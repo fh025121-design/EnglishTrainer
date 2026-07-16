@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>English Typing Trainer</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1>English Typing Trainer</h1>
+          <p class="subtext">タイピングで単語・熟語を定着させよう</p>
+        </div>
+        <button id="settingsBtn" class="ghost-btn settings-btn" type="button">設定</button>
+      </header>
+
+      <main class="main-content">
+        <section id="homeScreen" class="screen active">
+          <div class="home-grid">
+            <div class="panel study-actions-panel">
+              <div class="panel-title-row">
+                <h3>学習</h3>
+              </div>
+              <div class="study-actions-grid">
+                <button id="resumeSessionBtn" class="primary-btn home-advance-btn hidden"><span class="advance-main">▶ 続きから学習</span><span id="resumeSessionMetaText" class="advance-sub">Day1</span></button>
+                <button id="advanceBtn" class="primary-btn home-advance-btn"><span class="advance-main">▶ 次へ進む</span><span id="advanceDayText" class="advance-sub">Day1</span></button>
+                <button id="daySelectWordBtn" class="secondary-btn">📘 Day学習</button>
+                <button id="daySelectPhraseBtn" class="secondary-btn">💬 熟語特訓</button>
+                <button id="challengeBtn" class="primary-btn challenge-primary-btn">▶ 過去の間違いに挑戦</button>
+              </div>
+            </div>
+
+            <div class="panel level-collection-panel">
+              <div class="panel-title-row">
+                <button id="openLevelCollectionScreenBtn" class="panel-link-btn" type="button">苦手コレクション</button>
+                <button id="levelInfoBtn" class="ghost-btn level-info-btn" type="button">💡 レベルのしくみ</button>
+              </div>
+              <ul id="levelCollectionList" class="level-collection-list"></ul>
+            </div>
+
+            <div class="panel recent-progress-panel">
+              <div class="panel-title-row">
+                <h3>最近進捗TOP5</h3>
+              </div>
+              <ul id="recentProgressList" class="recent-progress-list"></ul>
+            </div>
+          </div>
+
+          <div class="panel home-message-bar">
+            <p id="learnedCountText" class="home-message-text learned-count-text">📚 0 / 1000語 学習済み</p>
+            <div class="home-divider" aria-hidden="true"></div>
+            <div class="home-message-subrow">
+              <p id="streakFooterText" class="home-message-text footer-info-text">🔥 0日連続</p>
+              <p id="studyRangeFooterText" class="home-message-text footer-info-text">学習中：Day1～1</p>
+              <p id="remainFooterText" class="home-message-text footer-info-text">🎯 1000語まであと1000語</p>
+            </div>
+            <div class="home-message-subrow home-message-subrow-four">
+              <p id="todaySessionCountText" class="home-message-text footer-info-text compact-footer-info-text">📘 学習回数 0回</p>
+              <p id="todayStudyTimeText" class="home-message-text footer-info-text compact-footer-info-text">⏱ 学習時間 0分</p>
+              <p id="todayQuestionCountText" class="home-message-text footer-info-text compact-footer-info-text">📝 問題数 0問</p>
+              <p id="todayAverageAccuracyText" class="home-message-text footer-info-text compact-footer-info-text">📈 平均正答率 -</p>
+            </div>
+            <div class="home-divider" aria-hidden="true"></div>
+            <div class="recent-three-days-wrap">
+              <p class="home-message-text recent-three-title">📊 直近3日間の学習</p>
+              <table class="recent-three-table" aria-label="直近3日学習統計">
+                <thead>
+                  <tr>
+                    <th scope="col"></th>
+                    <th id="recentDayLabel1" scope="col">-</th>
+                    <th id="recentDayLabel2" scope="col">-</th>
+                    <th id="recentDayLabel3" scope="col">-</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">タイプ数</th>
+                    <td id="recentSolved1">-</td>
+                    <td id="recentSolved2">-</td>
+                    <td id="recentSolved3">-</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">正答率</th>
+                    <td id="recentAccuracy1">-</td>
+                    <td id="recentAccuracy2">-</td>
+                    <td id="recentAccuracy3">-</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="levelCollectionScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">苦手コレクション</p>
+              <h2>レベル別に復習する</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel level-collection-screen-panel">
+            <ul id="levelCollectionScreenList" class="level-collection-list level-collection-screen-list"></ul>
+          </div>
+        </section>
+
+        <section id="levelDetailScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">苦手コレクション</p>
+              <h2 id="levelDetailTitle">Lv一覧</h2>
+              <p id="levelDetailSubtitle" class="subtext">カテゴリ内の単語・熟語を確認できます</p>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel level-detail-panel">
+            <ul id="levelWordList" class="level-word-list"></ul>
+          </div>
+          <div class="screen-footer-actions">
+            <button id="studyLevelOnlyBtn" class="primary-btn" type="button">▶ このカテゴリだけ学習する</button>
+          </div>
+        </section>
+
+        <section id="itemDetailScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">単語詳細</p>
+              <h2 id="itemDetailWord">because</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel item-detail-panel">
+            <p id="itemDetailMeaning" class="item-detail-meaning">〜なので</p>
+            <div class="item-detail-grid">
+              <article class="stat-card compact item-detail-stat">
+                <p class="label">現在のカテゴリ</p>
+                <h3 id="itemDetailLevel">🔥 要特訓</h3>
+              </article>
+              <article class="stat-card compact item-detail-stat">
+                <p class="label">正答率</p>
+                <h3 id="itemDetailAccuracy">-</h3>
+              </article>
+              <article class="stat-card compact item-detail-stat">
+                <p class="label">挑戦回数</p>
+                <h3 id="itemDetailAttempts">0回</h3>
+              </article>
+              <article class="stat-card compact item-detail-stat">
+                <p class="label">最終学習日</p>
+                <h3 id="itemDetailLastStudied">未学習</h3>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section id="dayCatalogScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">Day学習設定</p>
+              <h2>学習内容を選択</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel day-catalog-panel">
+            <form id="dayRangeForm" class="day-range-form">
+              <label>
+                学習するDay
+                <select id="dayStudyDaySelect"></select>
+              </label>
+              <label>
+                出題内容
+                <select id="dayStudyTypeSelect">
+                  <option value="word">単語</option>
+                  <option value="phrase">熟語</option>
+                  <option value="all">両方</option>
+                </select>
+              </label>
+              <button id="dayRangeStartBtn" type="submit" class="primary-btn">学習開始</button>
+            </form>
+            <div id="dayCatalogGrid" class="day-catalog-grid"></div>
+          </div>
+        </section>
+
+        <section id="testScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <h2 id="testModeTitle">10問</h2>
+            </div>
+            <button id="suspendSessionBtn" class="ghost-btn" type="button">中断</button>
+          </div>
+
+          <div id="testSetupPanel" class="panel setup-panel">
+            <form id="testForm" class="test-form">
+              <label>
+                開始Day
+                <select id="startDaySelect">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                </select>
+              </label>
+              <label>
+                終了Day
+                <select id="endDaySelect">
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                </select>
+              </label>
+              <label>
+                出題内容
+                <select id="typeSelect">
+                  <option value="all">両方</option>
+                  <option value="word">単語</option>
+                  <option value="phrase">熟語</option>
+                </select>
+              </label>
+              <button type="submit" class="primary-btn">10問スタート</button>
+            </form>
+          </div>
+
+          <div class="question-stage">
+            <div id="phaseIntroCard" class="panel phase-intro-card hidden">
+              <p id="phaseIntroTitle" class="phase-intro-title">📘 新しい単語</p>
+              <p id="phaseIntroDescription" class="phase-intro-description">Day1の新しい単語・熟語を学習します。</p>
+              <p id="phaseIntroCount" class="phase-intro-count">10問</p>
+              <button id="phaseIntroStartBtn" class="primary-btn" type="button">▶ スタート</button>
+            </div>
+
+            <div id="questionCard" class="panel question-card hidden">
+              <div class="question-meta">
+                <span id="questionPhaseText" class="phase-progress-text">📘 新しい単語 1 / 10</span>
+                <span id="questionCounter">1 / 20</span>
+              </div>
+              <div class="question-copy">
+                <p id="meaningText" class="meaning-text"></p>
+                <div id="similarHints" class="similar-hints hidden"></div>
+              </div>
+              <div class="answer-panel">
+                <div id="questionTypeBadge" class="type-badge word">単語で答える</div>
+                <h3 class="input-label">英語を入力してください</h3>
+                <form class="answer-form">
+                  <input class="answer-input" type="text" autocomplete="off" spellcheck="false" placeholder="英語を入力してください" />
+                </form>
+                <div class="helper-row">
+                  <p class="helper-text">Enterで回答</p>
+                  <span id="audioPlaybackIcon" class="audio-icon hidden" aria-hidden="true">🔊</span>
+                </div>
+              </div>
+              <div id="feedbackBox" class="feedback-box hidden"></div>
+              <button id="nextQuestionBtn" class="primary-btn hidden">次の問題</button>
+            </div>
+
+            <div id="reviewCard" class="panel question-card hidden">
+              <div class="question-meta">
+                <span id="reviewPhaseText" class="phase-progress-text">🔄 今回の復習 1 / 4</span>
+                <span id="reviewCounter">1 / 10</span>
+              </div>
+              <div class="question-copy">
+                <p id="reviewMeaningText" class="meaning-text"></p>
+                <div id="reviewSimilarHints" class="similar-hints hidden"></div>
+              </div>
+              <div class="answer-panel">
+                <div id="reviewTypeBadge" class="type-badge word">単語で答える</div>
+                <h3 class="input-label">英語を入力してください</h3>
+                <form class="answer-form">
+                  <input class="answer-input" type="text" autocomplete="off" spellcheck="false" placeholder="英語を入力してください" />
+                </form>
+                <div class="helper-row">
+                  <p class="helper-text">Enterで回答</p>
+                  <span id="reviewAudioPlaybackIcon" class="audio-icon hidden" aria-hidden="true">🔊</span>
+                </div>
+              </div>
+              <div id="reviewFeedbackBox" class="feedback-box hidden"></div>
+              <button id="reviewNextBtn" class="primary-btn hidden">次の問題</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="progressScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">記録を見る</p>
+              <h2>学習の進み具合</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="result-shell">
+            <div class="panel progress-card">
+              <div class="progress-summary">
+                <article class="stat-card">
+                  <p class="label">Master count</p>
+                  <h3 id="progressMasterCount">0</h3>
+                </article>
+                <article class="stat-card">
+                  <p class="label">今週の問題数</p>
+                  <h3 id="progressWeeklySolved">0</h3>
+                </article>
+                <article class="stat-card">
+                  <p class="label">総解答数</p>
+                  <h3 id="progressTotalSolved">0</h3>
+                </article>
+              </div>
+              <div class="progress-list-wrap">
+                <h3>要復習の一覧</h3>
+                <ul id="progressReviewList" class="review-list"></ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="resultScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">学習結果</p>
+              <h2 id="resultHeaderTitle">結果</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="result-shell">
+            <div class="panel result-card result-dashboard-card">
+              <h2 id="resultTitle">🎉 Day1 完了！</h2>
+              <p id="resultSummary" class="result-summary">今日の学習を記録しました。</p>
+              <div class="result-sections">
+                <section class="result-section">
+                  <div class="panel-title-row result-section-head">
+                    <h3>今日の結果</h3>
+                  </div>
+                  <div class="result-metric-list">
+                    <div class="result-metric-row">
+                      <span class="result-metric-label">正答率</span>
+                      <span id="resultAccuracy" class="result-metric-value">-</span>
+                    </div>
+                    <div class="result-metric-row">
+                      <span class="result-metric-label">問題数</span>
+                      <span id="resultQuestionCount" class="result-metric-value">0問</span>
+                    </div>
+                    <div class="result-metric-row">
+                      <span class="result-metric-label">正解数</span>
+                      <span id="resultCorrectCount" class="result-metric-value">0問</span>
+                    </div>
+                    <div class="result-metric-row">
+                      <span class="result-metric-label">学習時間</span>
+                      <span id="resultStudyTime" class="result-metric-value">0分</span>
+                    </div>
+                  </div>
+                </section>
+                <section class="result-section">
+                  <div class="panel-title-row result-section-head">
+                    <h3>学習状況</h3>
+                  </div>
+                  <div class="result-metric-list">
+                    <div class="result-metric-row">
+                      <span class="result-metric-label">学習済み</span>
+                      <span id="resultLearnedCount" class="result-metric-value">0 / 1000語</span>
+                    </div>
+                    <div class="result-metric-row">
+                      <span class="result-metric-label">🔥 連続学習</span>
+                      <span id="resultStreak" class="result-metric-value">0日</span>
+                    </div>
+                    <div class="result-metric-row">
+                      <span class="result-metric-label">現在のフェーズ</span>
+                      <span id="resultCurrentPhase" class="result-metric-value">-</span>
+                    </div>
+                    <div class="result-metric-row">
+                      <span class="result-metric-label">現在の進捗</span>
+                      <span id="resultCurrentProgress" class="result-metric-value">-</span>
+                    </div>
+                  </div>
+                </section>
+                <section class="result-section">
+                  <div class="panel-title-row result-section-head">
+                    <h3>今日の変化</h3>
+                  </div>
+                  <ul id="resultLevelChanges" class="result-change-list"></ul>
+                </section>
+                <section class="result-section">
+                  <div class="panel-title-row result-section-head">
+                    <h3>次回おすすめ</h3>
+                  </div>
+                  <button id="resultRecommendationBtn" class="secondary-btn result-recommend-btn" type="button">▶ 要特訓を復習</button>
+                </section>
+              </div>
+              <div class="result-actions">
+                <button id="resultNextDayBtn" class="primary-btn">▶ 次のDayへ</button>
+                <button id="resultHomeBtn" class="secondary-btn">🏠 ホームへ戻る</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <div id="levelInfoModal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop" data-close-modal="levelInfoModal"></div>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="levelInfoTitle">
+          <div class="modal-header">
+            <h2 id="levelInfoTitle">💡 レベルのしくみ</h2>
+            <button class="ghost-btn modal-close-btn" type="button" data-close-modal="levelInfoModal">閉じる</button>
+          </div>
+          <div class="level-info-flow">
+            <div class="level-info-item">
+              <p class="level-info-name">🔥 Lv1 要特訓</p>
+              <p class="level-info-desc">まだ覚え途中</p>
+            </div>
+            <div class="level-info-arrow">↓</div>
+            <div class="level-info-item">
+              <p class="level-info-name">⚠️ Lv2 あと一歩</p>
+              <p class="level-info-desc">少しずつ定着</p>
+            </div>
+            <div class="level-info-arrow">↓</div>
+            <div class="level-info-item">
+              <p class="level-info-name">💪 Lv3 ほぼ習得</p>
+              <p class="level-info-desc">かなり定着</p>
+            </div>
+            <div class="level-info-arrow">↓</div>
+            <div class="level-info-item">
+              <p class="level-info-name">🏆 Lv4 自信あり</p>
+              <p class="level-info-desc">ほぼマスター</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="levelUpModal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop modal-backdrop-soft"></div>
+        <div class="modal-card level-up-card" role="dialog" aria-modal="true" aria-labelledby="levelUpTitle">
+          <p id="levelUpTitle" class="level-up-eyebrow">🎉 レベルアップ！</p>
+          <h2 id="levelUpWordText">important</h2>
+          <p id="levelUpLevelText" class="level-up-rank">🏆 自信あり</p>
+          <button id="levelUpCloseBtn" class="primary-btn" type="button">つづける</button>
+        </div>
+      </div>
+
+      <div id="gameTicketModal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop modal-backdrop-soft"></div>
+        <div class="modal-card game-ticket-card" role="dialog" aria-modal="true" aria-labelledby="gameTicketTitle">
+          <p id="gameTicketTitle" class="level-up-eyebrow">🎉 ゲームチケットを手に入れた！</p>
+          <h2 id="gameTicketMinutesText">🎮 ゲームチケット（5分）</h2>
+          <p class="game-ticket-photo-text">📸 あとで使うので、すぐ写真を撮っておこう！</p>
+          <p id="gameTicketIntroText" class="game-ticket-intro-text hidden">💡 復習を続けていると、ゲームチケットを見つけることがあります。（出ない日もあります。）</p>
+          <button class="primary-btn" type="button" data-close-modal="gameTicketModal">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
