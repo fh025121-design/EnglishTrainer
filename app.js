@@ -1538,16 +1538,47 @@ function playQuestionAudio(question, onComplete) {
   return true;
 }
 
-function playAnswerAudioSequenceAndAdvance(question) {
-  playQuestionAudio(question, () => {
-    window.setTimeout(() => {
-      playQuestionAudio(question, () => {
-        window.setTimeout(() => {
-          advanceToNextQuestion();
-        }, 500);
-      });
-    }, 800);
+function startSecondAudioAndAutoAdvance(question) {
+  const session = state.session;
+  if (!session || !session.answered || !session.awaitingEnter || session.enterLocked || session.enterConsumed) {
+    return false;
+  }
+
+  session.enterLocked = true;
+  session.enterConsumed = true;
+  session.awaitingEnter = false;
+  session.answerLocked = true;
+
+  const targetQuestion = question || session.currentQuestion;
+  if (!targetQuestion) {
+    advanceToNextQuestion();
+    return true;
+  }
+
+  playQuestionAudio(targetQuestion, () => {
+    advanceToNextQuestion();
   });
+  return true;
+}
+
+function enableSecondAudioTrigger(session, input, answerBtn) {
+  if (!session) return;
+  session.awaitingEnter = true;
+  session.answered = true;
+  session.enterLocked = false;
+  session.answerLocked = true;
+  session.enterConsumed = false;
+  session.enterLockUntil = null;
+
+  if (input) {
+    input.disabled = false;
+    input.focus();
+  }
+
+  if (answerBtn) {
+    answerBtn.disabled = false;
+    answerBtn.textContent = "2回目音声を再生";
+  }
 }
 
 function finalizeIfCurrentPhaseCompleted(sessionLike, options = {}) {
@@ -2487,7 +2518,7 @@ function renderQuestionSession() {
       event.preventDefault();
       const activeSession = state.session;
       if (activeSession?.answered && activeSession.awaitingEnter) {
-        advanceToNextQuestion();
+        startSecondAudioAndAutoAdvance(activeSession.currentQuestion);
         return;
       }
       submitCurrentAnswer();
@@ -2560,7 +2591,7 @@ function renderReviewSession() {
       event.preventDefault();
       const activeSession = state.session;
       if (activeSession?.answered && activeSession.awaitingEnter) {
-        advanceToNextQuestion();
+        startSecondAudioAndAutoAdvance(activeSession.currentQuestion);
         return;
       }
       submitCurrentAnswer();
@@ -2606,7 +2637,7 @@ function handleEnterKey(event) {
   }
   event.preventDefault();
   event.stopPropagation();
-  advanceToNextQuestion();
+  startSecondAudioAndAutoAdvance(session.currentQuestion);
 }
 
 function advanceToNextQuestion() {
@@ -2640,11 +2671,7 @@ function handleReplayAndAdvance(question) {
   if (!session || !session.answered || !session.awaitingEnter || session.enterLocked || session.enterConsumed) {
     return;
   }
-
-  session.enterLocked = true;
-  session.enterConsumed = true;
-  session.awaitingEnter = false;
-  advanceToNextQuestion();
+  startSecondAudioAndAutoAdvance(question);
 }
 
 function showResultScreen(summary = state.stats.lastResultSummary) {
@@ -2783,23 +2810,29 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       updateStreak();
       session.currentQuestionState = "correct";
       feedbackBox.className = "feedback-box success";
-      feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "正解音声を再生します");
+      feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterまたは答えるで2回目音声を再生");
       nextButton.classList.add("hidden");
       input.disabled = true;
       input.blur();
       session.awaitingEnter = false;
-      session.answered = false;
+      session.answered = true;
       session.answerLocked = true;
       session.enterConsumed = false;
-      session.enterLocked = false;
-      if (answerBtn) answerBtn.disabled = true;
+      session.enterLocked = true;
+      session.enterLockUntil = null;
+      if (answerBtn) {
+        answerBtn.disabled = true;
+        answerBtn.textContent = "2回目音声を待機中";
+      }
       saveState();
       renderHome();
       renderProgress();
       if (levelChange.leveledUpToFour) {
         showLevelUpModal(item);
       }
-      playAnswerAudioSequenceAndAdvance(question);
+      playQuestionAudio(question, () => {
+        enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
+      });
       return;
     }
 
@@ -2817,37 +2850,25 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     state.stats.totalSolvedQuestions += 1;
     state.stats.solvedByDay[todayKey()] = (state.stats.solvedByDay[todayKey()] || 0) + 1;
     updateStreak();
-    session.currentQuestionState = "incorrect";
+    session.currentQuestionState = "retrying";
     feedbackBox.className = "feedback-box error";
-    feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正解音声を再生します");
+    feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正しい英語をもう一度入力");
     nextButton.classList.add("hidden");
-    input.disabled = true;
-    input.blur();
-    session.awaitingEnter = false;
-    session.answered = false;
-    session.answerLocked = true;
-    session.enterConsumed = false;
-    session.enterLocked = false;
-    if (answerBtn) answerBtn.disabled = true;
+    input.value = "";
+    input.disabled = false;
+    input.focus();
     saveState();
     renderHome();
     renderProgress();
-    playAnswerAudioSequenceAndAdvance(question);
     return;
   }
 
   if (!isCorrect) {
+    input.value = "";
+    input.disabled = false;
+    input.focus();
     feedbackBox.className = "feedback-box error";
-    feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正解音声を再生します");
-    input.disabled = true;
-    input.blur();
-    session.awaitingEnter = false;
-    session.answered = false;
-    session.answerLocked = true;
-    session.enterConsumed = false;
-    session.enterLocked = false;
-    if (answerBtn) answerBtn.disabled = true;
-    playAnswerAudioSequenceAndAdvance(question);
+    feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正しい英語をもう一度入力");
     return;
   }
 
@@ -2862,23 +2883,29 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   session.currentQuestionState = "correct";
 
   feedbackBox.className = "feedback-box success";
-  feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "正解音声を再生します");
+  feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterまたは答えるで2回目音声を再生");
   nextButton.classList.add("hidden");
   input.disabled = true;
   input.blur();
   session.awaitingEnter = false;
-  session.answered = false;
+  session.answered = true;
   session.answerLocked = true;
   session.enterConsumed = false;
-  session.enterLocked = false;
-  if (answerBtn) answerBtn.disabled = true;
+  session.enterLocked = true;
+  session.enterLockUntil = null;
+  if (answerBtn) {
+    answerBtn.disabled = true;
+    answerBtn.textContent = "2回目音声を待機中";
+  }
   saveState();
   renderHome();
   renderProgress();
   if (levelChange.leveledUpToFour) {
     showLevelUpModal(item);
   }
-  playAnswerAudioSequenceAndAdvance(question);
+  playQuestionAudio(question, () => {
+    enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
+  });
 }
 
 function updateBestAccuracyFromSession(session) {
