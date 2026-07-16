@@ -1497,6 +1497,8 @@ function playQuestionAudio(question, onComplete) {
   stopCurrentAudio();
 
   const audio = new Audio(`audio/${encodeURIComponent(questionId)}.mp3`);
+  console.log("audio question id:", question?.id);
+  console.log("audio path:", audio.src);
   currentAudio = audio;
   audio.preload = "auto";
   audio.volume = 1;
@@ -1521,7 +1523,7 @@ function playQuestionAudio(question, onComplete) {
   audio.addEventListener(
     "error",
     () => {
-      console.error("MP3 audio could not be played:", questionId, audio.src);
+      console.error("音声ファイル読込失敗:", audio.src);
       finishOnce();
     },
     { once: true }
@@ -1530,7 +1532,7 @@ function playQuestionAudio(question, onComplete) {
   const playPromise = audio.play();
   if (playPromise && typeof playPromise.catch === "function") {
     playPromise.catch((error) => {
-      console.error("MP3 playback failed:", error);
+      console.error("音声再生失敗:", audio.src, error);
       finishOnce();
     });
   }
