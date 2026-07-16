@@ -3235,6 +3235,25 @@ function bindEvents() {
     });
   }
 
+  const settingsBtn = document.getElementById("settingsBtn");
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", () => {
+      showScreen("settingsScreen");
+    });
+  }
+
+  const speechTestBtn = document.getElementById("speechTestBtn");
+  if (speechTestBtn) {
+    speechTestBtn.addEventListener("click", () => {
+      const utterance = new SpeechSynthesisUtterance("apple");
+      utterance.lang = "en-US";
+      utterance.rate = 0.85;
+      utterance.volume = 1;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    });
+  }
+
   const questionAudioBtn = document.getElementById("audioPlaybackIcon");
   if (questionAudioBtn) {
     questionAudioBtn.addEventListener("click", () => {
