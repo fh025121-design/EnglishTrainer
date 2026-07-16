@@ -2,6 +2,8 @@ const STORAGE_KEY = "english-trainer-state-v1";
 let audioPlaybackActive = false;
 let speechVoicesCache = [];
 let speechVoicesInitialized = false;
+let currentSpeechUtterance = null;
+let speechFallbackTimer = null;
 const LEVEL_DEFINITIONS = [
   { level: 1, label: "要特訓", icon: "🔥" },
   { level: 2, label: "あと一歩", icon: "⚠️" },
@@ -1584,60 +1586,63 @@ function isMobileDevice() {
   return Boolean(coarsePointer || ua);
 }
 
-function speakOnceThenAdvance(text) {
-  const session = state.session;
-  if (!session) return;
+function speakEnglishMobile(text, onComplete) {
+  const value = String(text || "").trim();
 
-  const targetQuestionId = session.currentQuestion?.id;
-  let completed = false;
-  let fallbackTimer = null;
-
-  const advanceOnce = () => {
-    if (completed) return;
-    completed = true;
-    if (fallbackTimer) {
-      window.clearTimeout(fallbackTimer);
-      fallbackTimer = null;
-    }
-    const activeSession = state.session;
-    if (!activeSession) return;
-    if (targetQuestionId && String(activeSession.currentQuestion?.id) !== String(targetQuestionId)) return;
-    audioPlaybackActive = false;
-    setAudioIconVisible(false);
-    advanceToNextQuestion();
-  };
-
-  const speakText = String(text || "").trim();
-  if (!speakText || !("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
-    advanceOnce();
+  if (!value || !("speechSynthesis" in window)) {
+    if (onComplete) onComplete();
     return;
   }
 
-  initSpeechVoices();
-  audioPlaybackActive = true;
-  setAudioIconVisible(true);
+  let completed = false;
+  const finishOnce = () => {
+    if (completed) return;
+    completed = true;
+
+    if (speechFallbackTimer) {
+      clearTimeout(speechFallbackTimer);
+      speechFallbackTimer = null;
+    }
+
+    currentSpeechUtterance = null;
+    audioPlaybackActive = false;
+    setAudioIconVisible(false);
+
+    if (onComplete) onComplete();
+  };
 
   try {
+    audioPlaybackActive = true;
+    setAudioIconVisible(true);
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(speakText);
-    utterance.lang = "en-US";
-    utterance.rate = 0.85;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    const englishVoice = getPreferredEnglishVoice();
+
+    currentSpeechUtterance = new SpeechSynthesisUtterance(value);
+    currentSpeechUtterance.lang = "en-US";
+    currentSpeechUtterance.rate = 0.85;
+    currentSpeechUtterance.pitch = 1;
+    currentSpeechUtterance.volume = 1;
+
+    const voices = window.speechSynthesis.getVoices();
+    const englishVoice = voices.find((voice) =>
+      String(voice?.lang || "").toLowerCase().startsWith("en")
+    );
+
     if (englishVoice) {
-      utterance.voice = englishVoice;
+      currentSpeechUtterance.voice = englishVoice;
     }
-    utterance.onend = advanceOnce;
-    utterance.onerror = (event) => {
-      console.error("Speech synthesis error:", event?.error || event);
-      advanceOnce();
+
+    currentSpeechUtterance.onend = finishOnce;
+    currentSpeechUtterance.onerror = (event) => {
+      console.error("Mobile speech error:", event?.error || event);
+      finishOnce();
     };
-    window.speechSynthesis.speak(utterance);
-    fallbackTimer = window.setTimeout(advanceOnce, 2500);
+
+    window.speechSynthesis.speak(currentSpeechUtterance);
+
+    speechFallbackTimer = window.setTimeout(finishOnce, 3000);
   } catch (error) {
-    console.error("Speech synthesis speak failed:", error);
-    advanceOnce();
+    console.error("Mobile speech failed:", error);
+    finishOnce();
   }
 }
 
@@ -2919,7 +2924,9 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
         showLevelUpModal(item);
       }
       if (mobileCorrectAutoAdvance) {
-        speakOnceThenAdvance(question.audio || question.answer || question.english);
+        speakEnglishMobile(question.audio || question.answer || question.english, () => {
+          advanceToNextQuestion();
+        });
       } else {
         playPronunciation(question.audio || question.answer || question.english);
       }
@@ -3001,7 +3008,9 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   }
 
   if (mobileCorrectAutoAdvance) {
-    speakOnceThenAdvance(question.audio || question.answer || question.english);
+    speakEnglishMobile(question.audio || question.answer || question.english, () => {
+      advanceToNextQuestion();
+    });
   } else {
     playPronunciation(question.audio || question.answer || question.english);
   }
@@ -3230,7 +3239,11 @@ function bindEvents() {
   if (questionAudioBtn) {
     questionAudioBtn.addEventListener("click", () => {
       const text = getCurrentQuestionSpeechText();
-      speakEnglish(text);
+      if (isMobileDevice()) {
+        speakEnglishMobile(text);
+      } else {
+        speakEnglish(text);
+      }
     });
   }
 
@@ -3238,7 +3251,11 @@ function bindEvents() {
   if (reviewAudioBtn) {
     reviewAudioBtn.addEventListener("click", () => {
       const text = getCurrentQuestionSpeechText();
-      speakEnglish(text);
+      if (isMobileDevice()) {
+        speakEnglishMobile(text);
+      } else {
+        speakEnglish(text);
+      }
     });
   }
 
