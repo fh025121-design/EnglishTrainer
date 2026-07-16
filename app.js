@@ -1,6 +1,5 @@
 const STORAGE_KEY = "english-trainer-state-v1";
 let currentAudio = null;
-let lastAutoPlayedAudioKey = "";
 const LEVEL_DEFINITIONS = [
   { level: 1, label: "要特訓", icon: "🔥" },
   { level: 2, label: "あと一歩", icon: "⚠️" },
@@ -1539,23 +1538,16 @@ function playQuestionAudio(question, onComplete) {
   return true;
 }
 
-function autoPlayQuestionAudio(question, session) {
-  const key = [
-    session?.mode || "",
-    session?.phase || "",
-    session?.currentIndex ?? "",
-    question?.id || ""
-  ].join(":");
-
-  if (!question?.id || key === lastAutoPlayedAudioKey) return;
-  lastAutoPlayedAudioKey = key;
-  playQuestionAudio(question);
-}
-
-function isMobileDevice() {
-  const coarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-  const ua = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
-  return Boolean(coarsePointer || ua);
+function playAnswerAudioSequenceAndAdvance(question) {
+  playQuestionAudio(question, () => {
+    window.setTimeout(() => {
+      playQuestionAudio(question, () => {
+        window.setTimeout(() => {
+          advanceToNextQuestion();
+        }, 500);
+      });
+    }, 800);
+  });
 }
 
 function finalizeIfCurrentPhaseCompleted(sessionLike, options = {}) {
@@ -2514,7 +2506,6 @@ function renderQuestionSession() {
   session.currentQuestionAttempted = false;
   session.currentQuestionState = "idle";
   session.currentQuestion = question;
-  autoPlayQuestionAudio(question, session);
 }
 
 function renderReviewSession() {
@@ -2588,7 +2579,6 @@ function renderReviewSession() {
   session.currentQuestionAttempted = false;
   session.currentQuestionState = "idle";
   session.currentQuestion = question;
-  autoPlayQuestionAudio(question, session);
 }
 
 function handleEnterKey(event) {
@@ -2616,9 +2606,6 @@ function handleEnterKey(event) {
   }
   event.preventDefault();
   event.stopPropagation();
-  if (session.currentQuestion) {
-    playQuestionAudio(session.currentQuestion);
-  }
   advanceToNextQuestion();
 }
 
@@ -2657,9 +2644,6 @@ function handleReplayAndAdvance(question) {
   session.enterLocked = true;
   session.enterConsumed = true;
   session.awaitingEnter = false;
-  if (question) {
-    playQuestionAudio(question);
-  }
   advanceToNextQuestion();
 }
 
@@ -2799,39 +2783,23 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       updateStreak();
       session.currentQuestionState = "correct";
       feedbackBox.className = "feedback-box success";
-      feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterまたは次の問題へ");
+      feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "正解音声を再生します");
       nextButton.classList.add("hidden");
       input.disabled = true;
       input.blur();
-      const mobileCorrectAutoAdvance = isMobileDevice();
-      if (mobileCorrectAutoAdvance) {
-        session.awaitingEnter = false;
-        session.answered = false;
-        session.answerLocked = true;
-        session.enterConsumed = false;
-        session.enterLocked = false;
-        if (answerBtn) answerBtn.disabled = true;
-      } else {
-        session.awaitingEnter = true;
-        session.answered = true;
-        session.answerLocked = true;
-        session.enterConsumed = false;
-        session.enterLocked = false;
-        if (answerBtn) answerBtn.textContent = "次の問題へ";
-      }
+      session.awaitingEnter = false;
+      session.answered = false;
+      session.answerLocked = true;
+      session.enterConsumed = false;
+      session.enterLocked = false;
+      if (answerBtn) answerBtn.disabled = true;
       saveState();
       renderHome();
       renderProgress();
       if (levelChange.leveledUpToFour) {
         showLevelUpModal(item);
       }
-      if (mobileCorrectAutoAdvance) {
-        playQuestionAudio(question, () => {
-          advanceToNextQuestion();
-        });
-      } else {
-        playQuestionAudio(question);
-      }
+      playAnswerAudioSequenceAndAdvance(question);
       return;
     }
 
@@ -2849,25 +2817,37 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     state.stats.totalSolvedQuestions += 1;
     state.stats.solvedByDay[todayKey()] = (state.stats.solvedByDay[todayKey()] || 0) + 1;
     updateStreak();
-    session.currentQuestionState = "retrying";
+    session.currentQuestionState = "incorrect";
     feedbackBox.className = "feedback-box error";
-    feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正しい英語をもう一度入力");
+    feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正解音声を再生します");
     nextButton.classList.add("hidden");
-    input.value = "";
-    input.disabled = false;
-    input.focus();
+    input.disabled = true;
+    input.blur();
+    session.awaitingEnter = false;
+    session.answered = false;
+    session.answerLocked = true;
+    session.enterConsumed = false;
+    session.enterLocked = false;
+    if (answerBtn) answerBtn.disabled = true;
     saveState();
     renderHome();
     renderProgress();
+    playAnswerAudioSequenceAndAdvance(question);
     return;
   }
 
   if (!isCorrect) {
-    input.value = "";
-    input.disabled = false;
-    input.focus();
     feedbackBox.className = "feedback-box error";
-    feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正しい英語をもう一度入力");
+    feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正解音声を再生します");
+    input.disabled = true;
+    input.blur();
+    session.awaitingEnter = false;
+    session.answered = false;
+    session.answerLocked = true;
+    session.enterConsumed = false;
+    session.enterLocked = false;
+    if (answerBtn) answerBtn.disabled = true;
+    playAnswerAudioSequenceAndAdvance(question);
     return;
   }
 
@@ -2882,40 +2862,23 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   session.currentQuestionState = "correct";
 
   feedbackBox.className = "feedback-box success";
-  feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterまたは次の問題へ");
+  feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "正解音声を再生します");
   nextButton.classList.add("hidden");
   input.disabled = true;
   input.blur();
-  const mobileCorrectAutoAdvance = isMobileDevice();
-  if (mobileCorrectAutoAdvance) {
-    session.awaitingEnter = false;
-    session.answered = false;
-    session.answerLocked = true;
-    session.enterConsumed = false;
-    session.enterLocked = false;
-    if (answerBtn) answerBtn.disabled = true;
-  } else {
-    session.awaitingEnter = true;
-    session.answered = true;
-    session.answerLocked = true;
-    session.enterConsumed = false;
-    session.enterLocked = false;
-    if (answerBtn) answerBtn.textContent = "次の問題へ";
-  }
+  session.awaitingEnter = false;
+  session.answered = false;
+  session.answerLocked = true;
+  session.enterConsumed = false;
+  session.enterLocked = false;
+  if (answerBtn) answerBtn.disabled = true;
   saveState();
   renderHome();
   renderProgress();
   if (levelChange.leveledUpToFour) {
     showLevelUpModal(item);
   }
-
-  if (mobileCorrectAutoAdvance) {
-    playQuestionAudio(question, () => {
-      advanceToNextQuestion();
-    });
-  } else {
-    playQuestionAudio(question);
-  }
+  playAnswerAudioSequenceAndAdvance(question);
 }
 
 function updateBestAccuracyFromSession(session) {
