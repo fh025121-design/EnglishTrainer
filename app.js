@@ -2485,6 +2485,7 @@ function renderQuestionSession() {
   const input = questionCard.querySelector(".answer-input");
   const form = questionCard.querySelector(".answer-form");
   const answerBtn = questionCard.querySelector(".mobile-answer-btn");
+  if (answerBtn) answerBtn.textContent = "答える";
 
   questionCounter.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
   if (questionPhaseText) questionPhaseText.textContent = formatPhaseProgressText(session);
@@ -2514,7 +2515,7 @@ function renderQuestionSession() {
       event.preventDefault();
       const activeSession = state.session;
       if (activeSession?.answered && activeSession.awaitingEnter) {
-        handleReplayAndAdvance(activeSession.currentQuestion);
+        advanceToNextQuestion();
         return;
       }
       submitCurrentAnswer();
@@ -2557,6 +2558,7 @@ function renderReviewSession() {
   const input = reviewCard.querySelector(".answer-input");
   const form = reviewCard.querySelector(".answer-form");
   const answerBtn = reviewCard.querySelector(".mobile-answer-btn");
+  if (answerBtn) answerBtn.textContent = "答える";
 
   reviewCounter.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
   if (reviewPhaseText) reviewPhaseText.textContent = formatPhaseProgressText(session);
@@ -2586,7 +2588,7 @@ function renderReviewSession() {
       event.preventDefault();
       const activeSession = state.session;
       if (activeSession?.answered && activeSession.awaitingEnter) {
-        handleReplayAndAdvance(activeSession.currentQuestion);
+        advanceToNextQuestion();
         return;
       }
       submitCurrentAnswer();
@@ -2632,7 +2634,36 @@ function handleEnterKey(event) {
   }
   event.preventDefault();
   event.stopPropagation();
-  handleReplayAndAdvance(session.currentQuestion);
+  if (session.currentQuestion) {
+    playPronunciation(session.currentQuestion.audio || session.currentQuestion.answer || session.currentQuestion.english);
+  }
+  advanceToNextQuestion();
+}
+
+function advanceToNextQuestion() {
+  const session = state.session;
+  if (!session) return;
+
+  session.enterLocked = false;
+  session.enterConsumed = true;
+  session.awaitingEnter = false;
+  session.answered = false;
+  session.answerLocked = false;
+  session.enterLockUntil = Date.now() + 120;
+
+  const nextIndex = session.currentIndex + 1;
+  const nextQuestion = session.questions?.[nextIndex];
+  if (!nextQuestion) {
+    finishSession();
+    return;
+  }
+
+  session.currentIndex = nextIndex;
+  if (session.mode === "review") {
+    renderReviewSession();
+  } else {
+    renderQuestionSession();
+  }
 }
 
 function handleReplayAndAdvance(question) {
@@ -2654,29 +2685,10 @@ function handleReplayAndAdvance(question) {
   session.enterLocked = true;
   session.enterConsumed = true;
   session.awaitingEnter = false;
-  const speechText = question.audio || question.answer || question.english;
-
-  playPronunciation(speechText, () => {
-    const activeSession = state.session;
-    if (!activeSession || activeSession.currentQuestion?.id !== question.id) {
-      return;
-    }
-    setAudioIconVisible(false);
-    session.enterLocked = false;
-    activeSession.enterLockUntil = Date.now() + 300;
-    const nextIndex = activeSession.currentIndex + 1;
-    const nextQuestion = activeSession.questions?.[nextIndex];
-    if (!nextQuestion) {
-      finishSession();
-      return;
-    }
-    activeSession.currentIndex = nextIndex;
-    if (activeSession.mode === "review") {
-      renderReviewSession();
-    } else {
-      renderQuestionSession();
-    }
-  });
+  if (question) {
+    playPronunciation(question.audio || question.answer || question.english);
+  }
+  advanceToNextQuestion();
 }
 
 function showResultScreen(summary = state.stats.lastResultSummary) {
@@ -2769,6 +2781,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   const normalizedAnswer = normalizeAnswer(trimmedAnswer);
   const isCorrect = isCorrectAnswerForQuestion(question, normalizedAnswer);
   const input = card.querySelector(".answer-input");
+  const answerBtn = card.querySelector(".mobile-answer-btn");
   const isMainNormalRun = session.mode === "normal" && session.phase === "phase1";
   const isPhraseSpiralMainRun = session.mode === "phrase-spiral" && session.phase === "phase1";
   const isScoredNormalRun = session.mode === "normal" && (session.phase === "phase0" || session.phase === "phase1");
@@ -2814,35 +2827,23 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       updateStreak();
       session.currentQuestionState = "correct";
       feedbackBox.className = "feedback-box success";
-      feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterでもう一度聞いて次へ");
+      feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterまたは次の問題へ");
       nextButton.classList.add("hidden");
       input.disabled = true;
       input.blur();
+      session.awaitingEnter = true;
+      session.answered = true;
+      session.answerLocked = true;
+      session.enterConsumed = false;
+      session.enterLocked = false;
+      if (answerBtn) answerBtn.textContent = "次の問題へ";
       saveState();
       renderHome();
       renderProgress();
       if (levelChange.leveledUpToFour) {
         showLevelUpModal(item);
       }
-
-      playPronunciation(question.audio || question.answer || question.english, () => {
-        const activeSession = state.session;
-        if (!activeSession || activeSession.currentQuestion?.id !== question.id) {
-          setAudioIconVisible(false);
-          return;
-        }
-        if (finalizeIfCurrentPhaseCompleted(activeSession, { source: "submitAnswer:firstCorrect" })) {
-          setAudioIconVisible(false);
-          return;
-        }
-        activeSession.awaitingEnter = true;
-        activeSession.answered = true;
-        activeSession.answerLocked = true;
-        activeSession.enterConsumed = false;
-        activeSession.enterLocked = false;
-        setAudioIconVisible(false);
-        feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterでもう一度聞いて次へ");
-      });
+      playPronunciation(question.audio || question.answer || question.english);
       return;
     }
 
@@ -2893,10 +2894,16 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   session.currentQuestionState = "correct";
 
   feedbackBox.className = "feedback-box success";
-  feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterでもう一度聞いて次へ");
+  feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterまたは次の問題へ");
   nextButton.classList.add("hidden");
   input.disabled = true;
   input.blur();
+  session.awaitingEnter = true;
+  session.answered = true;
+  session.answerLocked = true;
+  session.enterConsumed = false;
+  session.enterLocked = false;
+  if (answerBtn) answerBtn.textContent = "次の問題へ";
   saveState();
   renderHome();
   renderProgress();
@@ -2904,24 +2911,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     showLevelUpModal(item);
   }
 
-  playPronunciation(question.audio || question.answer || question.english, () => {
-    const activeSession = state.session;
-    if (!activeSession || activeSession.currentQuestion?.id !== question.id) {
-      setAudioIconVisible(false);
-      return;
-    }
-    if (finalizeIfCurrentPhaseCompleted(activeSession, { source: "submitAnswer:retryCorrect" })) {
-      setAudioIconVisible(false);
-      return;
-    }
-    activeSession.awaitingEnter = true;
-    activeSession.answered = true;
-    activeSession.answerLocked = true;
-    activeSession.enterConsumed = false;
-    activeSession.enterLocked = false;
-    setAudioIconVisible(false);
-    feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterでもう一度聞いて次へ");
-  });
+  playPronunciation(question.audio || question.answer || question.english);
 }
 
 function updateBestAccuracyFromSession(session) {
