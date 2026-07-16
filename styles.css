@@ -85,6 +85,12 @@ p {
   min-width: 86px;
 }
 
+.settings-version-text {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
 .chip {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: white;

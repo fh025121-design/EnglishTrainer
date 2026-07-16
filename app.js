@@ -1,9 +1,6 @@
 const STORAGE_KEY = "english-trainer-state-v1";
 let audioPlaybackActive = false;
-let speechVoicesCache = [];
-let speechVoicesInitialized = false;
-let currentSpeechUtterance = null;
-let speechFallbackTimer = null;
+let currentAudio = null;
 const LEVEL_DEFINITIONS = [
   { level: 1, label: "要特訓", icon: "🔥" },
   { level: 2, label: "あと一歩", icon: "⚠️" },
@@ -276,6 +273,7 @@ function buildVocabularyItems() {
     ...item,
     id: item.id || String(index + 1),
     meaning: item.meaning || item.hint || item.japanese,
+    audioFile: item.audioFile || "",
     levelData: {
       level: 1,
       successCount: 0,
@@ -1483,167 +1481,58 @@ function setAudioIconVisible(visible) {
   if (reviewIcon) reviewIcon.classList.toggle("is-playing", Boolean(visible));
 }
 
-function refreshSpeechVoices() {
-  if (!("speechSynthesis" in window)) return [];
-  try {
-    const voices = window.speechSynthesis.getVoices();
-    speechVoicesCache = Array.isArray(voices) ? voices : [];
-  } catch (error) {
-    console.error("Failed to read speech voices:", error);
-    speechVoicesCache = [];
-  }
-  return speechVoicesCache;
-}
-
-function initSpeechVoices() {
-  if (speechVoicesInitialized || !("speechSynthesis" in window)) return;
-  speechVoicesInitialized = true;
-  refreshSpeechVoices();
-  window.speechSynthesis.addEventListener("voiceschanged", () => {
-    refreshSpeechVoices();
-  });
-}
-
-function getPreferredEnglishVoice() {
-  const voices = refreshSpeechVoices();
-  return voices.find((voice) => String(voice?.lang || "").toLowerCase().startsWith("en"));
-}
-
-function speakEnglish(text, onComplete) {
-  const speakText = String(text || "").trim();
-  if (!speakText) {
-    if (onComplete) onComplete();
-    return false;
-  }
-  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
-    console.error("Speech synthesis is not available on this device.");
+function playAudio(file, onComplete) {
+  const audioFile = String(file || "").trim();
+  if (!audioFile) {
+    console.error("音声ファイルがありません");
     if (onComplete) onComplete();
     return false;
   }
 
-  initSpeechVoices();
   audioPlaybackActive = true;
   setAudioIconVisible(true);
 
-  const utterance = new SpeechSynthesisUtterance(speakText);
-  utterance.lang = "en-US";
-  utterance.rate = 0.85;
-  utterance.pitch = 1;
-  utterance.volume = 1;
-
-  const englishVoice = getPreferredEnglishVoice();
-  if (englishVoice) {
-    utterance.voice = englishVoice;
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
   }
 
-  let settled = false;
-  let fallbackTimerId = null;
+  currentAudio = new Audio(audioFile);
+
   const finish = () => {
-    if (settled) return;
-    settled = true;
-    if (fallbackTimerId !== null) {
-      window.clearTimeout(fallbackTimerId);
-      fallbackTimerId = null;
-    }
     audioPlaybackActive = false;
     setAudioIconVisible(false);
+    currentAudio = null;
     if (onComplete) onComplete();
   };
 
-  utterance.onend = finish;
-  utterance.onerror = (event) => {
-    console.error("Speech synthesis error:", event?.error || event);
+  currentAudio.onended = finish;
+  currentAudio.onerror = () => {
+    console.error("Audio Error", audioFile);
     finish();
   };
 
-  try {
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-    const fallbackDelay = Math.max(1400, Math.min(3200, speakText.length * 80 + 600));
-    fallbackTimerId = window.setTimeout(finish, fallbackDelay);
-  } catch (error) {
-    console.error("Speech synthesis speak failed:", error);
+  currentAudio.play().catch((error) => {
+    console.error("Audio play failed", audioFile, error);
     finish();
-    return false;
-  }
-
+  });
   return true;
 }
 
-function playPronunciation(text, onComplete) {
-  return speakEnglish(text, onComplete);
+function getQuestionAudioFile(question) {
+  return question?.audioFile || "";
 }
 
 function getCurrentQuestionSpeechText() {
   const current = state?.session?.currentQuestion;
   if (!current) return "";
-  return current.audio || current.answer || current.english || "";
+  return getQuestionAudioFile(current);
 }
 
 function isMobileDevice() {
   const coarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   const ua = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
   return Boolean(coarsePointer || ua);
-}
-
-function speakEnglishMobile(text, onComplete) {
-  const value = String(text || "").trim();
-
-  if (!value || !("speechSynthesis" in window)) {
-    if (onComplete) onComplete();
-    return;
-  }
-
-  let completed = false;
-  const finishOnce = () => {
-    if (completed) return;
-    completed = true;
-
-    if (speechFallbackTimer) {
-      clearTimeout(speechFallbackTimer);
-      speechFallbackTimer = null;
-    }
-
-    currentSpeechUtterance = null;
-    audioPlaybackActive = false;
-    setAudioIconVisible(false);
-
-    if (onComplete) onComplete();
-  };
-
-  try {
-    audioPlaybackActive = true;
-    setAudioIconVisible(true);
-    window.speechSynthesis.cancel();
-
-    currentSpeechUtterance = new SpeechSynthesisUtterance(value);
-    currentSpeechUtterance.lang = "en-US";
-    currentSpeechUtterance.rate = 0.85;
-    currentSpeechUtterance.pitch = 1;
-    currentSpeechUtterance.volume = 1;
-
-    const voices = window.speechSynthesis.getVoices();
-    const englishVoice = voices.find((voice) =>
-      String(voice?.lang || "").toLowerCase().startsWith("en")
-    );
-
-    if (englishVoice) {
-      currentSpeechUtterance.voice = englishVoice;
-    }
-
-    currentSpeechUtterance.onend = finishOnce;
-    currentSpeechUtterance.onerror = (event) => {
-      console.error("Mobile speech error:", event?.error || event);
-      finishOnce();
-    };
-
-    window.speechSynthesis.speak(currentSpeechUtterance);
-
-    speechFallbackTimer = window.setTimeout(finishOnce, 3000);
-  } catch (error) {
-    console.error("Mobile speech failed:", error);
-    finishOnce();
-  }
 }
 
 function finalizeIfCurrentPhaseCompleted(sessionLike, options = {}) {
@@ -2705,7 +2594,7 @@ function handleEnterKey(event) {
   event.preventDefault();
   event.stopPropagation();
   if (session.currentQuestion) {
-    playPronunciation(session.currentQuestion.audio || session.currentQuestion.answer || session.currentQuestion.english);
+    playAudio(getQuestionAudioFile(session.currentQuestion));
   }
   advanceToNextQuestion();
 }
@@ -2742,21 +2631,11 @@ function handleReplayAndAdvance(question) {
     return;
   }
 
-  if (audioPlaybackActive && "speechSynthesis" in window) {
-    try {
-      window.speechSynthesis.cancel();
-    } catch (error) {
-      console.error("Speech synthesis cancel failed:", error);
-    }
-    audioPlaybackActive = false;
-    setAudioIconVisible(false);
-  }
-
   session.enterLocked = true;
   session.enterConsumed = true;
   session.awaitingEnter = false;
   if (question) {
-    playPronunciation(question.audio || question.answer || question.english);
+    playAudio(getQuestionAudioFile(question));
   }
   advanceToNextQuestion();
 }
@@ -2924,11 +2803,11 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
         showLevelUpModal(item);
       }
       if (mobileCorrectAutoAdvance) {
-        speakEnglishMobile(question.audio || question.answer || question.english, () => {
+        playAudio(getQuestionAudioFile(question), () => {
           advanceToNextQuestion();
         });
       } else {
-        playPronunciation(question.audio || question.answer || question.english);
+        playAudio(getQuestionAudioFile(question));
       }
       return;
     }
@@ -3008,11 +2887,11 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   }
 
   if (mobileCorrectAutoAdvance) {
-    speakEnglishMobile(question.audio || question.answer || question.english, () => {
+    playAudio(getQuestionAudioFile(question), () => {
       advanceToNextQuestion();
     });
   } else {
-    playPronunciation(question.audio || question.answer || question.english);
+    playAudio(getQuestionAudioFile(question));
   }
 }
 
@@ -3245,36 +3124,21 @@ function bindEvents() {
   const speechTestBtn = document.getElementById("speechTestBtn");
   if (speechTestBtn) {
     speechTestBtn.addEventListener("click", () => {
-      const utterance = new SpeechSynthesisUtterance("apple");
-      utterance.lang = "en-US";
-      utterance.rate = 0.85;
-      utterance.volume = 1;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
+      playAudio("audio/apple.mp3");
     });
   }
 
   const questionAudioBtn = document.getElementById("audioPlaybackIcon");
   if (questionAudioBtn) {
     questionAudioBtn.addEventListener("click", () => {
-      const text = getCurrentQuestionSpeechText();
-      if (isMobileDevice()) {
-        speakEnglishMobile(text);
-      } else {
-        speakEnglish(text);
-      }
+      playAudio(getCurrentQuestionSpeechText());
     });
   }
 
   const reviewAudioBtn = document.getElementById("reviewAudioPlaybackIcon");
   if (reviewAudioBtn) {
     reviewAudioBtn.addEventListener("click", () => {
-      const text = getCurrentQuestionSpeechText();
-      if (isMobileDevice()) {
-        speakEnglishMobile(text);
-      } else {
-        speakEnglish(text);
-      }
+      playAudio(getCurrentQuestionSpeechText());
     });
   }
 
@@ -3431,7 +3295,6 @@ function bindEvents() {
 let state = loadState();
 
 function init() {
-  initSpeechVoices();
   const itemsSynced = ensureItemsSyncedWithVocabularyBank();
   clampStudyRangeToAvailableDays();
   autoCompleteStaleSessionIfNeeded();

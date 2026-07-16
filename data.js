@@ -175,3 +175,21 @@
   { id: "D07-P04", day: 7, type: "phrase", japanese: "人に～するよう言う", answer: "tell 人 to", hint: "", similar: [] },
   { id: "D07-P05", day: 7, type: "phrase", japanese: "人に～を頼む", answer: "ask 人 to", hint: "", similar: [] }
 ];
+
+function normalizeAudioBaseName(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/人/g, "person")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+}
+
+window.vocabularyBank = (window.vocabularyBank || []).map((item) => {
+  if (item.audioFile) return item;
+  const baseName = normalizeAudioBaseName(item.answer || "");
+  return {
+    ...item,
+    audioFile: baseName ? `audio/${baseName}.mp3` : ""
+  };
+});
