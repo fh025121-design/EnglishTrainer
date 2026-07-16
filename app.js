@@ -1,6 +1,6 @@
 const STORAGE_KEY = "english-trainer-state-v1";
-let audioPlaybackActive = false;
 let currentAudio = null;
+let lastAutoPlayedAudioKey = "";
 const LEVEL_DEFINITIONS = [
   { level: 1, label: "要特訓", icon: "🔥" },
   { level: 2, label: "あと一歩", icon: "⚠️" },
@@ -1474,59 +1474,82 @@ function isCorrectAnswerForQuestion(question, normalizedInput) {
   return normalizedInput === normalizedCorrect;
 }
 
-function setAudioIconVisible(visible) {
-  const questionIcon = document.getElementById("audioPlaybackIcon");
-  const reviewIcon = document.getElementById("reviewAudioPlaybackIcon");
-  if (questionIcon) questionIcon.classList.toggle("is-playing", Boolean(visible));
-  if (reviewIcon) reviewIcon.classList.toggle("is-playing", Boolean(visible));
+function stopCurrentAudio() {
+  if (!currentAudio) return;
+
+  try {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+  } catch (error) {
+    console.error("Audio stop failed:", error);
+  }
+
+  currentAudio = null;
 }
 
-function playAudio(file, onComplete) {
-  const audioFile = String(file || "").trim();
-  if (!audioFile) {
-    console.error("音声ファイルがありません");
-    if (onComplete) onComplete();
+function playQuestionAudio(question, onComplete) {
+  const questionId = String(question?.id || "").trim();
+
+  if (!questionId) {
+    if (typeof onComplete === "function") onComplete();
     return false;
   }
 
-  audioPlaybackActive = true;
-  setAudioIconVisible(true);
+  stopCurrentAudio();
 
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.currentTime = 0;
+  const audio = new Audio(`audio/${encodeURIComponent(questionId)}.mp3`);
+  currentAudio = audio;
+  audio.preload = "auto";
+  audio.volume = 1;
+  audio.playbackRate = 1;
+
+  let completed = false;
+
+  const finishOnce = () => {
+    if (completed) return;
+    completed = true;
+
+    if (currentAudio === audio) {
+      currentAudio = null;
+    }
+
+    if (typeof onComplete === "function") {
+      onComplete();
+    }
+  };
+
+  audio.addEventListener("ended", finishOnce, { once: true });
+  audio.addEventListener(
+    "error",
+    () => {
+      console.error("MP3 audio could not be played:", questionId, audio.src);
+      finishOnce();
+    },
+    { once: true }
+  );
+
+  const playPromise = audio.play();
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch((error) => {
+      console.error("MP3 playback failed:", error);
+      finishOnce();
+    });
   }
 
-  currentAudio = new Audio(audioFile);
-
-  const finish = () => {
-    audioPlaybackActive = false;
-    setAudioIconVisible(false);
-    currentAudio = null;
-    if (onComplete) onComplete();
-  };
-
-  currentAudio.onended = finish;
-  currentAudio.onerror = () => {
-    console.error("Audio Error", audioFile);
-    finish();
-  };
-
-  currentAudio.play().catch((error) => {
-    console.error("Audio play failed", audioFile, error);
-    finish();
-  });
   return true;
 }
 
-function getQuestionAudioFile(question) {
-  return question?.audioFile || "";
-}
+function autoPlayQuestionAudio(question, session) {
+  const key = [
+    session?.mode || "",
+    session?.phase || "",
+    session?.currentIndex ?? "",
+    question?.id || ""
+  ].join(":");
 
-function getCurrentQuestionSpeechText() {
-  const current = state?.session?.currentQuestion;
-  if (!current) return "";
-  return getQuestionAudioFile(current);
+  if (!question?.id || key === lastAutoPlayedAudioKey) return;
+  lastAutoPlayedAudioKey = key;
+  playQuestionAudio(question);
 }
 
 function isMobileDevice() {
@@ -2456,7 +2479,6 @@ function renderQuestionSession() {
     : "";
   feedbackBox.className = "feedback-box hidden";
   feedbackBox.innerHTML = "";
-  setAudioIconVisible(false);
   nextQuestionBtn.classList.add("hidden");
   input.value = "";
   input.disabled = false;
@@ -2492,6 +2514,7 @@ function renderQuestionSession() {
   session.currentQuestionAttempted = false;
   session.currentQuestionState = "idle";
   session.currentQuestion = question;
+  autoPlayQuestionAudio(question, session);
 }
 
 function renderReviewSession() {
@@ -2530,7 +2553,6 @@ function renderReviewSession() {
     : "";
   reviewFeedbackBox.className = "feedback-box hidden";
   reviewFeedbackBox.innerHTML = "";
-  setAudioIconVisible(false);
   reviewNextBtn.classList.add("hidden");
   input.value = "";
   input.disabled = false;
@@ -2566,6 +2588,7 @@ function renderReviewSession() {
   session.currentQuestionAttempted = false;
   session.currentQuestionState = "idle";
   session.currentQuestion = question;
+  autoPlayQuestionAudio(question, session);
 }
 
 function handleEnterKey(event) {
@@ -2594,7 +2617,7 @@ function handleEnterKey(event) {
   event.preventDefault();
   event.stopPropagation();
   if (session.currentQuestion) {
-    playAudio(getQuestionAudioFile(session.currentQuestion));
+    playQuestionAudio(session.currentQuestion);
   }
   advanceToNextQuestion();
 }
@@ -2635,7 +2658,7 @@ function handleReplayAndAdvance(question) {
   session.enterConsumed = true;
   session.awaitingEnter = false;
   if (question) {
-    playAudio(getQuestionAudioFile(question));
+    playQuestionAudio(question);
   }
   advanceToNextQuestion();
 }
@@ -2803,11 +2826,11 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
         showLevelUpModal(item);
       }
       if (mobileCorrectAutoAdvance) {
-        playAudio(getQuestionAudioFile(question), () => {
+        playQuestionAudio(question, () => {
           advanceToNextQuestion();
         });
       } else {
-        playAudio(getQuestionAudioFile(question));
+        playQuestionAudio(question);
       }
       return;
     }
@@ -2887,11 +2910,11 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   }
 
   if (mobileCorrectAutoAdvance) {
-    playAudio(getQuestionAudioFile(question), () => {
+    playQuestionAudio(question, () => {
       advanceToNextQuestion();
     });
   } else {
-    playAudio(getQuestionAudioFile(question));
+    playQuestionAudio(question);
   }
 }
 
@@ -3124,21 +3147,7 @@ function bindEvents() {
   const speechTestBtn = document.getElementById("speechTestBtn");
   if (speechTestBtn) {
     speechTestBtn.addEventListener("click", () => {
-      playAudio("audio/apple.mp3");
-    });
-  }
-
-  const questionAudioBtn = document.getElementById("audioPlaybackIcon");
-  if (questionAudioBtn) {
-    questionAudioBtn.addEventListener("click", () => {
-      playAudio(getCurrentQuestionSpeechText());
-    });
-  }
-
-  const reviewAudioBtn = document.getElementById("reviewAudioPlaybackIcon");
-  if (reviewAudioBtn) {
-    reviewAudioBtn.addEventListener("click", () => {
-      playAudio(getCurrentQuestionSpeechText());
+      playQuestionAudio({ id: "apple" });
     });
   }
 
