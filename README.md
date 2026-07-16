@@ -45,4 +45,4 @@ For future updates, only push your changes to GitHub. The workflow redeploys aut
 - Do not clear/reset saved state on deploy.
 - Existing migration/sanitization logic in `loadState()` must be kept so older saved data remains readable.
 
-When data formats are extended, add backward-compatible migration in `loadState()` and related `sanitize*` functions instead of replacing or deleting saved data.abc
+When data formats are extended, add backward-compatible migration in `loadState()` and related `sanitize*` functions instead of replacing or deleting saved data.

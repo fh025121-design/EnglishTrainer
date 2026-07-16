@@ -870,6 +870,10 @@ select {
   margin-top: 4px;
 }
 
+.mobile-answer-btn {
+  display: none;
+}
+
 .answer-input {
   flex: 1 1 280px;
   padding: 10px 14px;
@@ -1409,6 +1413,14 @@ select {
   .topbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .mobile-answer-btn {
+    display: block;
+    width: 100%;
+    min-height: 62px;
+    font-size: 1.2rem;
+    font-weight: 800;
   }
 
 }
