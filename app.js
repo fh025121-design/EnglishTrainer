@@ -1535,9 +1535,14 @@ function speakEnglish(text, onComplete) {
   }
 
   let settled = false;
+  let fallbackTimerId = null;
   const finish = () => {
     if (settled) return;
     settled = true;
+    if (fallbackTimerId !== null) {
+      window.clearTimeout(fallbackTimerId);
+      fallbackTimerId = null;
+    }
     audioPlaybackActive = false;
     setAudioIconVisible(false);
     if (onComplete) onComplete();
@@ -1552,6 +1557,8 @@ function speakEnglish(text, onComplete) {
   try {
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
+    const fallbackDelay = Math.max(1400, Math.min(3200, speakText.length * 80 + 600));
+    fallbackTimerId = window.setTimeout(finish, fallbackDelay);
   } catch (error) {
     console.error("Speech synthesis speak failed:", error);
     finish();
@@ -2505,6 +2512,11 @@ function renderQuestionSession() {
   if (answerBtn) {
     answerBtn.onclick = (event) => {
       event.preventDefault();
+      const activeSession = state.session;
+      if (activeSession?.answered && activeSession.awaitingEnter) {
+        handleReplayAndAdvance(activeSession.currentQuestion);
+        return;
+      }
       submitCurrentAnswer();
     };
   }
@@ -2572,6 +2584,11 @@ function renderReviewSession() {
   if (answerBtn) {
     answerBtn.onclick = (event) => {
       event.preventDefault();
+      const activeSession = state.session;
+      if (activeSession?.answered && activeSession.awaitingEnter) {
+        handleReplayAndAdvance(activeSession.currentQuestion);
+        return;
+      }
       submitCurrentAnswer();
     };
   }
@@ -2607,7 +2624,7 @@ function handleEnterKey(event) {
     }
   }
   const session = state.session;
-  if (!session || !session.answered || !session.awaitingEnter || session.enterLocked || audioPlaybackActive) {
+  if (!session || !session.answered || !session.awaitingEnter || session.enterLocked) {
     return;
   }
   if (session.enterLockUntil && Date.now() < session.enterLockUntil) {
@@ -2620,8 +2637,18 @@ function handleEnterKey(event) {
 
 function handleReplayAndAdvance(question) {
   const session = state.session;
-  if (!session || !session.answered || !session.awaitingEnter || session.enterLocked || session.enterConsumed || audioPlaybackActive) {
+  if (!session || !session.answered || !session.awaitingEnter || session.enterLocked || session.enterConsumed) {
     return;
+  }
+
+  if (audioPlaybackActive && "speechSynthesis" in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (error) {
+      console.error("Speech synthesis cancel failed:", error);
+    }
+    audioPlaybackActive = false;
+    setAudioIconVisible(false);
   }
 
   session.enterLocked = true;
