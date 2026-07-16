@@ -1275,9 +1275,26 @@ select {
 }
 
 .audio-icon {
-  font-size: 0.95rem;
-  line-height: 1;
+  appearance: none;
+  border: 1px solid rgba(94, 214, 214, 0.35);
+  background: rgba(94, 214, 214, 0.08);
   color: var(--accent);
+  font-size: 0.9rem;
+  line-height: 1.1;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.audio-icon.is-playing {
+  background: rgba(94, 214, 214, 0.18);
+  border-color: rgba(94, 214, 214, 0.6);
+}
+
+.audio-icon:focus-visible {
+  outline: 2px solid rgba(94, 214, 214, 0.45);
+  outline-offset: 2px;
 }
 
 .helper-text {

@@ -1,5 +1,7 @@
 const STORAGE_KEY = "english-trainer-state-v1";
 let audioPlaybackActive = false;
+let speechVoicesCache = [];
+let speechVoicesInitialized = false;
 const LEVEL_DEFINITIONS = [
   { level: 1, label: "要特訓", icon: "🔥" },
   { level: 2, label: "あと一歩", icon: "⚠️" },
@@ -1063,7 +1065,8 @@ const defaultState = {
     completedSessions: [],
     pendingSessionNotice: "",
     gameTicket: createDefaultGameTicketStats(),
-    pendingGameTicket: null
+    pendingGameTicket: null,
+    savedNormalSession: null
   },
   items: buildVocabularyItems(),
   session: null
@@ -1096,6 +1099,7 @@ function loadState() {
       : "";
     mergedState.stats.gameTicket = sanitizeGameTicketStats(parsed.stats?.gameTicket);
     mergedState.stats.pendingGameTicket = sanitizePendingGameTicket(parsed.stats?.pendingGameTicket);
+    mergedState.stats.savedNormalSession = sanitizeStoredSession(parsed.stats?.savedNormalSession);
     mergedState.review = {
       ...mergedState.review,
       ...(parsed.review || {})
@@ -1473,45 +1477,98 @@ function isCorrectAnswerForQuestion(question, normalizedInput) {
 function setAudioIconVisible(visible) {
   const questionIcon = document.getElementById("audioPlaybackIcon");
   const reviewIcon = document.getElementById("reviewAudioPlaybackIcon");
-  if (questionIcon) questionIcon.classList.toggle("hidden", !visible);
-  if (reviewIcon) reviewIcon.classList.toggle("hidden", !visible);
+  if (questionIcon) questionIcon.classList.toggle("is-playing", Boolean(visible));
+  if (reviewIcon) reviewIcon.classList.toggle("is-playing", Boolean(visible));
 }
 
-function playPronunciation(text, onComplete) {
-  if (!window.speechSynthesis) {
+function refreshSpeechVoices() {
+  if (!("speechSynthesis" in window)) return [];
+  try {
+    const voices = window.speechSynthesis.getVoices();
+    speechVoicesCache = Array.isArray(voices) ? voices : [];
+  } catch (error) {
+    console.error("Failed to read speech voices:", error);
+    speechVoicesCache = [];
+  }
+  return speechVoicesCache;
+}
+
+function initSpeechVoices() {
+  if (speechVoicesInitialized || !("speechSynthesis" in window)) return;
+  speechVoicesInitialized = true;
+  refreshSpeechVoices();
+  window.speechSynthesis.addEventListener("voiceschanged", () => {
+    refreshSpeechVoices();
+  });
+}
+
+function getPreferredEnglishVoice() {
+  const voices = refreshSpeechVoices();
+  return voices.find((voice) => String(voice?.lang || "").toLowerCase().startsWith("en"));
+}
+
+function speakEnglish(text, onComplete) {
+  const speakText = String(text || "").trim();
+  if (!speakText) {
+    if (onComplete) onComplete();
+    return false;
+  }
+  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+    console.error("Speech synthesis is not available on this device.");
     if (onComplete) onComplete();
     return false;
   }
 
-  if (audioPlaybackActive) {
-    if (onComplete) {
-      window.setTimeout(onComplete, 0);
-    }
-    return false;
-  }
-
+  initSpeechVoices();
   audioPlaybackActive = true;
   setAudioIconVisible(true);
-  const utterance = new SpeechSynthesisUtterance(text);
+
+  const utterance = new SpeechSynthesisUtterance(speakText);
   utterance.lang = "en-US";
-  utterance.rate = 0.95;
+  utterance.rate = 0.85;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  const englishVoice = getPreferredEnglishVoice();
+  if (englishVoice) {
+    utterance.voice = englishVoice;
+  }
 
   let settled = false;
   const finish = () => {
     if (settled) return;
     settled = true;
     audioPlaybackActive = false;
+    setAudioIconVisible(false);
     if (onComplete) onComplete();
   };
 
   utterance.onend = finish;
-  utterance.onerror = finish;
+  utterance.onerror = (event) => {
+    console.error("Speech synthesis error:", event?.error || event);
+    finish();
+  };
 
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
-  const fallbackDelay = Math.max(1200, Math.min(3000, text.length * 80 + 600));
-  window.setTimeout(finish, fallbackDelay);
+  try {
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  } catch (error) {
+    console.error("Speech synthesis speak failed:", error);
+    finish();
+    return false;
+  }
+
   return true;
+}
+
+function playPronunciation(text, onComplete) {
+  return speakEnglish(text, onComplete);
+}
+
+function getCurrentQuestionSpeechText() {
+  const current = state?.session?.currentQuestion;
+  if (!current) return "";
+  return current.audio || current.answer || current.english || "";
 }
 
 function finalizeIfCurrentPhaseCompleted(sessionLike, options = {}) {
@@ -1717,13 +1774,33 @@ function renderHome() {
   if (resumeSessionBtn) resumeSessionBtn.classList.toggle("hidden", !hasActiveSession);
   if (resumeSessionMetaText && state.session) resumeSessionMetaText.textContent = getSessionResumeMetaText(state.session);
   if (progressMasterCount) progressMasterCount.textContent = state.stats.masterCount;
-  if (advanceBtn) advanceBtn.disabled = hasActiveSession;
-  if (daySelectWordBtn) daySelectWordBtn.disabled = hasActiveSession;
-  if (daySelectPhraseBtn) daySelectPhraseBtn.disabled = hasActiveSession;
-  if (challengeBtn) challengeBtn.disabled = hasActiveSession || getChallengePool().length === 0;
+  if (advanceBtn) advanceBtn.disabled = false;
+  if (daySelectWordBtn) daySelectWordBtn.disabled = false;
+  if (daySelectPhraseBtn) daySelectPhraseBtn.disabled = false;
+  if (challengeBtn) challengeBtn.disabled = false;
   renderLevelCollection();
   renderRecentProgressTop5();
   renderHomeMessage();
+}
+
+function hasSavedNormalSession() {
+  const restored = sanitizeStoredSession(state?.stats?.savedNormalSession);
+  return Boolean(restored && restored.mode === "normal");
+}
+
+function stashNormalSessionIfNeeded(sessionLike) {
+  if (!sessionLike || sessionLike.mode !== "normal") return;
+  if (sessionLike.isSessionCompleted || sessionLike.isFinishingSession) return;
+  pauseSessionClock(sessionLike);
+  state.stats.savedNormalSession = structuredClone(sessionLike);
+}
+
+function restoreSavedNormalSession() {
+  const restored = sanitizeStoredSession(state?.stats?.savedNormalSession);
+  if (!restored || restored.mode !== "normal") return false;
+  state.session = restored;
+  state.stats.savedNormalSession = null;
+  return true;
 }
 
 function showScreen(screenId, options = {}) {
@@ -2224,9 +2301,28 @@ function startNextLevelFocusBatch(level) {
 }
 
 function prepareSession(mode, options = {}) {
-  if (!options.resumeExisting && state.session) {
+  if (options.resumeExisting && state.session) {
     resumeActiveSession();
     return;
+  }
+
+  if (state.session) {
+    const switchingToDifferentMode = state.session.mode !== mode;
+    if (switchingToDifferentMode) {
+      stashNormalSessionIfNeeded(state.session);
+      state.session = null;
+    } else if (!options.forceNewSession) {
+      resumeActiveSession();
+      return;
+    }
+  }
+
+  if (mode === "normal" && !options.customPool && !options.forceNewSession) {
+    if (restoreSavedNormalSession()) {
+      saveState();
+      resumeActiveSession();
+      return;
+    }
   }
 
   const itemsSynced = ensureItemsSyncedWithVocabularyBank();
@@ -2381,6 +2477,7 @@ function renderQuestionSession() {
   const nextQuestionBtn = document.getElementById("nextQuestionBtn");
   const input = questionCard.querySelector(".answer-input");
   const form = questionCard.querySelector(".answer-form");
+  const answerBtn = questionCard.querySelector(".mobile-answer-btn");
 
   questionCounter.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
   if (questionPhaseText) questionPhaseText.textContent = formatPhaseProgressText(session);
@@ -2398,10 +2495,19 @@ function renderQuestionSession() {
   input.value = "";
   input.disabled = false;
   input.placeholder = question.type === "phrase" ? "空欄の英語だけ入力" : "英語を入力してください";
-  form.onsubmit = (event) => {
-    event.preventDefault();
+  const submitCurrentAnswer = () => {
     submitAnswer(question, input.value, feedbackBox, nextQuestionBtn, questionCard);
   };
+  form.onsubmit = (event) => {
+    event.preventDefault();
+    submitCurrentAnswer();
+  };
+  if (answerBtn) {
+    answerBtn.onclick = (event) => {
+      event.preventDefault();
+      submitCurrentAnswer();
+    };
+  }
   if (reviewCard) reviewCard.classList.add("hidden");
   questionCard.classList.remove("hidden");
   animateQuestionCard(questionCard);
@@ -2438,6 +2544,7 @@ function renderReviewSession() {
   const reviewNextBtn = document.getElementById("reviewNextBtn");
   const input = reviewCard.querySelector(".answer-input");
   const form = reviewCard.querySelector(".answer-form");
+  const answerBtn = reviewCard.querySelector(".mobile-answer-btn");
 
   reviewCounter.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
   if (reviewPhaseText) reviewPhaseText.textContent = formatPhaseProgressText(session);
@@ -2455,10 +2562,19 @@ function renderReviewSession() {
   input.value = "";
   input.disabled = false;
   input.placeholder = question.type === "phrase" ? "空欄の英語だけ入力" : "英語を入力してください";
-  form.onsubmit = (event) => {
-    event.preventDefault();
+  const submitCurrentAnswer = () => {
     submitAnswer(question, input.value, reviewFeedbackBox, reviewNextBtn, reviewCard);
   };
+  form.onsubmit = (event) => {
+    event.preventDefault();
+    submitCurrentAnswer();
+  };
+  if (answerBtn) {
+    answerBtn.onclick = (event) => {
+      event.preventDefault();
+      submitCurrentAnswer();
+    };
+  }
   if (questionCard) questionCard.classList.add("hidden");
   reviewCard.classList.remove("hidden");
   animateQuestionCard(reviewCard);
@@ -2609,6 +2725,10 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   const trimmedAnswer = rawAnswer.trim();
   if (!trimmedAnswer) {
     const input = card.querySelector(".answer-input");
+    if (feedbackBox) {
+      feedbackBox.className = "feedback-box error";
+      feedbackBox.innerHTML = "<strong>入力してください</strong><span class=\"hint\">英語を入力してから回答してください</span>";
+    }
     if (input) {
       input.focus();
     }
@@ -2996,9 +3116,35 @@ function bindEvents() {
     });
   }
 
+  const questionAudioBtn = document.getElementById("audioPlaybackIcon");
+  if (questionAudioBtn) {
+    questionAudioBtn.addEventListener("click", () => {
+      const text = getCurrentQuestionSpeechText();
+      speakEnglish(text);
+    });
+  }
+
+  const reviewAudioBtn = document.getElementById("reviewAudioPlaybackIcon");
+  if (reviewAudioBtn) {
+    reviewAudioBtn.addEventListener("click", () => {
+      const text = getCurrentQuestionSpeechText();
+      speakEnglish(text);
+    });
+  }
+
   const daySelectWordBtn = document.getElementById("daySelectWordBtn");
   if (daySelectWordBtn) {
     daySelectWordBtn.addEventListener("click", () => {
+      if (state.session?.mode === "normal") {
+        resumeActiveSession();
+        return;
+      }
+      if (hasSavedNormalSession()) {
+        restoreSavedNormalSession();
+        saveState();
+        resumeActiveSession();
+        return;
+      }
       renderDayCatalog();
       showScreen("dayCatalogScreen");
     });
@@ -3139,6 +3285,7 @@ function bindEvents() {
 let state = loadState();
 
 function init() {
+  initSpeechVoices();
   const itemsSynced = ensureItemsSyncedWithVocabularyBank();
   clampStudyRangeToAvailableDays();
   autoCompleteStaleSessionIfNeeded();
