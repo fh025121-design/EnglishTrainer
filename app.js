@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 03:57", note: "ホーム画面のゲームチケット表示を整理・直近3日間の正答率集計を修正" },
     { version: "2026/07/18 03:32", note: "PC版ゲームチケット機能を新仕様へ全面更新・所持一覧と使用履歴を追加" },
     { version: "2026/07/18 02:27", note: "苦手克服の出題順を改善・レベル1・未出題・直前の誤答を優先するよう変更" },
     { version: "2026/07/18 02:06", note: "苦手克服を5問単位で繰り返せるよう改善・「さらに5問挑戦」「今日はここまで」を追加" },
@@ -194,10 +195,12 @@ function sanitizeGameTicketStats(value) {
 }
 
 function isDesktopGameTicketEnabled() {
+  const hasWideViewport = typeof window !== "undefined" ? Number(window.innerWidth) > 860 : true;
   if (typeof shouldUseDesktopAutoAudioFlow === "function") {
-    return shouldUseDesktopAutoAudioFlow();
+    if (shouldUseDesktopAutoAudioFlow()) return true;
+    return hasWideViewport;
   }
-  return true;
+  return hasWideViewport;
 }
 
 function ensureGameTicketState() {
@@ -722,14 +725,14 @@ function getRemainingTicketDays(expiresAt) {
 }
 
 function renderGameTicketHomePanel() {
-  const panel = document.getElementById("gameTicketPanel");
+  const button = document.getElementById("openGameTicketHubBtn");
   const inventoryList = document.getElementById("gameTicketInventoryList");
   const totalText = document.getElementById("gameTicketTotalText");
   const usageList = document.getElementById("gameTicketUsageHistoryList");
-  if (!panel || !inventoryList || !totalText || !usageList) return;
+  if (!button || !inventoryList || !totalText || !usageList) return;
 
   if (!isDesktopGameTicketEnabled()) {
-    panel.classList.add("hidden");
+    button.classList.add("hidden");
     return;
   }
 
@@ -774,7 +777,16 @@ function renderGameTicketHomePanel() {
     ? usageRows.map((entry) => `<li class="game-ticket-history-item"><span>${formatMonthDayFromTimestamp(entry.usedAt)} ${entry.minutes}分券</span><span>× ${entry.count}</span></li>`).join("")
     : '<li class="empty-state">まだ使用履歴はありません</li>';
 
-  panel.classList.remove("hidden");
+  button.classList.remove("hidden");
+}
+
+function openGameTicketHubModal() {
+  if (!isDesktopGameTicketEnabled()) return;
+  renderGameTicketHomePanel();
+  const modal = document.getElementById("gameTicketHubModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
 }
 
 function openGameTicketUseModal(minutes) {
@@ -1087,22 +1099,57 @@ function buildRecentThreeDayRows() {
   return rows;
 }
 
-function getRecentAccuracyByDateMap() {
-  const byDate = {};
-  recentDayProgressUpdates.forEach((entry) => {
-    if (!entry || !entry.at) return;
-    const key = formatDateKey(new Date(entry.at));
-    if (!byDate[key]) byDate[key] = [];
-    byDate[key].push(Number(entry.accuracy) || 0);
-  });
+function createDefaultDailyPerformanceEntry() {
+  return {
+    questionCount: 0,
+    correctCount: 0
+  };
+}
 
+function sanitizeDailyPerformanceByDate(value) {
+  const source = value && typeof value === "object" ? value : {};
   const result = {};
-  Object.entries(byDate).forEach(([key, values]) => {
-    if (!values.length) return;
-    const total = values.reduce((sum, value) => sum + value, 0);
-    result[key] = Math.round(total / values.length);
+  Object.entries(source).forEach(([key, entry]) => {
+    if (!key || !entry || typeof entry !== "object") return;
+    const questionCount = Math.max(0, Math.round(Number(entry.questionCount) || 0));
+    const correctCount = Math.max(0, Math.min(questionCount, Math.round(Number(entry.correctCount) || 0)));
+    if (!questionCount && !correctCount) return;
+    result[key] = { questionCount, correctCount };
   });
   return result;
+}
+
+function buildLegacyDailyPerformanceByDate(sessions) {
+  const result = {};
+  (sessions || []).forEach((entry) => {
+    if (!entry?.dayKey) return;
+    const questionCount = Math.max(0, Math.round(Number(entry.questionCount) || 0));
+    if (!questionCount) return;
+    const derivedCorrectCount = Number.isFinite(Number(entry.correctCount))
+      ? Math.max(0, Math.min(questionCount, Math.round(Number(entry.correctCount))))
+      : Math.max(0, Math.min(questionCount, Math.round(questionCount * ((Number(entry.accuracy) || 0) / 100))));
+    const current = result[entry.dayKey] || createDefaultDailyPerformanceEntry();
+    current.questionCount += questionCount;
+    current.correctCount += derivedCorrectCount;
+    result[entry.dayKey] = current;
+  });
+  return result;
+}
+
+function ensureDailyPerformanceEntry(dayKey) {
+  state.stats.dailyPerformanceByDate = sanitizeDailyPerformanceByDate(state.stats.dailyPerformanceByDate);
+  if (!state.stats.dailyPerformanceByDate[dayKey]) {
+    state.stats.dailyPerformanceByDate[dayKey] = createDefaultDailyPerformanceEntry();
+  }
+  return state.stats.dailyPerformanceByDate[dayKey];
+}
+
+function recordDailyPerformance(isCorrect, dayKey = todayKey()) {
+  const entry = ensureDailyPerformanceEntry(dayKey);
+  entry.questionCount += 1;
+  if (isCorrect) {
+    entry.correctCount = Math.min(entry.questionCount, entry.correctCount + 1);
+  }
 }
 
 function getAccuracyToneClass(accuracy) {
@@ -1128,50 +1175,40 @@ function buildAccuracyEvaluationMarkup(accuracy, wrapperClass = "recent-accuracy
 }
 
 function getDailySessionAggregate(dayKey) {
+  const dailyPerformanceByDate = sanitizeDailyPerformanceByDate(state.stats.dailyPerformanceByDate);
+  state.stats.dailyPerformanceByDate = dailyPerformanceByDate;
   const sessions = Array.isArray(state.stats.completedSessions) ? state.stats.completedSessions : [];
   const targetSessions = sessions.filter((entry) => entry.dayKey === dayKey);
   const totals = targetSessions.reduce((acc, entry) => {
     acc.count += 1;
     acc.durationMinutes += Math.max(0, Number(entry.durationMinutes) || 0);
-    acc.questionCount += Math.max(0, Number(entry.questionCount) || 0);
-    acc.weightedAccuracy += (Number(entry.accuracy) || 0) * Math.max(1, Number(entry.questionCount) || 0);
-    acc.weight += Math.max(1, Number(entry.questionCount) || 0);
     return acc;
   }, {
     count: 0,
     durationMinutes: 0,
-    questionCount: 0,
-    weightedAccuracy: 0,
-    weight: 0
+    questionCount: Math.max(0, Number(dailyPerformanceByDate[dayKey]?.questionCount) || 0),
+    correctCount: Math.max(0, Number(dailyPerformanceByDate[dayKey]?.correctCount) || 0)
   });
 
   const activeSession = state.session;
   if (activeSession && getSessionStartDayKey(activeSession) === dayKey) {
-    const activeAnswerCount = Math.max(0, Number(activeSession.answerCount) || 0);
-    const activeCorrectCount = Array.isArray(activeSession.answerHistory)
-      ? activeSession.answerHistory.filter((entry) => entry?.isCorrect).length
-      : 0;
     const activeDurationMinutes = Math.max(0, Math.round(getSessionElapsedMs(activeSession) / 60000));
-    const activeAccuracy = activeAnswerCount > 0
-      ? Math.round((activeCorrectCount / activeAnswerCount) * 100)
-      : null;
-
-    if (activeAnswerCount > 0 || activeDurationMinutes > 0) {
+    if (totals.questionCount > 0 || activeDurationMinutes > 0) {
       totals.count += 1;
       totals.durationMinutes += activeDurationMinutes;
-      totals.questionCount += activeAnswerCount;
-      if (typeof activeAccuracy === "number") {
-        totals.weightedAccuracy += activeAccuracy * Math.max(1, activeAnswerCount);
-        totals.weight += Math.max(1, activeAnswerCount);
-      }
     }
   }
+
+  const averageAccuracy = totals.questionCount > 0
+    ? Math.max(0, Math.min(100, Math.round((totals.correctCount / totals.questionCount) * 100)))
+    : null;
 
   return {
     count: totals.count,
     durationMinutes: totals.durationMinutes,
     questionCount: totals.questionCount,
-    averageAccuracy: totals.weight ? Math.round(totals.weightedAccuracy / totals.weight) : null
+    correctCount: totals.correctCount,
+    averageAccuracy
   };
 }
 
@@ -1469,15 +1506,13 @@ function renderHomeMessage() {
 
   const learnedCount = getLearnedItemCount();
   const recentRows = buildRecentThreeDayRows();
-  const solvedByDay = state.stats.solvedByDay || {};
-  const recentAccuracyByDate = getRecentAccuracyByDateMap();
   const todayAggregate = getDailySessionAggregate(todayKey());
   const dayLabelCells = [recentDayLabel1, recentDayLabel2, recentDayLabel3];
   const solvedCells = [recentSolved1, recentSolved2, recentSolved3];
   const accuracyCells = [recentAccuracy1, recentAccuracy2, recentAccuracy3];
 
   learnedCountText.textContent = `📚 ${learnedCount} / 1000語 学習済み`;
-  streakFooterText.textContent = `🔥 ${state.stats.streak || 0}日連続`;
+  streakFooterText.textContent = `🔥 ${state.stats.streak || 0}日連続継続中`;
   studyRangeFooterText.textContent = `学習中：Day${state.settings.studyRange.start}～${state.settings.studyRange.end}`;
   remainFooterText.textContent = `🎯 1000語まであと${Math.max(0, 1000 - learnedCount)}語`;
   todaySessionCountText.textContent = `📘 学習回数 ${todayAggregate.count}回`;
@@ -1486,12 +1521,11 @@ function renderHomeMessage() {
   todayAverageAccuracyText.textContent = `📈 平均正答率 ${Number.isFinite(todayAggregate.averageAccuracy) ? `${todayAggregate.averageAccuracy}%` : "-"}`;
 
   recentRows.forEach((row, index) => {
-    const solved = solvedByDay[row.key];
-    const accuracy = recentAccuracyByDate[row.key];
-    const solvedText = Number.isFinite(solved) && solved > 0 ? String(solved) : "-";
+    const aggregate = getDailySessionAggregate(row.key);
+    const solvedText = Number.isFinite(aggregate.questionCount) && aggregate.questionCount > 0 ? String(aggregate.questionCount) : "-";
     dayLabelCells[index].textContent = row.label || "-";
     solvedCells[index].textContent = solvedText;
-    accuracyCells[index].innerHTML = buildAccuracyEvaluationMarkup(accuracy);
+    accuracyCells[index].innerHTML = buildAccuracyEvaluationMarkup(aggregate.averageAccuracy);
   });
 }
 
@@ -1578,6 +1612,7 @@ const defaultState = {
     lastSolvedDate: "",
     totalSolvedQuestions: 0,
     solvedByDay: {},
+    dailyPerformanceByDate: {},
     dayBestAccuracy: {},
     previousSessionWeakQuestionIds: [],
     lastResultSummary: null,
@@ -1609,6 +1644,9 @@ function loadState() {
     mergedState.stats.completedSessions = Array.isArray(parsed.stats?.completedSessions)
       ? parsed.stats.completedSessions.map(sanitizeCompletedSessionEntry).filter(Boolean)
       : [];
+    mergedState.stats.dailyPerformanceByDate = Object.keys(parsed.stats?.dailyPerformanceByDate || {}).length
+      ? sanitizeDailyPerformanceByDate(parsed.stats?.dailyPerformanceByDate)
+      : buildLegacyDailyPerformanceByDate(mergedState.stats.completedSessions);
     mergedState.stats.previousSessionWeakQuestionIds = Array.isArray(parsed.stats?.previousSessionWeakQuestionIds)
       ? parsed.stats.previousSessionWeakQuestionIds.map((id) => String(id))
       : [];
@@ -1818,6 +1856,7 @@ function sanitizeCompletedSessionEntry(entry) {
   if (!entry || typeof entry !== "object") return null;
   const accuracy = Number(entry.accuracy);
   const questionCount = Number(entry.questionCount);
+  const correctCount = Number(entry.correctCount);
   const durationMinutes = Number(entry.durationMinutes);
   return {
     dayKey: typeof entry.dayKey === "string" ? entry.dayKey : todayKey(),
@@ -1826,6 +1865,7 @@ function sanitizeCompletedSessionEntry(entry) {
     title: typeof entry.title === "string" ? entry.title : "学習結果",
     accuracy: Number.isFinite(accuracy) ? Math.max(0, Math.min(100, Math.round(accuracy))) : 0,
     questionCount: Number.isFinite(questionCount) ? Math.max(0, Math.round(questionCount)) : 0,
+    correctCount: Number.isFinite(correctCount) ? Math.max(0, Math.round(correctCount)) : null,
     durationMinutes: Number.isFinite(durationMinutes) ? Math.max(0, Math.round(durationMinutes)) : 0,
     interrupted: Boolean(entry.interrupted)
   };
@@ -2499,7 +2539,6 @@ function renderHome() {
   if (daySelectPhraseBtn) daySelectPhraseBtn.disabled = false;
   if (challengeBtn) challengeBtn.disabled = false;
   renderGameTicketHomePanel();
-  renderHomeUpdateHistory();
   renderLevelCollection();
   renderRecentProgressTop5();
   renderHomeMessage();
@@ -2826,6 +2865,7 @@ function appendCompletedSession(summary) {
     title: summary.title,
     accuracy: summary.accuracy,
     questionCount: summary.answerCount,
+    correctCount: summary.correctCount,
     durationMinutes: summary.durationMinutes,
     interrupted: summary.interrupted
   }));
@@ -3591,6 +3631,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     session.enterLockUntil = null;
 
     if (isCorrect) {
+      recordDailyPerformance(true);
       if (isNormalWeakFocusRun) {
         const weakFocusCorrectIds = new Set((session.weakFocusCurrentRoundCorrectIds || []).map((id) => String(id)));
         weakFocusCorrectIds.add(questionId);
@@ -3655,6 +3696,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
         session.wrongQuestionIds.push(questionIdKey);
       }
     }
+    recordDailyPerformance(false);
     if (isNormalWeakFocusRun) {
       const weakFocusWrongIds = new Set((session.weakFocusCurrentRoundWrongIds || []).map((id) => String(id)));
       weakFocusWrongIds.add(questionId);
@@ -3975,6 +4017,13 @@ function bindEvents() {
       if (!modal) return;
       modal.classList.add("hidden");
       modal.setAttribute("aria-hidden", "true");
+    });
+  }
+
+  const openGameTicketHubBtn = document.getElementById("openGameTicketHubBtn");
+  if (openGameTicketHubBtn) {
+    openGameTicketHubBtn.addEventListener("click", () => {
+      openGameTicketHubModal();
     });
   }
 

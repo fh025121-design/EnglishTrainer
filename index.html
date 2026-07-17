@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260718-0332" />
+    <link rel="stylesheet" href="styles.css?v=20260718-0357" />
   </head>
   <body>
     <div class="app-shell">
@@ -48,32 +48,11 @@
             </div>
           </div>
 
-          <div id="gameTicketPanel" class="panel home-ticket-panel hidden">
-            <div class="panel-title-row">
-              <h3>🎫 ゲームチケット</h3>
-              <span id="gameTicketTotalText" class="panel-pill">合計 0分</span>
-            </div>
-            <p class="game-ticket-description">
-              追加特訓や過去の間違いに取り組むと、ゲームチケットがもらえることがあります。
-            </p>
-            <p class="game-ticket-description">
-              チケットは毎日必ずもらえるものではありません。何度か頑張ったときに、たまたま出てくるボーナスです。
-            </p>
-            <p class="game-ticket-description">
-              通常の学習を1回行っただけでは、チケットの対象にはなりません。
-            </p>
-            <ul id="gameTicketInventoryList" class="game-ticket-list"></ul>
-            <div class="game-ticket-history-wrap">
-              <h4>🕒 最近使ったチケット</h4>
-              <ul id="gameTicketUsageHistoryList" class="game-ticket-history-list"></ul>
-            </div>
-          </div>
-
           <div class="panel home-message-bar">
             <p id="learnedCountText" class="home-message-text learned-count-text">📚 0 / 1000語 学習済み</p>
             <div class="home-divider" aria-hidden="true"></div>
             <div class="home-message-subrow">
-              <p id="streakFooterText" class="home-message-text footer-info-text">🔥 0日連続</p>
+              <p id="streakFooterText" class="home-message-text footer-info-text">🔥 0日連続継続中</p>
               <p id="studyRangeFooterText" class="home-message-text footer-info-text">学習中：Day1～1</p>
               <p id="remainFooterText" class="home-message-text footer-info-text">🎯 1000語まであと1000語</p>
             </div>
@@ -85,39 +64,38 @@
             </div>
             <div class="home-divider" aria-hidden="true"></div>
             <div class="recent-three-days-wrap">
-              <p class="home-message-text recent-three-title">📊 直近3日間の学習</p>
-              <table class="recent-three-table" aria-label="直近3日学習統計">
-                <thead>
-                  <tr>
-                    <th scope="col"></th>
-                    <th id="recentDayLabel1" scope="col">-</th>
-                    <th id="recentDayLabel2" scope="col">-</th>
-                    <th id="recentDayLabel3" scope="col">-</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <th scope="row">タイプ数</th>
-                    <td id="recentSolved1">-</td>
-                    <td id="recentSolved2">-</td>
-                    <td id="recentSolved3">-</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">正答率</th>
-                    <td id="recentAccuracy1">-</td>
-                    <td id="recentAccuracy2">-</td>
-                    <td id="recentAccuracy3">-</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="recent-three-days-main">
+                <p class="home-message-text recent-three-title">📊 直近3日間の学習</p>
+                <table class="recent-three-table" aria-label="直近3日学習統計">
+                  <thead>
+                    <tr>
+                      <th scope="col"></th>
+                      <th id="recentDayLabel1" scope="col">-</th>
+                      <th id="recentDayLabel2" scope="col">-</th>
+                      <th id="recentDayLabel3" scope="col">-</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">タイプ数</th>
+                      <td id="recentSolved1">-</td>
+                      <td id="recentSolved2">-</td>
+                      <td id="recentSolved3">-</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">正答率</th>
+                      <td id="recentAccuracy1">-</td>
+                      <td id="recentAccuracy2">-</td>
+                      <td id="recentAccuracy3">-</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <button id="openGameTicketHubBtn" class="secondary-btn home-ticket-icon-btn hidden" type="button">
+                <span class="home-ticket-icon-shape" aria-hidden="true">🎫</span>
+                <span class="home-ticket-icon-label">ゲーム<br>チケット</span>
+              </button>
             </div>
-          </div>
-
-          <div class="panel home-update-panel">
-            <div class="panel-title-row">
-              <h3>更新履歴</h3>
-            </div>
-            <ul id="homeUpdateHistoryList" class="home-update-history-list"></ul>
           </div>
         </section>
 
@@ -543,9 +521,40 @@
           </div>
         </div>
       </div>
+
+      <div id="gameTicketHubModal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop modal-backdrop-soft"></div>
+        <div class="modal-card game-ticket-hub-card" role="dialog" aria-modal="true" aria-labelledby="gameTicketHubTitle">
+          <div class="modal-header">
+            <div>
+              <p id="gameTicketHubTitle" class="level-up-eyebrow">🎫 ゲームチケット</p>
+              <p class="game-ticket-hub-note">PC版限定機能です</p>
+            </div>
+            <button class="ghost-btn modal-close-btn" type="button" data-close-modal="gameTicketHubModal">閉じる</button>
+          </div>
+          <p class="game-ticket-description game-ticket-hub-description">
+            追加特訓や過去の間違いに取り組むと、ゲームチケットがもらえることがあります。
+          </p>
+          <p class="game-ticket-description game-ticket-hub-description">
+            チケットは毎日必ずもらえるものではありません。何度か頑張ったときに、たまたま出てくるボーナスです。
+          </p>
+          <p class="game-ticket-description game-ticket-hub-description">
+            通常の学習を1回行っただけでは、チケットの対象にはなりません。
+          </p>
+          <div class="panel-title-row game-ticket-hub-total-row">
+            <h3>所持チケット</h3>
+            <span id="gameTicketTotalText" class="panel-pill">合計 0分</span>
+          </div>
+          <ul id="gameTicketInventoryList" class="game-ticket-list"></ul>
+          <div class="game-ticket-history-wrap">
+            <h4>🕒 最近使ったチケット</h4>
+            <ul id="gameTicketUsageHistoryList" class="game-ticket-history-list"></ul>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <script src="data.js?v=20260718-0332"></script>
-    <script src="app.js?v=20260718-0332"></script>
+    <script src="data.js?v=20260718-0357"></script>
+    <script src="app.js?v=20260718-0357"></script>
   </body>
 </html>

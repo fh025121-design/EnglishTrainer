@@ -149,11 +149,6 @@ p {
   font-weight: 700;
 }
 
-.home-update-panel {
-  margin-top: 12px;
-  padding: 14px 16px;
-}
-
 .home-ticket-panel {
   margin-top: 12px;
   padding: 16px 18px;
@@ -666,17 +661,23 @@ p {
 }
 
 .recent-three-days-wrap {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  column-gap: 36px;
+}
+
+.recent-three-days-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 10px;
+  min-width: 0;
 }
 
 .recent-three-title {
   color: rgba(214, 233, 252, 0.95);
-  font-size: 1.6rem;
+  font-size: 1.52rem;
   white-space: nowrap;
-  flex: 0 0 auto;
   line-height: 1.1;
 }
 
@@ -687,10 +688,9 @@ p {
 }
 
 .recent-three-table {
-  width: auto;
+  width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  flex: 1 1 auto;
 }
 
 .recent-three-table th,
@@ -711,15 +711,60 @@ p {
 
 .recent-three-table thead th:not(:first-child),
 .recent-three-table tbody td {
-  width: 26%;
+  width: 33.333%;
 }
 
 .recent-three-table th:first-child,
 .recent-three-table tbody th {
-  text-align: left;
-  width: 22%;
+  display: none;
+}
+
+.home-ticket-icon-btn {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  align-self: center;
+  justify-self: end;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  padding: 0;
+  line-height: 1.1;
   color: var(--text);
-  font-weight: 700;
+  border: none;
+  background: transparent;
+}
+
+.home-ticket-icon-shape {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 6cm;
+  min-width: 6cm;
+  height: 3cm;
+  min-height: 3cm;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-size: 3.06rem;
+}
+
+.home-ticket-icon-label {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.home-ticket-icon-btn:hover {
+  background: transparent;
+  opacity: 0.92;
 }
 
 .recent-accuracy-value {
@@ -1394,6 +1439,26 @@ select {
   padding: 28px 24px;
 }
 
+.game-ticket-hub-card {
+  width: min(760px, 100%);
+  max-height: min(82vh, 860px);
+  overflow: auto;
+}
+
+.game-ticket-hub-note {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.game-ticket-hub-description {
+  margin-top: 8px;
+}
+
+.game-ticket-hub-total-row {
+  margin-top: 18px;
+}
+
 .ticket-reward-card {
   overflow: hidden;
   animation: ticketRewardFloat 220ms ease-out;
@@ -1635,6 +1700,21 @@ select {
 
   .home-message-bar {
     gap: 8px;
+  }
+
+  .recent-three-days-wrap,
+  .recent-three-days-main {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .recent-three-table {
+    table-layout: auto;
+  }
+
+  .home-ticket-icon-btn {
+    display: none !important;
   }
 
   .game-ticket-entry-btn,
