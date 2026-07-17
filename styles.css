@@ -127,6 +127,29 @@ p {
   margin-top: 10px;
 }
 
+.settings-danger-wrap {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.settings-reset-btn {
+  width: 100%;
+  border-color: rgba(255, 109, 109, 0.35);
+}
+
+.reset-learning-data-card {
+  width: min(500px, 100%);
+}
+
+.reset-learning-data-text {
+  margin-top: 10px;
+}
+
+.settings-reset-confirm-btn {
+  background: linear-gradient(135deg, #ff6d6d, #cf3f3f);
+}
+
 .settings-history-list {
   list-style: none;
   margin: 0;

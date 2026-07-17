@@ -4027,6 +4027,29 @@ function bindEvents() {
     });
   }
 
+  const openResetLearningDataModalBtn = document.getElementById("openResetLearningDataModalBtn");
+  if (openResetLearningDataModalBtn) {
+    openResetLearningDataModalBtn.addEventListener("click", () => {
+      const modal = document.getElementById("resetLearningDataModal");
+      if (!modal) return;
+      modal.classList.remove("hidden");
+      modal.setAttribute("aria-hidden", "false");
+    });
+  }
+
+  const confirmResetLearningDataBtn = document.getElementById("confirmResetLearningDataBtn");
+  if (confirmResetLearningDataBtn) {
+    confirmResetLearningDataBtn.addEventListener("click", () => {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+      } catch (error) {
+        console.error("Could not reset learning data", error);
+        alert("学習記録の初期化に失敗しました。もう一度お試しください。");
+      }
+    });
+  }
+
   const advanceBtn = document.getElementById("advanceBtn");
   if (advanceBtn) {
     advanceBtn.addEventListener("click", () => {
