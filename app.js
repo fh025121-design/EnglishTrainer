@@ -1522,12 +1522,27 @@ function buildPhraseTypingSpec(question) {
   };
 }
 
+function getPreferredQuestionJapaneseText(question) {
+  if (question?.type === "phrase") {
+    return String(question?.learningJapanese || question?.japanese || "");
+  }
+  return String(question?.japanese || "");
+}
+
+function formatJapaneseQuestionText(question) {
+  const japanese = getPreferredQuestionJapaneseText(question);
+  if (!japanese) return "";
+  return japanese
+    .replace(/something/g, "物")
+    .replace(/someone/g, "人");
+}
+
 function getQuestionPromptText(question) {
   const phraseSpec = buildPhraseTypingSpec(question);
   if (!phraseSpec) {
-    return question?.japanese || "";
+    return formatJapaneseQuestionText(question);
   }
-  return `${question.japanese} (${phraseSpec.display})`;
+  return `${formatJapaneseQuestionText(question)} (${phraseSpec.display})`;
 }
 
 function isCorrectAnswerForQuestion(question, normalizedInput) {
