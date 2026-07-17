@@ -950,6 +950,18 @@ select {
   font-weight: 800;
 }
 
+.weak-focus-decision-card {
+  width: min(720px, 100%);
+}
+
+.weak-focus-actions {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
 .question-card.is-transitioning {
   opacity: 0;
   transform: translateY(6px);

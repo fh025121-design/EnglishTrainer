@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 02:06", note: "苦手克服を5問単位で繰り返せるよう改善・「さらに5問挑戦」「今日はここまで」を追加" },
     { version: "2026/07/18 01:28", note: "PC版の回答後に音声を2回連続再生・音声再生後、自動で次の問題へ進むよう改善" },
     { version: "2026/07/18 01:03", note: "Day8～40の音声を追加・40Dayすべて音声対応・音声生成処理を改善" },
     { version: "2026/07/17 23:38", note: "スマホのキャッシュ対策を追加・CSS・JavaScriptのバージョン管理を追加・更新日時の記載ルールを修正" },
@@ -42,6 +43,8 @@ const PHRASE_SPIRAL_LEVEL_TARGETS = {
 };
 const LEVEL_FOUR_FAILURES_TO_DOWN = 3;
 const LEVEL_FOCUS_BATCH_SIZE = 5;
+const NORMAL_WEAK_FOCUS_BATCH_SIZE = 5;
+const NORMAL_WEAK_FOCUS_MAX_ROUNDS = 10;
 const GAME_TICKET_CONFIG = {
   eligibleModes: new Set(["level-focus", "challenge"]),
   baseChance: 0.08,
@@ -919,6 +922,7 @@ function startCurrentPhaseQuestions() {
   const session = state.session;
   if (!session) return;
   session.awaitingPhaseStart = false;
+  hideWeakFocusDecisionPanel();
   hidePhaseIntro();
   if (session.mode === "review") {
     renderReviewSession();
@@ -928,15 +932,51 @@ function startCurrentPhaseQuestions() {
   showScreen("testScreen");
 }
 
-function getWeakPhasePool(sessionLike, limit = 10) {
+function getWeakPhasePool(sessionLike, limit = 10, additionalExcludedIds = []) {
   const buckets = buildLevelBuckets();
   const excludedIds = new Set((sessionLike?.baseQuestionIds || []).map((id) => String(id)));
+  (sessionLike?.weakFocusAskedQuestionIds || []).forEach((id) => excludedIds.add(String(id)));
+  (additionalExcludedIds || []).forEach((id) => excludedIds.add(String(id)));
   const candidates = [...(buckets[1] || []), ...(buckets[2] || [])].filter((item) => !excludedIds.has(String(item.id)));
   return weightedSampleWithoutReplacement(candidates, limit);
 }
 
+function hideWeakFocusDecisionPanel() {
+  const decisionCard = document.getElementById("weakFocusDecisionCard");
+  if (decisionCard) decisionCard.classList.add("hidden");
+}
+
+function renderWeakFocusDecisionPanel(sessionLike = state.session) {
+  if (!sessionLike || sessionLike.mode !== "normal") return;
+  const decisionCard = document.getElementById("weakFocusDecisionCard");
+  const decisionText = document.getElementById("weakFocusDecisionText");
+  const continueBtn = document.getElementById("weakFocusContinueBtn");
+  const finishBtn = document.getElementById("weakFocusFinishBtn");
+  const questionCard = document.getElementById("questionCard");
+  const reviewCard = document.getElementById("reviewCard");
+  const introCard = document.getElementById("phaseIntroCard");
+  if (!decisionCard || !decisionText || !continueBtn || !finishBtn) return;
+
+  const completedRounds = Math.max(0, Number(sessionLike.weakFocusRoundCount) || 0);
+  const remainingRounds = Math.max(0, NORMAL_WEAK_FOCUS_MAX_ROUNDS - completedRounds);
+  decisionText.textContent = remainingRounds > 0
+    ? `苦手克服を5問完了しました。あと最大${remainingRounds}回、5問ずつ挑戦できます。`
+    : "苦手克服を5問完了しました。";
+
+  continueBtn.classList.toggle("hidden", remainingRounds <= 0);
+  continueBtn.textContent = "さらに5問挑戦";
+  finishBtn.textContent = "今日はここまで";
+
+  if (questionCard) questionCard.classList.add("hidden");
+  if (reviewCard) reviewCard.classList.add("hidden");
+  if (introCard) introCard.classList.add("hidden");
+  decisionCard.classList.remove("hidden");
+  showScreen("testScreen");
+}
+
 function beginSessionPhase(sessionLike, phase, questions, options = {}) {
   if (!sessionLike || !Array.isArray(questions) || !questions.length) return false;
+  hideWeakFocusDecisionPanel();
   sessionLike.phase = phase;
   sessionLike.questions = questions;
   sessionLike.questionIds = questions.map((question) => String(question.id));
@@ -951,6 +991,7 @@ function beginSessionPhase(sessionLike, phase, questions, options = {}) {
   sessionLike.enterLockUntil = null;
   sessionLike.currentQuestion = null;
   sessionLike.awaitingPhaseStart = Boolean(options.showIntro);
+  sessionLike.awaitingWeakFocusDecision = false;
   setTestModeHeader(questions.length);
   saveState();
   if (options.showIntro) {
@@ -1313,6 +1354,11 @@ function sanitizeStoredSession(sessionLike) {
     phase2Skipped: Boolean(sessionLike.phase2Skipped),
     phase3Completed: Boolean(sessionLike.phase3Completed),
     phase3Skipped: Boolean(sessionLike.phase3Skipped),
+    weakFocusRoundCount: Math.max(0, Number(sessionLike.weakFocusRoundCount) || 0),
+    weakFocusAskedQuestionIds: Array.isArray(sessionLike.weakFocusAskedQuestionIds)
+      ? sessionLike.weakFocusAskedQuestionIds.map((id) => String(id))
+      : [],
+    awaitingWeakFocusDecision: Boolean(sessionLike.awaitingWeakFocusDecision),
     isFinishingSession: false,
     isSessionCompleted: false
   };
@@ -2425,7 +2471,9 @@ function resumeActiveSession() {
   setTestModeHeader(session.questions.length);
   saveState();
   setTestScreenActive(true);
-  if (session.awaitingPhaseStart) {
+  if (session.awaitingWeakFocusDecision) {
+    renderWeakFocusDecisionPanel(session);
+  } else if (session.awaitingPhaseStart) {
     renderPhaseIntro();
   } else if (session.mode === "review") {
     renderReviewSession();
@@ -2465,6 +2513,48 @@ function startNormalMainRound(session) {
   const questions = collectQuestionsById(ids);
   if (!questions.length) return false;
   return beginSessionPhase(session, "phase1", questions, { showIntro: true });
+}
+
+function startNormalWeakFocusRound(session, options = {}) {
+  if (!session || session.mode !== "normal") return false;
+  const completedRounds = Math.max(0, Number(session.weakFocusRoundCount) || 0);
+  if (completedRounds >= NORMAL_WEAK_FOCUS_MAX_ROUNDS) return false;
+
+  const askedIds = Array.isArray(session.weakFocusAskedQuestionIds)
+    ? session.weakFocusAskedQuestionIds.map((id) => String(id))
+    : [];
+  const questions = getWeakPhasePool(session, NORMAL_WEAK_FOCUS_BATCH_SIZE, askedIds);
+  if (!questions.length) return false;
+
+  const askedSet = new Set(askedIds);
+  questions.forEach((question) => askedSet.add(String(question.id)));
+  session.weakFocusAskedQuestionIds = [...askedSet];
+  session.weakFocusRoundCount = completedRounds + 1;
+  session.phase3Skipped = false;
+
+  return beginSessionPhase(session, "phase3", questions, { showIntro: Boolean(options.showIntro) });
+}
+
+function continueNormalWeakFocusRound() {
+  const session = state.session;
+  if (!session || session.mode !== "normal" || !session.awaitingWeakFocusDecision) return;
+
+  if (startNormalWeakFocusRound(session, { showIntro: true })) {
+    return;
+  }
+
+  session.awaitingWeakFocusDecision = false;
+  session.phase3Completed = true;
+  completeCurrentSession("completed", { showResult: true });
+}
+
+function finishNormalWeakFocusToday() {
+  const session = state.session;
+  if (!session || session.mode !== "normal" || !session.awaitingWeakFocusDecision) return;
+
+  session.awaitingWeakFocusDecision = false;
+  session.phase3Completed = true;
+  completeCurrentSession("completed", { showResult: true });
 }
 
 function clearCardForTransition(mode) {
@@ -2679,6 +2769,9 @@ function prepareSession(mode, options = {}) {
     phase2Skipped: false,
     phase3Completed: false,
     phase3Skipped: mode === "phrase-spiral" ? true : false,
+    weakFocusRoundCount: 0,
+    weakFocusAskedQuestionIds: [],
+    awaitingWeakFocusDecision: false,
     isFinishingSession: false,
     isSessionCompleted: false
   };
@@ -2718,6 +2811,7 @@ function animateQuestionCard(card) {
 function renderQuestionSession() {
   const session = state.session;
   if (!session) return;
+  hideWeakFocusDecisionPanel();
 
   const question = session.questions[session.currentIndex];
   if (!question) {
@@ -2791,6 +2885,7 @@ function renderQuestionSession() {
 function renderReviewSession() {
   const session = state.session;
   if (!session) return;
+  hideWeakFocusDecisionPanel();
 
   const question = session.questions[session.currentIndex];
   if (!question) {
@@ -3250,29 +3345,37 @@ function finishSession() {
         session.phase2Skipped = true;
         session.phase2Completed = false;
       }
-      const weakQuestions = getWeakPhasePool(session, 10);
-      if (weakQuestions.length) {
+      if (startNormalWeakFocusRound(session, { showIntro: true })) {
         session.phase3Skipped = false;
-        if (beginSessionPhase(session, "phase3", weakQuestions, { showIntro: true })) return;
-      } else {
-        session.phase3Skipped = true;
-        session.phase3Completed = false;
+        return;
       }
+      session.phase3Skipped = true;
+      session.phase3Completed = false;
     }
 
     if (session.phase === "phase2") {
       session.phase2Completed = true;
-      const weakQuestions = getWeakPhasePool(session, 10);
-      if (weakQuestions.length) {
+      if (startNormalWeakFocusRound(session, { showIntro: true })) {
         session.phase3Skipped = false;
-        if (beginSessionPhase(session, "phase3", weakQuestions, { showIntro: true })) return;
-      } else {
-        session.phase3Skipped = true;
-        session.phase3Completed = false;
+        return;
       }
+      session.phase3Skipped = true;
+      session.phase3Completed = false;
     }
 
     if (session.phase === "phase3") {
+      const completedRounds = Math.max(0, Number(session.weakFocusRoundCount) || 0);
+      const hasRemainingRounds = completedRounds < NORMAL_WEAK_FOCUS_MAX_ROUNDS;
+      const nextWeakQuestions = hasRemainingRounds
+        ? getWeakPhasePool(session, NORMAL_WEAK_FOCUS_BATCH_SIZE, session.weakFocusAskedQuestionIds || [])
+        : [];
+      if (nextWeakQuestions.length && hasRemainingRounds) {
+        session.awaitingWeakFocusDecision = true;
+        renderWeakFocusDecisionPanel(session);
+        saveState();
+        return;
+      }
+      session.awaitingWeakFocusDecision = false;
       session.phase3Completed = true;
     }
 
@@ -3374,6 +3477,20 @@ function bindEvents() {
   if (phaseIntroStartBtn) {
     phaseIntroStartBtn.addEventListener("click", () => {
       startCurrentPhaseQuestions();
+    });
+  }
+
+  const weakFocusContinueBtn = document.getElementById("weakFocusContinueBtn");
+  if (weakFocusContinueBtn) {
+    weakFocusContinueBtn.addEventListener("click", () => {
+      continueNormalWeakFocusRound();
+    });
+  }
+
+  const weakFocusFinishBtn = document.getElementById("weakFocusFinishBtn");
+  if (weakFocusFinishBtn) {
+    weakFocusFinishBtn.addEventListener("click", () => {
+      finishNormalWeakFocusToday();
     });
   }
 
