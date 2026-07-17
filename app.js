@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 01:03", note: "Day8～40の音声を追加・40Dayすべて音声対応・音声生成処理を改善" },
     { version: "2026/07/17 23:38", note: "スマホのキャッシュ対策を追加・CSS・JavaScriptのバージョン管理を追加・更新日時の記載ルールを修正" },
     { version: "26/0717/1900", note: "Day9～Day14を追加" },
     { version: "26/0717/1900", note: "熟語表示を改善" },
@@ -1599,22 +1600,34 @@ function stopCurrentAudio() {
 
 function playQuestionAudio(question, onComplete, onError) {
   const questionId = String(question?.id || "").trim();
+  const rawAudioFile = String(question?.audioFile || "").trim();
 
-  if (!questionId) {
+  if (!questionId && !rawAudioFile) {
     if (typeof onComplete === "function") onComplete();
     return false;
   }
 
   stopCurrentAudio();
 
-  const audioPath = `audio/${encodeURIComponent(questionId)}.mp3`;
-  const audio = new Audio(audioPath);
+  const normalizedAudioFile = rawAudioFile.replace(/\\/g, "/").split("?", 1)[0].split("#", 1)[0];
+  const candidates = [];
+
+  if (normalizedAudioFile) {
+    candidates.push(normalizedAudioFile.startsWith("audio/") ? normalizedAudioFile : `audio/${normalizedAudioFile}`);
+  }
+
+  if (questionId) {
+    candidates.push(`audio/${encodeURIComponent(questionId)}.mp3`);
+  }
+
+  const uniqueCandidates = [...new Set(candidates.filter((path) => Boolean(path)))];
+  if (!uniqueCandidates.length) {
+    if (typeof onComplete === "function") onComplete();
+    return false;
+  }
+
   console.log("audio question id:", question?.id);
-  console.log("audio path:", audio.src);
-  currentAudio = audio;
-  audio.preload = "auto";
-  audio.volume = 1;
-  audio.playbackRate = 1;
+  console.log("audio candidates:", uniqueCandidates);
 
   let completed = false;
 
@@ -1622,38 +1635,58 @@ function playQuestionAudio(question, onComplete, onError) {
     if (completed) return;
     completed = true;
 
-    if (currentAudio === audio) {
-      currentAudio = null;
-    }
+    stopCurrentAudio();
 
     if (typeof onComplete === "function") {
       onComplete();
     }
   };
 
-  audio.addEventListener("ended", finishOnce, { once: true });
-  audio.addEventListener(
-    "error",
-    () => {
-      console.error("音声ファイル読込失敗:", audio.src);
-      if (typeof onError === "function") {
-        onError();
-      }
-      finishOnce();
-    },
-    { once: true }
-  );
+  const tryPlayAt = (index) => {
+    if (completed) return;
 
-  const playPromise = audio.play();
-  if (playPromise && typeof playPromise.catch === "function") {
-    playPromise.catch((error) => {
-      console.error("音声再生失敗:", audio.src, error);
+    const audioPath = uniqueCandidates[index];
+    if (!audioPath) {
+      console.error("音声再生候補がすべて失敗:", uniqueCandidates);
       if (typeof onError === "function") {
         onError();
       }
       finishOnce();
-    });
-  }
+      return;
+    }
+
+    const audio = new Audio(audioPath);
+    currentAudio = audio;
+    audio.preload = "auto";
+    audio.volume = 1;
+    audio.playbackRate = 1;
+
+    const handleFailure = (error) => {
+      console.error("音声再生失敗:", audio.src, error);
+      if (currentAudio === audio) {
+        currentAudio = null;
+      }
+      tryPlayAt(index + 1);
+    };
+
+    audio.addEventListener("ended", finishOnce, { once: true });
+    audio.addEventListener(
+      "error",
+      () => {
+        handleFailure(new Error("audio load error"));
+      },
+      { once: true }
+    );
+
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch((error) => {
+        handleFailure(error);
+      });
+    }
+  };
+
+  tryPlayAt(0);
 
   return true;
 }

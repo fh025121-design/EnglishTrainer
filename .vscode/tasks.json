@@ -69,6 +69,83 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "debug-parse-make-audio",
+			"type": "shell",
+			"command": "py -3 _debug_parse_make_audio.py",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "debug-parse-make-audio",
+			"type": "shell",
+			"command": "py -3 _debug_parse_make_audio.py",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "get-jst-time",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$tz=[System.TimeZoneInfo]::FindSystemTimeZoneById('Tokyo Standard Time'); [System.TimeZoneInfo]::ConvertTime((Get-Date),$tz).ToString('yyyy/MM/dd HH:mm')"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "get-jst-time-2",
+			"type": "shell",
+			"command": "$tz=[System.TimeZoneInfo]::FindSystemTimeZoneById(\"Tokyo Standard Time\"); [System.TimeZoneInfo]::ConvertTime((Get-Date),$tz).ToString(\"yyyy/MM/dd HH:mm\")",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "now-jst",
+			"type": "shell",
+			"command": "py -3 _now_jst.py",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "check-audio-refs",
+			"type": "shell",
+			"command": "py -3 _check_audio_refs.py",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "check-audio-refs",
+			"type": "shell",
+			"command": "py -3 _check_audio_refs.py",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "sync-missing-audio-refs",
+			"type": "shell",
+			"command": "py -3 _sync_missing_audio_refs.py",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "check-audio-refs",
+			"type": "shell",
+			"command": "py -3 _check_audio_refs.py",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }
