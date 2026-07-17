@@ -146,6 +146,14 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "now-jst",
+			"type": "shell",
+			"command": "py -3 _now_jst.py",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }

@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 01:28", note: "PC版の回答後に音声を2回連続再生・音声再生後、自動で次の問題へ進むよう改善" },
     { version: "2026/07/18 01:03", note: "Day8～40の音声を追加・40Dayすべて音声対応・音声生成処理を改善" },
     { version: "2026/07/17 23:38", note: "スマホのキャッシュ対策を追加・CSS・JavaScriptのバージョン管理を追加・更新日時の記載ルールを修正" },
     { version: "26/0717/1900", note: "Day9～Day14を追加" },
@@ -1691,6 +1692,66 @@ function playQuestionAudio(question, onComplete, onError) {
   return true;
 }
 
+function shouldUseDesktopAutoAudioFlow() {
+  const hasTouchDevice =
+    (typeof window !== "undefined" && "ontouchstart" in window) ||
+    (typeof navigator !== "undefined" && Number(navigator.maxTouchPoints) > 0) ||
+    (typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches);
+
+  return !hasTouchDevice;
+}
+
+function isDesktopAutoAudioFlow(session, question) {
+  if (!session || !question) return false;
+  return shouldUseDesktopAutoAudioFlow();
+}
+
+function startDesktopDoubleAudioAndAutoAdvance(session, question, feedbackBox) {
+  if (!session || !question) return false;
+
+  // 回答後は Enter を不要にし、2回再生後に自動遷移する。
+  session.awaitingEnter = false;
+  session.answered = true;
+  session.answerLocked = true;
+  session.enterConsumed = true;
+  session.enterLocked = true;
+  session.enterLockUntil = null;
+
+  let advanced = false;
+  const advanceAfterDelay = () => {
+    if (advanced) return;
+    advanced = true;
+    if (state.session !== session) return;
+    setTimeout(() => {
+      if (state.session !== session) return;
+      advanceToNextQuestion();
+    }, 200);
+  };
+
+  const handleError = () => {
+    if (feedbackBox) {
+      showAudioPlaybackError(feedbackBox);
+    }
+    advanceAfterDelay();
+  };
+
+  playQuestionAudio(
+    question,
+    () => {
+      playQuestionAudio(
+        question,
+        () => {
+          advanceAfterDelay();
+        },
+        handleError
+      );
+    },
+    handleError
+  );
+
+  return true;
+}
+
 function startSecondAudioAndAutoAdvance(question) {
   const session = state.session;
   if (!session || !session.answered || !session.awaitingEnter || session.enterLocked || session.enterConsumed) {
@@ -3003,13 +3064,20 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       session.enterLockUntil = null;
       if (answerBtn) {
         answerBtn.disabled = true;
-        answerBtn.textContent = "2回目音声を待機中";
+        answerBtn.textContent = "音声再生中";
       }
-      playQuestionAudio(question, () => {
-        enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
-      }, () => {
-        showAudioPlaybackError(feedbackBox);
-      });
+
+      if (isDesktopAutoAudioFlow(session, question)) {
+        feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "音声を2回再生後、自動で次へ進みます");
+        startDesktopDoubleAudioAndAutoAdvance(session, question, feedbackBox);
+      } else {
+        playQuestionAudio(question, () => {
+          enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
+        }, () => {
+          showAudioPlaybackError(feedbackBox);
+        });
+      }
+
       saveState();
       renderHome();
       renderProgress();
@@ -3078,13 +3146,20 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   session.enterLockUntil = null;
   if (answerBtn) {
     answerBtn.disabled = true;
-    answerBtn.textContent = "2回目音声を待機中";
+    answerBtn.textContent = "音声再生中";
   }
-  playQuestionAudio(question, () => {
-    enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
-  }, () => {
-    showAudioPlaybackError(feedbackBox);
-  });
+
+  if (isDesktopAutoAudioFlow(session, question)) {
+    feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "音声を2回再生後、自動で次へ進みます");
+    startDesktopDoubleAudioAndAutoAdvance(session, question, feedbackBox);
+  } else {
+    playQuestionAudio(question, () => {
+      enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
+    }, () => {
+      showAudioPlaybackError(feedbackBox);
+    });
+  }
+
   saveState();
   renderHome();
   renderProgress();
