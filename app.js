@@ -1425,14 +1425,62 @@ function normalizeAnswer(value) {
 }
 
 const PHRASE_FRAME_TOKENS = new Set(["人", "もの", "場所"]);
+const PHRASE_PLACEHOLDER_TOKEN_MAP = new Map([
+  ["人", "someone"],
+  ["物", "something"],
+  ["もの", "something"]
+]);
+const PHRASE_VISIBLE_PLACEHOLDERS = new Set(["someone", "something"]);
 
 function normalizePhraseToken(token) {
   return String(token || "").trim().replace(/[()]/g, "");
 }
 
+function normalizePhrasePlaceholderToken(token) {
+  const normalizedToken = normalizePhraseToken(token);
+  return PHRASE_PLACEHOLDER_TOKEN_MAP.get(normalizedToken) || normalizedToken;
+}
+
 function isPhraseFrameToken(token) {
-  const normalized = String(token || "").trim().replace(/[()]/g, "");
+  const normalized = normalizePhraseToken(token);
   return PHRASE_FRAME_TOKENS.has(normalized);
+}
+
+function buildAcceptedPhraseAnswers(tokenMeta) {
+  const accepted = new Set();
+  const answerTokens = tokenMeta.filter((token) => !token.isFrameToken);
+  const omittableIndexes = [];
+
+  const addCandidate = (candidateTokens) => {
+    const normalized = normalizeAnswer(candidateTokens.join(" "));
+    if (normalized) accepted.add(normalized);
+  };
+
+  addCandidate(answerTokens.map((token) => token.normalizedToken).filter(Boolean));
+
+  answerTokens.forEach((token, index) => {
+    if (PHRASE_VISIBLE_PLACEHOLDERS.has(token.normalizedToken) || token.isOptional) {
+      omittableIndexes.push(index);
+    }
+  });
+
+  const variantCount = 1 << omittableIndexes.length;
+  for (let mask = 1; mask < variantCount; mask += 1) {
+    const omittedIndexes = new Set();
+    omittableIndexes.forEach((tokenIndex, offset) => {
+      if (mask & (1 << offset)) {
+        omittedIndexes.add(tokenIndex);
+      }
+    });
+    addCandidate(
+      answerTokens
+        .filter((_, index) => !omittedIndexes.has(index))
+        .map((token) => token.normalizedToken)
+        .filter(Boolean)
+    );
+  }
+
+  return accepted;
 }
 
 function buildPhraseTypingSpec(question) {
@@ -1444,35 +1492,32 @@ function buildPhraseTypingSpec(question) {
 
   const tokenMeta = tokens.map((rawToken, index) => ({
     rawToken,
-    normalizedToken: normalizePhraseToken(rawToken),
+    normalizedToken: normalizePhrasePlaceholderToken(rawToken),
     isFrameToken: isPhraseFrameToken(rawToken),
     isOptional: /\(.+\)/.test(rawToken),
     index
   }));
 
-const display = tokenMeta.map((token) => {
-  if (
-    token.normalizedToken === "someone" ||
-    token.normalizedToken === "something"
-  ) {
-    return token.normalizedToken;
-  }
-  return "＿＿";
-}).join(" ");
+  const display = tokenMeta.map((token) => {
+    if (PHRASE_VISIBLE_PLACEHOLDERS.has(token.normalizedToken)) {
+      return token.normalizedToken;
+    }
+    return "＿＿";
+  }).join(" ");
 
-  const blanks = tokenMeta.filter((token) => token.index > 0 && !token.isFrameToken);
-  const required = blanks.filter((token) => !token.isOptional).map((token) => token.normalizedToken).filter(Boolean);
-  const allBlankTokens = blanks.map((token) => token.normalizedToken).filter(Boolean);
-  const fullEnglish = tokenMeta.filter((token) => !token.isFrameToken).map((token) => token.normalizedToken).filter(Boolean);
+  const canonicalAnswerTokens = tokenMeta.map((token) => token.normalizedToken).filter(Boolean);
+  const fullEnglish = tokenMeta
+    .filter((token) => !token.isFrameToken)
+    .map((token) => token.normalizedToken)
+    .filter(Boolean);
+  const acceptedNormalizedInputs = buildAcceptedPhraseAnswers(tokenMeta);
 
-  const acceptedNormalizedInputs = new Set();
-  acceptedNormalizedInputs.add(normalizeAnswer(allBlankTokens.join(" ")));
-  acceptedNormalizedInputs.add(normalizeAnswer(required.join(" ")));
-  acceptedNormalizedInputs.add(normalizeAnswer(fullEnglish.join(" ")));
   acceptedNormalizedInputs.add(normalizeAnswer(rawAnswer));
+  acceptedNormalizedInputs.add(normalizeAnswer(canonicalAnswerTokens.join(" ")));
 
   return {
     display,
+    canonicalAnswer: canonicalAnswerTokens.join(" "),
     acceptedNormalizedInputs
   };
 }
@@ -1488,7 +1533,14 @@ function getQuestionPromptText(question) {
 function isCorrectAnswerForQuestion(question, normalizedInput) {
   const phraseSpec = buildPhraseTypingSpec(question);
   if (phraseSpec) {
-    return phraseSpec.acceptedNormalizedInputs.has(normalizedInput);
+    const normalizedPhraseInput = normalizeAnswer(
+      String(normalizedInput || "")
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((token) => normalizePhrasePlaceholderToken(token))
+        .join(" ")
+    );
+    return phraseSpec.acceptedNormalizedInputs.has(normalizedPhraseInput);
   }
   const normalizedCorrect = normalizeAnswer(question.answer || question.english);
   return normalizedInput === normalizedCorrect;
