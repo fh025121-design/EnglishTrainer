@@ -2,6 +2,10 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "26/0717/1900", note: "Day9～Day14を追加" },
+    { version: "26/0717/1900", note: "熟語表示を改善" },
+    { version: "26/0717/1900", note: "Day学習の画面遷移を修正" },
+    { version: "26/0717/1900", note: "熟語モードの出題不具合を修正" },
     { version: "26/0717/1250", note: "バージョン表示を追加" },
     { version: "26/0717/1310", note: "スマホ音声を修正" }
   ]
@@ -908,7 +912,7 @@ function hidePhaseIntro() {
   if (introCard) introCard.classList.add("hidden");
 }
 
-function startCurrentPhaseQuestions(playAudioInGesture = false) {
+function startCurrentPhaseQuestions() {
   const session = state.session;
   if (!session) return;
   session.awaitingPhaseStart = false;
@@ -919,15 +923,6 @@ function startCurrentPhaseQuestions(playAudioInGesture = false) {
     renderQuestionSession();
   }
   showScreen("testScreen");
-
-  if (playAudioInGesture) {
-    const firstQuestion = state.session?.currentQuestion;
-    if (firstQuestion) {
-      playQuestionAudio(firstQuestion, null, () => {
-        showAudioPlaybackError();
-      });
-    }
-  }
 }
 
 function getWeakPhasePool(sessionLike, limit = 10) {
@@ -1020,38 +1015,60 @@ function renderHomeMessage() {
 }
 
 function renderDayCatalog() {
-  const dayStudyDaySelect = document.getElementById("dayStudyDaySelect");
+  const dayStudyStartDaySelect = document.getElementById("dayStudyStartDaySelect");
+  const dayStudyEndDaySelect = document.getElementById("dayStudyEndDaySelect");
   const dayStudyTypeSelect = document.getElementById("dayStudyTypeSelect");
   const dayCatalogGrid = document.getElementById("dayCatalogGrid");
-  if (!dayCatalogGrid || !dayStudyDaySelect || !dayStudyTypeSelect) return;
+  if (!dayCatalogGrid || !dayStudyStartDaySelect || !dayStudyEndDaySelect || !dayStudyTypeSelect) return;
 
-  const allDays = Array.from({ length: 40 }, (_, index) => index + 1);
+  const availableDays = getAvailableDays().filter((day) => day >= 1 && day <= 14);
+  const allDays = availableDays.length ? availableDays : Array.from({ length: 14 }, (_, index) => index + 1);
   const buildDayOptions = (days) => days.map((day) => `<option value="${day}">Day${day}</option>`).join("");
 
-  dayStudyDaySelect.innerHTML = buildDayOptions(allDays);
+  dayStudyStartDaySelect.innerHTML = buildDayOptions(allDays);
 
-  const storedDay = Number(state.settings.dayStudy?.day) || Number(state.settings.studyRange?.start) || 1;
-  const safeDay = Math.max(1, Math.min(40, storedDay));
+  const minDay = allDays[0];
+  const maxDay = allDays[allDays.length - 1];
+  const storedStart = Number(state.settings.dayStudy?.start ?? state.settings.dayStudy?.day ?? state.settings.studyRange?.start ?? minDay);
+  const storedEnd = Number(state.settings.dayStudy?.end ?? state.settings.dayStudy?.day ?? state.settings.studyRange?.end ?? maxDay);
+  const safeStart = Number.isFinite(storedStart) ? Math.max(minDay, Math.min(maxDay, storedStart)) : minDay;
+  const safeEnd = Number.isFinite(storedEnd) ? Math.max(safeStart, Math.min(maxDay, storedEnd)) : maxDay;
   const storedType = state.settings.dayStudy?.type;
   const safeType = storedType === "word" || storedType === "phrase" || storedType === "all" ? storedType : "all";
 
-  dayStudyDaySelect.value = String(safeDay);
+  dayStudyStartDaySelect.value = String(safeStart);
+
+  const syncEndDayOptions = (preferredEnd) => {
+    const selectedStart = Number(dayStudyStartDaySelect.value) || minDay;
+    const selectableEndDays = allDays.filter((day) => day >= selectedStart);
+    dayStudyEndDaySelect.innerHTML = buildDayOptions(selectableEndDays);
+    const normalizedPreferred = Number.isFinite(Number(preferredEnd)) ? Number(preferredEnd) : safeEnd;
+    const fallbackEnd = selectableEndDays[selectableEndDays.length - 1];
+    const nextEnd = selectableEndDays.includes(normalizedPreferred) ? normalizedPreferred : fallbackEnd;
+    dayStudyEndDaySelect.value = String(nextEnd);
+  };
+
+  syncEndDayOptions(safeEnd);
   dayStudyTypeSelect.value = safeType;
 
-  const availableDays = new Set(getAvailableDays());
   dayCatalogGrid.innerHTML = allDays.map((day) => {
     const accuracy = Math.max(0, Math.min(100, Number(state.stats.dayBestAccuracy?.[String(day)]) || 0));
     const stars = getStarTextFromAccuracy(accuracy);
     const perfectClass = accuracy === 100 ? "is-perfect" : "";
-    const unavailableClass = availableDays.has(day) ? "" : "is-unavailable";
+    const unavailableClass = "";
     return `<button type="button" class="day-card ${perfectClass} ${unavailableClass}" data-day="${day}"><span class="day-card-title">Day${day}</span><span class="day-card-stars">${stars}</span><span class="day-card-percent">${Math.round(accuracy)}%</span></button>`;
   }).join("");
+
+  dayStudyStartDaySelect.onchange = () => {
+    syncEndDayOptions(dayStudyEndDaySelect.value);
+  };
 
   dayCatalogGrid.querySelectorAll(".day-card").forEach((button) => {
     button.addEventListener("click", () => {
       const day = Number(button.dataset.day);
-      const nextDay = Math.max(1, Math.min(40, day));
-      dayStudyDaySelect.value = String(nextDay);
+      const nextDay = Math.max(minDay, Math.min(maxDay, day));
+      dayStudyStartDaySelect.value = String(nextDay);
+      syncEndDayOptions(nextDay);
     });
   });
 }
@@ -1867,27 +1884,31 @@ function renderHome() {
   syncDerivedStats();
   const advanceDayText = document.getElementById("advanceDayText");
   const advanceBtn = document.getElementById("advanceBtn");
-  const resumeSessionBtn = document.getElementById("resumeSessionBtn");
-  const resumeSessionMetaText = document.getElementById("resumeSessionMetaText");
   const progressMasterCount = document.getElementById("progressMasterCount");
   const daySelectWordBtn = document.getElementById("daySelectWordBtn");
   const daySelectPhraseBtn = document.getElementById("daySelectPhraseBtn");
   const challengeBtn = document.getElementById("challengeBtn");
-  const hasActiveSession = Boolean(state.session);
   const availableDays = getAvailableDays();
   const nextDay = availableDays.length ? Math.min(availableDays[availableDays.length - 1], state.settings.studyRange.end + 1) : state.settings.studyRange.end;
 
   if (advanceDayText) advanceDayText.textContent = `Day${nextDay}`;
-  if (resumeSessionBtn) resumeSessionBtn.classList.toggle("hidden", !hasActiveSession);
-  if (resumeSessionMetaText && state.session) resumeSessionMetaText.textContent = getSessionResumeMetaText(state.session);
   if (progressMasterCount) progressMasterCount.textContent = state.stats.masterCount;
   if (advanceBtn) advanceBtn.disabled = false;
   if (daySelectWordBtn) daySelectWordBtn.disabled = false;
   if (daySelectPhraseBtn) daySelectPhraseBtn.disabled = false;
   if (challengeBtn) challengeBtn.disabled = false;
+  renderHomeUpdateHistory();
   renderLevelCollection();
   renderRecentProgressTop5();
   renderHomeMessage();
+}
+
+function renderHomeUpdateHistory() {
+  const list = document.getElementById("homeUpdateHistoryList");
+  if (!list) return;
+  list.innerHTML = SETTINGS_INFO.releaseHistory
+    .map((entry) => `<li><span class="home-update-version">${entry.version}</span><span>${entry.note}</span></li>`)
+    .join("");
 }
 
 function hasSavedNormalSession() {
@@ -1944,37 +1965,61 @@ function startNextDaySession() {
 }
 
 function getDayStudyPool(day, type) {
-  const safeDay = Math.max(1, Math.min(40, Number(day) || 1));
+  const startDay = Number(day?.startDay);
+  const endDay = Number(day?.endDay);
+  const safeStart = Number.isFinite(startDay) ? Math.max(1, Math.min(14, startDay)) : 1;
+  const safeEnd = Number.isFinite(endDay) ? Math.max(safeStart, Math.min(14, endDay)) : safeStart;
   const normalizedType = type === "word" || type === "phrase" || type === "all" ? type : "all";
-  const dayItems = state.items.filter((item) => Number(item.day) === safeDay);
+  const dayItems = state.items.filter((item) => Number(item.day) >= safeStart && Number(item.day) <= safeEnd);
   const typedItems = normalizedType === "all" ? dayItems : dayItems.filter((item) => item.type === normalizedType);
   if (normalizedType === "phrase") {
     return shuffle(typedItems);
+  }
+  if (normalizedType === "all") {
+    const targetCount = Math.min(10, typedItems.length);
+    const shuffledWords = shuffle(dayItems.filter((item) => item.type === "word"));
+    const shuffledPhrases = shuffle(dayItems.filter((item) => item.type === "phrase"));
+    if (targetCount <= 0) return [];
+    if (!shuffledWords.length || !shuffledPhrases.length) {
+      return shuffle(typedItems).slice(0, targetCount);
+    }
+    const guaranteed = [shuffledWords.shift(), shuffledPhrases.shift()];
+    const rest = shuffle([...shuffledWords, ...shuffledPhrases]);
+    return [...guaranteed, ...rest].slice(0, targetCount);
   }
   const targetCount = Math.min(10, typedItems.length);
   return shuffle(typedItems).slice(0, targetCount);
 }
 
-function startDayStudySession(day, type) {
-  const safeDay = Math.max(1, Math.min(40, Number(day) || 1));
+function startDayStudySession(startDay, endDay, type) {
+  const safeStart = Math.max(1, Math.min(14, Number(startDay) || 1));
+  const safeEnd = Math.max(safeStart, Math.min(14, Number(endDay) || safeStart));
   const normalizedType = type === "word" || type === "phrase" || type === "all" ? type : "all";
-  const customPool = getDayStudyPool(safeDay, normalizedType);
+  const customPool = getDayStudyPool({ startDay: safeStart, endDay: safeEnd }, normalizedType);
 
   state.settings.dayStudy = {
-    day: safeDay,
+    start: safeStart,
+    end: safeEnd,
     type: normalizedType
+  };
+  state.settings.studyRange = {
+    start: safeStart,
+    end: safeEnd
   };
   saveState();
 
   if (!customPool.length) {
-    alert(`Day${safeDay} の${normalizedType === "all" ? "単語・熟語" : normalizedType === "word" ? "単語" : "熟語"}に出題可能な問題がありません。`);
+    const dayText = safeStart === safeEnd ? `Day${safeStart}` : `Day${safeStart}～Day${safeEnd}`;
+    alert(`${dayText} の${normalizedType === "all" ? "単語・熟語" : normalizedType === "word" ? "単語" : "熟語"}に出題可能な問題がありません。`);
     return;
   }
 
   prepareSession("normal", {
     customPool,
+    forceNewSession: true,
     dayStudy: {
-      day: safeDay,
+      start: safeStart,
+      end: safeEnd,
       type: normalizedType
     }
   });
@@ -2157,7 +2202,7 @@ function buildSuspendedSummary(session) {
     currentPhase: getPhaseMeta(session).title,
     currentProgress: `${current} / ${session?.questions?.length || 0}`,
     canAdvanceDay: false,
-    canResume: true,
+    canResume: false,
     interrupted: true,
     levelChanges: LEVEL_DEFINITIONS.map((entry) => ({ ...entry, delta: 0, count: getLevelBucketCounts()[entry.level] || 0 })),
     recommendation: {
@@ -2709,22 +2754,8 @@ function renderReviewSession() {
   session.currentQuestion = question;
 }
 
-function handleEnterKey(event) {
-  if (event.key !== "Enter" || event.repeat) return;
-  if (currentScreenId === "resultScreen") {
-    const summary = state.stats.lastResultSummary;
-    if (summary?.mode === "level-focus") {
-      event.preventDefault();
-      event.stopPropagation();
-      if (resultActionFocusMode === "home") {
-        returnHomeFromInterruptedResult();
-      } else {
-        const level = Number(summary.recommendation?.level) || activeLevelFilter || 1;
-        startNextLevelFocusBatch(level);
-      }
-      return;
-    }
-  }
+function handleEnterAdvanceKey(event) {
+  if (event.key !== "Enter") return;
   const session = state.session;
   if (!session || !session.answered || !session.awaitingEnter || session.enterLocked) {
     return;
@@ -3155,6 +3186,10 @@ function renderProgress() {
   if (progressTotalSolved) progressTotalSolved.textContent = state.stats.totalSolvedQuestions;
 }
 
+function handleEnterKey(event) {
+  handleEnterAdvanceKey(event);
+}
+
 function bindEvents() {
   document.addEventListener("keydown", handleEnterKey);
   document.addEventListener("keydown", (event) => {
@@ -3214,24 +3249,10 @@ function bindEvents() {
     });
   }
 
-  const resumeSessionBtn = document.getElementById("resumeSessionBtn");
-  if (resumeSessionBtn) {
-    resumeSessionBtn.addEventListener("click", () => {
-      resumeActiveSession();
-    });
-  }
-
-  const suspendSessionBtn = document.getElementById("suspendSessionBtn");
-  if (suspendSessionBtn) {
-    suspendSessionBtn.addEventListener("click", () => {
-      suspendCurrentSession();
-    });
-  }
-
   const phaseIntroStartBtn = document.getElementById("phaseIntroStartBtn");
   if (phaseIntroStartBtn) {
     phaseIntroStartBtn.addEventListener("click", () => {
-      startCurrentPhaseQuestions(true);
+      startCurrentPhaseQuestions();
     });
   }
 
@@ -3296,16 +3317,7 @@ function bindEvents() {
   const daySelectWordBtn = document.getElementById("daySelectWordBtn");
   if (daySelectWordBtn) {
     daySelectWordBtn.addEventListener("click", () => {
-      if (state.session?.mode === "normal") {
-        resumeActiveSession();
-        return;
-      }
-      if (hasSavedNormalSession()) {
-        restoreSavedNormalSession();
-        saveState();
-        resumeActiveSession();
-        return;
-      }
+      state.stats.savedNormalSession = null;
       renderDayCatalog();
       showScreen("dayCatalogScreen");
     });
@@ -3336,20 +3348,18 @@ function bindEvents() {
   if (dayRangeForm) {
     dayRangeForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      const dayRaw = Number(document.getElementById("dayStudyDaySelect")?.value);
+      const startDayRaw = Number(document.getElementById("dayStudyStartDaySelect")?.value);
+      const endDayRaw = Number(document.getElementById("dayStudyEndDaySelect")?.value);
       const typeRaw = String(document.getElementById("dayStudyTypeSelect")?.value || "all");
-      const safeDay = Number.isFinite(dayRaw) ? Math.max(1, Math.min(40, dayRaw)) : 1;
+      const safeStart = Number.isFinite(startDayRaw) ? Math.max(1, Math.min(14, startDayRaw)) : 1;
+      const safeEnd = Number.isFinite(endDayRaw) ? Math.max(safeStart, Math.min(14, endDayRaw)) : safeStart;
       const safeType = typeRaw === "word" || typeRaw === "phrase" || typeRaw === "all" ? typeRaw : "all";
-      startDayStudySession(safeDay, safeType);
+      startDayStudySession(safeStart, safeEnd, safeType);
     });
   }
 
   document.querySelectorAll(".back-nav-btn").forEach((button) => {
     button.addEventListener("click", () => {
-      if (currentScreenId === "testScreen" && state.session) {
-        suspendCurrentSession();
-        return;
-      }
       goBackScreen();
       if (currentScreenId === "homeScreen") {
         renderHome();
@@ -3403,10 +3413,6 @@ function bindEvents() {
       if (summary?.mode === "level-focus") {
         const level = Number(summary.recommendation?.level) || activeLevelFilter || 1;
         startNextLevelFocusBatch(level);
-        return;
-      }
-      if (summary?.canResume && state.session) {
-        resumeActiveSession();
         return;
       }
       startNextDaySession();

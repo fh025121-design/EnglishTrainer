@@ -24,7 +24,6 @@
                 <h3>学習</h3>
               </div>
               <div class="study-actions-grid">
-                <button id="resumeSessionBtn" class="primary-btn home-advance-btn hidden"><span class="advance-main">▶ 続きから学習</span><span id="resumeSessionMetaText" class="advance-sub">Day1</span></button>
                 <button id="advanceBtn" class="primary-btn home-advance-btn"><span class="advance-main">▶ 次へ進む</span><span id="advanceDayText" class="advance-sub">Day1</span></button>
                 <button id="daySelectWordBtn" class="secondary-btn">📘 Day学習</button>
                 <button id="daySelectPhraseBtn" class="secondary-btn">💬 熟語特訓</button>
@@ -90,6 +89,13 @@
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <div class="panel home-update-panel">
+            <div class="panel-title-row">
+              <h3>更新履歴</h3>
+            </div>
+            <ul id="homeUpdateHistoryList" class="home-update-history-list"></ul>
           </div>
         </section>
 
@@ -200,8 +206,12 @@
           <div class="panel day-catalog-panel">
             <form id="dayRangeForm" class="day-range-form">
               <label>
-                学習するDay
-                <select id="dayStudyDaySelect"></select>
+                開始Day
+                <select id="dayStudyStartDaySelect"></select>
+              </label>
+              <label>
+                終了Day
+                <select id="dayStudyEndDaySelect"></select>
               </label>
               <label>
                 出題内容
@@ -223,7 +233,7 @@
             <div>
               <h2 id="testModeTitle">10問</h2>
             </div>
-            <button id="suspendSessionBtn" class="ghost-btn" type="button">中断</button>
+            <div class="header-spacer" aria-hidden="true"></div>
           </div>
 
           <div id="testSetupPanel" class="panel setup-panel">
