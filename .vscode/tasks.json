@@ -1,0 +1,74 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "extract-day15-40",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"_extract_day15_40.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "extract-day15-40",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"_extract_day15_40.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "extract-day15-40",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"_extract_day15_40.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "count-data-items",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"-c",
+				"from pathlib import Path; import re; text=Path('data.js').read_text(encoding='utf-8'); print('ITEMS', len(re.findall(r'id: \\\"D\\d{2}-[WP]\\d{2}\\\"', text)))"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "count-data-items",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"_count_data_items.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "count-data-items-2",
+			"type": "shell",
+			"command": "py -3 _count_data_items.py",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

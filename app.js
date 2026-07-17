@@ -1022,8 +1022,13 @@ function renderDayCatalog() {
   const dayCatalogGrid = document.getElementById("dayCatalogGrid");
   if (!dayCatalogGrid || !dayStudyStartDaySelect || !dayStudyEndDaySelect || !dayStudyTypeSelect) return;
 
-  const availableDays = getAvailableDays().filter((day) => day >= 1 && day <= 14);
-  const allDays = availableDays.length ? availableDays : Array.from({ length: 14 }, (_, index) => index + 1);
+  const allDays = getAvailableDays();
+  if (!allDays.length) {
+    dayCatalogGrid.innerHTML = "";
+    dayStudyStartDaySelect.innerHTML = "";
+    dayStudyEndDaySelect.innerHTML = "";
+    return;
+  }
   const buildDayOptions = (days) => days.map((day) => `<option value="${day}">Day${day}</option>`).join("");
 
   dayStudyStartDaySelect.innerHTML = buildDayOptions(allDays);
@@ -1777,6 +1782,11 @@ function getAvailableDays() {
   return [...new Set(state.items.map((item) => item.day))].sort((a, b) => a - b);
 }
 
+function getMaxAvailableDay() {
+  const availableDays = getAvailableDays();
+  return availableDays.length ? availableDays[availableDays.length - 1] : 1;
+}
+
 function ensureItemsSyncedWithVocabularyBank() {
   const latestItems = buildVocabularyItems();
   if (!latestItems.length) return false;
@@ -1968,8 +1978,9 @@ function startNextDaySession() {
 function getDayStudyPool(day, type) {
   const startDay = Number(day?.startDay);
   const endDay = Number(day?.endDay);
-  const safeStart = Number.isFinite(startDay) ? Math.max(1, Math.min(14, startDay)) : 1;
-  const safeEnd = Number.isFinite(endDay) ? Math.max(safeStart, Math.min(14, endDay)) : safeStart;
+  const maxDay = getMaxAvailableDay();
+  const safeStart = Number.isFinite(startDay) ? Math.max(1, Math.min(maxDay, startDay)) : 1;
+  const safeEnd = Number.isFinite(endDay) ? Math.max(safeStart, Math.min(maxDay, endDay)) : safeStart;
   const normalizedType = type === "word" || type === "phrase" || type === "all" ? type : "all";
   const dayItems = state.items.filter((item) => Number(item.day) >= safeStart && Number(item.day) <= safeEnd);
   const typedItems = normalizedType === "all" ? dayItems : dayItems.filter((item) => item.type === normalizedType);
@@ -1993,8 +2004,9 @@ function getDayStudyPool(day, type) {
 }
 
 function startDayStudySession(startDay, endDay, type) {
-  const safeStart = Math.max(1, Math.min(14, Number(startDay) || 1));
-  const safeEnd = Math.max(safeStart, Math.min(14, Number(endDay) || safeStart));
+  const maxDay = getMaxAvailableDay();
+  const safeStart = Math.max(1, Math.min(maxDay, Number(startDay) || 1));
+  const safeEnd = Math.max(safeStart, Math.min(maxDay, Number(endDay) || safeStart));
   const normalizedType = type === "word" || type === "phrase" || type === "all" ? type : "all";
   const customPool = getDayStudyPool({ startDay: safeStart, endDay: safeEnd }, normalizedType);
 
@@ -3352,8 +3364,9 @@ function bindEvents() {
       const startDayRaw = Number(document.getElementById("dayStudyStartDaySelect")?.value);
       const endDayRaw = Number(document.getElementById("dayStudyEndDaySelect")?.value);
       const typeRaw = String(document.getElementById("dayStudyTypeSelect")?.value || "all");
-      const safeStart = Number.isFinite(startDayRaw) ? Math.max(1, Math.min(14, startDayRaw)) : 1;
-      const safeEnd = Number.isFinite(endDayRaw) ? Math.max(safeStart, Math.min(14, endDayRaw)) : safeStart;
+      const maxDay = getMaxAvailableDay();
+      const safeStart = Number.isFinite(startDayRaw) ? Math.max(1, Math.min(maxDay, startDayRaw)) : 1;
+      const safeEnd = Number.isFinite(endDayRaw) ? Math.max(safeStart, Math.min(maxDay, endDayRaw)) : safeStart;
       const safeType = typeRaw === "word" || typeRaw === "phrase" || typeRaw === "all" ? typeRaw : "all";
       startDayStudySession(safeStart, safeEnd, safeType);
     });
