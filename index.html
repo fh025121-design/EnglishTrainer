@@ -98,13 +98,29 @@
             <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
             <div>
               <p class="eyebrow">設定</p>
-              <h2>音声テスト</h2>
+              <h2>バージョン情報</h2>
             </div>
             <div class="header-spacer" aria-hidden="true"></div>
           </div>
           <div class="panel">
-            <button id="speechTestBtn" class="primary-btn" type="button">音声テスト</button>
-            <p class="settings-version-text">Ver. 2026-07-17-1</p>
+            <div class="settings-version-row">
+              <p id="settingsVersionText" class="settings-version-text"></p>
+              <button id="showUpdateHistoryBtn" class="ghost-btn" type="button">更新内容</button>
+            </div>
+            <div id="adminHistoryGate" class="settings-update-gate hidden">
+              <div class="settings-update-password-row">
+                <input
+                  id="adminHistoryPasswordInput"
+                  class="settings-update-password-input"
+                  type="password"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder="パスワード"
+                />
+                <button id="adminHistoryUnlockBtn" class="primary-btn" type="button">表示</button>
+              </div>
+            </div>
+            <div id="adminHistoryPanel" class="settings-update-history hidden"></div>
           </div>
         </section>
 

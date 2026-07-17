@@ -1,4 +1,12 @@
 const STORAGE_KEY = "english-trainer-state-v1";
+const SETTINGS_INFO = {
+  adminPassword: "12345",
+  releaseHistory: [
+    { version: "26/0717/1250", note: "バージョン表示を追加" },
+    { version: "26/0717/1310", note: "スマホ音声を修正" }
+  ]
+};
+const APP_VERSION = SETTINGS_INFO.releaseHistory[0]?.version || "0/0000/0000";
 let currentAudio = null;
 const LEVEL_DEFINITIONS = [
   { level: 1, label: "要特訓", icon: "🔥" },
@@ -1496,7 +1504,8 @@ function playQuestionAudio(question, onComplete) {
 
   stopCurrentAudio();
 
-  const audio = new Audio(`audio/${encodeURIComponent(questionId)}.mp3`);
+  const audioPath = `audio/${encodeURIComponent(questionId)}.mp3`;
+  const audio = new Audio(audioPath);
   console.log("audio question id:", question?.id);
   console.log("audio path:", audio.src);
   currentAudio = audio;
@@ -3136,10 +3145,54 @@ function bindEvents() {
     });
   }
 
-  const speechTestBtn = document.getElementById("speechTestBtn");
-  if (speechTestBtn) {
-    speechTestBtn.addEventListener("click", () => {
-      playQuestionAudio({ id: "apple" });
+  const showUpdateHistoryBtn = document.getElementById("showUpdateHistoryBtn");
+  const adminHistoryGate = document.getElementById("adminHistoryGate");
+  const adminHistoryPasswordInput = document.getElementById("adminHistoryPasswordInput");
+  const adminHistoryUnlockBtn = document.getElementById("adminHistoryUnlockBtn");
+  const adminHistoryPanel = document.getElementById("adminHistoryPanel");
+
+  const hideAdminHistory = () => {
+    if (!adminHistoryPanel) return;
+    adminHistoryPanel.classList.add("hidden");
+    adminHistoryPanel.innerHTML = "";
+  };
+
+  const unlockAdminHistory = () => {
+    if (!adminHistoryPasswordInput || !adminHistoryPanel) return;
+    if (adminHistoryPasswordInput.value !== SETTINGS_INFO.adminPassword) {
+      hideAdminHistory();
+      return;
+    }
+
+    const historyMarkup = SETTINGS_INFO.releaseHistory
+      .map((entry) => `<li><span class="settings-history-version">${entry.version}</span><span>${entry.note}</span></li>`)
+      .join("");
+    adminHistoryPanel.innerHTML = `<ul class="settings-history-list">${historyMarkup}</ul>`;
+    adminHistoryPanel.classList.remove("hidden");
+  };
+
+  if (showUpdateHistoryBtn) {
+    showUpdateHistoryBtn.addEventListener("click", () => {
+      if (adminHistoryGate) {
+        adminHistoryGate.classList.remove("hidden");
+      }
+      hideAdminHistory();
+      if (adminHistoryPasswordInput) {
+        adminHistoryPasswordInput.value = "";
+        adminHistoryPasswordInput.focus();
+      }
+    });
+  }
+
+  if (adminHistoryUnlockBtn) {
+    adminHistoryUnlockBtn.addEventListener("click", unlockAdminHistory);
+  }
+
+  if (adminHistoryPasswordInput) {
+    adminHistoryPasswordInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      unlockAdminHistory();
     });
   }
 
@@ -3296,6 +3349,10 @@ function bindEvents() {
 let state = loadState();
 
 function init() {
+  const settingsVersionText = document.getElementById("settingsVersionText");
+  if (settingsVersionText) {
+    settingsVersionText.textContent = `Ver ${APP_VERSION}`;
+  }
   const itemsSynced = ensureItemsSyncedWithVocabularyBank();
   clampStudyRangeToAvailableDays();
   autoCompleteStaleSessionIfNeeded();
