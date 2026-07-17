@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 02:27", note: "苦手克服の出題順を改善・レベル1・未出題・直前の誤答を優先するよう変更" },
     { version: "2026/07/18 02:06", note: "苦手克服を5問単位で繰り返せるよう改善・「さらに5問挑戦」「今日はここまで」を追加" },
     { version: "2026/07/18 01:28", note: "PC版の回答後に音声を2回連続再生・音声再生後、自動で次の問題へ進むよう改善" },
     { version: "2026/07/18 01:03", note: "Day8～40の音声を追加・40Dayすべて音声対応・音声生成処理を改善" },
@@ -932,13 +933,107 @@ function startCurrentPhaseQuestions() {
   showScreen("testScreen");
 }
 
-function getWeakPhasePool(sessionLike, limit = 10, additionalExcludedIds = []) {
+function buildWeakFocusPriorityBuckets(sessionLike) {
   const buckets = buildLevelBuckets();
-  const excludedIds = new Set((sessionLike?.baseQuestionIds || []).map((id) => String(id)));
-  (sessionLike?.weakFocusAskedQuestionIds || []).forEach((id) => excludedIds.add(String(id)));
-  (additionalExcludedIds || []).forEach((id) => excludedIds.add(String(id)));
-  const candidates = [...(buckets[1] || []), ...(buckets[2] || [])].filter((item) => !excludedIds.has(String(item.id)));
-  return weightedSampleWithoutReplacement(candidates, limit);
+  const baseQuestionIds = new Set((sessionLike?.baseQuestionIds || []).map((id) => String(id)));
+  const askedQuestionIds = new Set((sessionLike?.weakFocusAskedQuestionIds || []).map((id) => String(id)));
+  const lastRoundCorrectIds = new Set((sessionLike?.weakFocusLastRoundCorrectIds || []).map((id) => String(id)));
+  const lastRoundWrongIds = new Set((sessionLike?.weakFocusLastRoundWrongIds || []).map((id) => String(id)));
+  const candidates = [...(buckets[1] || []), ...(buckets[2] || [])].filter((item) => !baseQuestionIds.has(String(item.id)));
+
+  const priorityBuckets = {
+    A: [],
+    B: [],
+    C: [],
+    D: [],
+    E: [],
+    F: []
+  };
+
+  candidates.forEach((item) => {
+    const questionId = String(item.id);
+    const level = getEffectiveLevelForItem(item);
+    const isLevelOne = level === 1;
+    const wasAskedInThisSession = askedQuestionIds.has(questionId);
+    const wasCorrectInLastRound = lastRoundCorrectIds.has(questionId);
+    const wasWrongInLastRound = lastRoundWrongIds.has(questionId);
+
+    if (isLevelOne && !wasAskedInThisSession) {
+      priorityBuckets.A.push(item);
+      return;
+    }
+    if (isLevelOne && wasWrongInLastRound) {
+      priorityBuckets.B.push(item);
+      return;
+    }
+    if (!isLevelOne && !wasAskedInThisSession) {
+      priorityBuckets.C.push(item);
+      return;
+    }
+    if (!isLevelOne && wasWrongInLastRound) {
+      priorityBuckets.D.push(item);
+      return;
+    }
+    if (wasCorrectInLastRound) {
+      priorityBuckets.E.push(item);
+      return;
+    }
+    priorityBuckets.F.push(item);
+  });
+
+  return Object.fromEntries(
+    Object.entries(priorityBuckets).map(([key, bucket]) => [key, shuffle(bucket)])
+  );
+}
+
+function pickWeakFocusCandidate(bucket, avoidQuestionId = "") {
+  if (!Array.isArray(bucket) || !bucket.length) return null;
+  if (!avoidQuestionId) return bucket.shift() || null;
+  const candidateIndex = bucket.findIndex((item) => String(item.id) !== String(avoidQuestionId));
+  if (candidateIndex === -1) return null;
+  const [candidate] = bucket.splice(candidateIndex, 1);
+  return candidate || null;
+}
+
+function getWeakPhasePool(sessionLike, limit = 10) {
+  const priorityBuckets = buildWeakFocusPriorityBuckets(sessionLike);
+  const orderedKeys = ["A", "B", "C", "D", "E", "F"];
+  const selected = [];
+  const usedIds = new Set();
+  let avoidFirstQuestionId = String(sessionLike?.weakFocusLastQuestionId || "");
+  let emptyPassCount = 0;
+  let orderedIndex = 0;
+
+  while (selected.length < limit) {
+    const key = orderedKeys[orderedIndex % orderedKeys.length];
+    orderedIndex += 1;
+    const bucket = priorityBuckets[key];
+    const candidate = pickWeakFocusCandidate(bucket, selected.length === 0 ? avoidFirstQuestionId : "");
+
+    if (!candidate) {
+      emptyPassCount += 1;
+      if (selected.length === 0 && avoidFirstQuestionId && emptyPassCount >= orderedKeys.length) {
+        avoidFirstQuestionId = "";
+        emptyPassCount = 0;
+        continue;
+      }
+      if (emptyPassCount >= orderedKeys.length) {
+        break;
+      }
+      continue;
+    }
+
+    const questionId = String(candidate.id);
+    if (usedIds.has(questionId)) {
+      continue;
+    }
+
+    usedIds.add(questionId);
+    selected.push(candidate);
+    emptyPassCount = 0;
+  }
+
+  return selected;
 }
 
 function hideWeakFocusDecisionPanel() {
@@ -1358,6 +1453,19 @@ function sanitizeStoredSession(sessionLike) {
     weakFocusAskedQuestionIds: Array.isArray(sessionLike.weakFocusAskedQuestionIds)
       ? sessionLike.weakFocusAskedQuestionIds.map((id) => String(id))
       : [],
+    weakFocusLastRoundCorrectIds: Array.isArray(sessionLike.weakFocusLastRoundCorrectIds)
+      ? sessionLike.weakFocusLastRoundCorrectIds.map((id) => String(id))
+      : [],
+    weakFocusLastRoundWrongIds: Array.isArray(sessionLike.weakFocusLastRoundWrongIds)
+      ? sessionLike.weakFocusLastRoundWrongIds.map((id) => String(id))
+      : [],
+    weakFocusCurrentRoundCorrectIds: Array.isArray(sessionLike.weakFocusCurrentRoundCorrectIds)
+      ? sessionLike.weakFocusCurrentRoundCorrectIds.map((id) => String(id))
+      : [],
+    weakFocusCurrentRoundWrongIds: Array.isArray(sessionLike.weakFocusCurrentRoundWrongIds)
+      ? sessionLike.weakFocusCurrentRoundWrongIds.map((id) => String(id))
+      : [],
+    weakFocusLastQuestionId: typeof sessionLike.weakFocusLastQuestionId === "string" ? sessionLike.weakFocusLastQuestionId : "",
     awaitingWeakFocusDecision: Boolean(sessionLike.awaitingWeakFocusDecision),
     isFinishingSession: false,
     isSessionCompleted: false
@@ -2523,12 +2631,14 @@ function startNormalWeakFocusRound(session, options = {}) {
   const askedIds = Array.isArray(session.weakFocusAskedQuestionIds)
     ? session.weakFocusAskedQuestionIds.map((id) => String(id))
     : [];
-  const questions = getWeakPhasePool(session, NORMAL_WEAK_FOCUS_BATCH_SIZE, askedIds);
+  const questions = getWeakPhasePool(session, NORMAL_WEAK_FOCUS_BATCH_SIZE);
   if (!questions.length) return false;
 
   const askedSet = new Set(askedIds);
   questions.forEach((question) => askedSet.add(String(question.id)));
   session.weakFocusAskedQuestionIds = [...askedSet];
+  session.weakFocusCurrentRoundCorrectIds = [];
+  session.weakFocusCurrentRoundWrongIds = [];
   session.weakFocusRoundCount = completedRounds + 1;
   session.phase3Skipped = false;
 
@@ -2771,6 +2881,11 @@ function prepareSession(mode, options = {}) {
     phase3Skipped: mode === "phrase-spiral" ? true : false,
     weakFocusRoundCount: 0,
     weakFocusAskedQuestionIds: [],
+    weakFocusLastRoundCorrectIds: [],
+    weakFocusLastRoundWrongIds: [],
+    weakFocusCurrentRoundCorrectIds: [],
+    weakFocusCurrentRoundWrongIds: [],
+    weakFocusLastQuestionId: "",
     awaitingWeakFocusDecision: false,
     isFinishingSession: false,
     isSessionCompleted: false
@@ -3105,6 +3220,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   const isMainNormalRun = session.mode === "normal" && session.phase === "phase1";
   const isPhraseSpiralMainRun = session.mode === "phrase-spiral" && session.phase === "phase1";
   const isScoredNormalRun = session.mode === "normal" && (session.phase === "phase0" || session.phase === "phase1");
+  const isNormalWeakFocusRun = session.mode === "normal" && session.phase === "phase3";
   session.answerHistory.push({
     questionId: String(question.id),
     isCorrect,
@@ -3129,6 +3245,11 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     session.enterLockUntil = null;
 
     if (isCorrect) {
+      if (isNormalWeakFocusRun) {
+        const weakFocusCorrectIds = new Set((session.weakFocusCurrentRoundCorrectIds || []).map((id) => String(id)));
+        weakFocusCorrectIds.add(questionId);
+        session.weakFocusCurrentRoundCorrectIds = [...weakFocusCorrectIds];
+      }
       const levelChange = updateItemLevelProgress(item, true);
       if (isScoredNormalRun || session.mode !== "normal") {
         session.correctFirstAttempt += 1;
@@ -3187,6 +3308,11 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       if (!session.wrongQuestionIds.includes(questionIdKey)) {
         session.wrongQuestionIds.push(questionIdKey);
       }
+    }
+    if (isNormalWeakFocusRun) {
+      const weakFocusWrongIds = new Set((session.weakFocusCurrentRoundWrongIds || []).map((id) => String(id)));
+      weakFocusWrongIds.add(questionId);
+      session.weakFocusCurrentRoundWrongIds = [...weakFocusWrongIds];
     }
     updateItemLevelProgress(item, false);
     resetReviewSchedule(questionId);
@@ -3364,10 +3490,17 @@ function finishSession() {
     }
 
     if (session.phase === "phase3") {
+      session.weakFocusLastRoundCorrectIds = Array.isArray(session.weakFocusCurrentRoundCorrectIds)
+        ? session.weakFocusCurrentRoundCorrectIds.map((id) => String(id))
+        : [];
+      session.weakFocusLastRoundWrongIds = Array.isArray(session.weakFocusCurrentRoundWrongIds)
+        ? session.weakFocusCurrentRoundWrongIds.map((id) => String(id))
+        : [];
+      session.weakFocusLastQuestionId = String(session.questions?.[session.questions.length - 1]?.id || "");
       const completedRounds = Math.max(0, Number(session.weakFocusRoundCount) || 0);
       const hasRemainingRounds = completedRounds < NORMAL_WEAK_FOCUS_MAX_ROUNDS;
       const nextWeakQuestions = hasRemainingRounds
-        ? getWeakPhasePool(session, NORMAL_WEAK_FOCUS_BATCH_SIZE, session.weakFocusAskedQuestionIds || [])
+        ? getWeakPhasePool(session, NORMAL_WEAK_FOCUS_BATCH_SIZE)
         : [];
       if (nextWeakQuestions.length && hasRemainingRounds) {
         session.awaitingWeakFocusDecision = true;
