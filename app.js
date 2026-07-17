@@ -908,7 +908,7 @@ function hidePhaseIntro() {
   if (introCard) introCard.classList.add("hidden");
 }
 
-function startCurrentPhaseQuestions() {
+function startCurrentPhaseQuestions(playAudioInGesture = false) {
   const session = state.session;
   if (!session) return;
   session.awaitingPhaseStart = false;
@@ -919,6 +919,15 @@ function startCurrentPhaseQuestions() {
     renderQuestionSession();
   }
   showScreen("testScreen");
+
+  if (playAudioInGesture) {
+    const firstQuestion = state.session?.currentQuestion;
+    if (firstQuestion) {
+      playQuestionAudio(firstQuestion, null, () => {
+        showAudioPlaybackError();
+      });
+    }
+  }
 }
 
 function getWeakPhasePool(sessionLike, limit = 10) {
@@ -1494,7 +1503,7 @@ function stopCurrentAudio() {
   currentAudio = null;
 }
 
-function playQuestionAudio(question, onComplete) {
+function playQuestionAudio(question, onComplete, onError) {
   const questionId = String(question?.id || "").trim();
 
   if (!questionId) {
@@ -1533,6 +1542,9 @@ function playQuestionAudio(question, onComplete) {
     "error",
     () => {
       console.error("音声ファイル読込失敗:", audio.src);
+      if (typeof onError === "function") {
+        onError();
+      }
       finishOnce();
     },
     { once: true }
@@ -1542,6 +1554,9 @@ function playQuestionAudio(question, onComplete) {
   if (playPromise && typeof playPromise.catch === "function") {
     playPromise.catch((error) => {
       console.error("音声再生失敗:", audio.src, error);
+      if (typeof onError === "function") {
+        onError();
+      }
       finishOnce();
     });
   }
@@ -2751,6 +2766,13 @@ function buildFeedbackMarkup(isCorrect, answer, prompt) {
   return `<strong>${symbol}</strong><div class="answer-line">${answer}</div><span class="hint">${prompt}</span>`;
 }
 
+function showAudioPlaybackError(targetFeedbackBox = null) {
+  const feedbackBox = targetFeedbackBox || document.querySelector("#questionCard:not(.hidden) .feedback-box, #reviewCard:not(.hidden) .feedback-box");
+  if (!feedbackBox) return;
+  feedbackBox.className = "feedback-box error";
+  feedbackBox.innerHTML = "<strong>音声を再生できません</strong>";
+}
+
 function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   const session = state.session;
   if (!session || session.answerLocked) return;
@@ -2835,15 +2857,17 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
         answerBtn.disabled = true;
         answerBtn.textContent = "2回目音声を待機中";
       }
+      playQuestionAudio(question, () => {
+        enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
+      }, () => {
+        showAudioPlaybackError(feedbackBox);
+      });
       saveState();
       renderHome();
       renderProgress();
       if (levelChange.leveledUpToFour) {
         showLevelUpModal(item);
       }
-      playQuestionAudio(question, () => {
-        enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
-      });
       return;
     }
 
@@ -2908,15 +2932,17 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     answerBtn.disabled = true;
     answerBtn.textContent = "2回目音声を待機中";
   }
+  playQuestionAudio(question, () => {
+    enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
+  }, () => {
+    showAudioPlaybackError(feedbackBox);
+  });
   saveState();
   renderHome();
   renderProgress();
   if (levelChange.leveledUpToFour) {
     showLevelUpModal(item);
   }
-  playQuestionAudio(question, () => {
-    enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
-  });
 }
 
 function updateBestAccuracyFromSession(session) {
@@ -3134,7 +3160,7 @@ function bindEvents() {
   const phaseIntroStartBtn = document.getElementById("phaseIntroStartBtn");
   if (phaseIntroStartBtn) {
     phaseIntroStartBtn.addEventListener("click", () => {
-      startCurrentPhaseQuestions();
+      startCurrentPhaseQuestions(true);
     });
   }
 
