@@ -121,7 +121,7 @@
   { id: "D05-W20", day: 5, type: "word", japanese: "動く", answer: "move", hint: "", similar: [] },
   { id: "D05-P01", day: 5, type: "phrase", japanese: "～しようとする", answer: "try to", hint: "", similar: [] },
   { id: "D05-P02", day: 5, type: "phrase", japanese: "～することを学ぶ", answer: "learn to", hint: "", similar: [] },
-  { id: "D05-P03", day: 5, type: "phrase", japanese: "人に～してほしい", answer: "want 人 to", hint: "", similar: [] },
+  { id: "D05-P03", day: 5, type: "phrase", japanese: "someoneに～してほしい", answer: "want someone to", hint: "", similar: [] },
   { id: "D05-P04", day: 5, type: "phrase", japanese: "～する必要がある", answer: "need to", hint: "", similar: [] },
   { id: "D05-P05", day: 5, type: "phrase", japanese: "～することを決める", answer: "decide to", hint: "", similar: [] },
   { id: "D06-W01", day: 6, type: "word", japanese: "望む", answer: "hope", hint: "", similar: [] },
@@ -144,9 +144,9 @@
   { id: "D06-W18", day: 6, type: "word", japanese: "試す", answer: "try", hint: "", similar: [] },
   { id: "D06-W19", day: 6, type: "word", japanese: "訪れる", answer: "visit", hint: "", similar: [] },
   { id: "D06-W20", day: 6, type: "word", japanese: "滞在する", answer: "stay", hint: "", similar: [] },
-  { id: "D06-P01", day: 6, type: "phrase", japanese: "人に～するよう言う", answer: "tell 人 to", hint: "", similar: [] },
-  { id: "D06-P02", day: 6, type: "phrase", japanese: "人に～を頼む", answer: "ask 人 to", hint: "", similar: [] },
-  { id: "D06-P03", day: 6, type: "phrase", japanese: "人が～するのを助ける", answer: "help 人 (to)", hint: "", similar: [] },
+  { id: "D06-P01", day: 6, type: "phrase", japanese: "someoneに～するよう言う", answer: "tell someone to", hint: "", similar: [] },
+  { id: "D06-P02", day: 6, type: "phrase", japanese: "someoneに～を頼む", answer: "ask someone to", hint: "", similar: [] },
+  { id: "D06-P03", day: 6, type: "phrase", japanese: "someoneが～するのを助ける", answer: "help someone (to)", hint: "", similar: [] },
   { id: "D06-P04", day: 6, type: "phrase", japanese: "～しようとする", answer: "try to", hint: "", similar: [] },
   { id: "D06-P05", day: 6, type: "phrase", japanese: "～することを学ぶ", answer: "learn to", hint: "", similar: [] },
   { id: "D07-W01", day: 7, type: "word", japanese: "戻る・返す", answer: "return", hint: "", similar: [] },
@@ -172,14 +172,14 @@
   { id: "D07-P01", day: 7, type: "phrase", japanese: "～することを楽しむ", answer: "enjoy doing", hint: "", similar: [] },
   { id: "D07-P02", day: 7, type: "phrase", japanese: "～し終える", answer: "finish doing", hint: "", similar: [] },
   { id: "D07-P03", day: 7, type: "phrase", japanese: "～することをやめる", answer: "stop doing", hint: "", similar: [] },
-  { id: "D07-P04", day: 7, type: "phrase", japanese: "人に～するよう言う", answer: "tell 人 to", hint: "", similar: [] },
-  { id: "D07-P05", day: 7, type: "phrase", japanese: "人に～を頼む", answer: "ask 人 to", hint: "", similar: [] }
+  { id: "D07-P04", day: 7, type: "phrase", japanese: "someoneに～するよう言う", answer: "tell someone to", hint: "", similar: [] },
+  { id: "D07-P05", day: 7, type: "phrase", japanese: "someoneに～を頼む", answer: "ask someone to", hint: "", similar: [] }
 ];
 
 function normalizeAudioBaseName(text) {
   return String(text || "")
     .toLowerCase()
-    .replace(/人/g, "person")
+    .replace(/someone/g, "person")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .replace(/_+/g, "_");

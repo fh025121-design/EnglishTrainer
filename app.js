@@ -1450,11 +1450,15 @@ function buildPhraseTypingSpec(question) {
     index
   }));
 
-  const display = tokenMeta.map((token) => {
-    if (token.isFrameToken) return token.normalizedToken;
-    if (token.index === 0) return token.normalizedToken;
-    return "____";
-  }).join(" ");
+const display = tokenMeta.map((token) => {
+  if (
+    token.normalizedToken === "someone" ||
+    token.normalizedToken === "something"
+  ) {
+    return token.normalizedToken;
+  }
+  return "＿＿";
+}).join(" ");
 
   const blanks = tokenMeta.filter((token) => token.index > 0 && !token.isFrameToken);
   const required = blanks.filter((token) => !token.isOptional).map((token) => token.normalizedToken).filter(Boolean);
