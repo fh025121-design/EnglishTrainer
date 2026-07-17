@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/17 23:38", note: "スマホのキャッシュ対策を追加・CSS・JavaScriptのバージョン管理を追加・更新日時の記載ルールを修正" },
     { version: "26/0717/1900", note: "Day9～Day14を追加" },
     { version: "26/0717/1900", note: "熟語表示を改善" },
     { version: "26/0717/1900", note: "Day学習の画面遷移を修正" },
