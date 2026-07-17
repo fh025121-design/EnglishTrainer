@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260717-2338" />
+    <link rel="stylesheet" href="styles.css?v=20260718-0332" />
   </head>
   <body>
     <div class="app-shell">
@@ -45,6 +45,27 @@
                 <h3>最近進捗TOP5</h3>
               </div>
               <ul id="recentProgressList" class="recent-progress-list"></ul>
+            </div>
+          </div>
+
+          <div id="gameTicketPanel" class="panel home-ticket-panel hidden">
+            <div class="panel-title-row">
+              <h3>🎫 ゲームチケット</h3>
+              <span id="gameTicketTotalText" class="panel-pill">合計 0分</span>
+            </div>
+            <p class="game-ticket-description">
+              追加特訓や過去の間違いに取り組むと、ゲームチケットがもらえることがあります。
+            </p>
+            <p class="game-ticket-description">
+              チケットは毎日必ずもらえるものではありません。何度か頑張ったときに、たまたま出てくるボーナスです。
+            </p>
+            <p class="game-ticket-description">
+              通常の学習を1回行っただけでは、チケットの対象にはなりません。
+            </p>
+            <ul id="gameTicketInventoryList" class="game-ticket-list"></ul>
+            <div class="game-ticket-history-wrap">
+              <h4>🕒 最近使ったチケット</h4>
+              <ul id="gameTicketUsageHistoryList" class="game-ticket-history-list"></ul>
             </div>
           </div>
 
@@ -500,17 +521,31 @@
 
       <div id="gameTicketModal" class="modal-shell hidden" aria-hidden="true">
         <div class="modal-backdrop modal-backdrop-soft"></div>
-        <div class="modal-card game-ticket-card" role="dialog" aria-modal="true" aria-labelledby="gameTicketTitle">
-          <p id="gameTicketTitle" class="level-up-eyebrow">🎉 ゲームチケットを手に入れた！</p>
-          <h2 id="gameTicketMinutesText">🎮 ゲームチケット（5分）</h2>
-          <p class="game-ticket-photo-text">📸 あとで使うので、すぐ写真を撮っておこう！</p>
-          <p id="gameTicketIntroText" class="game-ticket-intro-text hidden">💡 復習を続けていると、ゲームチケットを見つけることがあります。（出ない日もあります。）</p>
-          <button class="primary-btn" type="button" data-close-modal="gameTicketModal">OK</button>
+        <div class="modal-card game-ticket-card ticket-reward-card" role="dialog" aria-modal="true" aria-labelledby="gameTicketTitle">
+          <span class="ticket-reward-sparkle ticket-reward-sparkle-left" aria-hidden="true">✦</span>
+          <span class="ticket-reward-sparkle ticket-reward-sparkle-right" aria-hidden="true">✧</span>
+          <p id="gameTicketTitle" class="level-up-eyebrow">🎫 ゲームチケット</p>
+          <h2 id="gameTicketMinutesText">10分券を獲得しました！</h2>
+          <p id="gameTicketBodyText" class="game-ticket-photo-text">追加特訓、よく頑張りました。</p>
+          <p id="gameTicketIntroText" class="game-ticket-intro-text">📷 スクリーンショットを撮って、保護者に見せましょう。</p>
+          <button id="gameTicketRewardOkBtn" class="primary-btn" type="button">OK</button>
+        </div>
+      </div>
+
+      <div id="gameTicketUseModal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop modal-backdrop-soft"></div>
+        <div class="modal-card game-ticket-use-card" role="dialog" aria-modal="true" aria-labelledby="gameTicketUseTitle">
+          <p id="gameTicketUseTitle" class="level-up-eyebrow">🎫 チケットを使う</p>
+          <h2 id="gameTicketUseMinutesText">10分券を使用しますか？</h2>
+          <div class="game-ticket-use-actions">
+            <button id="confirmGameTicketUseBtn" class="primary-btn" type="button">使用する</button>
+            <button class="secondary-btn" type="button" data-close-modal="gameTicketUseModal">キャンセル</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <script src="data.js?v=20260717-2338"></script>
-    <script src="app.js?v=20260717-2338"></script>
+    <script src="data.js?v=20260718-0332"></script>
+    <script src="app.js?v=20260718-0332"></script>
   </body>
 </html>

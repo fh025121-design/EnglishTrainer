@@ -154,6 +154,83 @@ p {
   padding: 14px 16px;
 }
 
+.home-ticket-panel {
+  margin-top: 12px;
+  padding: 16px 18px;
+}
+
+.game-ticket-description {
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.game-ticket-description + .game-ticket-description {
+  margin-top: 6px;
+}
+
+.game-ticket-list,
+.game-ticket-history-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-ticket-entry-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.game-ticket-entry-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(94, 214, 214, 0.45);
+  background: rgba(94, 214, 214, 0.08);
+}
+
+.game-ticket-entry-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.game-ticket-entry-meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.game-ticket-history-wrap {
+  margin-top: 16px;
+}
+
+.game-ticket-history-wrap h4 {
+  font-size: 1rem;
+}
+
+.game-ticket-history-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+}
+
 .home-update-history-list {
   list-style: none;
   margin: 8px 0 0;
@@ -1317,6 +1394,40 @@ select {
   padding: 28px 24px;
 }
 
+.ticket-reward-card {
+  overflow: hidden;
+  animation: ticketRewardFloat 220ms ease-out;
+}
+
+.ticket-reward-sparkle {
+  position: absolute;
+  top: 18px;
+  color: #ffd57a;
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+.ticket-reward-sparkle-left {
+  left: 20px;
+}
+
+.ticket-reward-sparkle-right {
+  right: 22px;
+}
+
+.game-ticket-use-card {
+  width: min(420px, 100%);
+  text-align: center;
+}
+
+.game-ticket-use-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
 .game-ticket-photo-text {
   margin-top: 12px;
   color: var(--text);
@@ -1328,6 +1439,17 @@ select {
   color: var(--muted);
   font-size: 0.95rem;
   line-height: 1.45;
+}
+
+@keyframes ticketRewardFloat {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .level-up-eyebrow {
@@ -1513,6 +1635,12 @@ select {
 
   .home-message-bar {
     gap: 8px;
+  }
+
+  .game-ticket-entry-btn,
+  .game-ticket-history-item {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .home-message-subrow {

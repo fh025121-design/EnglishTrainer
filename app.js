@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 03:32", note: "PC版ゲームチケット機能を新仕様へ全面更新・所持一覧と使用履歴を追加" },
     { version: "2026/07/18 02:27", note: "苦手克服の出題順を改善・レベル1・未出題・直前の誤答を優先するよう変更" },
     { version: "2026/07/18 02:06", note: "苦手克服を5問単位で繰り返せるよう改善・「さらに5問挑戦」「今日はここまで」を追加" },
     { version: "2026/07/18 01:28", note: "PC版の回答後に音声を2回連続再生・音声再生後、自動で次の問題へ進むよう改善" },
@@ -47,18 +48,30 @@ const LEVEL_FOCUS_BATCH_SIZE = 5;
 const NORMAL_WEAK_FOCUS_BATCH_SIZE = 5;
 const NORMAL_WEAK_FOCUS_MAX_ROUNDS = 10;
 const GAME_TICKET_CONFIG = {
-  eligibleModes: new Set(["level-focus", "challenge"]),
-  baseChance: 0.08,
-  repeatBonus: 0.05,
-  maxChance: 0.45,
-  pityNoWinThreshold: 8,
-  introMaxDisplays: 1,
+  debugRandomChanceOverride: null,
+  eligibleTrainingThreshold: 3,
+  rescueTriggerDays: 3,
+  rescueGrantTrainingCount: 2,
+  dailyMaxEarned: 2,
+  earlyTrainingChance: 0.12,
+  lateTrainingChance: 0.03,
+  afterFirstWinChance: 0.02,
   ticketOptions: [
-    { minutes: 5, weight: 55 },
-    { minutes: 10, weight: 30 },
-    { minutes: 15, weight: 15 }
-  ]
+    { minutes: 5, weight: 70 },
+    { minutes: 10, weight: 20 },
+    { minutes: 15, weight: 10 }
+  ],
+  streakBonusMilestones: [
+    { days: 20, minutes: 30 },
+    { days: 50, minutes: 30 },
+    { days: 75, minutes: 30 },
+    { days: 100, minutes: 60 }
+  ],
+  streakBonusRepeatStart: 130,
+  streakBonusRepeatInterval: 30,
+  streakBonusRepeatMinutes: 30
 };
+const GAME_TICKET_DAY_MS = 24 * 60 * 60 * 1000;
 let resultActionFocusMode = null;
 const PHASE_METADATA = {
   phase0: {
@@ -101,39 +114,173 @@ const levelTrendTracker = {
 
 function createDefaultGameTicketStats() {
   return {
-    eligibleCompletionCount: 0,
-    noWinStreak: 0,
-    foundCount: 0,
-    introShownCount: 0
+    inventory: [],
+    dailyTrainingCount: 0,
+    dailyEarnedCount: 0,
+    unsuccessfulEligibleDays: 0,
+    lastProcessedDate: "",
+    streakBonusAwardedDays: [],
+    usageHistory: [],
+    pendingRewards: []
+  };
+}
+
+function sanitizeGameTicketInventoryEntry(value) {
+  if (!value || typeof value !== "object") return null;
+  const id = typeof value.id === "string" && value.id ? value.id : `ticket-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const minutes = Number(value.minutes);
+  const earnedAt = Number(value.earnedAt);
+  const expiresAt = Number(value.expiresAt);
+  const usedAt = value.usedAt == null ? null : Number(value.usedAt);
+  const source = value.source === "streakBonus" ? "streakBonus" : "random";
+  if (!Number.isFinite(minutes) || minutes <= 0) return null;
+  if (!Number.isFinite(earnedAt) || !Number.isFinite(expiresAt)) return null;
+  return {
+    id,
+    minutes: Math.round(minutes),
+    earnedAt,
+    expiresAt,
+    usedAt: Number.isFinite(usedAt) ? usedAt : null,
+    source
+  };
+}
+
+function sanitizeGameTicketUsageEntry(value) {
+  if (!value || typeof value !== "object") return null;
+  const minutes = Number(value.minutes);
+  const usedAt = Number(value.usedAt);
+  if (!Number.isFinite(minutes) || minutes <= 0 || !Number.isFinite(usedAt)) return null;
+  return {
+    id: typeof value.id === "string" && value.id ? value.id : `used-${usedAt}-${Math.random().toString(36).slice(2, 8)}`,
+    minutes: Math.round(minutes),
+    usedAt
+  };
+}
+
+function sanitizeGameTicketRewardEntry(value) {
+  if (!value || typeof value !== "object") return null;
+  const minutes = Number(value.minutes);
+  const queuedAt = Number(value.queuedAt);
+  if (!Number.isFinite(minutes) || minutes <= 0) return null;
+  return {
+    id: typeof value.id === "string" && value.id ? value.id : `reward-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: value.type === "streakBonus" ? "streakBonus" : "random",
+    minutes: Math.round(minutes),
+    streakDays: Number.isFinite(Number(value.streakDays)) ? Math.max(0, Math.round(Number(value.streakDays))) : null,
+    queuedAt: Number.isFinite(queuedAt) ? queuedAt : Date.now()
   };
 }
 
 function sanitizeGameTicketStats(value) {
   const source = value && typeof value === "object" ? value : {};
   return {
-    eligibleCompletionCount: Math.max(0, Number(source.eligibleCompletionCount) || 0),
-    noWinStreak: Math.max(0, Number(source.noWinStreak) || 0),
-    foundCount: Math.max(0, Number(source.foundCount) || 0),
-    introShownCount: Math.max(0, Number(source.introShownCount) || 0)
+    inventory: Array.isArray(source.inventory)
+      ? source.inventory.map(sanitizeGameTicketInventoryEntry).filter(Boolean)
+      : [],
+    dailyTrainingCount: Math.max(0, Number(source.dailyTrainingCount) || 0),
+    dailyEarnedCount: Math.max(0, Number(source.dailyEarnedCount) || 0),
+    unsuccessfulEligibleDays: Math.max(0, Number(source.unsuccessfulEligibleDays) || 0),
+    lastProcessedDate: typeof source.lastProcessedDate === "string" ? source.lastProcessedDate : "",
+    streakBonusAwardedDays: Array.isArray(source.streakBonusAwardedDays)
+      ? source.streakBonusAwardedDays.filter((entry) => typeof entry === "string" && entry)
+      : [],
+    usageHistory: Array.isArray(source.usageHistory)
+      ? source.usageHistory.map(sanitizeGameTicketUsageEntry).filter(Boolean)
+      : [],
+    pendingRewards: Array.isArray(source.pendingRewards)
+      ? source.pendingRewards.map(sanitizeGameTicketRewardEntry).filter(Boolean)
+      : []
   };
 }
 
-function sanitizePendingGameTicket(value) {
-  if (!value || typeof value !== "object") return null;
-  const minutes = Number(value.minutes);
-  if (!Number.isFinite(minutes) || ![5, 10, 15].includes(minutes)) return null;
-  return {
-    minutes,
-    showIntro: Boolean(value.showIntro),
-    foundAt: Number.isFinite(Number(value.foundAt)) ? Number(value.foundAt) : Date.now()
-  };
+function isDesktopGameTicketEnabled() {
+  if (typeof shouldUseDesktopAutoAudioFlow === "function") {
+    return shouldUseDesktopAutoAudioFlow();
+  }
+  return true;
 }
 
 function ensureGameTicketState() {
   if (!state?.stats) return createDefaultGameTicketStats();
-  state.stats.gameTicket = sanitizeGameTicketStats(state.stats.gameTicket);
-  state.stats.pendingGameTicket = sanitizePendingGameTicket(state.stats.pendingGameTicket);
-  return state.stats.gameTicket;
+  state.stats.gameTickets = sanitizeGameTicketStats(state.stats.gameTickets);
+  return state.stats.gameTickets;
+}
+
+function clampProbability(value) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function computeGameTicketExpiry(earnedAt) {
+  const baseDate = new Date(Number(earnedAt) || Date.now());
+  const targetYear = baseDate.getMonth() === 11 ? baseDate.getFullYear() + 1 : baseDate.getFullYear();
+  const targetMonth = (baseDate.getMonth() + 1) % 12;
+  const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const targetDay = Math.min(baseDate.getDate(), lastDayOfTargetMonth);
+  return new Date(
+    targetYear,
+    targetMonth,
+    targetDay,
+    baseDate.getHours(),
+    baseDate.getMinutes(),
+    baseDate.getSeconds(),
+    baseDate.getMilliseconds()
+  ).getTime();
+}
+
+function createGameTicketInventoryEntry(minutes, source) {
+  const earnedAt = Date.now();
+  return {
+    id: `ticket-${earnedAt}-${Math.random().toString(36).slice(2, 10)}`,
+    minutes: Math.round(minutes),
+    earnedAt,
+    expiresAt: computeGameTicketExpiry(earnedAt),
+    usedAt: null,
+    source: source === "streakBonus" ? "streakBonus" : "random"
+  };
+}
+
+function pruneExpiredGameTickets(store) {
+  if (!store) return;
+  const now = Date.now();
+  store.inventory = (store.inventory || []).filter((ticket) => ticket.usedAt || ticket.expiresAt > now);
+}
+
+function pruneGameTicketUsageHistory(store) {
+  if (!store) return;
+  const cutoff = Date.now() - (3 * GAME_TICKET_DAY_MS);
+  store.usageHistory = (store.usageHistory || []).filter((entry) => entry.usedAt >= cutoff);
+}
+
+function syncGameTicketState() {
+  const store = ensureGameTicketState();
+  pruneExpiredGameTickets(store);
+  pruneGameTicketUsageHistory(store);
+  if (!isDesktopGameTicketEnabled()) {
+    return store;
+  }
+
+  const currentDate = todayKey();
+  if (!store.lastProcessedDate) {
+    store.lastProcessedDate = currentDate;
+    return store;
+  }
+  if (store.lastProcessedDate === currentDate) {
+    return store;
+  }
+
+  if (store.dailyTrainingCount >= GAME_TICKET_CONFIG.eligibleTrainingThreshold) {
+    if (store.dailyEarnedCount === 0) {
+      store.unsuccessfulEligibleDays += 1;
+    } else {
+      store.unsuccessfulEligibleDays = 0;
+    }
+  }
+
+  store.dailyTrainingCount = 0;
+  store.dailyEarnedCount = 0;
+  store.lastProcessedDate = currentDate;
+  return store;
 }
 
 function pickGameTicketMinutes() {
@@ -149,39 +296,106 @@ function pickGameTicketMinutes() {
   return GAME_TICKET_CONFIG.ticketOptions[GAME_TICKET_CONFIG.ticketOptions.length - 1].minutes;
 }
 
-function maybeDiscoverGameTicket(sessionLike, reason) {
-  if (!sessionLike || reason !== "completed") return null;
-  if (!GAME_TICKET_CONFIG.eligibleModes.has(sessionLike.mode)) return null;
+function queueGameTicketReward(store, ticket, meta = {}) {
+  if (!store || !ticket) return;
+  const reward = sanitizeGameTicketRewardEntry({
+    id: ticket.id,
+    type: meta.type || ticket.source,
+    minutes: ticket.minutes,
+    streakDays: meta.streakDays,
+    queuedAt: Date.now()
+  });
+  if (!reward) return;
+  store.pendingRewards.push(reward);
+}
 
-  const ticketStats = ensureGameTicketState();
-  ticketStats.eligibleCompletionCount += 1;
+function awardGameTicket(store, minutes, source, meta = {}) {
+  if (!store) return null;
+  const ticket = createGameTicketInventoryEntry(minutes, source);
+  store.inventory.push(ticket);
+  if (source === "random") {
+    store.dailyEarnedCount += 1;
+  }
+  queueGameTicketReward(store, ticket, { ...meta, type: source });
+  return ticket;
+}
 
-  const chance = Math.min(
-    GAME_TICKET_CONFIG.maxChance,
-    GAME_TICKET_CONFIG.baseChance + (ticketStats.noWinStreak * GAME_TICKET_CONFIG.repeatBonus)
-  );
-  const pityHit = ticketStats.noWinStreak >= GAME_TICKET_CONFIG.pityNoWinThreshold;
-  const won = pityHit || Math.random() < chance;
+function getRandomTicketChanceForTraining(store) {
+  if (!store) return 0;
+  if (store.dailyEarnedCount >= GAME_TICKET_CONFIG.dailyMaxEarned) return 0;
+  if (store.dailyTrainingCount < GAME_TICKET_CONFIG.eligibleTrainingThreshold) return 0;
+  if (store.dailyEarnedCount >= 1) return GAME_TICKET_CONFIG.afterFirstWinChance;
+  if (store.dailyTrainingCount <= 5) return GAME_TICKET_CONFIG.earlyTrainingChance;
+  return GAME_TICKET_CONFIG.lateTrainingChance;
+}
 
-  if (!won) {
-    ticketStats.noWinStreak += 1;
-    return null;
+function shouldAwardRandomGameTicket(chance) {
+  const override = GAME_TICKET_CONFIG.debugRandomChanceOverride;
+  const safeChance = Number.isFinite(override) ? clampProbability(override) : clampProbability(chance);
+  return Math.random() < safeChance;
+}
+
+function processCompletedTicketTraining() {
+  if (!isDesktopGameTicketEnabled()) return [];
+  const store = syncGameTicketState();
+  store.dailyTrainingCount += 1;
+  const earnedTickets = [];
+
+  const rescueReady =
+    store.unsuccessfulEligibleDays >= GAME_TICKET_CONFIG.rescueTriggerDays &&
+    store.dailyTrainingCount === GAME_TICKET_CONFIG.rescueGrantTrainingCount &&
+    store.dailyEarnedCount < GAME_TICKET_CONFIG.dailyMaxEarned;
+
+  if (rescueReady) {
+    const rescueTicket = awardGameTicket(store, pickGameTicketMinutes(), "random");
+    if (rescueTicket) {
+      store.unsuccessfulEligibleDays = 0;
+      earnedTickets.push(rescueTicket);
+    }
   }
 
-  ticketStats.noWinStreak = 0;
-  ticketStats.foundCount += 1;
-  const showIntro = ticketStats.introShownCount < GAME_TICKET_CONFIG.introMaxDisplays;
-  if (showIntro) {
-    ticketStats.introShownCount += 1;
+  const chance = getRandomTicketChanceForTraining(store);
+  if (chance > 0 && shouldAwardRandomGameTicket(chance)) {
+    const randomTicket = awardGameTicket(store, pickGameTicketMinutes(), "random");
+    if (randomTicket) {
+      earnedTickets.push(randomTicket);
+    }
   }
 
-  const pending = {
-    minutes: pickGameTicketMinutes(),
-    showIntro,
-    foundAt: Date.now()
-  };
-  state.stats.pendingGameTicket = pending;
-  return pending;
+  return earnedTickets;
+}
+
+function getStreakBonusMinutes(streakDays) {
+  const directMatch = GAME_TICKET_CONFIG.streakBonusMilestones.find((entry) => entry.days === streakDays);
+  if (directMatch) return directMatch.minutes;
+  if (streakDays >= GAME_TICKET_CONFIG.streakBonusRepeatStart) {
+    const offset = streakDays - GAME_TICKET_CONFIG.streakBonusRepeatStart;
+    if (offset % GAME_TICKET_CONFIG.streakBonusRepeatInterval === 0) {
+      return GAME_TICKET_CONFIG.streakBonusRepeatMinutes;
+    }
+  }
+  return 0;
+}
+
+function processStreakBonusTicket(reason) {
+  if (reason !== "completed" || !isDesktopGameTicketEnabled()) return null;
+  const store = syncGameTicketState();
+  const streakDays = Math.max(0, Number(state.stats.streak) || 0);
+  const minutes = getStreakBonusMinutes(streakDays);
+  if (!minutes) return null;
+
+  const awardKey = `${todayKey()}:${streakDays}`;
+  if (store.streakBonusAwardedDays.includes(awardKey)) return null;
+
+  const streakTicket = awardGameTicket(store, minutes, "streakBonus", { streakDays });
+  if (!streakTicket) return null;
+  store.streakBonusAwardedDays = [...store.streakBonusAwardedDays, awardKey].slice(-180);
+  return streakTicket;
+}
+
+function getActiveGameTickets(store = ensureGameTicketState()) {
+  const now = Date.now();
+  return (store.inventory || []).filter((ticket) => !ticket.usedAt && ticket.expiresAt > now);
 }
 
 function normalizeIdentityText(value) {
@@ -451,22 +665,150 @@ function hideLevelUpModal() {
 }
 
 function showGameTicketModal(ticket) {
+  if (!isDesktopGameTicketEnabled()) return;
   const modal = document.getElementById("gameTicketModal");
+  const titleText = document.getElementById("gameTicketTitle");
   const minutesText = document.getElementById("gameTicketMinutesText");
+  const bodyText = document.getElementById("gameTicketBodyText");
   const introText = document.getElementById("gameTicketIntroText");
-  if (!modal || !minutesText || !introText) return;
-  minutesText.textContent = `🎮 ゲームチケット（${ticket.minutes}分）`;
-  introText.classList.toggle("hidden", !ticket.showIntro);
+  if (!modal || !titleText || !minutesText || !bodyText || !introText) return;
+  if (ticket.type === "streakBonus") {
+    titleText.textContent = "🔥 連続学習ボーナス";
+    minutesText.textContent = `${ticket.minutes}分券を獲得しました！`;
+    bodyText.textContent = `${ticket.streakDays}日連続達成、おめでとう！`;
+  } else {
+    titleText.textContent = "🎫 ゲームチケット";
+    minutesText.textContent = `${ticket.minutes}分券を獲得しました！`;
+    bodyText.textContent = "追加特訓、よく頑張りました。";
+  }
+  introText.textContent = "📷 スクリーンショットを撮って、保護者に見せましょう。";
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
 }
 
 function showPendingGameTicketModalIfAny() {
-  const pending = sanitizePendingGameTicket(state?.stats?.pendingGameTicket);
+  if (!isDesktopGameTicketEnabled()) return;
+  const store = ensureGameTicketState();
+  const pending = Array.isArray(store.pendingRewards) ? store.pendingRewards[0] : null;
   if (!pending) return;
   showGameTicketModal(pending);
-  state.stats.pendingGameTicket = null;
+}
+
+function dismissCurrentGameTicketReward() {
+  const store = ensureGameTicketState();
+  if (Array.isArray(store.pendingRewards) && store.pendingRewards.length) {
+    store.pendingRewards.shift();
+  }
+  const modal = document.getElementById("gameTicketModal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+  }
   saveState();
+  showPendingGameTicketModalIfAny();
+}
+
+function formatMonthDayFromTimestamp(timestamp) {
+  const value = new Date(Number(timestamp) || Date.now());
+  return `${value.getMonth() + 1}/${value.getDate()}`;
+}
+
+function getRemainingTicketDays(expiresAt) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const expiry = new Date(Number(expiresAt) || Date.now());
+  expiry.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.ceil((expiry.getTime() - now.getTime()) / GAME_TICKET_DAY_MS));
+}
+
+function renderGameTicketHomePanel() {
+  const panel = document.getElementById("gameTicketPanel");
+  const inventoryList = document.getElementById("gameTicketInventoryList");
+  const totalText = document.getElementById("gameTicketTotalText");
+  const usageList = document.getElementById("gameTicketUsageHistoryList");
+  if (!panel || !inventoryList || !totalText || !usageList) return;
+
+  if (!isDesktopGameTicketEnabled()) {
+    panel.classList.add("hidden");
+    return;
+  }
+
+  const store = syncGameTicketState();
+  const activeTickets = getActiveGameTickets(store);
+  const grouped = new Map();
+  activeTickets.forEach((ticket) => {
+    const key = String(ticket.minutes);
+    const current = grouped.get(key) || { minutes: ticket.minutes, count: 0, earliestExpiry: ticket.expiresAt };
+    current.count += 1;
+    current.earliestExpiry = Math.min(current.earliestExpiry, ticket.expiresAt);
+    grouped.set(key, current);
+  });
+
+  const groupedRows = [...grouped.values()].sort((a, b) => b.minutes - a.minutes);
+  const totalMinutes = activeTickets.reduce((sum, ticket) => sum + ticket.minutes, 0);
+  totalText.textContent = `合計 ${totalMinutes}分`;
+  inventoryList.innerHTML = groupedRows.length
+    ? groupedRows.map((entry) => `
+        <li>
+          <button class="game-ticket-entry-btn" type="button" data-ticket-minutes="${entry.minutes}">
+            <span class="game-ticket-entry-main">${entry.minutes}分券 × ${entry.count}枚</span>
+            <span class="game-ticket-entry-meta">あと${getRemainingTicketDays(entry.earliestExpiry)}日</span>
+          </button>
+        </li>
+      `).join("")
+    : '<li class="empty-state">使えるチケットはまだありません</li>';
+
+  const usageMap = new Map();
+  (store.usageHistory || [])
+    .slice()
+    .sort((a, b) => b.usedAt - a.usedAt)
+    .forEach((entry) => {
+      const key = `${formatDateKey(new Date(entry.usedAt))}:${entry.minutes}`;
+      const current = usageMap.get(key) || { usedAt: entry.usedAt, minutes: entry.minutes, count: 0 };
+      current.count += 1;
+      usageMap.set(key, current);
+    });
+
+  const usageRows = [...usageMap.values()].sort((a, b) => b.usedAt - a.usedAt);
+  usageList.innerHTML = usageRows.length
+    ? usageRows.map((entry) => `<li class="game-ticket-history-item"><span>${formatMonthDayFromTimestamp(entry.usedAt)} ${entry.minutes}分券</span><span>× ${entry.count}</span></li>`).join("")
+    : '<li class="empty-state">まだ使用履歴はありません</li>';
+
+  panel.classList.remove("hidden");
+}
+
+function openGameTicketUseModal(minutes) {
+  if (!isDesktopGameTicketEnabled()) return;
+  const modal = document.getElementById("gameTicketUseModal");
+  const title = document.getElementById("gameTicketUseMinutesText");
+  const button = document.getElementById("confirmGameTicketUseBtn");
+  const store = syncGameTicketState();
+  const activeTickets = getActiveGameTickets(store).filter((ticket) => Number(ticket.minutes) === Number(minutes));
+  if (!modal || !title || !button || !activeTickets.length) return;
+  title.textContent = `${Number(minutes)}分券を使用しますか？`;
+  button.dataset.ticketMinutes = String(minutes);
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function useGameTicketByMinutes(minutes) {
+  const store = syncGameTicketState();
+  const candidates = getActiveGameTickets(store)
+    .filter((ticket) => Number(ticket.minutes) === Number(minutes))
+    .sort((a, b) => a.expiresAt - b.expiresAt || a.earnedAt - b.earnedAt);
+  const nextTicket = candidates[0];
+  if (!nextTicket) return false;
+
+  nextTicket.usedAt = Date.now();
+  store.usageHistory.unshift({
+    id: `used-${nextTicket.id}`,
+    minutes: nextTicket.minutes,
+    usedAt: nextTicket.usedAt
+  });
+  pruneGameTicketUsageHistory(store);
+  saveState();
+  renderHome();
+  return true;
 }
 
 function updateItemLevelProgress(item, isCorrect) {
@@ -1241,8 +1583,7 @@ const defaultState = {
     lastResultSummary: null,
     completedSessions: [],
     pendingSessionNotice: "",
-    gameTicket: createDefaultGameTicketStats(),
-    pendingGameTicket: null,
+    gameTickets: createDefaultGameTicketStats(),
     savedNormalSession: null
   },
   items: buildVocabularyItems(),
@@ -1274,8 +1615,9 @@ function loadState() {
     mergedState.stats.pendingSessionNotice = typeof parsed.stats?.pendingSessionNotice === "string"
       ? parsed.stats.pendingSessionNotice
       : "";
-    mergedState.stats.gameTicket = sanitizeGameTicketStats(parsed.stats?.gameTicket);
-    mergedState.stats.pendingGameTicket = sanitizePendingGameTicket(parsed.stats?.pendingGameTicket);
+    mergedState.stats.gameTickets = sanitizeGameTicketStats(parsed.stats?.gameTickets);
+    delete mergedState.stats.gameTicket;
+    delete mergedState.stats.pendingGameTicket;
     mergedState.stats.savedNormalSession = sanitizeStoredSession(parsed.stats?.savedNormalSession);
     mergedState.review = {
       ...mergedState.review,
@@ -2023,7 +2365,7 @@ function syncDerivedStats() {
   state.stats.tickets = state.stats.tickets || 0;
   state.stats.weeklySolved = getWeeklySolvedCount();
   state.stats.dayBestAccuracy = state.stats.dayBestAccuracy || {};
-  ensureGameTicketState();
+  syncGameTicketState();
 }
 
 function getAvailableDays() {
@@ -2156,6 +2498,7 @@ function renderHome() {
   if (daySelectWordBtn) daySelectWordBtn.disabled = false;
   if (daySelectPhraseBtn) daySelectPhraseBtn.disabled = false;
   if (challengeBtn) challengeBtn.disabled = false;
+  renderGameTicketHomePanel();
   renderHomeUpdateHistory();
   renderLevelCollection();
   renderRecentProgressTop5();
@@ -2496,10 +2839,13 @@ function completeCurrentSession(reason = "completed", options = {}) {
   session.isFinishingSession = true;
   pauseSessionClock(session);
   session.completedReason = reason;
+  if (reason === "completed" && session.mode === "challenge") {
+    processCompletedTicketTraining();
+  }
+  processStreakBonusTicket(reason);
   updateBestAccuracyFromSession(session);
   const summary = buildResultSummary(session);
   state.stats.lastResultSummary = summary;
-  maybeDiscoverGameTicket(session, reason);
   if (session.mode === "normal") {
     const weakIds = extractWeakQuestionIdsFromSession(session);
     state.stats.previousSessionWeakQuestionIds = weakIds;
@@ -3497,6 +3843,7 @@ function finishSession() {
         ? session.weakFocusCurrentRoundWrongIds.map((id) => String(id))
         : [];
       session.weakFocusLastQuestionId = String(session.questions?.[session.questions.length - 1]?.id || "");
+      processCompletedTicketTraining();
       const completedRounds = Math.max(0, Number(session.weakFocusRoundCount) || 0);
       const hasRemainingRounds = completedRounds < NORMAL_WEAK_FOCUS_MAX_ROUNDS;
       const nextWeakQuestions = hasRemainingRounds
@@ -3506,6 +3853,7 @@ function finishSession() {
         session.awaitingWeakFocusDecision = true;
         renderWeakFocusDecisionPanel(session);
         saveState();
+        showPendingGameTicketModalIfAny();
         return;
       }
       session.awaitingWeakFocusDecision = false;
@@ -3596,6 +3944,37 @@ function bindEvents() {
   if (levelUpCloseBtn) {
     levelUpCloseBtn.addEventListener("click", () => {
       hideLevelUpModal();
+    });
+  }
+
+  const gameTicketRewardOkBtn = document.getElementById("gameTicketRewardOkBtn");
+  if (gameTicketRewardOkBtn) {
+    gameTicketRewardOkBtn.addEventListener("click", () => {
+      dismissCurrentGameTicketReward();
+    });
+  }
+
+  const gameTicketInventoryList = document.getElementById("gameTicketInventoryList");
+  if (gameTicketInventoryList) {
+    gameTicketInventoryList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-ticket-minutes]");
+      if (!button) return;
+      const minutes = Number(button.getAttribute("data-ticket-minutes"));
+      if (!Number.isFinite(minutes)) return;
+      openGameTicketUseModal(minutes);
+    });
+  }
+
+  const confirmGameTicketUseBtn = document.getElementById("confirmGameTicketUseBtn");
+  if (confirmGameTicketUseBtn) {
+    confirmGameTicketUseBtn.addEventListener("click", () => {
+      const minutes = Number(confirmGameTicketUseBtn.dataset.ticketMinutes);
+      if (!Number.isFinite(minutes)) return;
+      if (!useGameTicketByMinutes(minutes)) return;
+      const modal = document.getElementById("gameTicketUseModal");
+      if (!modal) return;
+      modal.classList.add("hidden");
+      modal.setAttribute("aria-hidden", "true");
     });
   }
 
@@ -3839,6 +4218,7 @@ function init() {
   renderHome();
   renderProgress();
   showScreen("homeScreen", { recordHistory: false });
+  showPendingGameTicketModalIfAny();
   flushPendingSessionNotice();
   if (itemsSynced) {
     console.info("Vocabulary data synced with latest data.js");
