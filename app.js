@@ -1696,6 +1696,168 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function createLearningBackupPayload() {
+  return {
+    formatVersion: 1,
+    backupCreatedAt: new Date().toISOString(),
+    appVersion: APP_VERSION,
+    storageKey: STORAGE_KEY,
+    state: structuredClone(state)
+  };
+}
+
+function getBackupFileName() {
+  return `EnglishTrainer_Backup_${todayKey()}.json`;
+}
+
+function downloadLearningBackupFile(payload) {
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = getBackupFileName();
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+}
+
+function parseLearningBackupPayload(rawText) {
+  const parsed = JSON.parse(rawText);
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("Backup root is invalid");
+  }
+
+  const stateCandidate = parsed.state;
+  const hasStateShape =
+    stateCandidate &&
+    typeof stateCandidate === "object" &&
+    typeof stateCandidate.settings === "object" &&
+    typeof stateCandidate.stats === "object" &&
+    Array.isArray(stateCandidate.items);
+
+  if (!hasStateShape) {
+    throw new Error("Backup state is invalid");
+  }
+
+  return {
+    formatVersion: Number.isFinite(Number(parsed.formatVersion)) ? Number(parsed.formatVersion) : 1,
+    backupCreatedAt: typeof parsed.backupCreatedAt === "string" ? parsed.backupCreatedAt : "",
+    appVersion: typeof parsed.appVersion === "string" ? parsed.appVersion : "",
+    storageKey: typeof parsed.storageKey === "string" ? parsed.storageKey : "",
+    state: stateCandidate
+  };
+}
+
+function parseAppVersionTimestamp(version) {
+  const source = String(version || "").trim();
+  if (!source) return null;
+
+  let match = source.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+  if (match) {
+    const [, year, month, day, hour, minute] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), 0, 0).getTime();
+  }
+
+  match = source.match(/^(\d{2})\/(\d{2})(\d{2})\/(\d{2})(\d{2})$/);
+  if (match) {
+    const [, yy, month, day, hour, minute] = match;
+    const fullYear = 2000 + Number(yy);
+    return new Date(fullYear, Number(month) - 1, Number(day), Number(hour), Number(minute), 0, 0).getTime();
+  }
+
+  return null;
+}
+
+function isOlderBackupVersion(backupVersion, currentVersion) {
+  const backupTimestamp = parseAppVersionTimestamp(backupVersion);
+  const currentTimestamp = parseAppVersionTimestamp(currentVersion);
+  if (!Number.isFinite(backupTimestamp) || !Number.isFinite(currentTimestamp)) {
+    return false;
+  }
+  return backupTimestamp < currentTimestamp;
+}
+
+function openBackupRestoreConfirmModal(options) {
+  const modal = document.getElementById("backupRestoreConfirmModal");
+  const titleEl = document.getElementById("backupRestoreConfirmTitle");
+  const messageEl = document.getElementById("backupRestoreConfirmMessage");
+  const confirmBtn = document.getElementById("backupRestoreConfirmActionBtn");
+  const cancelBtn = document.getElementById("backupRestoreConfirmCancelBtn");
+  const closeBtn = document.getElementById("backupRestoreConfirmCloseBtn");
+  const backdrop = document.getElementById("backupRestoreConfirmBackdrop");
+  if (!modal || !titleEl || !messageEl || !confirmBtn || !cancelBtn || !closeBtn || !backdrop) {
+    return Promise.resolve(window.confirm(String(options?.message || "確認しますか？")));
+  }
+
+  titleEl.textContent = String(options?.title || "確認");
+  messageEl.textContent = String(options?.message || "確認しますか？");
+  confirmBtn.textContent = String(options?.confirmText || "実行する");
+
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const cleanup = () => {
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+      closeBtn.removeEventListener("click", onCancel);
+      backdrop.removeEventListener("click", onCancel);
+      modal.classList.add("hidden");
+      modal.setAttribute("aria-hidden", "true");
+    };
+
+    const finalize = (result) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(result);
+    };
+
+    const onConfirm = () => finalize(true);
+    const onCancel = () => finalize(false);
+
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+    closeBtn.addEventListener("click", onCancel);
+    backdrop.addEventListener("click", onCancel);
+  });
+}
+
+async function tryRestoreLearningDataFromFile(file) {
+  const genericErrorMessage = "バックアップファイルを読み込めませんでした。";
+  try {
+    const rawText = await file.text();
+    const backup = parseLearningBackupPayload(rawText);
+
+    const overwriteConfirmed = await openBackupRestoreConfirmModal({
+      title: "復元の確認",
+      message: "現在の学習記録を上書きします。\n元に戻すことはできません。",
+      confirmText: "復元する"
+    });
+    if (!overwriteConfirmed) return;
+
+    if (isOlderBackupVersion(backup.appVersion, APP_VERSION)) {
+      const legacyConfirmed = await openBackupRestoreConfirmModal({
+        title: "古いバックアップの警告",
+        message: "このバックアップは古いバージョンで作成されています。\n一部のデータが復元できない可能性があります。\n復元しますか？",
+        confirmText: "復元する"
+      });
+      if (!legacyConfirmed) return;
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(backup.state));
+    alert("学習記録を復元しました。\n\nアプリを再読み込みします。");
+    location.reload();
+  } catch (error) {
+    console.error("Could not restore backup file", error);
+    alert(genericErrorMessage);
+  }
+}
+
 function structuredClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -4047,6 +4209,37 @@ function bindEvents() {
         console.error("Could not reset learning data", error);
         alert("学習記録の初期化に失敗しました。もう一度お試しください。");
       }
+    });
+  }
+
+  const backupLearningDataBtn = document.getElementById("backupLearningDataBtn");
+  if (backupLearningDataBtn) {
+    backupLearningDataBtn.addEventListener("click", () => {
+      if (!isDesktopGameTicketEnabled()) return;
+      try {
+        const payload = createLearningBackupPayload();
+        downloadLearningBackupFile(payload);
+      } catch (error) {
+        console.error("Could not create learning backup", error);
+        alert("バックアップファイルを作成できませんでした。");
+      }
+    });
+  }
+
+  const restoreLearningDataBtn = document.getElementById("restoreLearningDataBtn");
+  const backupRestoreFileInput = document.getElementById("backupRestoreFileInput");
+  if (restoreLearningDataBtn && backupRestoreFileInput) {
+    restoreLearningDataBtn.addEventListener("click", () => {
+      if (!isDesktopGameTicketEnabled()) return;
+      backupRestoreFileInput.value = "";
+      backupRestoreFileInput.click();
+    });
+
+    backupRestoreFileInput.addEventListener("change", async () => {
+      const file = backupRestoreFileInput.files && backupRestoreFileInput.files[0];
+      if (!file) return;
+      await tryRestoreLearningDataFromFile(file);
+      backupRestoreFileInput.value = "";
     });
   }
 

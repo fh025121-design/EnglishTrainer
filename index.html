@@ -127,6 +127,11 @@
               </div>
             </div>
             <div id="adminHistoryPanel" class="settings-update-history hidden"></div>
+            <div class="settings-backup-wrap" aria-label="学習記録バックアップ操作">
+              <button id="backupLearningDataBtn" class="secondary-btn settings-backup-btn" type="button">💾 学習記録をバックアップ</button>
+              <button id="restoreLearningDataBtn" class="secondary-btn settings-backup-btn" type="button">📂 学習記録を復元</button>
+              <input id="backupRestoreFileInput" class="hidden" type="file" accept="application/json,.json" />
+            </div>
             <div class="settings-danger-wrap">
               <button id="openResetLearningDataModalBtn" class="secondary-btn settings-reset-btn" type="button">学習記録をすべて初期化</button>
             </div>
@@ -567,6 +572,21 @@
           <div class="result-actions">
             <button id="confirmResetLearningDataBtn" class="primary-btn settings-reset-confirm-btn" type="button">初期化する</button>
             <button class="secondary-btn" type="button" data-close-modal="resetLearningDataModal">キャンセル</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="backupRestoreConfirmModal" class="modal-shell hidden" aria-hidden="true">
+        <div id="backupRestoreConfirmBackdrop" class="modal-backdrop"></div>
+        <div class="modal-card reset-learning-data-card" role="dialog" aria-modal="true" aria-labelledby="backupRestoreConfirmTitle">
+          <div class="modal-header">
+            <p id="backupRestoreConfirmTitle" class="level-up-eyebrow">確認</p>
+            <button id="backupRestoreConfirmCloseBtn" class="ghost-btn modal-close-btn" type="button">閉じる</button>
+          </div>
+          <p id="backupRestoreConfirmMessage" class="game-ticket-description reset-learning-data-text">現在の学習記録を上書きします。元に戻すことはできません。</p>
+          <div class="result-actions">
+            <button id="backupRestoreConfirmActionBtn" class="primary-btn settings-reset-confirm-btn" type="button">復元する</button>
+            <button id="backupRestoreConfirmCancelBtn" class="secondary-btn" type="button">キャンセル</button>
           </div>
         </div>
       </div>
