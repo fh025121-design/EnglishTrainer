@@ -779,15 +779,16 @@ function detectResponsePromptMode(answerForms) {
   return "single";
 }
 
-function buildResponsePromptTemplate(responseTemplate, promptMode) {
+function getResponseInputMode(question, promptMode) {
+  if (promptMode === "formal") {
+    return "formal-single";
+  }
+  return promptMode;
+}
+
+function buildResponsePromptTemplate(responseTemplate, inputMode) {
   const safeTemplate = String(responseTemplate || "");
   if (!safeTemplate) return "";
-  if (promptMode === "formal") {
-    if (safeTemplate.includes("(      )")) {
-      return safeTemplate.replace("(      )", "(      ) (      )");
-    }
-    return safeTemplate.replace(/\(\s*\)/, "(      ) (      )");
-  }
   return safeTemplate;
 }
 
@@ -916,10 +917,12 @@ function startResponseTraining(scope = "all") {
   }
   const scriptedQuestions = questions.map((question) => {
     const promptMode = detectResponsePromptMode(question.answerForms);
+    const inputMode = getResponseInputMode(question, promptMode);
     return {
       ...question,
       promptMode,
-      promptTemplate: buildResponsePromptTemplate(question.response, promptMode)
+      inputMode,
+      promptTemplate: buildResponsePromptTemplate(question.response, inputMode)
     };
   });
 
@@ -1020,9 +1023,13 @@ function renderResponseTrainingQuestion() {
   templateText.textContent = currentQuestion.promptTemplate || currentQuestion.response;
   answerTranslationText.textContent = currentQuestion.translationAnswer || "";
 
-  const usesTwoInput = currentQuestion.promptMode === "formal";
+  const usesTwoInput = false;
   answerInputSecondWrap.classList.toggle("hidden", !usesTwoInput);
-  answerInput.placeholder = usesTwoInput ? "例: can" : "例: isn't";
+  answerInput.placeholder = currentQuestion.inputMode === "formal-single"
+    ? "例: is not"
+    : usesTwoInput
+      ? "例: can"
+      : "例: isn't";
   answerInputSecond.placeholder = "例: not";
 
   answerInput.value = "";
@@ -1054,16 +1061,19 @@ function submitResponseTrainingAnswer() {
 
   const primaryRaw = String(answerInput.value || "");
   const secondaryRaw = String(answerInputSecond.value || "");
-  const usesTwoInput = currentQuestion.promptMode === "formal";
+  const usesTwoInput = false;
   if (!primaryRaw.trim() || (usesTwoInput && !secondaryRaw.trim())) {
     feedbackBox.className = "feedback-box error";
     feedbackBox.innerHTML = "<strong>入力してください</strong><span class=\"hint\">英字で入力してください</span>";
     answerInput.focus();
     return;
   }
-  if (!/^[a-zA-Z']+$/.test(primaryRaw.trim()) || (usesTwoInput && !/^[a-zA-Z']+$/.test(secondaryRaw.trim()))) {
+  const primaryPattern = currentQuestion.inputMode === "formal-single" ? /^[a-zA-Z' ]+$/ : /^[a-zA-Z']+$/;
+  if (!primaryPattern.test(primaryRaw.trim()) || (usesTwoInput && !/^[a-zA-Z']+$/.test(secondaryRaw.trim()))) {
     feedbackBox.className = "feedback-box error";
-    feedbackBox.innerHTML = "<strong>英字と ' のみ入力できます</strong>";
+    feedbackBox.innerHTML = currentQuestion.inputMode === "formal-single"
+      ? "<strong>英字・スペース・' のみ入力できます</strong>"
+      : "<strong>英字と ' のみ入力できます</strong>";
     answerInput.focus();
     return;
   }

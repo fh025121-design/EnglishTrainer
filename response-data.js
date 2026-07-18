@@ -1,4 +1,112 @@
-window.responseTrainingBank = [
+function normalizeResponseText(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeResponseAnswerList(value) {
+  const source = Array.isArray(value) ? value : value ? [value] : [];
+  const out = [];
+  const seen = new Set();
+  source.forEach((entry) => {
+    const normalized = normalizeResponseText(entry);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    out.push(normalized);
+  });
+  return out;
+}
+
+function parseResponseIdNumber(id) {
+  const match = /^response_(\d+)$/.exec(String(id || "").trim());
+  return match ? Number(match[1]) : null;
+}
+
+function buildResponseIdResolver(rows) {
+  let nextNumber = 1;
+  rows.forEach((row) => {
+    const parsed = parseResponseIdNumber(row?.id);
+    if (Number.isFinite(parsed)) nextNumber = Math.max(nextNumber, parsed + 1);
+  });
+
+  const used = new Set();
+  return (preferredId) => {
+    const safePreferred = normalizeResponseText(preferredId);
+    if (safePreferred && !used.has(safePreferred)) {
+      used.add(safePreferred);
+      return safePreferred;
+    }
+
+    let candidate = `response_${String(nextNumber).padStart(3, "0")}`;
+    while (used.has(candidate)) {
+      nextNumber += 1;
+      candidate = `response_${String(nextNumber).padStart(3, "0")}`;
+    }
+    used.add(candidate);
+    nextNumber += 1;
+    return candidate;
+  };
+}
+
+function buildCompletedResponse(response, answers, fallbackCompletedResponse) {
+  const explicitCompleted = normalizeResponseText(fallbackCompletedResponse);
+  if (explicitCompleted) return explicitCompleted;
+  const firstAnswer = answers[0] || "";
+  if (!response || !firstAnswer) return "";
+  if (response.includes("(      )")) {
+    return response.replace("(      )", firstAnswer);
+  }
+  return response.replace(/\(\s*\)/, firstAnswer);
+}
+
+function normalizeResponseTrainingItem(row, resolveId) {
+  const question = normalizeResponseText(row?.question);
+  const response = normalizeResponseText(row?.response);
+  const answers = normalizeResponseAnswerList(row?.answer ?? row?.answers);
+  const category = normalizeResponseText(row?.category);
+  const topic = normalizeResponseText(row?.topic || row?.title || row?.category);
+  const completedResponse = buildCompletedResponse(
+    response,
+    answers,
+    row?.completedResponse || row?.completed || row?.completedAnswer
+  );
+  const translationQuestion = normalizeResponseText(
+    row?.translationQuestion || row?.questionTranslation || row?.translationQ || row?.translation
+  );
+  const translationAnswer = normalizeResponseText(
+    row?.translationAnswer || row?.answerTranslation || row?.translationA
+  );
+  const point = normalizeResponseText(row?.point || row?.note || row?.memo);
+
+  return {
+    id: resolveId(row?.id),
+    category,
+    topic,
+    question,
+    response,
+    answer: answers,
+    completedResponse,
+    translationQuestion,
+    translationAnswer,
+    point
+  };
+}
+
+function normalizeResponseTrainingBank(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const resolveId = buildResponseIdResolver(safeRows);
+  return safeRows
+    .map((row) => normalizeResponseTrainingItem(row, resolveId))
+    .filter((row) => (
+      row.question &&
+      row.response &&
+      row.answer.length &&
+      row.completedResponse &&
+      row.category &&
+      row.topic &&
+      row.point
+    ));
+}
+
+const responseTrainingBaseItems = [
   {
     id: "response_001",
     category: "be動詞",
@@ -129,7 +237,7 @@ window.responseTrainingBank = [
     completedResponse: "Yes, he will.",
     translationQuestion: "彼は私たちに加わりますか。",
     translationAnswer: "はい、加わります。",
-    point: "Will には will / won't で返す。"
+    point: "Will には will / won't で即答。"
   },
   {
     id: "response_012",
@@ -372,3 +480,27 @@ window.responseTrainingBank = [
     point: "want to でも do 疑問文として応答する。"
   }
 ];
+
+// 今後の追加問題はこの配列の末尾に貼り付ける。
+// 既存問題は残り、id が重複しても自動で振り直される。
+// title しかない場合は topic として補完し、completedResponse がない場合は
+// response と answer から可能な範囲で自動生成する。
+const responseTrainingAppendedItems = [
+  // {
+  //   id: "response_031",
+  //   category: "疑問詞",
+  //   topic: "一般動詞",
+  //   question: "Where do you play tennis?",
+  //   response: "I (      ) at the park.",
+  //   answer: ["play"],
+  //   completedResponse: "I play at the park.",
+  //   translationQuestion: "あなたはどこでテニスをしますか。",
+  //   translationAnswer: "私は公園でします。",
+  //   point: "Where do you ...? と聞かれたら、場所を含む短い応答で返す。"
+  // }
+];
+
+window.responseTrainingBank = normalizeResponseTrainingBank([
+  ...responseTrainingBaseItems,
+  ...responseTrainingAppendedItems
+]);
