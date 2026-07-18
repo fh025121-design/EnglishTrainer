@@ -30,6 +30,17 @@ const SETTINGS_INFO = {
 const APP_VERSION = SETTINGS_INFO.releaseHistory[0]?.version || "0/0000/0000";
 let currentAudio = null;
 let isResettingLearningData = false;
+
+// ===== Debug only =====
+// Local development only.
+// Do NOT enable for production.
+const DEBUG_ALWAYS_WIN_TICKET = true;
+const DEBUG_ALWAYS_WIN_TICKET_EFFECTIVE = DEBUG_ALWAYS_WIN_TICKET && (() => {
+  if (typeof location === "undefined") return false;
+  const host = String(location.hostname || "").toLowerCase();
+  return location.protocol === "file:" || host === "localhost" || host === "127.0.0.1";
+})();
+
 const LEVEL_DEFINITIONS = [
   { level: 1, label: "要特訓", icon: "🔥" },
   { level: 2, label: "あと一歩", icon: "⚠️" },
@@ -363,6 +374,9 @@ function getRandomTicketChanceForTraining(store) {
 }
 
 function shouldAwardRandomGameTicket(chance) {
+  if (DEBUG_ALWAYS_WIN_TICKET_EFFECTIVE) {
+    return true;
+  }
   const override = GAME_TICKET_CONFIG.debugRandomChanceOverride;
   const safeChance = Number.isFinite(override) ? clampProbability(override) : clampProbability(chance);
   return Math.random() < safeChance;
