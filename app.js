@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026-07-18T08:20:00Z", note: "中断機能を通常学習専用へ変更し、Day学習・熟語特訓・過去の間違い・苦手特訓などの復習モードは途中終了時に結果画面へ集計して終了、再開データは保存しない仕様へ統一" },
     { version: "2026-07-18T07:10:00Z", note: "中断再開の保存/復元を強化し、ホームに『中断したところから戻る』を追加。採点直後中断時は次の問題から再開し、再読み込み/再起動時も問題順を維持するよう修正" },
     { version: "2026-07-18T06:25:00Z", note: "更新時刻のJST変換判定を修正し、UTC入力はJSTへ正しく変換・JST入力は二重変換しないよう統一" },
     { version: "2026-07-18T06:05:00Z", note: "苦手特訓の『＋ あと5問』選択後に中間の開始案内を表示せず、追加5問の1問目を即時開始するよう修正" },
@@ -1711,7 +1712,9 @@ function loadState() {
     mergedState.stats.gameTickets = sanitizeGameTicketStats(parsed.stats?.gameTickets);
     delete mergedState.stats.gameTicket;
     delete mergedState.stats.pendingGameTicket;
-    mergedState.stats.savedNormalSession = sanitizeStoredSession(parsed.stats?.savedNormalSession);
+    const storedNormalSession = sanitizeStoredSession(parsed.stats?.savedNormalSession);
+    const legacySession = sanitizeStoredSession(parsed.session);
+    mergedState.stats.savedNormalSession = storedNormalSession || (legacySession?.mode === "normal" ? legacySession : null);
     mergedState.review = {
       ...mergedState.review,
       ...(parsed.review || {})
@@ -1739,7 +1742,7 @@ function loadState() {
       };
     });
     mergedState.review.records = migrateStoredReviewData(parsed.review, mergedState.items);
-    mergedState.session = sanitizeStoredSession(parsed.session);
+    mergedState.session = null;
     return mergedState;
   } catch (error) {
     console.error("Could not read saved state", error);
@@ -1747,8 +1750,15 @@ function loadState() {
   }
 }
 
+function buildPersistedStateSnapshot() {
+  const snapshot = structuredClone(state);
+  snapshot.stats.savedNormalSession = sanitizeStoredSession(snapshot.stats?.savedNormalSession);
+  snapshot.session = null;
+  return snapshot;
+}
+
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(buildPersistedStateSnapshot()));
 }
 
 function createLearningBackupPayload() {
@@ -2834,10 +2844,6 @@ function hasSavedNormalSession() {
 }
 
 function hasResumableNormalSession() {
-  const live = sanitizeStoredSession(state?.session);
-  if (live && live.mode === "normal" && !live.isSessionCompleted && !live.isFinishingSession) {
-    return true;
-  }
   return hasSavedNormalSession();
 }
 
@@ -2870,6 +2876,14 @@ function clearSavedNormalSession() {
   state.stats.savedNormalSession = null;
   saveState();
   refreshResumeSessionButton();
+}
+
+function persistSessionProgress(sessionLike = state.session) {
+  if (sessionLike?.mode === "normal") {
+    stashNormalSessionIfNeeded(sessionLike);
+    return;
+  }
+  saveState();
 }
 
 function showScreen(screenId, options = {}) {
@@ -3256,7 +3270,7 @@ function buildSuspendedSummary(session) {
   return {
     mode: session.mode,
     dayKey: getSessionStartDayKey(session),
-    title: "⏸ ここまでの学習結果",
+    title: session.mode === "normal" ? "📊 本日の学習" : "⏸ ここまでの学習結果",
     accuracy,
     answerCount: answered,
     correctCount: correct,
@@ -3266,7 +3280,7 @@ function buildSuspendedSummary(session) {
     currentPhase: getPhaseMeta(session).title,
     currentProgress: `${current} / ${session?.questions?.length || 0}`,
     canAdvanceDay: false,
-    canResume: false,
+    canResume: session.mode === "normal",
     interrupted: true,
     levelChanges: LEVEL_DEFINITIONS.map((entry) => ({ ...entry, delta: 0, count: getLevelBucketCounts()[entry.level] || 0 })),
     recommendation: {
@@ -3311,6 +3325,7 @@ function completeCurrentSession(reason = "completed", options = {}) {
   if (session.mode === "normal") {
     const weakIds = extractWeakQuestionIdsFromSession(session);
     state.stats.previousSessionWeakQuestionIds = weakIds;
+    state.stats.savedNormalSession = null;
   }
   appendCompletedSession(summary);
   session.isSessionCompleted = true;
@@ -3376,9 +3391,16 @@ function flushPendingSessionNotice() {
 
 function suspendCurrentSession() {
   if (!state.session) return;
+  if (state.session.mode !== "normal") {
+    completeCurrentSession("interrupted", { showResult: true });
+    return;
+  }
+
   pauseSessionClock(state.session);
+  stashNormalSessionIfNeeded(state.session);
   const summary = buildSuspendedSummary(state.session);
   state.stats.lastResultSummary = summary;
+  state.session = null;
   saveState();
   setTestScreenActive(false);
   showResultScreen(summary);
@@ -3609,7 +3631,7 @@ function prepareSession(mode, options = {}) {
     if (switchingToDifferentMode) {
       stashNormalSessionIfNeeded(state.session);
       state.session = null;
-    } else if (!options.forceNewSession) {
+    } else if (mode === "normal" && !options.forceNewSession) {
       resumeActiveSession();
       return;
     }
@@ -3837,11 +3859,7 @@ function renderQuestionSession() {
   session.currentQuestionAttempted = false;
   session.currentQuestionState = "idle";
   session.currentQuestion = question;
-  if (session.mode === "normal") {
-    stashNormalSessionIfNeeded(session);
-  } else {
-    saveState();
-  }
+  persistSessionProgress(session);
   scheduleKeyboardNavigationSync();
 }
 
@@ -3954,11 +3972,7 @@ function advanceToNextQuestion() {
   }
 
   session.currentIndex = nextIndex;
-  if (session.mode === "normal") {
-    stashNormalSessionIfNeeded(session);
-  } else {
-    saveState();
-  }
+  persistSessionProgress(session);
   if (session.mode === "review") {
     renderReviewSession();
   } else {
@@ -4027,7 +4041,7 @@ function showResultScreen(summary = state.stats.lastResultSummary) {
   } else {
     resultRecommendationBtn.classList.toggle("hidden", Boolean(summary.interrupted));
     resultNextDayBtn.classList.toggle("hidden", !summary.canAdvanceDay && !summary.canResume);
-    resultNextDayBtn.textContent = summary.canResume ? "▶ 続きから学習" : "▶ 次のDayへ";
+    resultNextDayBtn.textContent = summary.canResume ? "▶ 中断したところから再開" : "▶ 次のDayへ";
     resultHomeBtn.textContent = "🏠 ホームへ戻る";
     updateResultActionSelection(null);
   }
@@ -4151,7 +4165,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
         });
       }
 
-      saveState();
+      persistSessionProgress(session);
       renderHome();
       renderProgress();
       if (levelChange.leveledUpToFour) {
@@ -4187,7 +4201,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     input.value = "";
     input.disabled = false;
     input.focus();
-    saveState();
+    persistSessionProgress(session);
     renderHome();
     renderProgress();
     return;
@@ -4239,7 +4253,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     });
   }
 
-  saveState();
+  persistSessionProgress(session);
   renderHome();
   renderProgress();
   if (levelChange.leveledUpToFour) {
@@ -4949,6 +4963,14 @@ function bindEvents() {
 
   document.querySelectorAll(".back-nav-btn").forEach((button) => {
     button.addEventListener("click", () => {
+      if (currentScreenId === "testScreen" && state.session) {
+        suspendCurrentSession();
+        return;
+      }
+      if (currentScreenId === "resultScreen") {
+        returnHomeFromInterruptedResult();
+        return;
+      }
       goBackScreen();
       if (currentScreenId === "homeScreen") {
         renderHome();
@@ -5004,6 +5026,12 @@ function bindEvents() {
         startNextLevelFocusBatch(level);
         return;
       }
+      if (summary?.canResume) {
+        if (restoreSavedNormalSession()) {
+          resumeActiveSession();
+        }
+        return;
+      }
       startNextDaySession();
     });
   }
@@ -5043,6 +5071,10 @@ function bindEvents() {
     }
     if (state.session?.mode === "normal") {
       stashNormalSessionIfNeeded(state.session);
+      return;
+    }
+    if (state.session) {
+      completeCurrentSession("interrupted", { showResult: false });
       return;
     }
     saveState();
