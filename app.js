@@ -2,6 +2,8 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 04:50", note: "通常学習の過去正解2問候補からLv1/Lv2・間違い復習対象・直近不正解問題を除外し、候補不足時は現在Dayで補完するよう修正" },
+    { version: "2026/07/18 04:30", note: "通常学習のスパイラル復習（現在Day8問+過去正解2問）を追加・Dayアンロック条件を通常学習完了のみに統一・初期化後はDay1開始へ固定・学習記録のバックアップ/復元機能を設定画面へ追加" },
     { version: "2026/07/18 03:57", note: "ホーム画面のゲームチケット表示を整理・直近3日間の正答率集計を修正" },
     { version: "2026/07/18 03:32", note: "PC版ゲームチケット機能を新仕様へ全面更新・所持一覧と使用履歴を追加" },
     { version: "2026/07/18 02:27", note: "苦手克服の出題順を改善・レベル1・未出題・直前の誤答を優先するよう変更" },
@@ -2924,14 +2926,36 @@ function scorePastCorrectCandidate(item) {
   return askedScore + correctScore - askedRecencyPenalty + jitter;
 }
 
+function isActiveMistakeReviewTarget(item) {
+  if (!item) return false;
+  if (item.reviewDue || (Number(item.reviewTodayCount) || 0) > 0) return true;
+  const reviewRecord = getReviewRecord(item.id);
+  if (!reviewRecord) return false;
+  if (reviewRecord.isVisibleInReviewList) return true;
+  if (typeof reviewRecord.nextReviewDate === "string" && reviewRecord.nextReviewDate && reviewRecord.nextReviewDate <= todayKey()) {
+    return true;
+  }
+  return false;
+}
+
+function isEligiblePastCorrectSpiralCandidate(item, currentDay) {
+  if (!item) return false;
+  if (Number(item.day) >= currentDay) return false;
+
+  const stats = getItemLearningStats(item);
+  if (Number(stats.correct) <= 0) return false;
+  if (!item.lastAnswerWasCorrect) return false;
+
+  if (getEffectiveLevelForItem(item) <= 2) return false;
+  if (isActiveMistakeReviewTarget(item)) return false;
+
+  return true;
+}
+
 function pickPastCorrectReviewItems(currentDay, count) {
   const targetCount = Math.max(0, count);
   if (targetCount <= 0) return [];
-  const candidates = state.items.filter((item) => {
-    if (Number(item.day) >= currentDay) return false;
-    const stats = getItemLearningStats(item);
-    return Number(stats.correct) > 0;
-  });
+  const candidates = state.items.filter((item) => isEligiblePastCorrectSpiralCandidate(item, currentDay));
   if (!candidates.length) return [];
   return candidates
     .map((item) => ({ item, score: scorePastCorrectCandidate(item) }))
