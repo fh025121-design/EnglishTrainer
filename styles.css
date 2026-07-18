@@ -970,6 +970,107 @@ p {
   line-height: 1.6;
 }
 
+.response-scope-btn {
+  font-weight: 700;
+}
+
+.response-template-text {
+  margin-top: 10px;
+}
+
+.response-question-translation {
+  margin-top: 10px;
+  color: #fff;
+  font-size: 1.08rem;
+  line-height: 1.55;
+}
+
+#responseAnswerInputSecondWrap {
+  margin-top: 8px;
+}
+
+.response-feedback-answer {
+  margin-top: 10px;
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+.response-feedback-divider {
+  height: 1px;
+  margin: 10px 0;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.response-topic-label {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.response-topic-be {
+  background: rgba(65, 145, 255, 0.2);
+}
+
+.response-topic-general {
+  background: rgba(66, 197, 123, 0.2);
+}
+
+.response-topic-modal {
+  background: rgba(176, 118, 255, 0.2);
+}
+
+.response-topic-wh {
+  background: rgba(240, 93, 93, 0.2);
+}
+
+.response-topic-progressive {
+  background: rgba(240, 195, 66, 0.2);
+}
+
+.response-topic-comparison {
+  background: rgba(248, 158, 67, 0.2);
+}
+
+.response-topic-other {
+  background: rgba(180, 180, 180, 0.2);
+}
+
+.response-feedback-line {
+  margin-top: 8px;
+}
+
+.response-feedback-translation-title,
+.response-feedback-point-title {
+  margin-top: 8px;
+  margin-bottom: 4px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.response-feedback-translation {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.response-form-pair {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--muted);
+}
+
+.response-feedback-point {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
 .day-card {
   border: 1px solid var(--border);
   border-radius: 14px;

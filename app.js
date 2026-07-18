@@ -69,13 +69,28 @@ const PHRASE_SPIRAL_LEVEL_TARGETS = {
 const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingIdiomBtn", mode: "phrase-spiral", isReady: true },
   { id: "trainingPrepositionBtn", mode: "preposition-training", isReady: true },
+  { id: "trainingResponseBtn", mode: "response-training", isReady: true },
   { id: "trainingInstantCompositionBtn", mode: null, isReady: false }
 ]);
 const TRAINING_MODE_KIND_MAP = Object.freeze({
   "phrase-spiral": "idiom",
-  "preposition-training": "preposition"
+  "preposition-training": "preposition",
+  "response-training": "response"
 });
 const PREPOSITION_TRAINING_QUESTION_LIMIT = 10;
+const RESPONSE_TRAINING_QUESTION_LIMIT = 10;
+const RESPONSE_TRAINING_CATEGORY_META = Object.freeze([
+  { key: "be", label: "be動詞" },
+  { key: "general", label: "一般動詞" },
+  { key: "modal", label: "助動詞" },
+  { key: "wh", label: "疑問詞" },
+  { key: "present", label: "現在形" },
+  { key: "past", label: "過去形" },
+  { key: "future", label: "未来" },
+  { key: "progressive", label: "現在進行形" },
+  { key: "comparison", label: "比較" },
+  { key: "other", label: "その他" }
+]);
 const LEVEL_FOUR_FAILURES_TO_DOWN = 3;
 const LEVEL_FOCUS_BATCH_SIZE = 5;
 const NORMAL_WEAK_FOCUS_BATCH_SIZE = 5;
@@ -138,6 +153,7 @@ let recentDayProgressUpdates = [];
 let activeLevelFilter = 1;
 let activeItemDetailId = null;
 let prepositionTrainingSession = null;
+let responseTrainingSession = null;
 let currentScreenId = "homeScreen";
 const screenHistory = [];
 const levelTrendTracker = {
@@ -671,6 +687,498 @@ function getPrepositionQuestionBank() {
       };
     })
     .filter(Boolean);
+}
+
+function getResponseTrainingCategoryLabel(category) {
+  const key = String(category || "").trim().toLowerCase();
+  const hit = RESPONSE_TRAINING_CATEGORY_META.find((entry) => entry.key === key);
+  return hit ? hit.label : "その他";
+}
+
+const RESPONSE_CONTRACTION_TO_FORMAL_MAP = Object.freeze({
+  "can't": ["can", "not"],
+  "won't": ["will", "not"],
+  "isn't": ["is", "not"],
+  "aren't": ["are", "not"],
+  "wasn't": ["was", "not"],
+  "weren't": ["were", "not"],
+  "don't": ["do", "not"],
+  "doesn't": ["does", "not"],
+  "didn't": ["did", "not"],
+  "mustn't": ["must", "not"]
+});
+
+function normalizeResponseInput(raw) {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[.!?]+$/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function dedupeStringList(values) {
+  const out = [];
+  const seen = new Set();
+  values.forEach((value) => {
+    const key = String(value || "").trim();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(key);
+  });
+  return out;
+}
+
+function buildResponseAnswerForms(rawAnswers) {
+  const normalizedAnswers = dedupeStringList(rawAnswers.map((value) => normalizeResponseInput(value)));
+  const oneWordAnswers = [];
+  const formalTwoWordAnswers = [];
+  const contractedAnswers = [];
+
+  normalizedAnswers.forEach((answer) => {
+    if (!answer) return;
+    const tokens = answer.split(" ").filter(Boolean);
+    if (tokens.length === 1) {
+      const token = tokens[0];
+      if (token === "cannot") {
+        formalTwoWordAnswers.push("can not");
+        contractedAnswers.push("can't");
+        return;
+      }
+      if (RESPONSE_CONTRACTION_TO_FORMAL_MAP[token]) {
+        contractedAnswers.push(token);
+        formalTwoWordAnswers.push(RESPONSE_CONTRACTION_TO_FORMAL_MAP[token].join(" "));
+        return;
+      }
+      oneWordAnswers.push(token);
+      return;
+    }
+
+    if (tokens.length === 2) {
+      const formal = tokens.join(" ");
+      formalTwoWordAnswers.push(formal);
+      Object.entries(RESPONSE_CONTRACTION_TO_FORMAL_MAP).forEach(([contracted, expanded]) => {
+        if (expanded.join(" ") === formal) contractedAnswers.push(contracted);
+      });
+      return;
+    }
+  });
+
+  return {
+    oneWordAnswers: dedupeStringList(oneWordAnswers),
+    formalTwoWordAnswers: dedupeStringList(formalTwoWordAnswers),
+    contractedAnswers: dedupeStringList(contractedAnswers)
+  };
+}
+
+function detectResponsePromptMode(answerForms) {
+  const hasFormal = answerForms.formalTwoWordAnswers.length > 0;
+  const hasContracted = answerForms.contractedAnswers.length > 0;
+  if (hasFormal && hasContracted) {
+    return Math.random() < 0.7 ? "formal" : "contracted";
+  }
+  if (hasFormal) return "formal";
+  if (hasContracted) return "contracted";
+  return "single";
+}
+
+function buildResponsePromptTemplate(responseTemplate, promptMode) {
+  const safeTemplate = String(responseTemplate || "");
+  if (!safeTemplate) return "";
+  if (promptMode === "formal") {
+    if (safeTemplate.includes("(      )")) {
+      return safeTemplate.replace("(      )", "(      ) (      )");
+    }
+    return safeTemplate.replace(/\(\s*\)/, "(      ) (      )");
+  }
+  return safeTemplate;
+}
+
+function getResponseTopicBadgeLabel(question) {
+  const key = String(question.category || "other");
+  const title = String(question.title || getResponseTrainingCategoryLabel(key));
+  if (key === "be") return `🟦 ${title}`;
+  if (key === "general") return `🟩 ${title}`;
+  if (key === "modal") return `🟪 ${title}`;
+  if (key === "wh") return `🟥 ${title}`;
+  if (key === "progressive") return `🟨 ${title}`;
+  if (key === "comparison") return `🟧 ${title}`;
+  return `⬜ ${title}`;
+}
+
+function getResponseTopicToneClass(question) {
+  const key = String(question.category || "other");
+  if (key === "be") return "response-topic-be";
+  if (key === "general") return "response-topic-general";
+  if (key === "modal") return "response-topic-modal";
+  if (key === "wh") return "response-topic-wh";
+  if (key === "progressive") return "response-topic-progressive";
+  if (key === "comparison") return "response-topic-comparison";
+  return "response-topic-other";
+}
+
+function getResponseQuestionBank() {
+  const source = Array.isArray(window.responseTrainingBank) ? window.responseTrainingBank : [];
+  const validCategorySet = new Set(RESPONSE_TRAINING_CATEGORY_META.map((entry) => entry.key));
+  return source
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const id = String(row.id || "").trim();
+      const categoryRaw = String(row.category || "").trim().toLowerCase();
+      const category = validCategorySet.has(categoryRaw) ? categoryRaw : "other";
+      const title = String(row.title || "").trim();
+      const question = String(row.question || "").trim();
+      const response = String(row.response || "").trim();
+      const translationQuestion = String(row.translationQuestion || "").trim();
+      const translationAnswer = String(row.translationAnswer || "").trim();
+      const point = String(row.point || "").trim();
+      const normalizedAnswers = Array.isArray(row.answer)
+        ? row.answer.map((value) => normalizeResponseInput(value)).filter(Boolean)
+        : [];
+      const answerForms = buildResponseAnswerForms(normalizedAnswers);
+      if (
+        !id ||
+        !question ||
+        !response ||
+        (
+          !answerForms.oneWordAnswers.length &&
+          !answerForms.formalTwoWordAnswers.length &&
+          !answerForms.contractedAnswers.length
+        )
+      ) return null;
+      return {
+        id,
+        category,
+        title,
+        question,
+        response,
+        answerForms,
+        translationQuestion,
+        translationAnswer,
+        point
+      };
+    })
+    .filter(Boolean);
+}
+
+function getResponseScopeLabel(scope) {
+  if (scope === "all") return "すべて";
+  return getResponseTrainingCategoryLabel(scope);
+}
+
+function getResponseScopeBuckets() {
+  const bank = getResponseQuestionBank();
+  return RESPONSE_TRAINING_CATEGORY_META
+    .map((meta) => ({
+      key: meta.key,
+      label: meta.label,
+      questions: bank.filter((question) => question.category === meta.key)
+    }))
+    .filter((bucket) => bucket.questions.length > 0);
+}
+
+function renderResponseScopeSelector() {
+  const allBtn = document.getElementById("responseScopeAllBtn");
+  const scopeButtons = document.getElementById("responseScopeButtons");
+  if (!allBtn || !scopeButtons) return;
+
+  const buckets = getResponseScopeBuckets();
+  const allCount = buckets.reduce((sum, bucket) => sum + bucket.questions.length, 0);
+  allBtn.textContent = `すべて ${allCount}問`;
+  scopeButtons.innerHTML = buckets
+    .map((bucket) => `<button type="button" class="secondary-btn response-scope-btn" data-response-scope="${bucket.key}">${bucket.label} ${bucket.questions.length}問</button>`)
+    .join("");
+
+  allBtn.onclick = () => startResponseTraining("all");
+  scopeButtons.querySelectorAll("[data-response-scope]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const scope = String(button.getAttribute("data-response-scope") || "").trim().toLowerCase();
+      if (!scope) return;
+      startResponseTraining(scope);
+    });
+  });
+}
+
+function openResponseTrainingSelector() {
+  renderResponseScopeSelector();
+  showScreen("responseSelectScreen");
+}
+
+function buildResponseQuestionSet(scope) {
+  const bank = getResponseQuestionBank();
+  const pool = scope === "all" ? bank : bank.filter((question) => question.category === scope);
+  if (!pool.length) return [];
+  const uniquePool = [];
+  const seen = new Set();
+  pool.forEach((question) => {
+    const key = String(question.id);
+    if (seen.has(key)) return;
+    seen.add(key);
+    uniquePool.push(question);
+  });
+  return shuffle(uniquePool).slice(0, Math.min(RESPONSE_TRAINING_QUESTION_LIMIT, uniquePool.length));
+}
+
+function startResponseTraining(scope) {
+  const safeScope = typeof scope === "string" && scope ? scope.toLowerCase() : "all";
+  const questions = buildResponseQuestionSet(safeScope);
+  if (!questions.length) {
+    alert("出題可能な応答文問題がありません。");
+    return;
+  }
+  const scriptedQuestions = questions.map((question) => {
+    const promptMode = detectResponsePromptMode(question.answerForms);
+    return {
+      ...question,
+      promptMode,
+      promptTemplate: buildResponsePromptTemplate(question.response, promptMode)
+    };
+  });
+
+  responseTrainingSession = {
+    scope: safeScope,
+    scopeLabel: getResponseScopeLabel(safeScope),
+    questions: scriptedQuestions,
+    currentIndex: 0,
+    answered: false,
+    correctCount: 0,
+    wrongCategoryCounts: {}
+  };
+  renderResponseTrainingQuestion();
+  showScreen("responsePracticeScreen");
+}
+
+function fillResponseTemplate(responseTemplate, value) {
+  const safeTemplate = String(responseTemplate || "");
+  if (!safeTemplate) return value;
+  if (safeTemplate.includes("(      )")) {
+    return safeTemplate.replace("(      )", value);
+  }
+  return safeTemplate.replace(/\(\s*\)/, value);
+}
+
+function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText) {
+  const canonicalContracted = question.answerForms.contractedAnswers[0] || "";
+  const canonicalFormal = question.answerForms.formalTwoWordAnswers[0] || "";
+  const canonicalSingle = question.answerForms.oneWordAnswers[0] || "";
+  const canonicalAnswer = question.promptMode === "formal"
+    ? (canonicalFormal || canonicalSingle || canonicalContracted)
+    : question.promptMode === "contracted"
+      ? (canonicalContracted || canonicalSingle || canonicalFormal)
+      : (canonicalSingle || canonicalContracted || canonicalFormal);
+  const userRow = isCorrect
+    ? ""
+    : `<div class="answer-line">あなたの答え：${userAnswerText || "-"}</div><div class="answer-line">正解：${canonicalAnswer}</div>`;
+  const completedResponse = fillResponseTemplate(question.response, canonicalAnswer);
+  const formsRow = canonicalContracted && canonicalFormal
+    ? `<div class="response-form-pair"><span>${canonicalContracted}</span><span>= ${canonicalFormal}</span></div>`
+    : "";
+  const topicBadge = getResponseTopicBadgeLabel(question);
+  const topicToneClass = getResponseTopicToneClass(question);
+  return [
+    `<strong>${isCorrect ? "✅ 正解" : "❌ 不正解"}</strong>`,
+    userRow,
+    `<p class="response-feedback-answer">${canonicalAnswer}</p>`,
+    `<div class="response-feedback-divider"></div>`,
+    `<p class="response-topic-label ${topicToneClass}">${topicBadge}</p>`,
+    `<div class="response-feedback-divider"></div>`,
+    `<p class="response-feedback-line">${question.question}</p>`,
+    `<p class="response-feedback-line">${completedResponse}</p>`,
+    `<p class="response-feedback-translation-title">和訳</p>`,
+    question.translationQuestion ? `<p class="response-feedback-translation">${question.translationQuestion}</p>` : "",
+    question.translationAnswer ? `<p class="response-feedback-translation">${question.translationAnswer}</p>` : "",
+    formsRow,
+    `<div class="response-feedback-divider"></div>`,
+    `<p class="response-feedback-point-title">ポイント</p>`,
+    question.point ? `<p class="response-feedback-point">${question.point}</p>` : ""
+  ].join("");
+}
+
+function renderResponseTrainingQuestion() {
+  const session = responseTrainingSession;
+  if (!session) {
+    openResponseTrainingSelector();
+    return;
+  }
+  if (session.currentIndex >= session.questions.length) {
+    showResponseTrainingResult();
+    return;
+  }
+
+  const title = document.getElementById("responsePracticeTitle");
+  const scopeText = document.getElementById("responseScopeText");
+  const counterText = document.getElementById("responseCounterText");
+  const questionText = document.getElementById("responseQuestionText");
+  const templateText = document.getElementById("responseTemplateText");
+  const questionTranslationText = document.getElementById("responseQuestionTranslationText");
+  const answerInput = document.getElementById("responseAnswerInput");
+  const answerInputSecond = document.getElementById("responseAnswerInputSecond");
+  const answerInputSecondWrap = document.getElementById("responseAnswerInputSecondWrap");
+  const answerBtn = document.getElementById("responseAnswerBtn");
+  const feedbackBox = document.getElementById("responseFeedbackBox");
+  const nextBtn = document.getElementById("responseNextBtn");
+  if (!title || !scopeText || !counterText || !questionText || !templateText || !questionTranslationText || !answerInput || !answerInputSecond || !answerInputSecondWrap || !answerBtn || !feedbackBox || !nextBtn) return;
+
+  const currentQuestion = session.questions[session.currentIndex];
+  title.textContent = `応答文特訓 ${session.scopeLabel}`;
+  scopeText.textContent = `応答文特訓 ${session.scopeLabel}`;
+  counterText.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
+  questionText.textContent = currentQuestion.question;
+  templateText.textContent = currentQuestion.promptTemplate || currentQuestion.response;
+  questionTranslationText.textContent = currentQuestion.translationQuestion || "";
+
+  const usesTwoInput = currentQuestion.promptMode === "formal";
+  answerInputSecondWrap.classList.toggle("hidden", !usesTwoInput);
+  answerInput.placeholder = usesTwoInput ? "例: can" : "例: isn't";
+  answerInputSecond.placeholder = "例: not";
+
+  answerInput.value = "";
+  answerInputSecond.value = "";
+  answerInput.disabled = false;
+  answerInputSecond.disabled = !usesTwoInput;
+  answerBtn.disabled = false;
+  feedbackBox.className = "feedback-box hidden";
+  feedbackBox.innerHTML = "";
+  nextBtn.disabled = false;
+  nextBtn.classList.add("hidden");
+  session.answered = false;
+  session.questionStartedAt = Date.now();
+  window.setTimeout(() => answerInput.focus(), 30);
+}
+
+function submitResponseTrainingAnswer() {
+  const session = responseTrainingSession;
+  if (!session || session.answered) return;
+  const currentQuestion = session.questions[session.currentIndex];
+  if (!currentQuestion) return;
+
+  const answerInput = document.getElementById("responseAnswerInput");
+  const answerInputSecond = document.getElementById("responseAnswerInputSecond");
+  const answerBtn = document.getElementById("responseAnswerBtn");
+  const feedbackBox = document.getElementById("responseFeedbackBox");
+  const nextBtn = document.getElementById("responseNextBtn");
+  if (!answerInput || !answerInputSecond || !answerBtn || !feedbackBox || !nextBtn) return;
+
+  const primaryRaw = String(answerInput.value || "");
+  const secondaryRaw = String(answerInputSecond.value || "");
+  const usesTwoInput = currentQuestion.promptMode === "formal";
+  if (!primaryRaw.trim() || (usesTwoInput && !secondaryRaw.trim())) {
+    feedbackBox.className = "feedback-box error";
+    feedbackBox.innerHTML = "<strong>入力してください</strong><span class=\"hint\">英字で入力してください</span>";
+    answerInput.focus();
+    return;
+  }
+  if (!/^[a-zA-Z']+$/.test(primaryRaw.trim()) || (usesTwoInput && !/^[a-zA-Z']+$/.test(secondaryRaw.trim()))) {
+    feedbackBox.className = "feedback-box error";
+    feedbackBox.innerHTML = "<strong>英字と ' のみ入力できます</strong>";
+    answerInput.focus();
+    return;
+  }
+
+  recordCommonAnswerEvent({
+    dayKey: todayKey(),
+    category: "training",
+    trainingKind: "response",
+    typingCount: 1
+  });
+
+  const startedAt = Number(session.questionStartedAt);
+  if (Number.isFinite(startedAt) && Date.now() > startedAt) {
+    const elapsedMs = Date.now() - startedAt;
+    const elapsedSeconds = elapsedMs > 0 ? Math.max(1, Math.ceil(elapsedMs / 1000)) : 0;
+    recordCommonStudySeconds(todayKey(), elapsedSeconds, {
+      category: "training",
+      trainingKind: "response"
+    });
+  }
+
+  const normalizedPrimary = normalizeResponseInput(primaryRaw);
+  const normalizedSecondary = normalizeResponseInput(secondaryRaw);
+  const normalized = usesTwoInput
+    ? `${normalizedPrimary} ${normalizedSecondary}`.trim()
+    : normalizedPrimary;
+
+  let isCorrect = false;
+  if (currentQuestion.promptMode === "formal") {
+    isCorrect = currentQuestion.answerForms.formalTwoWordAnswers.some((answer) => answer === normalized);
+  } else if (currentQuestion.promptMode === "contracted") {
+    isCorrect = currentQuestion.answerForms.contractedAnswers.some((answer) => answer === normalized);
+  } else {
+    isCorrect = currentQuestion.answerForms.oneWordAnswers.some((answer) => answer === normalized)
+      || currentQuestion.answerForms.contractedAnswers.some((answer) => answer === normalized);
+  }
+
+  session.answered = true;
+  if (isCorrect) {
+    session.correctCount += 1;
+  } else {
+    const categoryKey = String(currentQuestion.category || "other");
+    session.wrongCategoryCounts[categoryKey] = (session.wrongCategoryCounts[categoryKey] || 0) + 1;
+  }
+
+  recordTrainingProfileAttempt("response", {
+    questionId: currentQuestion.id,
+    category: currentQuestion.category,
+    isCorrect
+  });
+  saveState();
+
+  feedbackBox.className = `feedback-box ${isCorrect ? "success" : "error"}`;
+  const userAnswerText = usesTwoInput ? `${primaryRaw.trim()} ${secondaryRaw.trim()}`.trim() : primaryRaw.trim();
+  feedbackBox.innerHTML = buildResponseFeedbackMarkup(currentQuestion, isCorrect, userAnswerText);
+  nextBtn.classList.remove("hidden");
+  nextBtn.disabled = false;
+  answerInput.disabled = true;
+  answerInputSecond.disabled = true;
+  answerBtn.disabled = true;
+  nextBtn.focus();
+}
+
+function moveToNextResponseTrainingQuestion() {
+  if (!responseTrainingSession) return;
+  const nextBtn = document.getElementById("responseNextBtn");
+  if (nextBtn) nextBtn.disabled = true;
+  const typingConfig = getTypingConfig();
+  setTimeout(() => {
+    if (!responseTrainingSession) return;
+    responseTrainingSession.currentIndex += 1;
+    if (responseTrainingSession.currentIndex >= responseTrainingSession.questions.length) {
+      showResponseTrainingResult();
+      return;
+    }
+    renderResponseTrainingQuestion();
+  }, typingDelaySecToMs(typingConfig.judgementToNextDelaySec));
+}
+
+function showResponseTrainingResult() {
+  const session = responseTrainingSession;
+  if (!session) {
+    openResponseTrainingSelector();
+    return;
+  }
+  const total = session.questions.length;
+  const correct = session.correctCount;
+  const accuracy = total ? Math.round((correct / total) * 100) : 0;
+
+  const resultTitle = document.getElementById("responseResultTitle");
+  const score = document.getElementById("responseResultScore");
+  const accuracyText = document.getElementById("responseResultAccuracy");
+  const wrongWrap = document.getElementById("responseWrongSummaryWrap");
+  const wrongList = document.getElementById("responseWrongSummaryList");
+  if (!resultTitle || !score || !accuracyText || !wrongWrap || !wrongList) return;
+
+  resultTitle.textContent = `応答文特訓 結果 (${session.scopeLabel})`;
+  score.textContent = `${correct} / ${total}問 正解`;
+  accuracyText.textContent = `${accuracy}%`;
+
+  const wrongRows = Object.entries(session.wrongCategoryCounts)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  wrongWrap.classList.toggle("hidden", wrongRows.length === 0);
+  wrongList.innerHTML = wrongRows
+    .map(([category, count]) => `<li><span>${getResponseTrainingCategoryLabel(category)}</span><span>${count}問</span></li>`)
+    .join("");
+
+  showScreen("responseResultScreen");
 }
 
 function isDesktopGameTicketEnabled() {
@@ -6054,6 +6562,10 @@ function bindEvents() {
           openPrepositionTrainingSelector();
           return;
         }
+        if (item.mode === "response-training") {
+          openResponseTrainingSelector();
+          return;
+        }
         prepareSession(item.mode);
         return;
       }
@@ -6107,6 +6619,46 @@ function bindEvents() {
   const prepositionBackToMenuBtn = document.getElementById("prepositionBackToMenuBtn");
   if (prepositionBackToMenuBtn) {
     prepositionBackToMenuBtn.addEventListener("click", () => {
+      showScreen("trainingMenuScreen");
+    });
+  }
+
+  const responseAnswerForm = document.getElementById("responseAnswerForm");
+  if (responseAnswerForm) {
+    responseAnswerForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submitResponseTrainingAnswer();
+    });
+  }
+
+  const responseNextBtn = document.getElementById("responseNextBtn");
+  if (responseNextBtn) {
+    responseNextBtn.addEventListener("click", () => {
+      moveToNextResponseTrainingQuestion();
+    });
+  }
+
+  const responseRetryBtn = document.getElementById("responseRetryBtn");
+  if (responseRetryBtn) {
+    responseRetryBtn.addEventListener("click", () => {
+      if (!responseTrainingSession) {
+        openResponseTrainingSelector();
+        return;
+      }
+      startResponseTraining(responseTrainingSession.scope);
+    });
+  }
+
+  const responseChooseScopeBtn = document.getElementById("responseChooseScopeBtn");
+  if (responseChooseScopeBtn) {
+    responseChooseScopeBtn.addEventListener("click", () => {
+      openResponseTrainingSelector();
+    });
+  }
+
+  const responseBackToMenuBtn = document.getElementById("responseBackToMenuBtn");
+  if (responseBackToMenuBtn) {
+    responseBackToMenuBtn.addEventListener("click", () => {
       showScreen("trainingMenuScreen");
     });
   }

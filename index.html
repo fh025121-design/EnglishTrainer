@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260719-0300" />
+    <link rel="stylesheet" href="styles.css?v=20260719-0510" />
   </head>
   <body>
     <div class="app-shell">
@@ -278,6 +278,7 @@
             <div class="study-actions-grid">
               <button id="trainingIdiomBtn" class="secondary-btn" type="button">💬 熟語特訓</button>
               <button id="trainingPrepositionBtn" class="secondary-btn" type="button">🧭 前置詞特訓</button>
+              <button id="trainingResponseBtn" class="secondary-btn" type="button">🗣️ 応答文特訓</button>
               <button id="trainingInstantCompositionBtn" class="secondary-btn" type="button">⚡ 瞬間英作文（準備中）</button>
             </div>
             <p class="subtext">未実装の特訓を押すと「準備中です」と表示されます。</p>
@@ -362,6 +363,92 @@
                 <button id="prepositionReviewWrongBtn" class="secondary-btn hidden" type="button">間違えた問題を復習</button>
                 <button id="prepositionChooseScopeBtn" class="secondary-btn" type="button">前置詞を選び直す</button>
                 <button id="prepositionBackToMenuBtn" class="secondary-btn" type="button">特訓メニューへ戻る</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="responseSelectScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">応答文特訓</p>
+              <h2>カテゴリーを選択</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel day-catalog-panel">
+            <div class="preposition-select-wrap">
+              <button id="responseScopeAllBtn" class="primary-btn" type="button">すべて</button>
+              <div id="responseScopeButtons" class="preposition-scope-grid"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="responsePracticeScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">応答文特訓</p>
+              <h2 id="responsePracticeTitle">応答文特訓 すべて</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="question-stage">
+            <div class="panel question-card" id="responseQuestionCard">
+              <div class="question-meta">
+                <span id="responseScopeText" class="phase-progress-text">応答文特訓 すべて</span>
+                <span id="responseCounterText">1 / 10</span>
+              </div>
+              <div class="question-copy">
+                <p id="responseQuestionText" class="meaning-text"></p>
+                <p id="responseTemplateText" class="response-template-text meaning-text"></p>
+                <p id="responseQuestionTranslationText" class="response-question-translation"></p>
+              </div>
+              <div class="answer-panel">
+                <div class="type-badge word">応答を入力</div>
+                <h3 class="input-label">英語を入力してください</h3>
+                <form id="responseAnswerForm" class="answer-form">
+                  <input id="responseAnswerInput" class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="例: isn't" />
+                  <div id="responseAnswerInputSecondWrap" class="hidden">
+                    <input id="responseAnswerInputSecond" class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="例: not" />
+                  </div>
+                  <button id="responseAnswerBtn" class="primary-btn mobile-answer-btn" type="submit">答える</button>
+                </form>
+              </div>
+              <div id="responseFeedbackBox" class="feedback-box hidden"></div>
+              <button id="responseNextBtn" class="primary-btn hidden" type="button">次へ</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="responseResultScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">応答文特訓</p>
+              <h2>結果</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="result-shell">
+            <div class="panel result-card result-dashboard-card">
+              <h2 id="responseResultTitle">応答文特訓 結果</h2>
+              <p id="responseResultScore" class="result-summary">0 / 0問 正解</p>
+              <div class="result-metric-list">
+                <div class="result-metric-row">
+                  <span class="result-metric-label">正答率</span>
+                  <span id="responseResultAccuracy" class="result-metric-value">0%</span>
+                </div>
+              </div>
+              <div id="responseWrongSummaryWrap" class="progress-list-wrap hidden">
+                <h3>今回間違えたカテゴリー</h3>
+                <ul id="responseWrongSummaryList" class="review-list"></ul>
+              </div>
+              <div class="result-actions preposition-result-actions">
+                <button id="responseRetryBtn" class="primary-btn" type="button">もう一度</button>
+                <button id="responseChooseScopeBtn" class="secondary-btn" type="button">カテゴリーを選び直す</button>
+                <button id="responseBackToMenuBtn" class="secondary-btn" type="button">特訓メニューへ戻る</button>
               </div>
             </div>
           </div>
@@ -725,8 +812,9 @@
       </div>
     </div>
 
-    <script src="data.js?v=20260719-0300"></script>
-    <script src="preposition-data.js?v=20260719-0300"></script>
-    <script src="app.js?v=20260719-0300"></script>
+    <script src="data.js?v=20260719-0510"></script>
+    <script src="preposition-data.js?v=20260719-0510"></script>
+    <script src="response-data.js?v=20260719-0510"></script>
+    <script src="app.js?v=20260719-0510"></script>
   </body>
 </html>
