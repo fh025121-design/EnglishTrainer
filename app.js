@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 06:05", note: "苦手特訓の『＋ あと5問』選択後に中間の開始案内を表示せず、追加5問の1問目を即時開始するよう修正" },
     { version: "2026/07/18 05:45", note: "PC版で進行ボタンのキーボード操作（矢印選択・Enter決定・Esc終了）を統一し、苦手特訓5問後に『＋ あと5問／✓ 特訓を終了』選択UIとPulse強調を追加" },
     { version: "2026/07/18 05:20", note: "バージョン情報・更新履歴の日時表示をJSTへ統一し、自動取得日時もJST変換して表示するよう修正" },
     { version: "2026/07/18 05:05", note: "PC版タイトルをEnglish Typing Trainer for PCへ変更し、将来のスマホ版名称をEnglish Trainer for Mobileに統一" },
@@ -3435,7 +3436,7 @@ function continueNormalWeakFocusRound() {
   const session = state.session;
   if (!session || session.mode !== "normal" || !session.awaitingWeakFocusDecision) return;
 
-  if (startNormalWeakFocusRound(session, { showIntro: true })) {
+  if (startNormalWeakFocusRound(session, { showIntro: false })) {
     return;
   }
 
