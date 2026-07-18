@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>English Trainer Mobile</title>
+    <link rel="stylesheet" href="mobile.css" />
+  </head>
+  <body>
+    <div class="mobile-app-shell">
+      <section id="homeScreen" class="screen active">
+        <header class="hero-card">
+          <p class="hero-icon">🎤 English Trainer</p>
+          <h1>スマホ版</h1>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel">
+            <h2>学習範囲</h2>
+            <div class="range-options" role="radiogroup" aria-label="学習範囲の選択">
+              <label class="option-card">
+                <input type="radio" name="studyRangeMode" value="auto" checked />
+                <span>お任せ</span>
+              </label>
+              <label class="option-card">
+                <input type="radio" name="studyRangeMode" value="day" />
+                <span>Day指定</span>
+              </label>
+            </div>
+
+            <div id="dayRangeFields" class="day-range-fields">
+              <label class="field-block">
+                <span>開始 Day</span>
+                <select id="startDaySelect"></select>
+              </label>
+              <label class="field-block">
+                <span>終了 Day</span>
+                <select id="endDaySelect"></select>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel action-panel">
+            <button id="startSpeakingBtn" class="primary-btn large-btn" type="button">🎤 スピーキングで学習</button>
+            <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
+            <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
+          </section>
+        </main>
+      </section>
+
+      <section id="studyScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="studyBackBtn" class="back-btn" type="button">← ホーム</button>
+        </header>
+
+        <main class="study-layout">
+          <div class="study-meta">
+            <p id="studyDayText" class="day-badge">Day1</p>
+            <p id="studyProgressText" class="progress-text">問題 1 / 10</p>
+          </div>
+
+          <section class="study-card">
+            <p id="studyTypeText" class="study-type-text">単語で答える</p>
+            <p id="studyPromptText" class="prompt-text">日本語</p>
+
+            <div id="speechControls" class="response-block hidden">
+              <button id="speechActionBtn" class="primary-btn mic-btn" type="button">🎤 話す</button>
+            </div>
+
+            <div id="typingControls" class="response-block hidden">
+              <label class="field-block">
+                <span class="typing-label">英語を入力</span>
+                <input id="typingAnswerInput" class="typing-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
+              </label>
+              <button id="typingSubmitBtn" class="primary-btn" type="button">判定する</button>
+            </div>
+
+            <div id="feedbackBlock" class="feedback-block hidden">
+              <p id="feedbackMessage" class="feedback-message"></p>
+              <div id="recognizedBlock" class="recognized-block hidden">
+                <p id="recognizedLabelText" class="recognized-label">聞き取った英語</p>
+                <p id="recognizedText" class="recognized-text"></p>
+              </div>
+              <div id="answerBlock" class="recognized-block hidden">
+                <p class="recognized-label">正解</p>
+                <p id="answerText" class="answer-text"></p>
+              </div>
+            </div>
+
+            <div id="studyActionArea" class="study-action-area"></div>
+          </section>
+
+          <section id="speechSupportNotice" class="support-notice hidden"></section>
+        </main>
+      </section>
+
+      <section id="resultScreen" class="screen">
+        <main class="stack-layout result-layout">
+          <section class="panel result-panel">
+            <h2>学習終了！</h2>
+            <p id="resultSummaryText" class="result-summary-text">10問中 0問正解</p>
+            <div class="result-breakdown">
+              <p id="resultFirstTryText">1回目で正解 0問</p>
+              <p id="resultSecondTryText">2回目で正解 0問</p>
+              <p id="resultFailedText">正解を確認 0問</p>
+            </div>
+            <div class="action-panel compact-actions">
+              <button id="retrySessionBtn" class="primary-btn large-btn" type="button">もう一度学習する</button>
+              <button id="returnHomeBtn" class="secondary-btn large-btn" type="button">ホームへ戻る</button>
+            </div>
+          </section>
+        </main>
+      </section>
+
+      <section id="settingsScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="settingsBackBtn" class="back-btn" type="button">← ホーム</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel">
+            <h2>設定</h2>
+            <div class="field-block">
+              <span>読み上げ速度</span>
+              <div class="range-options" role="radiogroup" aria-label="読み上げ速度">
+                <label class="option-card">
+                  <input type="radio" name="speechRateMode" value="slow" />
+                  <span>遅い</span>
+                </label>
+                <label class="option-card">
+                  <input type="radio" name="speechRateMode" value="normal" />
+                  <span>標準</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel action-panel">
+            <button id="runMicTestBtn" class="secondary-btn large-btn" type="button">マイクテスト</button>
+            <p id="micTestStatusText" class="status-text"></p>
+            <button id="resetMobileDataBtn" class="danger-btn large-btn" type="button">スマホ版データ初期化</button>
+          </section>
+        </main>
+      </section>
+
+      <section id="comingSoonScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="comingSoonBackBtn" class="back-btn" type="button">← ホーム</button>
+        </header>
+        <main class="stack-layout">
+          <section class="panel result-panel">
+            <h2>準備中</h2>
+            <p class="status-text">この画面は準備中です。まずはスピーキング学習を利用してください。</p>
+          </section>
+        </main>
+      </section>
+    </div>
+
+    <div id="confirmModal" class="modal-shell hidden" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <h2 id="confirmTitle">確認</h2>
+        <p id="confirmMessage" class="status-text"></p>
+        <div class="modal-actions">
+          <button id="confirmCancelBtn" class="secondary-btn" type="button">キャンセル</button>
+          <button id="confirmOkBtn" class="primary-btn" type="button">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../data.js"></script>
+    <script src="mobile.js"></script>
+  </body>
+  </html>
