@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026-07-18T07:10:00Z", note: "中断再開の保存/復元を強化し、ホームに『中断したところから戻る』を追加。採点直後中断時は次の問題から再開し、再読み込み/再起動時も問題順を維持するよう修正" },
     { version: "2026-07-18T06:25:00Z", note: "更新時刻のJST変換判定を修正し、UTC入力はJSTへ正しく変換・JST入力は二重変換しないよう統一" },
     { version: "2026-07-18T06:05:00Z", note: "苦手特訓の『＋ あと5問』選択後に中間の開始案内を表示せず、追加5問の1問目を即時開始するよう修正" },
     { version: "2026/07/18 05:45", note: "PC版で進行ボタンのキーボード操作（矢印選択・Enter決定・Esc終了）を統一し、苦手特訓5問後に『＋ あと5問／✓ 特訓を終了』選択UIとPulse強調を追加" },
@@ -26,6 +27,7 @@ const SETTINGS_INFO = {
 };
 const APP_VERSION = SETTINGS_INFO.releaseHistory[0]?.version || "0/0000/0000";
 let currentAudio = null;
+let isResettingLearningData = false;
 const LEVEL_DEFINITIONS = [
   { level: 1, label: "要特訓", icon: "🔥" },
   { level: 2, label: "あと一歩", icon: "⚠️" },
@@ -2815,6 +2817,7 @@ function renderHome() {
   renderLevelCollection();
   renderRecentProgressTop5();
   renderHomeMessage();
+  refreshResumeSessionButton();
 }
 
 function renderHomeUpdateHistory() {
@@ -2830,11 +2833,27 @@ function hasSavedNormalSession() {
   return Boolean(restored && restored.mode === "normal");
 }
 
+function hasResumableNormalSession() {
+  const live = sanitizeStoredSession(state?.session);
+  if (live && live.mode === "normal" && !live.isSessionCompleted && !live.isFinishingSession) {
+    return true;
+  }
+  return hasSavedNormalSession();
+}
+
+function refreshResumeSessionButton() {
+  const button = document.getElementById("resumeSessionBtn");
+  if (!button) return;
+  button.classList.toggle("hidden", !hasResumableNormalSession());
+}
+
 function stashNormalSessionIfNeeded(sessionLike) {
   if (!sessionLike || sessionLike.mode !== "normal") return;
   if (sessionLike.isSessionCompleted || sessionLike.isFinishingSession) return;
   pauseSessionClock(sessionLike);
   state.stats.savedNormalSession = structuredClone(sessionLike);
+  saveState();
+  refreshResumeSessionButton();
 }
 
 function restoreSavedNormalSession() {
@@ -2842,7 +2861,15 @@ function restoreSavedNormalSession() {
   if (!restored || restored.mode !== "normal") return false;
   state.session = restored;
   state.stats.savedNormalSession = null;
+  saveState();
+  refreshResumeSessionButton();
   return true;
+}
+
+function clearSavedNormalSession() {
+  state.stats.savedNormalSession = null;
+  saveState();
+  refreshResumeSessionButton();
 }
 
 function showScreen(screenId, options = {}) {
@@ -3366,6 +3393,21 @@ function resumeActiveSession() {
   const session = state.session;
   if (!session) return false;
   if (autoCompleteStaleSessionIfNeeded()) return false;
+  if (session.mode === "normal" && session.answered) {
+    const nextIndex = Number(session.currentIndex) + 1;
+    if (Number.isInteger(nextIndex) && nextIndex < session.questions.length) {
+      session.currentIndex = nextIndex;
+    } else if (Number.isInteger(nextIndex) && nextIndex >= session.questions.length) {
+      session.answered = false;
+      session.awaitingEnter = false;
+      session.enterLocked = false;
+      session.answerLocked = false;
+      session.enterConsumed = false;
+      session.enterLockUntil = null;
+      finishSession();
+      return false;
+    }
+  }
   resumeSessionClock(session);
   session.answered = false;
   session.awaitingEnter = false;
@@ -3795,6 +3837,11 @@ function renderQuestionSession() {
   session.currentQuestionAttempted = false;
   session.currentQuestionState = "idle";
   session.currentQuestion = question;
+  if (session.mode === "normal") {
+    stashNormalSessionIfNeeded(session);
+  } else {
+    saveState();
+  }
   scheduleKeyboardNavigationSync();
 }
 
@@ -3907,6 +3954,11 @@ function advanceToNextQuestion() {
   }
 
   session.currentIndex = nextIndex;
+  if (session.mode === "normal") {
+    stashNormalSessionIfNeeded(session);
+  } else {
+    saveState();
+  }
   if (session.mode === "review") {
     renderReviewSession();
   } else {
@@ -4709,9 +4761,11 @@ function bindEvents() {
   if (confirmResetLearningDataBtn) {
     confirmResetLearningDataBtn.addEventListener("click", () => {
       try {
+        isResettingLearningData = true;
         localStorage.removeItem(STORAGE_KEY);
         location.reload();
       } catch (error) {
+        isResettingLearningData = false;
         console.error("Could not reset learning data", error);
         alert("学習記録の初期化に失敗しました。もう一度お試しください。");
       }
@@ -4753,6 +4807,19 @@ function bindEvents() {
   if (advanceBtn) {
     advanceBtn.addEventListener("click", () => {
       startNextDaySession();
+    });
+  }
+
+  const resumeSessionBtn = document.getElementById("resumeSessionBtn");
+  if (resumeSessionBtn) {
+    resumeSessionBtn.addEventListener("click", () => {
+      if (state.session?.mode === "normal") {
+        resumeActiveSession();
+        return;
+      }
+      if (restoreSavedNormalSession()) {
+        resumeActiveSession();
+      }
     });
   }
 
@@ -4838,7 +4905,7 @@ function bindEvents() {
   const daySelectWordBtn = document.getElementById("daySelectWordBtn");
   if (daySelectWordBtn) {
     daySelectWordBtn.addEventListener("click", () => {
-      state.stats.savedNormalSession = null;
+      clearSavedNormalSession();
       renderDayCatalog();
       showScreen("dayCatalogScreen");
     });
@@ -4969,6 +5036,17 @@ function bindEvents() {
       renderReviewSession();
     });
   }
+
+  window.addEventListener("beforeunload", () => {
+    if (isResettingLearningData) {
+      return;
+    }
+    if (state.session?.mode === "normal") {
+      stashNormalSessionIfNeeded(state.session);
+      return;
+    }
+    saveState();
+  });
 }
 
 let state = loadState();
