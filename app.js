@@ -2,7 +2,8 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
-    { version: "2026/07/18 06:05", note: "苦手特訓の『＋ あと5問』選択後に中間の開始案内を表示せず、追加5問の1問目を即時開始するよう修正" },
+    { version: "2026-07-18T06:25:00Z", note: "更新時刻のJST変換判定を修正し、UTC入力はJSTへ正しく変換・JST入力は二重変換しないよう統一" },
+    { version: "2026-07-18T06:05:00Z", note: "苦手特訓の『＋ あと5問』選択後に中間の開始案内を表示せず、追加5問の1問目を即時開始するよう修正" },
     { version: "2026/07/18 05:45", note: "PC版で進行ボタンのキーボード操作（矢印選択・Enter決定・Esc終了）を統一し、苦手特訓5問後に『＋ あと5問／✓ 特訓を終了』選択UIとPulse強調を追加" },
     { version: "2026/07/18 05:20", note: "バージョン情報・更新履歴の日時表示をJSTへ統一し、自動取得日時もJST変換して表示するよう修正" },
     { version: "2026/07/18 05:05", note: "PC版タイトルをEnglish Typing Trainer for PCへ変更し、将来のスマホ版名称をEnglish Trainer for Mobileに統一" },
@@ -1803,23 +1804,7 @@ function parseLearningBackupPayload(rawText) {
 }
 
 function parseAppVersionTimestamp(version) {
-  const source = String(version || "").trim();
-  if (!source) return null;
-
-  let match = source.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
-  if (match) {
-    const [, year, month, day, hour, minute] = match;
-    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), 0, 0).getTime();
-  }
-
-  match = source.match(/^(\d{2})\/(\d{2})(\d{2})\/(\d{2})(\d{2})$/);
-  if (match) {
-    const [, yy, month, day, hour, minute] = match;
-    const fullYear = 2000 + Number(yy);
-    return new Date(fullYear, Number(month) - 1, Number(day), Number(hour), Number(minute), 0, 0).getTime();
-  }
-
-  return null;
+  return parseVersionValueToTimestamp(version);
 }
 
 function isOlderBackupVersion(backupVersion, currentVersion) {
@@ -1947,21 +1932,46 @@ function parseVersionValueToTimestamp(value) {
     return numeric;
   }
 
+  const toUtcFromJstParts = (year, month, day, hour, minute, second = 0) => Date.UTC(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour) - 9,
+    Number(minute),
+    Number(second),
+    0
+  );
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:?\d{2})$/i.test(source)) {
+    const parsedUtc = Date.parse(source);
+    return Number.isFinite(parsedUtc) ? parsedUtc : null;
+  }
+
+  if (/\b(UTC|GMT)\b/i.test(source)) {
+    const parsedUtc = Date.parse(source);
+    return Number.isFinite(parsedUtc) ? parsedUtc : null;
+  }
+
   let match = source.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
   if (match) {
     const [, year, month, day, hour, minute] = match;
-    return Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour) - 9, Number(minute), 0, 0);
+    return toUtcFromJstParts(year, month, day, hour, minute, 0);
+  }
+
+  match = source.match(/^(\d{4})-(\d{2})-(\d{2})[\sT](\d{2}):(\d{2})(?::(\d{2}))?(?:\s*JST)?$/i);
+  if (match) {
+    const [, year, month, day, hour, minute, second = "0"] = match;
+    return toUtcFromJstParts(year, month, day, hour, minute, second);
   }
 
   match = source.match(/^(\d{2})\/(\d{2})(\d{2})\/(\d{2})(\d{2})$/);
   if (match) {
     const [, yy, month, day, hour, minute] = match;
     const fullYear = 2000 + Number(yy);
-    return Date.UTC(fullYear, Number(month) - 1, Number(day), Number(hour) - 9, Number(minute), 0, 0);
+    return toUtcFromJstParts(fullYear, month, day, hour, minute, 0);
   }
 
-  const parsed = Date.parse(source);
-  return Number.isFinite(parsed) ? parsed : null;
+  return null;
 }
 
 function formatVersionForJstDisplay(value) {
