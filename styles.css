@@ -737,6 +737,29 @@ p {
   font-size: 18px;
 }
 
+.today-question-label {
+  display: block;
+  font-size: 0.86em;
+  color: rgba(210, 230, 252, 0.88);
+}
+
+.today-question-total {
+  display: block;
+  font-size: 1.46em;
+  font-weight: 800;
+  line-height: 1.05;
+  color: #f4fbff;
+}
+
+.today-question-breakdown {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 2px;
+  font-size: 0.72em;
+  color: rgba(191, 212, 236, 0.92);
+}
+
 .home-message-subrow-four {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }

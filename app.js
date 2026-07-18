@@ -71,6 +71,10 @@ const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingPrepositionBtn", mode: "preposition-training", isReady: true },
   { id: "trainingInstantCompositionBtn", mode: null, isReady: false }
 ]);
+const TRAINING_MODE_KIND_MAP = Object.freeze({
+  "phrase-spiral": "idiom",
+  "preposition-training": "preposition"
+});
 const PREPOSITION_TRAINING_QUESTION_LIMIT = 10;
 const LEVEL_FOUR_FAILURES_TO_DOWN = 3;
 const LEVEL_FOCUS_BATCH_SIZE = 5;
@@ -299,8 +303,273 @@ function typingDelaySecToMs(value) {
   return Math.round(toTenthsClamped(value, 0) * 1000);
 }
 
+function getTrainingKindByMode(mode) {
+  const normalizedMode = String(mode || "").trim().toLowerCase();
+  if (!normalizedMode) return "";
+  return TRAINING_MODE_KIND_MAP[normalizedMode] || "";
+}
+
+function getPracticeCategoryByMode(mode) {
+  return getTrainingKindByMode(mode) ? "training" : "day";
+}
+
+function toSafeDailyStatCount(value) {
+  return Math.max(0, Math.round(Number(value) || 0));
+}
+
+function createDefaultDailyStatsEntry() {
+  return {
+    totalAnswered: 0,
+    dayAnswered: 0,
+    trainingAnswered: 0,
+    totalTyping: 0,
+    dayTyping: 0,
+    trainingTyping: 0,
+    studySeconds: 0,
+    dayStudySeconds: 0,
+    trainingStudySeconds: 0,
+    unknownLegacyAnswered: 0,
+    unknownLegacyStudySeconds: 0,
+    trainingByType: {}
+  };
+}
+
+function sanitizeDailyStatsByDate(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const result = {};
+
+  Object.entries(source).forEach(([dayKey, entry]) => {
+    if (!dayKey || !entry || typeof entry !== "object") return;
+    const base = createDefaultDailyStatsEntry();
+    base.totalAnswered = toSafeDailyStatCount(entry.totalAnswered);
+    base.dayAnswered = toSafeDailyStatCount(entry.dayAnswered);
+    base.trainingAnswered = toSafeDailyStatCount(entry.trainingAnswered);
+    base.totalTyping = toSafeDailyStatCount(entry.totalTyping);
+    base.dayTyping = toSafeDailyStatCount(entry.dayTyping);
+    base.trainingTyping = toSafeDailyStatCount(entry.trainingTyping);
+    base.studySeconds = toSafeDailyStatCount(entry.studySeconds);
+    base.dayStudySeconds = toSafeDailyStatCount(entry.dayStudySeconds);
+    base.trainingStudySeconds = toSafeDailyStatCount(entry.trainingStudySeconds);
+    base.unknownLegacyAnswered = toSafeDailyStatCount(entry.unknownLegacyAnswered);
+    base.unknownLegacyStudySeconds = toSafeDailyStatCount(entry.unknownLegacyStudySeconds);
+
+    const trainingByType = entry.trainingByType && typeof entry.trainingByType === "object"
+      ? entry.trainingByType
+      : {};
+    const normalizedTrainingByType = {};
+    Object.entries(trainingByType).forEach(([kind, row]) => {
+      if (!kind || !row || typeof row !== "object") return;
+      normalizedTrainingByType[String(kind)] = {
+        answered: toSafeDailyStatCount(row.answered),
+        typing: toSafeDailyStatCount(row.typing),
+        studySeconds: toSafeDailyStatCount(row.studySeconds)
+      };
+    });
+    base.trainingByType = normalizedTrainingByType;
+
+    if (!base.totalAnswered) {
+      base.totalAnswered = Math.max(0, base.dayAnswered + base.trainingAnswered);
+    }
+    if (!base.totalTyping) {
+      base.totalTyping = Math.max(0, base.dayTyping + base.trainingTyping);
+    }
+    if (!base.studySeconds) {
+      base.studySeconds = Math.max(0, base.dayStudySeconds + base.trainingStudySeconds);
+    }
+
+    result[dayKey] = base;
+  });
+
+  return result;
+}
+
+function ensureDailyStatsEntry(dayKey) {
+  state.stats.dailyStatsByDate = sanitizeDailyStatsByDate(state.stats.dailyStatsByDate);
+  const legacyQuestionCount = Math.max(0, Number(state.stats?.dailyPerformanceByDate?.[dayKey]?.questionCount) || 0);
+  const legacyStudySeconds = Math.max(0, Math.round((Number(state.stats?.studyTimeByDate?.[dayKey]) || 0) / 1000));
+  if (!state.stats.dailyStatsByDate[dayKey]) {
+    state.stats.dailyStatsByDate[dayKey] = {
+      ...createDefaultDailyStatsEntry(),
+      unknownLegacyAnswered: legacyQuestionCount,
+      unknownLegacyStudySeconds: legacyStudySeconds
+    };
+  }
+  const entry = state.stats.dailyStatsByDate[dayKey];
+  const explicitAnswered = Math.max(0, Number(entry.dayAnswered) || 0) + Math.max(0, Number(entry.trainingAnswered) || 0);
+  const explicitStudySeconds = Math.max(0, Number(entry.dayStudySeconds) || 0) + Math.max(0, Number(entry.trainingStudySeconds) || 0);
+  const requiredUnknownAnswered = Math.max(0, legacyQuestionCount - explicitAnswered);
+  const requiredUnknownStudySeconds = Math.max(0, legacyStudySeconds - explicitStudySeconds);
+  if ((Number(entry.unknownLegacyAnswered) || 0) < requiredUnknownAnswered) {
+    entry.unknownLegacyAnswered = requiredUnknownAnswered;
+  }
+  if ((Number(entry.unknownLegacyStudySeconds) || 0) < requiredUnknownStudySeconds) {
+    entry.unknownLegacyStudySeconds = requiredUnknownStudySeconds;
+  }
+  return entry;
+}
+
+function recordCommonAnswerEvent(options = {}) {
+  const dayKey = typeof options.dayKey === "string" && options.dayKey ? options.dayKey : todayKey();
+  const category = options.category === "training" ? "training" : "day";
+  const trainingKind = typeof options.trainingKind === "string" && options.trainingKind ? options.trainingKind : "";
+  const typingCount = Math.max(0, Math.round(Number(options.typingCount) || 1));
+  const entry = ensureDailyStatsEntry(dayKey);
+
+  entry.totalAnswered += 1;
+  entry.totalTyping += typingCount;
+  if (category === "training") {
+    entry.trainingAnswered += 1;
+    entry.trainingTyping += typingCount;
+    if (trainingKind) {
+      entry.trainingByType[trainingKind] = entry.trainingByType[trainingKind] || {
+        answered: 0,
+        typing: 0,
+        studySeconds: 0
+      };
+      entry.trainingByType[trainingKind].answered += 1;
+      entry.trainingByType[trainingKind].typing += typingCount;
+      entry[`${trainingKind}TrainingAnswered`] = (toSafeDailyStatCount(entry[`${trainingKind}TrainingAnswered`]) + 1);
+    }
+  } else {
+    entry.dayAnswered += 1;
+    entry.dayTyping += typingCount;
+  }
+
+  state.stats.totalSolvedQuestions = Math.max(0, Number(state.stats.totalSolvedQuestions) || 0) + 1;
+  state.stats.totalAnsweredCount = Math.max(0, Number(state.stats.totalAnsweredCount) || 0) + 1;
+  state.stats.totalTypingCount = Math.max(0, Number(state.stats.totalTypingCount) || 0) + typingCount;
+  state.stats.solvedByDay[dayKey] = (state.stats.solvedByDay[dayKey] || 0) + 1;
+}
+
+function recordCommonStudySeconds(dayKey, seconds, options = {}) {
+  const safeDayKey = typeof dayKey === "string" && dayKey ? dayKey : todayKey();
+  const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+  if (!safeSeconds) return;
+  const category = options.category === "training" ? "training" : "day";
+  const trainingKind = typeof options.trainingKind === "string" && options.trainingKind ? options.trainingKind : "";
+  const entry = ensureDailyStatsEntry(safeDayKey);
+
+  entry.studySeconds += safeSeconds;
+  if (category === "training") {
+    entry.trainingStudySeconds += safeSeconds;
+    if (trainingKind) {
+      entry.trainingByType[trainingKind] = entry.trainingByType[trainingKind] || {
+        answered: 0,
+        typing: 0,
+        studySeconds: 0
+      };
+      entry.trainingByType[trainingKind].studySeconds += safeSeconds;
+      entry[`${trainingKind}TrainingStudySeconds`] = toSafeDailyStatCount(entry[`${trainingKind}TrainingStudySeconds`]) + safeSeconds;
+    }
+  } else {
+    entry.dayStudySeconds += safeSeconds;
+  }
+}
+
 function showTrainingComingSoonNotice() {
   alert("準備中です");
+}
+
+function createDefaultTrainingProfiles() {
+  return {};
+}
+
+function sanitizeTrainingProfiles(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const result = {};
+
+  Object.entries(source).forEach(([trainingKind, profile]) => {
+    if (!trainingKind || !profile || typeof profile !== "object") return;
+    const questions = profile.questions && typeof profile.questions === "object" ? profile.questions : {};
+    const normalizedQuestions = {};
+    Object.entries(questions).forEach(([questionId, row]) => {
+      if (!questionId || !row || typeof row !== "object") return;
+      const attempts = Math.max(0, Number(row.attempts) || 0);
+      const correct = Math.max(0, Number(row.correct) || 0);
+      const wrong = Math.max(0, Number(row.wrong) || 0);
+      normalizedQuestions[String(questionId)] = {
+        attempts,
+        correct: Math.min(attempts, correct),
+        wrong: Math.min(attempts, wrong),
+        lastStudiedAt: Math.max(0, Number(row.lastStudiedAt) || 0)
+      };
+    });
+
+    result[String(trainingKind)] = {
+      attempts: Math.max(0, Number(profile.attempts) || 0),
+      correct: Math.max(0, Number(profile.correct) || 0),
+      wrong: Math.max(0, Number(profile.wrong) || 0),
+      lastStudiedAt: Math.max(0, Number(profile.lastStudiedAt) || 0),
+      byCategory: profile.byCategory && typeof profile.byCategory === "object" ? profile.byCategory : {},
+      questions: normalizedQuestions
+    };
+  });
+
+  return result;
+}
+
+function ensureTrainingProfile(trainingKind) {
+  const safeTrainingKind = String(trainingKind || "").trim();
+  if (!safeTrainingKind) return null;
+  state.stats.trainingProfiles = sanitizeTrainingProfiles(state.stats.trainingProfiles);
+  if (!state.stats.trainingProfiles[safeTrainingKind]) {
+    state.stats.trainingProfiles[safeTrainingKind] = {
+      attempts: 0,
+      correct: 0,
+      wrong: 0,
+      lastStudiedAt: 0,
+      byCategory: {},
+      questions: {}
+    };
+  }
+  return state.stats.trainingProfiles[safeTrainingKind];
+}
+
+function recordTrainingProfileAttempt(trainingKind, options = {}) {
+  const profile = ensureTrainingProfile(trainingKind);
+  if (!profile) return;
+  const questionId = String(options.questionId || "").trim();
+  const category = String(options.category || "").trim();
+  const isCorrect = Boolean(options.isCorrect);
+  const now = Date.now();
+
+  profile.attempts += 1;
+  if (isCorrect) {
+    profile.correct += 1;
+  } else {
+    profile.wrong += 1;
+  }
+  profile.lastStudiedAt = now;
+
+  if (category) {
+    profile.byCategory[category] = profile.byCategory[category] || {
+      attempts: 0,
+      correct: 0,
+      wrong: 0
+    };
+    profile.byCategory[category].attempts += 1;
+    if (isCorrect) {
+      profile.byCategory[category].correct += 1;
+    } else {
+      profile.byCategory[category].wrong += 1;
+    }
+  }
+
+  if (questionId) {
+    profile.questions[questionId] = profile.questions[questionId] || {
+      attempts: 0,
+      correct: 0,
+      wrong: 0,
+      lastStudiedAt: 0
+    };
+    profile.questions[questionId].attempts += 1;
+    if (isCorrect) {
+      profile.questions[questionId].correct += 1;
+    } else {
+      profile.questions[questionId].wrong += 1;
+    }
+    profile.questions[questionId].lastStudiedAt = now;
+  }
 }
 
 function createDefaultPrepositionTrainingStats() {
@@ -1424,10 +1693,13 @@ function recordDailyPerformance(isCorrect, dayKey = todayKey()) {
   }
 }
 
-function recordStudyTimeBetween(startMs, endMs) {
+function recordStudyTimeBetween(startMs, endMs, options = {}) {
   const safeStart = Number(startMs);
   const safeEnd = Number(endMs);
   if (!Number.isFinite(safeStart) || !Number.isFinite(safeEnd) || safeEnd <= safeStart) return;
+
+  const category = options.category === "training" ? "training" : "day";
+  const trainingKind = typeof options.trainingKind === "string" && options.trainingKind ? options.trainingKind : "";
 
   let cursor = safeStart;
   while (cursor < safeEnd) {
@@ -1436,7 +1708,10 @@ function recordStudyTimeBetween(startMs, endMs) {
     const segmentEnd = Math.min(safeEnd, nextBoundary);
     const dayKey = formatDateKey(cursorDate);
     const store = ensureStudyTimeEntry(dayKey);
-    store[dayKey] += Math.max(0, segmentEnd - cursor);
+    const segmentMs = Math.max(0, segmentEnd - cursor);
+    store[dayKey] += segmentMs;
+    const seconds = segmentMs > 0 ? Math.max(1, Math.ceil(segmentMs / 1000)) : 0;
+    recordCommonStudySeconds(dayKey, seconds, { category, trainingKind });
     cursor = segmentEnd;
   }
 }
@@ -1468,15 +1743,34 @@ function getDailySessionAggregate(dayKey) {
   state.stats.dailyPerformanceByDate = dailyPerformanceByDate;
   const studyTimeByDate = sanitizeStudyTimeByDate(state.stats.studyTimeByDate);
   state.stats.studyTimeByDate = studyTimeByDate;
+  const dailyStatsByDate = sanitizeDailyStatsByDate(state.stats.dailyStatsByDate);
+  state.stats.dailyStatsByDate = dailyStatsByDate;
   const sessions = Array.isArray(state.stats.completedSessions) ? state.stats.completedSessions : [];
   const targetSessions = sessions.filter((entry) => entry.dayKey === dayKey);
+  const legacyQuestionCount = Math.max(0, Number(dailyPerformanceByDate[dayKey]?.questionCount) || 0);
+  const legacyStudyMs = Math.max(0, Number(studyTimeByDate[dayKey]) || 0);
+  const hasSplitEntry = Boolean(dailyStatsByDate[dayKey]);
+  const hasLegacy = legacyQuestionCount > 0 || legacyStudyMs > 0;
+  const breakdown = hasSplitEntry || hasLegacy
+    ? ensureDailyStatsEntry(dayKey)
+    : createDefaultDailyStatsEntry();
+  const explicitAnswered = Math.max(0, Number(breakdown.dayAnswered) || 0) + Math.max(0, Number(breakdown.trainingAnswered) || 0);
+  const totalQuestionCount = Math.max(legacyQuestionCount, Math.max(0, Number(breakdown.unknownLegacyAnswered) || 0) + explicitAnswered);
+  const explicitStudySeconds = Math.max(0, Number(breakdown.dayStudySeconds) || 0) + Math.max(0, Number(breakdown.trainingStudySeconds) || 0);
+  const totalDurationMinutes = Math.max(
+    Math.max(0, Math.round(legacyStudyMs / 60000)),
+    Math.max(0, Math.round((Math.max(0, Number(breakdown.unknownLegacyStudySeconds) || 0) + explicitStudySeconds) / 60))
+  );
+
   const totals = targetSessions.reduce((acc, entry) => {
     acc.count += 1;
     return acc;
   }, {
     count: 0,
-    durationMinutes: Math.max(0, Math.round((Number(studyTimeByDate[dayKey]) || 0) / 60000)),
-    questionCount: Math.max(0, Number(dailyPerformanceByDate[dayKey]?.questionCount) || 0),
+    durationMinutes: totalDurationMinutes,
+    questionCount: totalQuestionCount,
+    dayQuestionCount: Math.max(0, Number(breakdown.dayAnswered) || 0),
+    trainingQuestionCount: Math.max(0, Number(breakdown.trainingAnswered) || 0),
     correctCount: Math.max(0, Number(dailyPerformanceByDate[dayKey]?.correctCount) || 0)
   });
 
@@ -1489,14 +1783,16 @@ function getDailySessionAggregate(dayKey) {
     }
   }
 
-  const averageAccuracy = totals.questionCount > 0
-    ? Math.max(0, Math.min(100, Math.round((totals.correctCount / totals.questionCount) * 100)))
+  const averageAccuracy = totals.dayQuestionCount > 0
+    ? Math.max(0, Math.min(100, Math.round((totals.correctCount / totals.dayQuestionCount) * 100)))
     : null;
 
   return {
     count: totals.count,
     durationMinutes: totals.durationMinutes,
     questionCount: totals.questionCount,
+    dayQuestionCount: totals.dayQuestionCount,
+    trainingQuestionCount: totals.trainingQuestionCount,
     correctCount: totals.correctCount,
     averageAccuracy
   };
@@ -1813,8 +2109,15 @@ function renderHomeMessage() {
   remainFooterText.textContent = `🎯 1000語まであと${Math.max(0, 1000 - learnedCount)}語`;
   todaySessionCountText.textContent = `📘 学習回数 ${todayAggregate.count}回`;
   todayStudyTimeText.textContent = `⏱ 学習時間 ${todayAggregate.durationMinutes}分`;
-  todayQuestionCountText.textContent = `📝 問題数 ${todayAggregate.questionCount}問`;
-  todayAverageAccuracyText.textContent = `📈 平均正答率 ${Number.isFinite(todayAggregate.averageAccuracy) ? `${todayAggregate.averageAccuracy}%` : "-"}`;
+  todayQuestionCountText.innerHTML = [
+    "<span class=\"today-question-label\">📚 今日</span>",
+    `<span class=\"today-question-total\">${todayAggregate.questionCount}問</span>`,
+    `<span class=\"today-question-breakdown\"><span>Day ${todayAggregate.dayQuestionCount}問</span><span>特訓 ${todayAggregate.trainingQuestionCount}問</span></span>`
+  ].join("");
+  const dayOnlyAccuracy = todayAggregate.dayQuestionCount > 0
+    ? Math.max(0, Math.min(100, Math.round((todayAggregate.correctCount / todayAggregate.dayQuestionCount) * 100)))
+    : null;
+  todayAverageAccuracyText.textContent = `📈 平均正答率 ${Number.isFinite(dayOnlyAccuracy) ? `${dayOnlyAccuracy}%` : "-"}`;
 
   recentRows.forEach((row, index) => {
     const aggregate = getDailySessionAggregate(row.key);
@@ -2006,6 +2309,12 @@ function recordPrepositionTrainingAttempt(question, isCorrect) {
   const prepositionKey = String(question.preposition || "").toLowerCase();
   const questionKey = String(question.id || "");
 
+  recordTrainingProfileAttempt("preposition", {
+    questionId: questionKey,
+    category: prepositionKey,
+    isCorrect
+  });
+
   stats.attempts += 1;
   if (isCorrect) {
     stats.correct += 1;
@@ -2097,6 +2406,7 @@ function renderPrepositionQuestion() {
   nextBtn.disabled = false;
   nextBtn.classList.add("hidden");
   session.answered = false;
+  session.questionStartedAt = Date.now();
   window.setTimeout(() => answerInput.focus(), 30);
 }
 
@@ -2125,6 +2435,23 @@ function submitPrepositionAnswer() {
     feedbackBox.innerHTML = "<strong>英字のみ入力できます</strong>";
     answerInput.focus();
     return;
+  }
+
+  recordCommonAnswerEvent({
+    dayKey: todayKey(),
+    category: "training",
+    trainingKind: "preposition",
+    typingCount: 1
+  });
+
+  const startedAt = Number(session.questionStartedAt);
+  if (Number.isFinite(startedAt) && Date.now() > startedAt) {
+    const elapsedMs = Date.now() - startedAt;
+    const elapsedSeconds = elapsedMs > 0 ? Math.max(1, Math.ceil(elapsedMs / 1000)) : 0;
+    recordCommonStudySeconds(todayKey(), elapsedSeconds, {
+      category: "training",
+      trainingKind: "preposition"
+    });
   }
 
   const normalized = trimmed.toLowerCase();
@@ -2239,9 +2566,12 @@ const defaultState = {
     streak: 0,
     lastSolvedDate: "",
     totalSolvedQuestions: 0,
+    totalAnsweredCount: 0,
+    totalTypingCount: 0,
     solvedByDay: {},
     dailyPerformanceByDate: {},
     studyTimeByDate: {},
+    dailyStatsByDate: {},
     dayBestAccuracy: {},
     previousSessionWeakQuestionIds: [],
     lastResultSummary: null,
@@ -2249,6 +2579,7 @@ const defaultState = {
     pendingSessionNotice: "",
     unlockedDayMax: 1,
     gameTickets: createDefaultGameTicketStats(),
+    trainingProfiles: createDefaultTrainingProfiles(),
     prepositionTraining: createDefaultPrepositionTrainingStats(),
     savedNormalSession: null
   },
@@ -2280,6 +2611,10 @@ function loadState() {
       ? sanitizeDailyPerformanceByDate(parsed.stats?.dailyPerformanceByDate)
       : buildLegacyDailyPerformanceByDate(mergedState.stats.completedSessions);
     mergedState.stats.studyTimeByDate = sanitizeStudyTimeByDate(parsed.stats?.studyTimeByDate);
+    mergedState.stats.dailyStatsByDate = sanitizeDailyStatsByDate(parsed.stats?.dailyStatsByDate);
+    mergedState.stats.totalAnsweredCount = Math.max(0, Number(parsed.stats?.totalAnsweredCount) || Number(parsed.stats?.totalSolvedQuestions) || 0);
+    mergedState.stats.totalTypingCount = Math.max(0, Number(parsed.stats?.totalTypingCount) || 0);
+    mergedState.stats.trainingProfiles = sanitizeTrainingProfiles(parsed.stats?.trainingProfiles);
     mergedState.stats.previousSessionWeakQuestionIds = Array.isArray(parsed.stats?.previousSessionWeakQuestionIds)
       ? parsed.stats.previousSessionWeakQuestionIds.map((id) => String(id))
       : [];
@@ -2772,7 +3107,11 @@ function checkpointSessionClock(sessionLike, options = {}) {
   const now = Date.now();
   if (Number.isFinite(lastResumedAt) && lastResumedAt && now > lastResumedAt) {
     const delta = now - lastResumedAt;
-    recordStudyTimeBetween(lastResumedAt, now);
+    const trainingKind = getTrainingKindByMode(sessionLike.mode);
+    recordStudyTimeBetween(lastResumedAt, now, {
+      category: trainingKind ? "training" : "day",
+      trainingKind
+    });
     sessionLike.accumulatedMs = Math.max(0, Number(sessionLike.accumulatedMs) || 0) + delta;
   }
   sessionLike.lastResumedAt = options.pause ? null : now;
@@ -4727,6 +5066,10 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   const session = state.session;
   if (!session || session.answerLocked) return;
 
+  const trainingKind = getTrainingKindByMode(session.mode);
+  const isTrainingSession = Boolean(trainingKind);
+  const practiceCategory = isTrainingSession ? "training" : "day";
+
   const trimmedAnswer = rawAnswer.trim();
   if (!trimmedAnswer) {
     const input = card.querySelector(".answer-input");
@@ -4740,12 +5083,26 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     return;
   }
 
+  recordCommonAnswerEvent({
+    dayKey: todayKey(),
+    category: practiceCategory,
+    trainingKind,
+    typingCount: 1
+  });
+
   session.answerCount = (session.answerCount || 0) + 1;
 
   const item = state.items.find((entry) => entry.id === question.id);
   const questionId = getQuestionId(question);
   const normalizedAnswer = normalizeAnswer(trimmedAnswer);
   const isCorrect = isCorrectAnswerForQuestion(question, normalizedAnswer);
+  if (trainingKind) {
+    recordTrainingProfileAttempt(trainingKind, {
+      questionId: question.id,
+      category: question.type || "",
+      isCorrect
+    });
+  }
   const input = card.querySelector(".answer-input");
   const answerBtn = card.querySelector(".mobile-answer-btn");
   const isMainNormalRun = session.mode === "normal" && session.phase === "phase1";
@@ -4763,8 +5120,10 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
 
   if (!session.currentQuestionAttempted) {
     session.currentQuestionAttempted = true;
-    item.hasBeenStudied = true;
-    recordItemStudyAttempt(item, isCorrect);
+    if (!isTrainingSession) {
+      item.hasBeenStudied = true;
+      recordItemStudyAttempt(item, isCorrect);
+    }
     if (isScoredNormalRun || session.mode !== "normal") {
       session.attemptedFirstCount += 1;
     }
@@ -4776,28 +5135,32 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     session.enterLockUntil = null;
 
     if (isCorrect) {
-      recordDailyPerformance(true);
+      if (!isTrainingSession) {
+        recordDailyPerformance(true);
+      }
       if (isNormalWeakFocusRun) {
         const weakFocusCorrectIds = new Set((session.weakFocusCurrentRoundCorrectIds || []).map((id) => String(id)));
         weakFocusCorrectIds.add(questionId);
         session.weakFocusCurrentRoundCorrectIds = [...weakFocusCorrectIds];
       }
-      const levelChange = updateItemLevelProgress(item, true);
+      const levelChange = isTrainingSession
+        ? { leveledUpToFour: false }
+        : updateItemLevelProgress(item, true);
       if (isScoredNormalRun || session.mode !== "normal") {
         session.correctFirstAttempt += 1;
       }
-      if ((isScoredNormalRun || session.mode !== "normal") && session.perDayAttemptStats[String(question.day)]) {
+      if (!isTrainingSession && (isScoredNormalRun || session.mode !== "normal") && session.perDayAttemptStats[String(question.day)]) {
         session.perDayAttemptStats[String(question.day)].correct += 1;
       }
-      if (session.mode === "review") {
+      if (!isTrainingSession && session.mode === "review") {
         advanceReviewSchedule(questionId);
       }
-      item.reviewDue = false;
-      item.lastAnswerWasCorrect = true;
-      state.stats.tickets += 1;
-      state.stats.totalSolvedQuestions += 1;
-      state.stats.solvedByDay[todayKey()] = (state.stats.solvedByDay[todayKey()] || 0) + 1;
-      updateStreak();
+      if (!isTrainingSession) {
+        item.reviewDue = false;
+        item.lastAnswerWasCorrect = true;
+        state.stats.tickets += 1;
+        updateStreak();
+      }
       session.currentQuestionState = "correct";
       feedbackBox.className = "feedback-box success";
       feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterまたは答えるで2回目音声を再生");
@@ -4851,20 +5214,22 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
         session.wrongQuestionIds.push(questionIdKey);
       }
     }
-    recordDailyPerformance(false);
+    if (!isTrainingSession) {
+      recordDailyPerformance(false);
+    }
     if (isNormalWeakFocusRun) {
       const weakFocusWrongIds = new Set((session.weakFocusCurrentRoundWrongIds || []).map((id) => String(id)));
       weakFocusWrongIds.add(questionId);
       session.weakFocusCurrentRoundWrongIds = [...weakFocusWrongIds];
     }
-    updateItemLevelProgress(item, false);
-    resetReviewSchedule(questionId);
-    item.reviewDue = true;
-    item.reviewTodayCount += 1;
-    item.lastAnswerWasCorrect = false;
-    state.stats.totalSolvedQuestions += 1;
-    state.stats.solvedByDay[todayKey()] = (state.stats.solvedByDay[todayKey()] || 0) + 1;
-    updateStreak();
+    if (!isTrainingSession) {
+      updateItemLevelProgress(item, false);
+      resetReviewSchedule(questionId);
+      item.reviewDue = true;
+      item.reviewTodayCount += 1;
+      item.lastAnswerWasCorrect = false;
+      updateStreak();
+    }
     session.currentQuestionState = "retrying";
     feedbackBox.className = "feedback-box error";
     feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正しい英語をもう一度入力");
@@ -4887,8 +5252,12 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     return;
   }
 
-  const levelChange = updateItemLevelProgress(item, true);
-  item.lastAnswerWasCorrect = true;
+  const levelChange = isTrainingSession
+    ? { leveledUpToFour: false }
+    : updateItemLevelProgress(item, true);
+  if (!isTrainingSession) {
+    item.lastAnswerWasCorrect = true;
+  }
   session.answered = false;
   session.answerLocked = false;
   session.awaitingEnter = false;
