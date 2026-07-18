@@ -62,6 +62,8 @@ const NORMAL_WEAK_FOCUS_MAX_ROUNDS = 10;
 const GAME_TICKET_CONFIG = {
   debugRandomChanceOverride: null,
   eligibleTrainingThreshold: 3,
+  firstBonusWeakFocusTarget: 3,
+  firstBonusTicketMinutes: 5,
   rescueTriggerDays: 3,
   rescueGrantTrainingCount: 2,
   dailyMaxEarned: 2,
@@ -137,9 +139,12 @@ function createDefaultGameTicketStats() {
     inventory: [],
     dailyTrainingCount: 0,
     dailyEarnedCount: 0,
+    normalWeakFocusCompletedCount: 0,
+    normalWeakFocusFirstBonusGranted: false,
     unsuccessfulEligibleDays: 0,
     lastProcessedDate: "",
     streakBonusAwardedDays: [],
+    earnedHistory: [],
     usageHistory: [],
     pendingRewards: []
   };
@@ -152,7 +157,11 @@ function sanitizeGameTicketInventoryEntry(value) {
   const earnedAt = Number(value.earnedAt);
   const expiresAt = Number(value.expiresAt);
   const usedAt = value.usedAt == null ? null : Number(value.usedAt);
-  const source = value.source === "streakBonus" ? "streakBonus" : "random";
+  const source = value.source === "streakBonus"
+    ? "streakBonus"
+    : value.source === "firstBonus"
+      ? "firstBonus"
+      : "random";
   if (!Number.isFinite(minutes) || minutes <= 0) return null;
   if (!Number.isFinite(earnedAt) || !Number.isFinite(expiresAt)) return null;
   return {
@@ -162,6 +171,20 @@ function sanitizeGameTicketInventoryEntry(value) {
     expiresAt,
     usedAt: Number.isFinite(usedAt) ? usedAt : null,
     source
+  };
+}
+
+function sanitizeGameTicketEarnedHistoryEntry(value) {
+  if (!value || typeof value !== "object") return null;
+  const earnedAt = Number(value.earnedAt);
+  const minutes = Number(value.minutes);
+  if (!Number.isFinite(earnedAt) || !Number.isFinite(minutes) || minutes <= 0) return null;
+  return {
+    id: typeof value.id === "string" && value.id ? value.id : `earned-${earnedAt}-${Math.random().toString(36).slice(2, 8)}`,
+    label: typeof value.label === "string" ? value.label : "",
+    minutes: Math.round(minutes),
+    earnedAt,
+    type: value.type === "streakBonus" ? "streakBonus" : value.type === "firstBonus" ? "firstBonus" : "random"
   };
 }
 
@@ -184,7 +207,7 @@ function sanitizeGameTicketRewardEntry(value) {
   if (!Number.isFinite(minutes) || minutes <= 0) return null;
   return {
     id: typeof value.id === "string" && value.id ? value.id : `reward-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    type: value.type === "streakBonus" ? "streakBonus" : "random",
+    type: value.type === "streakBonus" ? "streakBonus" : value.type === "firstBonus" ? "firstBonus" : "random",
     minutes: Math.round(minutes),
     streakDays: Number.isFinite(Number(value.streakDays)) ? Math.max(0, Math.round(Number(value.streakDays))) : null,
     queuedAt: Number.isFinite(queuedAt) ? queuedAt : Date.now()
@@ -199,10 +222,15 @@ function sanitizeGameTicketStats(value) {
       : [],
     dailyTrainingCount: Math.max(0, Number(source.dailyTrainingCount) || 0),
     dailyEarnedCount: Math.max(0, Number(source.dailyEarnedCount) || 0),
+    normalWeakFocusCompletedCount: Math.max(0, Number(source.normalWeakFocusCompletedCount) || 0),
+    normalWeakFocusFirstBonusGranted: Boolean(source.normalWeakFocusFirstBonusGranted),
     unsuccessfulEligibleDays: Math.max(0, Number(source.unsuccessfulEligibleDays) || 0),
     lastProcessedDate: typeof source.lastProcessedDate === "string" ? source.lastProcessedDate : "",
     streakBonusAwardedDays: Array.isArray(source.streakBonusAwardedDays)
       ? source.streakBonusAwardedDays.filter((entry) => typeof entry === "string" && entry)
+      : [],
+    earnedHistory: Array.isArray(source.earnedHistory)
+      ? source.earnedHistory.map(sanitizeGameTicketEarnedHistoryEntry).filter(Boolean)
       : [],
     usageHistory: Array.isArray(source.usageHistory)
       ? source.usageHistory.map(sanitizeGameTicketUsageEntry).filter(Boolean)
@@ -269,7 +297,7 @@ function createGameTicketInventoryEntry(minutes, source) {
     earnedAt,
     expiresAt: computeGameTicketExpiry(earnedAt),
     usedAt: null,
-    source: source === "streakBonus" ? "streakBonus" : "random"
+    source: source === "streakBonus" ? "streakBonus" : source === "firstBonus" ? "firstBonus" : "random"
   };
 }
 
@@ -349,6 +377,20 @@ function awardGameTicket(store, minutes, source, meta = {}) {
   if (source === "random") {
     store.dailyEarnedCount += 1;
   }
+  if (meta.historyLabel) {
+    const historyEntry = sanitizeGameTicketEarnedHistoryEntry({
+      id: ticket.id,
+      label: meta.historyLabel,
+      minutes: ticket.minutes,
+      earnedAt: ticket.earnedAt,
+      type: meta.type || ticket.source
+    });
+    if (historyEntry) {
+      store.earnedHistory = Array.isArray(store.earnedHistory) ? store.earnedHistory : [];
+      store.earnedHistory.unshift(historyEntry);
+      store.earnedHistory = store.earnedHistory.slice(0, 240);
+    }
+  }
   queueGameTicketReward(store, ticket, { ...meta, type: source });
   return ticket;
 }
@@ -368,11 +410,33 @@ function shouldAwardRandomGameTicket(chance) {
   return Math.random() < safeChance;
 }
 
-function processCompletedTicketTraining() {
+function processCompletedTicketTraining(options = {}) {
   if (!isDesktopGameTicketEnabled()) return [];
   const store = syncGameTicketState();
   store.dailyTrainingCount += 1;
   const earnedTickets = [];
+
+  if (options.trainingType === "normal-weak-focus") {
+    store.normalWeakFocusCompletedCount += 1;
+    const reachedFirstBonus =
+      !store.normalWeakFocusFirstBonusGranted &&
+      store.normalWeakFocusCompletedCount >= GAME_TICKET_CONFIG.firstBonusWeakFocusTarget;
+    if (reachedFirstBonus) {
+      const firstBonusTicket = awardGameTicket(
+        store,
+        GAME_TICKET_CONFIG.firstBonusTicketMinutes,
+        "firstBonus",
+        {
+          type: "firstBonus",
+          historyLabel: "追加特訓3回達成ボーナス　5分券"
+        }
+      );
+      if (firstBonusTicket) {
+        store.normalWeakFocusFirstBonusGranted = true;
+        earnedTickets.push(firstBonusTicket);
+      }
+    }
+  }
 
   const rescueReady =
     store.unsuccessfulEligibleDays >= GAME_TICKET_CONFIG.rescueTriggerDays &&
@@ -713,6 +777,10 @@ function showGameTicketModal(ticket) {
     titleText.textContent = "🔥 連続学習ボーナス";
     minutesText.textContent = `${ticket.minutes}分券を獲得しました！`;
     bodyText.textContent = `${ticket.streakDays}日連続達成、おめでとう！`;
+  } else if (ticket.type === "firstBonus") {
+    titleText.textContent = "🎉 初回ボーナス！ 追加特訓を3回達成しました";
+    minutesText.textContent = "ゲームチケット 5分券を獲得！";
+    bodyText.textContent = "";
   } else {
     titleText.textContent = "🎫 ゲームチケット";
     minutesText.textContent = `${ticket.minutes}分券を獲得しました！`;
@@ -3387,7 +3455,7 @@ function completeCurrentSession(reason = "completed", options = {}) {
   pauseSessionClock(session);
   session.completedReason = reason;
   if (reason === "completed" && session.mode === "challenge") {
-    processCompletedTicketTraining();
+    processCompletedTicketTraining({ trainingType: "challenge" });
   }
   processStreakBonusTicket(reason);
   updateBestAccuracyFromSession(session);
@@ -4435,7 +4503,7 @@ function finishSession() {
         ? session.weakFocusCurrentRoundWrongIds.map((id) => String(id))
         : [];
       session.weakFocusLastQuestionId = String(session.questions?.[session.questions.length - 1]?.id || "");
-      processCompletedTicketTraining();
+      processCompletedTicketTraining({ trainingType: "normal-weak-focus" });
       const completedRounds = Math.max(0, Number(session.weakFocusRoundCount) || 0);
       const hasRemainingRounds = completedRounds < NORMAL_WEAK_FOCUS_MAX_ROUNDS;
       const nextWeakQuestions = hasRemainingRounds
