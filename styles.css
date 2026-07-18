@@ -956,6 +956,20 @@ p {
   font-weight: 700;
 }
 
+.preposition-translation-text {
+  margin-top: 10px;
+  color: #fff;
+  font-size: 1.18rem;
+  line-height: 1.6;
+}
+
+.preposition-translation-after {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 1.18rem;
+  line-height: 1.6;
+}
+
 .day-card {
   border: 1px solid var(--border);
   border-radius: 14px;

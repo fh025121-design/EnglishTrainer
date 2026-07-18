@@ -663,6 +663,7 @@ function getPrepositionQuestionBank() {
         sentence,
         question,
         answer,
+        translation: String(row.translation || "").trim(),
         contextImage: String(row.contextImage || "").trim(),
         sourceDay: Number.isFinite(Number(row.sourceDay)) ? Number(row.sourceDay) : null,
         category: row.category === "fixedPhrase" ? "fixedPhrase" : "core",
@@ -2348,6 +2349,7 @@ function recordPrepositionTrainingAttempt(question, isCorrect) {
 function buildPrepositionFeedbackMarkup(question, isCorrect, userAnswer) {
   const meta = getPrepositionMetaMap()[question.preposition] || { icon: "●", coreImage: "位置関係", representative: [] };
   const representative = (meta.representative || []).slice(0, 2);
+  const translation = question.translation || "";
   const answerRow = isCorrect
     ? ""
     : `<div class="answer-line">あなたの答え：${userAnswer || "-"}</div><div class="answer-line">正解：${question.answer}</div>`;
@@ -2365,6 +2367,7 @@ function buildPrepositionFeedbackMarkup(question, isCorrect, userAnswer) {
     `<p class="preposition-info-label">今回の使い方</p>`,
     `<p class="preposition-context-image">「${question.contextImage || "文脈での位置関係"}」</p>`,
     `<p class="preposition-sentence">${question.sentence}</p>`,
+    translation ? `<p class="preposition-translation-after">${translation}</p>` : "",
     representativeMarkup,
     `</div>`
   ].join("");
@@ -2386,17 +2389,19 @@ function renderPrepositionQuestion() {
   const scopeText = document.getElementById("prepositionScopeText");
   const counterText = document.getElementById("prepositionCounterText");
   const questionText = document.getElementById("prepositionQuestionText");
+  const translationText = document.getElementById("prepositionTranslationText");
   const answerInput = document.getElementById("prepositionAnswerInput");
   const answerBtn = document.getElementById("prepositionAnswerBtn");
   const feedbackBox = document.getElementById("prepositionFeedbackBox");
   const nextBtn = document.getElementById("prepositionNextBtn");
-  if (!title || !scopeText || !counterText || !questionText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
+  if (!title || !scopeText || !counterText || !questionText || !translationText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
 
   const currentQuestion = session.questions[session.currentIndex];
   title.textContent = `前置詞特訓 ${session.scopeLabel}`;
   scopeText.textContent = `前置詞特訓 ${session.scopeLabel}`;
   counterText.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
   questionText.textContent = currentQuestion.question;
+  translationText.textContent = currentQuestion.translation || "";
 
   answerInput.value = "";
   answerInput.disabled = false;
