@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026-07-18T09:05:00Z", note: "ホーム画面の『通常学習を再開』と『次へ進む Day○』を排他表示に変更し、各回答時点での学習実績保存と日別学習時間の途中保存を強化。Day進行と日付集計を分離し、日付をまたいでも通常学習を継続できるよう修正" },
     { version: "2026-07-18T08:20:00Z", note: "中断機能を通常学習専用へ変更し、Day学習・熟語特訓・過去の間違い・苦手特訓などの復習モードは途中終了時に結果画面へ集計して終了、再開データは保存しない仕様へ統一" },
     { version: "2026-07-18T07:10:00Z", note: "中断再開の保存/復元を強化し、ホームに『中断したところから戻る』を追加。採点直後中断時は次の問題から再開し、再読み込み/再起動時も問題順を維持するよう修正" },
     { version: "2026-07-18T06:25:00Z", note: "更新時刻のJST変換判定を修正し、UTC入力はJSTへ正しく変換・JST入力は二重変換しないよう統一" },
@@ -1152,6 +1153,17 @@ function sanitizeDailyPerformanceByDate(value) {
   return result;
 }
 
+function sanitizeStudyTimeByDate(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const result = {};
+  Object.entries(source).forEach(([key, entry]) => {
+    const milliseconds = Math.max(0, Math.round(Number(entry) || 0));
+    if (!key || !milliseconds) return;
+    result[key] = milliseconds;
+  });
+  return result;
+}
+
 function buildLegacyDailyPerformanceByDate(sessions) {
   const result = {};
   (sessions || []).forEach((entry) => {
@@ -1177,11 +1189,36 @@ function ensureDailyPerformanceEntry(dayKey) {
   return state.stats.dailyPerformanceByDate[dayKey];
 }
 
+function ensureStudyTimeEntry(dayKey) {
+  state.stats.studyTimeByDate = sanitizeStudyTimeByDate(state.stats.studyTimeByDate);
+  if (!state.stats.studyTimeByDate[dayKey]) {
+    state.stats.studyTimeByDate[dayKey] = 0;
+  }
+  return state.stats.studyTimeByDate;
+}
+
 function recordDailyPerformance(isCorrect, dayKey = todayKey()) {
   const entry = ensureDailyPerformanceEntry(dayKey);
   entry.questionCount += 1;
   if (isCorrect) {
     entry.correctCount = Math.min(entry.questionCount, entry.correctCount + 1);
+  }
+}
+
+function recordStudyTimeBetween(startMs, endMs) {
+  const safeStart = Number(startMs);
+  const safeEnd = Number(endMs);
+  if (!Number.isFinite(safeStart) || !Number.isFinite(safeEnd) || safeEnd <= safeStart) return;
+
+  let cursor = safeStart;
+  while (cursor < safeEnd) {
+    const cursorDate = new Date(cursor);
+    const nextBoundary = new Date(cursorDate.getFullYear(), cursorDate.getMonth(), cursorDate.getDate() + 1).getTime();
+    const segmentEnd = Math.min(safeEnd, nextBoundary);
+    const dayKey = formatDateKey(cursorDate);
+    const store = ensureStudyTimeEntry(dayKey);
+    store[dayKey] += Math.max(0, segmentEnd - cursor);
+    cursor = segmentEnd;
   }
 }
 
@@ -1210,22 +1247,23 @@ function buildAccuracyEvaluationMarkup(accuracy, wrapperClass = "recent-accuracy
 function getDailySessionAggregate(dayKey) {
   const dailyPerformanceByDate = sanitizeDailyPerformanceByDate(state.stats.dailyPerformanceByDate);
   state.stats.dailyPerformanceByDate = dailyPerformanceByDate;
+  const studyTimeByDate = sanitizeStudyTimeByDate(state.stats.studyTimeByDate);
+  state.stats.studyTimeByDate = studyTimeByDate;
   const sessions = Array.isArray(state.stats.completedSessions) ? state.stats.completedSessions : [];
   const targetSessions = sessions.filter((entry) => entry.dayKey === dayKey);
   const totals = targetSessions.reduce((acc, entry) => {
     acc.count += 1;
-    acc.durationMinutes += Math.max(0, Number(entry.durationMinutes) || 0);
     return acc;
   }, {
     count: 0,
-    durationMinutes: 0,
+    durationMinutes: Math.max(0, Math.round((Number(studyTimeByDate[dayKey]) || 0) / 60000)),
     questionCount: Math.max(0, Number(dailyPerformanceByDate[dayKey]?.questionCount) || 0),
     correctCount: Math.max(0, Number(dailyPerformanceByDate[dayKey]?.correctCount) || 0)
   });
 
   const activeSession = state.session;
-  if (activeSession && getSessionStartDayKey(activeSession) === dayKey) {
-    const activeDurationMinutes = Math.max(0, Math.round(getSessionElapsedMs(activeSession) / 60000));
+  if (activeSession) {
+    const activeDurationMinutes = Math.max(0, Math.round(getSessionElapsedMsWithinDay(activeSession, dayKey) / 60000));
     if (totals.questionCount > 0 || activeDurationMinutes > 0) {
       totals.count += 1;
       totals.durationMinutes += activeDurationMinutes;
@@ -1664,6 +1702,7 @@ const defaultState = {
     totalSolvedQuestions: 0,
     solvedByDay: {},
     dailyPerformanceByDate: {},
+    studyTimeByDate: {},
     dayBestAccuracy: {},
     previousSessionWeakQuestionIds: [],
     lastResultSummary: null,
@@ -1699,6 +1738,7 @@ function loadState() {
     mergedState.stats.dailyPerformanceByDate = Object.keys(parsed.stats?.dailyPerformanceByDate || {}).length
       ? sanitizeDailyPerformanceByDate(parsed.stats?.dailyPerformanceByDate)
       : buildLegacyDailyPerformanceByDate(mergedState.stats.completedSessions);
+    mergedState.stats.studyTimeByDate = sanitizeStudyTimeByDate(parsed.stats?.studyTimeByDate);
     mergedState.stats.previousSessionWeakQuestionIds = Array.isArray(parsed.stats?.previousSessionWeakQuestionIds)
       ? parsed.stats.previousSessionWeakQuestionIds.map((id) => String(id))
       : [];
@@ -2169,10 +2209,35 @@ function getSessionElapsedMs(sessionLike) {
   return accumulated + Math.max(0, Date.now() - lastResumedAt);
 }
 
-function pauseSessionClock(sessionLike) {
+function getSessionElapsedMsWithinDay(sessionLike, dayKey) {
+  const lastResumedAt = Number(sessionLike?.lastResumedAt);
+  if (!Number.isFinite(lastResumedAt) || !lastResumedAt || !dayKey) {
+    return 0;
+  }
+  const [year, month, day] = String(dayKey).split("-").map(Number);
+  if (!year || !month || !day) return 0;
+  const start = new Date(year, month - 1, day).getTime();
+  const end = new Date(year, month - 1, day + 1).getTime();
+  const now = Date.now();
+  const overlapStart = Math.max(lastResumedAt, start);
+  const overlapEnd = Math.min(now, end);
+  return Math.max(0, overlapEnd - overlapStart);
+}
+
+function checkpointSessionClock(sessionLike, options = {}) {
   if (!sessionLike) return;
-  sessionLike.accumulatedMs = getSessionElapsedMs(sessionLike);
-  sessionLike.lastResumedAt = null;
+  const lastResumedAt = Number(sessionLike.lastResumedAt);
+  const now = Date.now();
+  if (Number.isFinite(lastResumedAt) && lastResumedAt && now > lastResumedAt) {
+    const delta = now - lastResumedAt;
+    recordStudyTimeBetween(lastResumedAt, now);
+    sessionLike.accumulatedMs = Math.max(0, Number(sessionLike.accumulatedMs) || 0) + delta;
+  }
+  sessionLike.lastResumedAt = options.pause ? null : now;
+}
+
+function pauseSessionClock(sessionLike) {
+  checkpointSessionClock(sessionLike, { pause: true });
 }
 
 function resumeSessionClock(sessionLike) {
@@ -2849,15 +2914,22 @@ function hasResumableNormalSession() {
 
 function refreshResumeSessionButton() {
   const button = document.getElementById("resumeSessionBtn");
+  const advanceBtn = document.getElementById("advanceBtn");
   if (!button) return;
-  button.classList.toggle("hidden", !hasResumableNormalSession());
+  const hasResume = hasResumableNormalSession();
+  button.classList.toggle("hidden", !hasResume);
+  if (advanceBtn) {
+    advanceBtn.classList.toggle("hidden", hasResume);
+  }
 }
 
 function stashNormalSessionIfNeeded(sessionLike) {
   if (!sessionLike || sessionLike.mode !== "normal") return;
   if (sessionLike.isSessionCompleted || sessionLike.isFinishingSession) return;
-  pauseSessionClock(sessionLike);
-  state.stats.savedNormalSession = structuredClone(sessionLike);
+  checkpointSessionClock(sessionLike);
+  const snapshot = structuredClone(sessionLike);
+  snapshot.lastResumedAt = null;
+  state.stats.savedNormalSession = snapshot;
   saveState();
   refreshResumeSessionButton();
 }
@@ -3372,13 +3444,7 @@ function extractWeakQuestionIdsFromSession(session) {
 }
 
 function autoCompleteStaleSessionIfNeeded() {
-  const session = state.session;
-  if (!session) return false;
-  if (getSessionStartDayKey(session) === todayKey()) return false;
-  completeCurrentSession("auto-ended", { showResult: false });
-  state.stats.pendingSessionNotice = "昨日の学習は途中終了として保存しました。";
-  saveState();
-  return true;
+  return false;
 }
 
 function flushPendingSessionNotice() {
@@ -4041,7 +4107,7 @@ function showResultScreen(summary = state.stats.lastResultSummary) {
   } else {
     resultRecommendationBtn.classList.toggle("hidden", Boolean(summary.interrupted));
     resultNextDayBtn.classList.toggle("hidden", !summary.canAdvanceDay && !summary.canResume);
-    resultNextDayBtn.textContent = summary.canResume ? "▶ 中断したところから再開" : "▶ 次のDayへ";
+    resultNextDayBtn.textContent = summary.canResume ? "▶ 通常学習を再開" : "▶ 次のDayへ";
     resultHomeBtn.textContent = "🏠 ホームへ戻る";
     updateResultActionSelection(null);
   }
