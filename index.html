@@ -397,13 +397,16 @@
           <div class="question-stage">
             <div class="panel question-card" id="responseQuestionCard">
               <div class="question-meta">
-                <span id="responseScopeText" class="phase-progress-text">応答文特訓 すべて</span>
+                <span id="responseScopeText" class="phase-progress-text">応答文特訓</span>
                 <span id="responseCounterText">1 / 10</span>
               </div>
               <div class="question-copy">
+                <p id="responseQuestionLabel" class="response-copy-label">Question</p>
                 <p id="responseQuestionText" class="meaning-text"></p>
-                <p id="responseTemplateText" class="response-template-text meaning-text"></p>
                 <p id="responseQuestionTranslationText" class="response-question-translation"></p>
+                <p id="responseAnswerLabel" class="response-copy-label">Answer</p>
+                <p id="responseTemplateText" class="response-template-text meaning-text"></p>
+                <p id="responseAnswerTranslationText" class="response-question-translation"></p>
               </div>
               <div class="answer-panel">
                 <div class="type-badge word">応答を入力</div>
@@ -447,7 +450,6 @@
               </div>
               <div class="result-actions preposition-result-actions">
                 <button id="responseRetryBtn" class="primary-btn" type="button">もう一度</button>
-                <button id="responseChooseScopeBtn" class="secondary-btn" type="button">カテゴリーを選び直す</button>
                 <button id="responseBackToMenuBtn" class="secondary-btn" type="button">特訓メニューへ戻る</button>
               </div>
             </div>

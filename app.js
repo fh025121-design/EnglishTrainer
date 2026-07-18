@@ -690,9 +690,7 @@ function getPrepositionQuestionBank() {
 }
 
 function getResponseTrainingCategoryLabel(category) {
-  const key = String(category || "").trim().toLowerCase();
-  const hit = RESPONSE_TRAINING_CATEGORY_META.find((entry) => entry.key === key);
-  return hit ? hit.label : "その他";
+  return String(category || "").trim() || "その他";
 }
 
 const RESPONSE_CONTRACTION_TO_FORMAL_MAP = Object.freeze({
@@ -794,40 +792,42 @@ function buildResponsePromptTemplate(responseTemplate, promptMode) {
 }
 
 function getResponseTopicBadgeLabel(question) {
-  const key = String(question.category || "other");
-  const title = String(question.title || getResponseTrainingCategoryLabel(key));
-  if (key === "be") return `🟦 ${title}`;
-  if (key === "general") return `🟩 ${title}`;
-  if (key === "modal") return `🟪 ${title}`;
-  if (key === "wh") return `🟥 ${title}`;
-  if (key === "progressive") return `🟨 ${title}`;
-  if (key === "comparison") return `🟧 ${title}`;
-  return `⬜ ${title}`;
+  const topic = String(question.topic || question.title || getResponseTrainingCategoryLabel(question.category));
+  if (topic.startsWith("be動詞")) return `🟦 ${topic}`;
+  if (topic.startsWith("一般動詞")) return `🟩 ${topic}`;
+  if (topic.startsWith("助動詞")) return `🟪 ${topic}`;
+  if (topic.startsWith("現在進行形")) return `🟨 ${topic}`;
+  if (topic.startsWith("比較")) return `🟧 ${topic}`;
+  if (String(question.category || "").startsWith("疑問詞")) return `🟥 ${topic}`;
+  return `⬜ ${topic}`;
 }
 
 function getResponseTopicToneClass(question) {
-  const key = String(question.category || "other");
-  if (key === "be") return "response-topic-be";
-  if (key === "general") return "response-topic-general";
-  if (key === "modal") return "response-topic-modal";
-  if (key === "wh") return "response-topic-wh";
-  if (key === "progressive") return "response-topic-progressive";
-  if (key === "comparison") return "response-topic-comparison";
+  const topic = String(question.topic || "");
+  const category = String(question.category || "");
+  if (topic.startsWith("be動詞")) return "response-topic-be";
+  if (topic.startsWith("一般動詞")) return "response-topic-general";
+  if (topic.startsWith("助動詞")) return "response-topic-modal";
+  if (category.startsWith("疑問詞")) return "response-topic-wh";
+  if (topic.startsWith("現在進行形")) return "response-topic-progressive";
+  if (topic.startsWith("比較")) return "response-topic-comparison";
   return "response-topic-other";
 }
 
 function getResponseQuestionBank() {
   const source = Array.isArray(window.responseTrainingBank) ? window.responseTrainingBank : [];
-  const validCategorySet = new Set(RESPONSE_TRAINING_CATEGORY_META.map((entry) => entry.key));
+  const seenIds = new Set();
   return source
     .map((row) => {
       if (!row || typeof row !== "object") return null;
       const id = String(row.id || "").trim();
-      const categoryRaw = String(row.category || "").trim().toLowerCase();
-      const category = validCategorySet.has(categoryRaw) ? categoryRaw : "other";
-      const title = String(row.title || "").trim();
+      if (!id || seenIds.has(id)) return null;
+      seenIds.add(id);
+      const category = String(row.category || "").trim();
+      const topic = String(row.topic || row.title || "").trim();
       const question = String(row.question || "").trim();
       const response = String(row.response || "").trim();
+      const completedResponse = String(row.completedResponse || "").trim();
       const translationQuestion = String(row.translationQuestion || "").trim();
       const translationAnswer = String(row.translationAnswer || "").trim();
       const point = String(row.point || "").trim();
@@ -837,8 +837,14 @@ function getResponseQuestionBank() {
       const answerForms = buildResponseAnswerForms(normalizedAnswers);
       if (
         !id ||
+        !category ||
+        !topic ||
         !question ||
         !response ||
+        !completedResponse ||
+        !translationQuestion ||
+        !translationAnswer ||
+        !point ||
         (
           !answerForms.oneWordAnswers.length &&
           !answerForms.formalTwoWordAnswers.length &&
@@ -848,9 +854,10 @@ function getResponseQuestionBank() {
       return {
         id,
         category,
-        title,
+        topic,
         question,
         response,
+        completedResponse,
         answerForms,
         translationQuestion,
         translationAnswer,
@@ -860,52 +867,34 @@ function getResponseQuestionBank() {
     .filter(Boolean);
 }
 
-function getResponseScopeLabel(scope) {
-  if (scope === "all") return "すべて";
-  return getResponseTrainingCategoryLabel(scope);
-}
-
-function getResponseScopeBuckets() {
-  const bank = getResponseQuestionBank();
-  return RESPONSE_TRAINING_CATEGORY_META
-    .map((meta) => ({
-      key: meta.key,
-      label: meta.label,
-      questions: bank.filter((question) => question.category === meta.key)
-    }))
-    .filter((bucket) => bucket.questions.length > 0);
-}
-
-function renderResponseScopeSelector() {
-  const allBtn = document.getElementById("responseScopeAllBtn");
-  const scopeButtons = document.getElementById("responseScopeButtons");
-  if (!allBtn || !scopeButtons) return;
-
-  const buckets = getResponseScopeBuckets();
-  const allCount = buckets.reduce((sum, bucket) => sum + bucket.questions.length, 0);
-  allBtn.textContent = `すべて ${allCount}問`;
-  scopeButtons.innerHTML = buckets
-    .map((bucket) => `<button type="button" class="secondary-btn response-scope-btn" data-response-scope="${bucket.key}">${bucket.label} ${bucket.questions.length}問</button>`)
-    .join("");
-
-  allBtn.onclick = () => startResponseTraining("all");
-  scopeButtons.querySelectorAll("[data-response-scope]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const scope = String(button.getAttribute("data-response-scope") || "").trim().toLowerCase();
-      if (!scope) return;
-      startResponseTraining(scope);
-    });
-  });
-}
-
 function openResponseTrainingSelector() {
-  renderResponseScopeSelector();
-  showScreen("responseSelectScreen");
+  startResponseTraining("all");
 }
 
-function buildResponseQuestionSet(scope) {
+function orderResponseQuestionsForVariety(questions) {
+  const pool = [...questions];
+  const ordered = [];
+  while (pool.length) {
+    const last = ordered[ordered.length - 1] || null;
+    let pickIndex = pool.findIndex((question) => {
+      if (!last) return true;
+      return question.category !== last.category && question.topic !== last.topic;
+    });
+    if (pickIndex < 0) {
+      pickIndex = pool.findIndex((question) => {
+        if (!last) return true;
+        return question.category !== last.category || question.topic !== last.topic;
+      });
+    }
+    if (pickIndex < 0) pickIndex = 0;
+    ordered.push(pool.splice(pickIndex, 1)[0]);
+  }
+  return ordered;
+}
+
+function buildResponseQuestionSet() {
   const bank = getResponseQuestionBank();
-  const pool = scope === "all" ? bank : bank.filter((question) => question.category === scope);
+  const pool = bank;
   if (!pool.length) return [];
   const uniquePool = [];
   const seen = new Set();
@@ -915,12 +904,12 @@ function buildResponseQuestionSet(scope) {
     seen.add(key);
     uniquePool.push(question);
   });
-  return shuffle(uniquePool).slice(0, Math.min(RESPONSE_TRAINING_QUESTION_LIMIT, uniquePool.length));
+  const selected = shuffle(uniquePool).slice(0, Math.min(RESPONSE_TRAINING_QUESTION_LIMIT, uniquePool.length));
+  return orderResponseQuestionsForVariety(selected);
 }
 
-function startResponseTraining(scope) {
-  const safeScope = typeof scope === "string" && scope ? scope.toLowerCase() : "all";
-  const questions = buildResponseQuestionSet(safeScope);
+function startResponseTraining(scope = "all") {
+  const questions = buildResponseQuestionSet();
   if (!questions.length) {
     alert("出題可能な応答文問題がありません。");
     return;
@@ -935,8 +924,8 @@ function startResponseTraining(scope) {
   });
 
   responseTrainingSession = {
-    scope: safeScope,
-    scopeLabel: getResponseScopeLabel(safeScope),
+    scope: "all",
+    scopeLabel: "すべて",
     questions: scriptedQuestions,
     currentIndex: 0,
     answered: false,
@@ -968,7 +957,7 @@ function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText) {
   const userRow = isCorrect
     ? ""
     : `<div class="answer-line">あなたの答え：${userAnswerText || "-"}</div><div class="answer-line">正解：${canonicalAnswer}</div>`;
-  const completedResponse = fillResponseTemplate(question.response, canonicalAnswer);
+  const completedResponse = question.completedResponse || fillResponseTemplate(question.response, canonicalAnswer);
   const formsRow = canonicalContracted && canonicalFormal
     ? `<div class="response-form-pair"><span>${canonicalContracted}</span><span>= ${canonicalFormal}</span></div>`
     : "";
@@ -982,9 +971,8 @@ function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText) {
     `<p class="response-topic-label ${topicToneClass}">${topicBadge}</p>`,
     `<div class="response-feedback-divider"></div>`,
     `<p class="response-feedback-line">${question.question}</p>`,
-    `<p class="response-feedback-line">${completedResponse}</p>`,
-    `<p class="response-feedback-translation-title">和訳</p>`,
     question.translationQuestion ? `<p class="response-feedback-translation">${question.translationQuestion}</p>` : "",
+    `<p class="response-feedback-line">${completedResponse}</p>`,
     question.translationAnswer ? `<p class="response-feedback-translation">${question.translationAnswer}</p>` : "",
     formsRow,
     `<div class="response-feedback-divider"></div>`,
@@ -1008,23 +996,29 @@ function renderResponseTrainingQuestion() {
   const scopeText = document.getElementById("responseScopeText");
   const counterText = document.getElementById("responseCounterText");
   const questionText = document.getElementById("responseQuestionText");
+  const questionLabel = document.getElementById("responseQuestionLabel");
   const templateText = document.getElementById("responseTemplateText");
   const questionTranslationText = document.getElementById("responseQuestionTranslationText");
+  const answerLabel = document.getElementById("responseAnswerLabel");
+  const answerTranslationText = document.getElementById("responseAnswerTranslationText");
   const answerInput = document.getElementById("responseAnswerInput");
   const answerInputSecond = document.getElementById("responseAnswerInputSecond");
   const answerInputSecondWrap = document.getElementById("responseAnswerInputSecondWrap");
   const answerBtn = document.getElementById("responseAnswerBtn");
   const feedbackBox = document.getElementById("responseFeedbackBox");
   const nextBtn = document.getElementById("responseNextBtn");
-  if (!title || !scopeText || !counterText || !questionText || !templateText || !questionTranslationText || !answerInput || !answerInputSecond || !answerInputSecondWrap || !answerBtn || !feedbackBox || !nextBtn) return;
+  if (!title || !scopeText || !counterText || !questionText || !questionLabel || !templateText || !questionTranslationText || !answerLabel || !answerTranslationText || !answerInput || !answerInputSecond || !answerInputSecondWrap || !answerBtn || !feedbackBox || !nextBtn) return;
 
   const currentQuestion = session.questions[session.currentIndex];
-  title.textContent = `応答文特訓 ${session.scopeLabel}`;
-  scopeText.textContent = `応答文特訓 ${session.scopeLabel}`;
+  title.textContent = "応答文特訓";
+  scopeText.textContent = "応答文特訓";
   counterText.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
+  questionLabel.textContent = "Question";
   questionText.textContent = currentQuestion.question;
-  templateText.textContent = currentQuestion.promptTemplate || currentQuestion.response;
   questionTranslationText.textContent = currentQuestion.translationQuestion || "";
+  answerLabel.textContent = "Answer";
+  templateText.textContent = currentQuestion.promptTemplate || currentQuestion.response;
+  answerTranslationText.textContent = currentQuestion.translationAnswer || "";
 
   const usesTwoInput = currentQuestion.promptMode === "formal";
   answerInputSecondWrap.classList.toggle("hidden", !usesTwoInput);
@@ -6563,7 +6557,7 @@ function bindEvents() {
           return;
         }
         if (item.mode === "response-training") {
-          openResponseTrainingSelector();
+          startResponseTraining("all");
           return;
         }
         prepareSession(item.mode);
@@ -6641,18 +6635,7 @@ function bindEvents() {
   const responseRetryBtn = document.getElementById("responseRetryBtn");
   if (responseRetryBtn) {
     responseRetryBtn.addEventListener("click", () => {
-      if (!responseTrainingSession) {
-        openResponseTrainingSelector();
-        return;
-      }
-      startResponseTraining(responseTrainingSession.scope);
-    });
-  }
-
-  const responseChooseScopeBtn = document.getElementById("responseChooseScopeBtn");
-  if (responseChooseScopeBtn) {
-    responseChooseScopeBtn.addEventListener("click", () => {
-      openResponseTrainingSelector();
+      startResponseTraining("all");
     });
   }
 
