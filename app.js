@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 05:05", note: "PC版タイトルをEnglish Typing Trainer for PCへ変更し、将来のスマホ版名称をEnglish Trainer for Mobileに統一" },
     { version: "2026/07/18 04:50", note: "通常学習の過去正解2問候補からLv1/Lv2・間違い復習対象・直近不正解問題を除外し、候補不足時は現在Dayで補完するよう修正" },
     { version: "2026/07/18 04:30", note: "通常学習のスパイラル復習（現在Day8問+過去正解2問）を追加・Dayアンロック条件を通常学習完了のみに統一・初期化後はDay1開始へ固定・学習記録のバックアップ/復元機能を設定画面へ追加" },
     { version: "2026/07/18 03:57", note: "ホーム画面のゲームチケット表示を整理・直近3日間の正答率集計を修正" },
