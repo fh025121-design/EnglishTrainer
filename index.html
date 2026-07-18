@@ -28,7 +28,7 @@
                 <button id="advanceBtn" class="primary-btn home-advance-btn"><span class="advance-main">▶ 次へ進む</span><span id="advanceDayText" class="advance-sub">Day1</span></button>
                 <button id="resumeSessionBtn" class="primary-btn hidden" type="button">▶ 通常学習を再開</button>
                 <button id="daySelectWordBtn" class="secondary-btn">📘 Day学習</button>
-                <button id="daySelectPhraseBtn" class="secondary-btn">💬 熟語特訓</button>
+                <button id="daySelectPhraseBtn" class="secondary-btn">💬 特訓</button>
                 <button id="challengeBtn" class="primary-btn challenge-primary-btn">▶ 過去の間違いに挑戦</button>
               </div>
             </div>
@@ -262,6 +262,25 @@
               <button id="dayRangeStartBtn" type="submit" class="primary-btn">学習開始</button>
             </form>
             <div id="dayCatalogGrid" class="day-catalog-grid"></div>
+          </div>
+        </section>
+
+        <section id="trainingMenuScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">特訓メニュー</p>
+              <h2>取り組む特訓を選択</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel day-catalog-panel">
+            <div class="study-actions-grid">
+              <button id="trainingIdiomBtn" class="secondary-btn" type="button">💬 熟語特訓</button>
+              <button id="trainingPrepositionBtn" class="secondary-btn" type="button">🧭 前置詞特訓（準備中）</button>
+              <button id="trainingInstantCompositionBtn" class="secondary-btn" type="button">⚡ 瞬間英作文（準備中）</button>
+            </div>
+            <p class="subtext">準備中の特訓を押すと「準備中です」と表示されます。</p>
           </div>
         </section>
 

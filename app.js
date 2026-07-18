@@ -66,6 +66,11 @@ const PHRASE_SPIRAL_LEVEL_TARGETS = {
   3: 1,
   4: 1
 };
+const TRAINING_MENU_ITEMS = Object.freeze([
+  { id: "trainingIdiomBtn", mode: "phrase-spiral", isReady: true },
+  { id: "trainingPrepositionBtn", mode: null, isReady: false },
+  { id: "trainingInstantCompositionBtn", mode: null, isReady: false }
+]);
 const LEVEL_FOUR_FAILURES_TO_DOWN = 3;
 const LEVEL_FOCUS_BATCH_SIZE = 5;
 const NORMAL_WEAK_FOCUS_BATCH_SIZE = 5;
@@ -290,6 +295,10 @@ function getTypingConfig() {
 
 function typingDelaySecToMs(value) {
   return Math.round(toTenthsClamped(value, 0) * 1000);
+}
+
+function showTrainingComingSoonNotice() {
+  alert("準備中です");
 }
 
 function isDesktopGameTicketEnabled() {
@@ -5235,9 +5244,21 @@ function bindEvents() {
   const daySelectPhraseBtn = document.getElementById("daySelectPhraseBtn");
   if (daySelectPhraseBtn) {
     daySelectPhraseBtn.addEventListener("click", () => {
-      prepareSession("phrase-spiral");
+      showScreen("trainingMenuScreen");
     });
   }
+
+  TRAINING_MENU_ITEMS.forEach((item) => {
+    const button = document.getElementById(item.id);
+    if (!button) return;
+    button.addEventListener("click", () => {
+      if (item.isReady && item.mode) {
+        prepareSession(item.mode);
+        return;
+      }
+      showTrainingComingSoonNotice();
+    });
+  });
 
   const challengeBtn = document.getElementById("challengeBtn");
   if (challengeBtn) {
