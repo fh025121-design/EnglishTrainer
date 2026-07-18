@@ -534,7 +534,8 @@ function buildVocabularyItems() {
     learningStats: {
       attempts: 0,
       correct: 0,
-      lastStudiedDate: ""
+      lastStudiedDate: "",
+      lastCorrectDate: ""
     }
   }));
 }
@@ -546,7 +547,8 @@ function sanitizeLearningStats(value) {
   return {
     attempts: Number.isInteger(attempts) ? Math.max(0, attempts) : 0,
     correct: Number.isInteger(correct) ? Math.max(0, correct) : 0,
-    lastStudiedDate: typeof source.lastStudiedDate === "string" ? source.lastStudiedDate : ""
+    lastStudiedDate: typeof source.lastStudiedDate === "string" ? source.lastStudiedDate : "",
+    lastCorrectDate: typeof source.lastCorrectDate === "string" ? source.lastCorrectDate : ""
   };
 }
 
@@ -568,10 +570,12 @@ function getItemAccuracyPercent(item) {
 function recordItemStudyAttempt(item, isCorrect) {
   const stats = getItemLearningStats(item);
   stats.attempts += 1;
+  const today = todayKey();
   if (isCorrect) {
     stats.correct += 1;
+    stats.lastCorrectDate = today;
   }
-  stats.lastStudiedDate = todayKey();
+  stats.lastStudiedDate = today;
 }
 
 function getLevelDefinition(level) {
@@ -2892,6 +2896,79 @@ function getFilteredPool() {
   });
 }
 
+function parseDateKeyToTime(dayKey) {
+  if (typeof dayKey !== "string") return null;
+  const match = dayKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  const value = new Date(Number(year), Number(month) - 1, Number(day)).getTime();
+  return Number.isFinite(value) ? value : null;
+}
+
+function getDaysSinceDateKey(dayKey) {
+  const dateTime = parseDateKeyToTime(dayKey);
+  if (!Number.isFinite(dateTime)) return Number.POSITIVE_INFINITY;
+  const todayTime = parseDateKeyToTime(todayKey());
+  if (!Number.isFinite(todayTime)) return Number.POSITIVE_INFINITY;
+  return Math.max(0, Math.floor((todayTime - dateTime) / GAME_TICKET_DAY_MS));
+}
+
+function scorePastCorrectCandidate(item) {
+  const stats = getItemLearningStats(item);
+  const daysSinceAsked = getDaysSinceDateKey(stats.lastStudiedDate);
+  const daysSinceCorrect = getDaysSinceDateKey(stats.lastCorrectDate);
+  const askedRecencyPenalty = daysSinceAsked <= 2 ? 1000 : 0;
+  const askedScore = Number.isFinite(daysSinceAsked) ? daysSinceAsked * 2 : 365;
+  const correctScore = Number.isFinite(daysSinceCorrect) ? daysSinceCorrect * 3 : 365;
+  const jitter = Math.random();
+  return askedScore + correctScore - askedRecencyPenalty + jitter;
+}
+
+function pickPastCorrectReviewItems(currentDay, count) {
+  const targetCount = Math.max(0, count);
+  if (targetCount <= 0) return [];
+  const candidates = state.items.filter((item) => {
+    if (Number(item.day) >= currentDay) return false;
+    const stats = getItemLearningStats(item);
+    return Number(stats.correct) > 0;
+  });
+  if (!candidates.length) return [];
+  return candidates
+    .map((item) => ({ item, score: scorePastCorrectCandidate(item) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, targetCount)
+    .map((entry) => entry.item);
+}
+
+function buildNormalSpiralMainQuestions() {
+  const availableDays = getAvailableDays();
+  if (!availableDays.length) return [];
+  const maxDay = availableDays[availableDays.length - 1];
+  const currentDayRaw = Number(state.settings.studyRange?.start);
+  const currentDay = Number.isFinite(currentDayRaw)
+    ? Math.max(availableDays[0], Math.min(maxDay, currentDayRaw))
+    : availableDays[0];
+
+  const currentDayItems = state.items.filter((item) => Number(item.day) === currentDay);
+  if (!currentDayItems.length) return [];
+
+  if (currentDay <= availableDays[0]) {
+    return weightedSampleWithoutReplacement(currentDayItems, Math.min(10, currentDayItems.length));
+  }
+
+  const currentDayCore = weightedSampleWithoutReplacement(currentDayItems, Math.min(8, currentDayItems.length));
+  const pastCorrect = pickPastCorrectReviewItems(currentDay, 2);
+  const selectedIds = new Set([...currentDayCore, ...pastCorrect].map((item) => String(item.id)));
+
+  const needed = Math.max(0, Math.min(10, currentDayItems.length + pastCorrect.length) - (currentDayCore.length + pastCorrect.length));
+  const currentDayFallback = weightedSampleWithoutReplacement(
+    currentDayItems.filter((item) => !selectedIds.has(String(item.id))),
+    needed
+  );
+
+  return shuffle([...currentDayCore, ...pastCorrect, ...currentDayFallback]).slice(0, 10);
+}
+
 function getChallengePool() {
   ensureReviewStore();
   const seen = new Set();
@@ -3430,7 +3507,7 @@ function prepareSession(mode, options = {}) {
     const pool = hasCustomPool ? options.customPool.filter((item) => Boolean(item)) : getFilteredPool();
     mainQuestions = hasCustomPool
       ? shuffle(pool).slice(0, Math.min(10, pool.length))
-      : weightedSampleWithoutReplacement(pool, 10);
+      : buildNormalSpiralMainQuestions();
     previousReviewQuestions = hasCustomPool ? [] : getPreviousSessionReviewPool();
     questions = previousReviewQuestions.length ? previousReviewQuestions : mainQuestions;
   }
