@@ -68,9 +68,10 @@ const PHRASE_SPIRAL_LEVEL_TARGETS = {
 };
 const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingIdiomBtn", mode: "phrase-spiral", isReady: true },
-  { id: "trainingPrepositionBtn", mode: null, isReady: false },
+  { id: "trainingPrepositionBtn", mode: "preposition-training", isReady: true },
   { id: "trainingInstantCompositionBtn", mode: null, isReady: false }
 ]);
+const PREPOSITION_TRAINING_QUESTION_LIMIT = 10;
 const LEVEL_FOUR_FAILURES_TO_DOWN = 3;
 const LEVEL_FOCUS_BATCH_SIZE = 5;
 const NORMAL_WEAK_FOCUS_BATCH_SIZE = 5;
@@ -132,6 +133,7 @@ const PHASE_METADATA = {
 let recentDayProgressUpdates = [];
 let activeLevelFilter = 1;
 let activeItemDetailId = null;
+let prepositionTrainingSession = null;
 let currentScreenId = "homeScreen";
 const screenHistory = [];
 const levelTrendTracker = {
@@ -299,6 +301,106 @@ function typingDelaySecToMs(value) {
 
 function showTrainingComingSoonNotice() {
   alert("準備中です");
+}
+
+function createDefaultPrepositionTrainingStats() {
+  return {
+    attempts: 0,
+    correct: 0,
+    wrong: 0,
+    lastStudiedAt: 0,
+    byPreposition: {},
+    byQuestion: {}
+  };
+}
+
+function sanitizePrepositionTrainingStats(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const byPreposition = source.byPreposition && typeof source.byPreposition === "object" ? source.byPreposition : {};
+  const byQuestion = source.byQuestion && typeof source.byQuestion === "object" ? source.byQuestion : {};
+  const normalizedByPreposition = {};
+  const normalizedByQuestion = {};
+
+  Object.entries(byPreposition).forEach(([key, row]) => {
+    if (!key || !row || typeof row !== "object") return;
+    normalizedByPreposition[String(key).toLowerCase()] = {
+      attempts: Math.max(0, Number(row.attempts) || 0),
+      correct: Math.max(0, Number(row.correct) || 0),
+      wrong: Math.max(0, Number(row.wrong) || 0)
+    };
+  });
+
+  Object.entries(byQuestion).forEach(([key, row]) => {
+    if (!key || !row || typeof row !== "object") return;
+    normalizedByQuestion[String(key)] = {
+      correct: Math.max(0, Number(row.correct) || 0),
+      wrong: Math.max(0, Number(row.wrong) || 0),
+      lastStudiedAt: Math.max(0, Number(row.lastStudiedAt) || 0)
+    };
+  });
+
+  return {
+    attempts: Math.max(0, Number(source.attempts) || 0),
+    correct: Math.max(0, Number(source.correct) || 0),
+    wrong: Math.max(0, Number(source.wrong) || 0),
+    lastStudiedAt: Math.max(0, Number(source.lastStudiedAt) || 0),
+    byPreposition: normalizedByPreposition,
+    byQuestion: normalizedByQuestion
+  };
+}
+
+function ensurePrepositionTrainingStats() {
+  if (!state.stats) state.stats = {};
+  state.stats.prepositionTraining = sanitizePrepositionTrainingStats(state.stats.prepositionTraining);
+  return state.stats.prepositionTraining;
+}
+
+function getPrepositionMetaMap() {
+  const source = window.prepositionTrainingMeta && typeof window.prepositionTrainingMeta === "object"
+    ? window.prepositionTrainingMeta
+    : {};
+  const fallback = {
+    icon: "●",
+    coreImage: "位置関係",
+    representative: []
+  };
+  const out = {};
+  Object.entries(source).forEach(([key, value]) => {
+    if (!key || !value || typeof value !== "object") return;
+    out[String(key).toLowerCase()] = {
+      icon: typeof value.icon === "string" && value.icon ? value.icon : fallback.icon,
+      coreImage: typeof value.coreImage === "string" && value.coreImage ? value.coreImage : fallback.coreImage,
+      representative: Array.isArray(value.representative)
+        ? value.representative.filter((entry) => typeof entry === "string" && entry).slice(0, 3)
+        : []
+    };
+  });
+  return out;
+}
+
+function getPrepositionQuestionBank() {
+  const source = Array.isArray(window.prepositionTrainingBank) ? window.prepositionTrainingBank : [];
+  return source
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const preposition = String(row.preposition || "").trim().toLowerCase();
+      const answer = String(row.answer || "").trim().toLowerCase();
+      const sentence = String(row.sentence || "").trim();
+      const question = String(row.question || "").trim();
+      if (!preposition || !answer || !sentence || !question) return null;
+      return {
+        id: String(row.id || ""),
+        preposition,
+        sentence,
+        question,
+        answer,
+        contextImage: String(row.contextImage || "").trim(),
+        sourceDay: Number.isFinite(Number(row.sourceDay)) ? Number(row.sourceDay) : null,
+        category: row.category === "fixedPhrase" ? "fixedPhrase" : "core",
+        audioFile: typeof row.audioFile === "string" ? row.audioFile : ""
+      };
+    })
+    .filter(Boolean);
 }
 
 function isDesktopGameTicketEnabled() {
@@ -1799,6 +1901,325 @@ function renderDayCatalog() {
   });
 }
 
+function getPrepositionScopeLabel(scope) {
+  return scope === "all" ? "すべて" : scope;
+}
+
+function getPrepositionScopeBuckets() {
+  const bucketMap = new Map();
+  getPrepositionQuestionBank().forEach((question) => {
+    if (!bucketMap.has(question.preposition)) {
+      bucketMap.set(question.preposition, []);
+    }
+    bucketMap.get(question.preposition).push(question);
+  });
+  return [...bucketMap.entries()]
+    .map(([preposition, questions]) => ({ preposition, questions }))
+    .sort((a, b) => a.preposition.localeCompare(b.preposition));
+}
+
+function renderPrepositionScopeSelector() {
+  const allBtn = document.getElementById("prepositionScopeAllBtn");
+  const scopeButtons = document.getElementById("prepositionScopeButtons");
+  if (!allBtn || !scopeButtons) return;
+
+  const buckets = getPrepositionScopeBuckets();
+  const allCount = buckets.reduce((sum, bucket) => sum + bucket.questions.length, 0);
+  allBtn.textContent = `すべて ${allCount}問`;
+  scopeButtons.innerHTML = buckets
+    .filter((bucket) => bucket.questions.length > 0)
+    .map((bucket) => `<button type="button" class="secondary-btn preposition-scope-btn" data-preposition-scope="${bucket.preposition}">${bucket.preposition} ${bucket.questions.length}問</button>`)
+    .join("");
+
+  allBtn.onclick = () => {
+    startPrepositionTraining("all");
+  };
+
+  scopeButtons.querySelectorAll("[data-preposition-scope]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const scope = String(button.getAttribute("data-preposition-scope") || "").trim().toLowerCase();
+      if (!scope) return;
+      startPrepositionTraining(scope);
+    });
+  });
+}
+
+function openPrepositionTrainingSelector() {
+  renderPrepositionScopeSelector();
+  showScreen("prepositionSelectScreen");
+}
+
+function buildPrepositionQuestionSet(scope, options = {}) {
+  const bank = getPrepositionQuestionBank();
+  const reviewIdSet = options.reviewQuestionIdSet instanceof Set ? options.reviewQuestionIdSet : null;
+  let pool = scope === "all"
+    ? bank
+    : bank.filter((question) => question.preposition === scope);
+
+  if (reviewIdSet) {
+    pool = pool.filter((question) => reviewIdSet.has(String(question.id)));
+  }
+
+  if (!pool.length) return [];
+
+  const uniquePool = [];
+  const seen = new Set();
+  pool.forEach((question) => {
+    const key = String(question.id);
+    if (seen.has(key)) return;
+    seen.add(key);
+    uniquePool.push(question);
+  });
+
+  const targetCount = Math.min(PREPOSITION_TRAINING_QUESTION_LIMIT, uniquePool.length);
+  return shuffle(uniquePool).slice(0, targetCount);
+}
+
+function startPrepositionTraining(scope, options = {}) {
+  const safeScope = typeof scope === "string" && scope ? scope.toLowerCase() : "all";
+  const reviewQuestionIdSet = Array.isArray(options.reviewQuestionIds)
+    ? new Set(options.reviewQuestionIds.map((id) => String(id)))
+    : null;
+  const questions = buildPrepositionQuestionSet(safeScope, { reviewQuestionIdSet });
+  if (!questions.length) {
+    alert("出題可能な前置詞問題がありません。");
+    return;
+  }
+
+  prepositionTrainingSession = {
+    scope: safeScope,
+    scopeLabel: getPrepositionScopeLabel(safeScope),
+    questions,
+    currentIndex: 0,
+    answered: false,
+    correctCount: 0,
+    wrongQuestionIds: [],
+    wrongPrepositionCounts: {},
+    reviewOnly: Boolean(reviewQuestionIdSet)
+  };
+  renderPrepositionQuestion();
+  showScreen("prepositionPracticeScreen");
+}
+
+function recordPrepositionTrainingAttempt(question, isCorrect) {
+  const stats = ensurePrepositionTrainingStats();
+  const prepositionKey = String(question.preposition || "").toLowerCase();
+  const questionKey = String(question.id || "");
+
+  stats.attempts += 1;
+  if (isCorrect) {
+    stats.correct += 1;
+  } else {
+    stats.wrong += 1;
+  }
+  stats.lastStudiedAt = Date.now();
+
+  if (!stats.byPreposition[prepositionKey]) {
+    stats.byPreposition[prepositionKey] = { attempts: 0, correct: 0, wrong: 0 };
+  }
+  stats.byPreposition[prepositionKey].attempts += 1;
+  if (isCorrect) {
+    stats.byPreposition[prepositionKey].correct += 1;
+  } else {
+    stats.byPreposition[prepositionKey].wrong += 1;
+  }
+
+  if (!stats.byQuestion[questionKey]) {
+    stats.byQuestion[questionKey] = { correct: 0, wrong: 0, lastStudiedAt: 0 };
+  }
+  if (isCorrect) {
+    stats.byQuestion[questionKey].correct += 1;
+  } else {
+    stats.byQuestion[questionKey].wrong += 1;
+  }
+  stats.byQuestion[questionKey].lastStudiedAt = Date.now();
+  saveState();
+}
+
+function buildPrepositionFeedbackMarkup(question, isCorrect, userAnswer) {
+  const meta = getPrepositionMetaMap()[question.preposition] || { icon: "●", coreImage: "位置関係", representative: [] };
+  const representative = (meta.representative || []).slice(0, 2);
+  const answerRow = isCorrect
+    ? ""
+    : `<div class="answer-line">あなたの答え：${userAnswer || "-"}</div><div class="answer-line">正解：${question.answer}</div>`;
+  const representativeMarkup = representative.length
+    ? `<div class="preposition-representative-wrap"><p class="preposition-info-label">代表例</p><ul>${representative.map((entry) => `<li>${entry}</li>`).join("")}</ul></div>`
+    : "";
+  return [
+    `<strong>${isCorrect ? "✅ 正解" : "❌ 不正解"}</strong>`,
+    answerRow,
+    `<div class="preposition-core-block">`,
+    `<div class="preposition-icon">${meta.icon}</div>`,
+    `<div class="preposition-main-answer">${question.answer}</div>`,
+    `<p class="preposition-info-label">基本イメージ</p>`,
+    `<p class="preposition-core-image">「${meta.coreImage}」</p>`,
+    `<p class="preposition-info-label">今回の使い方</p>`,
+    `<p class="preposition-context-image">「${question.contextImage || "文脈での位置関係"}」</p>`,
+    `<p class="preposition-sentence">${question.sentence}</p>`,
+    representativeMarkup,
+    `</div>`
+  ].join("");
+}
+
+function renderPrepositionQuestion() {
+  const session = prepositionTrainingSession;
+  if (!session) {
+    openPrepositionTrainingSelector();
+    return;
+  }
+
+  if (session.currentIndex >= session.questions.length) {
+    showPrepositionTrainingResult();
+    return;
+  }
+
+  const title = document.getElementById("prepositionPracticeTitle");
+  const scopeText = document.getElementById("prepositionScopeText");
+  const counterText = document.getElementById("prepositionCounterText");
+  const questionText = document.getElementById("prepositionQuestionText");
+  const answerInput = document.getElementById("prepositionAnswerInput");
+  const answerBtn = document.getElementById("prepositionAnswerBtn");
+  const feedbackBox = document.getElementById("prepositionFeedbackBox");
+  const nextBtn = document.getElementById("prepositionNextBtn");
+  if (!title || !scopeText || !counterText || !questionText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
+
+  const currentQuestion = session.questions[session.currentIndex];
+  title.textContent = `前置詞特訓 ${session.scopeLabel}`;
+  scopeText.textContent = `前置詞特訓 ${session.scopeLabel}`;
+  counterText.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
+  questionText.textContent = currentQuestion.question;
+
+  answerInput.value = "";
+  answerInput.disabled = false;
+  answerBtn.disabled = false;
+  feedbackBox.className = "feedback-box hidden";
+  feedbackBox.innerHTML = "";
+  nextBtn.disabled = false;
+  nextBtn.classList.add("hidden");
+  session.answered = false;
+  window.setTimeout(() => answerInput.focus(), 30);
+}
+
+function submitPrepositionAnswer() {
+  const session = prepositionTrainingSession;
+  if (!session || session.answered) return;
+  const currentQuestion = session.questions[session.currentIndex];
+  if (!currentQuestion) return;
+
+  const answerInput = document.getElementById("prepositionAnswerInput");
+  const answerBtn = document.getElementById("prepositionAnswerBtn");
+  const feedbackBox = document.getElementById("prepositionFeedbackBox");
+  const nextBtn = document.getElementById("prepositionNextBtn");
+  if (!answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
+
+  const raw = String(answerInput.value || "");
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    feedbackBox.className = "feedback-box error";
+    feedbackBox.innerHTML = "<strong>入力してください</strong><span class=\"hint\">英字で入力してください</span>";
+    answerInput.focus();
+    return;
+  }
+  if (!/^[a-zA-Z]+$/.test(trimmed)) {
+    feedbackBox.className = "feedback-box error";
+    feedbackBox.innerHTML = "<strong>英字のみ入力できます</strong>";
+    answerInput.focus();
+    return;
+  }
+
+  const normalized = trimmed.toLowerCase();
+  const isCorrect = normalized === String(currentQuestion.answer || "").toLowerCase();
+  session.answered = true;
+  if (isCorrect) {
+    session.correctCount += 1;
+  } else {
+    session.wrongQuestionIds.push(String(currentQuestion.id));
+    session.wrongPrepositionCounts[currentQuestion.preposition] = (session.wrongPrepositionCounts[currentQuestion.preposition] || 0) + 1;
+  }
+
+  recordPrepositionTrainingAttempt(currentQuestion, isCorrect);
+
+  feedbackBox.className = `feedback-box ${isCorrect ? "success" : "error"}`;
+  feedbackBox.innerHTML = buildPrepositionFeedbackMarkup(currentQuestion, isCorrect, normalized);
+  nextBtn.classList.add("hidden");
+  answerInput.disabled = true;
+  answerBtn.disabled = true;
+
+  const typingConfig = getTypingConfig();
+  const showNextButton = () => {
+    nextBtn.classList.remove("hidden");
+    nextBtn.disabled = false;
+    nextBtn.focus();
+  };
+
+  if (!shouldUseDesktopAutoAudioFlow() || !String(currentQuestion.audioFile || "").trim()) {
+    showNextButton();
+    return;
+  }
+
+  playQuestionAudioSequence(currentQuestion, {
+    repeatCount: typingConfig.audioRepeatCount,
+    initialDelayMs: typingDelaySecToMs(typingConfig.questionToAudioDelaySec),
+    repeatGapMs: typingDelaySecToMs(typingConfig.repeatGapDelaySec),
+    playbackRate: typingConfig.audioPlaybackRate,
+    onComplete: () => {
+      setTimeout(showNextButton, typingDelaySecToMs(typingConfig.audioToInputDelaySec));
+    },
+    onError: () => {
+      setTimeout(showNextButton, typingDelaySecToMs(typingConfig.audioToInputDelaySec));
+    }
+  });
+}
+
+function moveToNextPrepositionQuestion() {
+  if (!prepositionTrainingSession) return;
+  const nextBtn = document.getElementById("prepositionNextBtn");
+  if (nextBtn) nextBtn.disabled = true;
+  const typingConfig = getTypingConfig();
+  setTimeout(() => {
+    if (!prepositionTrainingSession) return;
+    prepositionTrainingSession.currentIndex += 1;
+    if (prepositionTrainingSession.currentIndex >= prepositionTrainingSession.questions.length) {
+      showPrepositionTrainingResult();
+      return;
+    }
+    renderPrepositionQuestion();
+  }, typingDelaySecToMs(typingConfig.judgementToNextDelaySec));
+}
+
+function showPrepositionTrainingResult() {
+  const session = prepositionTrainingSession;
+  if (!session) {
+    openPrepositionTrainingSelector();
+    return;
+  }
+
+  const total = session.questions.length;
+  const correct = session.correctCount;
+  const accuracy = total ? Math.round((correct / total) * 100) : 0;
+
+  const resultTitle = document.getElementById("prepositionResultTitle");
+  const score = document.getElementById("prepositionResultScore");
+  const accuracyText = document.getElementById("prepositionResultAccuracy");
+  const wrongWrap = document.getElementById("prepositionWrongSummaryWrap");
+  const wrongList = document.getElementById("prepositionWrongSummaryList");
+  const reviewWrongBtn = document.getElementById("prepositionReviewWrongBtn");
+  if (!resultTitle || !score || !accuracyText || !wrongWrap || !wrongList || !reviewWrongBtn) return;
+
+  resultTitle.textContent = `前置詞特訓 結果 (${session.scopeLabel})`;
+  score.textContent = `${correct} / ${total}問 正解`;
+  accuracyText.textContent = `${accuracy}%`;
+
+  const wrongRows = Object.entries(session.wrongPrepositionCounts)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  wrongWrap.classList.toggle("hidden", wrongRows.length === 0);
+  wrongList.innerHTML = wrongRows.map(([preposition, count]) => `<li><span>${preposition}</span><span>${count}問</span></li>`).join("");
+  reviewWrongBtn.classList.toggle("hidden", session.wrongQuestionIds.length === 0);
+
+  showScreen("prepositionResultScreen");
+}
+
 const defaultState = {
   settings: {
     studyRange: { start: 1, end: 1 },
@@ -1828,6 +2249,7 @@ const defaultState = {
     pendingSessionNotice: "",
     unlockedDayMax: 1,
     gameTickets: createDefaultGameTicketStats(),
+    prepositionTraining: createDefaultPrepositionTrainingStats(),
     savedNormalSession: null
   },
   items: buildVocabularyItems(),
@@ -1869,6 +2291,7 @@ function loadState() {
       mergedState.items
     );
     mergedState.stats.gameTickets = sanitizeGameTicketStats(parsed.stats?.gameTickets);
+    mergedState.stats.prepositionTraining = sanitizePrepositionTrainingStats(parsed.stats?.prepositionTraining);
     delete mergedState.stats.gameTicket;
     delete mergedState.stats.pendingGameTicket;
     const storedNormalSession = sanitizeStoredSession(parsed.stats?.savedNormalSession);
@@ -5253,12 +5676,66 @@ function bindEvents() {
     if (!button) return;
     button.addEventListener("click", () => {
       if (item.isReady && item.mode) {
+        if (item.mode === "preposition-training") {
+          openPrepositionTrainingSelector();
+          return;
+        }
         prepareSession(item.mode);
         return;
       }
       showTrainingComingSoonNotice();
     });
   });
+
+  const prepositionAnswerForm = document.getElementById("prepositionAnswerForm");
+  if (prepositionAnswerForm) {
+    prepositionAnswerForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submitPrepositionAnswer();
+    });
+  }
+
+  const prepositionNextBtn = document.getElementById("prepositionNextBtn");
+  if (prepositionNextBtn) {
+    prepositionNextBtn.addEventListener("click", () => {
+      moveToNextPrepositionQuestion();
+    });
+  }
+
+  const prepositionRetryBtn = document.getElementById("prepositionRetryBtn");
+  if (prepositionRetryBtn) {
+    prepositionRetryBtn.addEventListener("click", () => {
+      if (!prepositionTrainingSession) {
+        openPrepositionTrainingSelector();
+        return;
+      }
+      startPrepositionTraining(prepositionTrainingSession.scope);
+    });
+  }
+
+  const prepositionReviewWrongBtn = document.getElementById("prepositionReviewWrongBtn");
+  if (prepositionReviewWrongBtn) {
+    prepositionReviewWrongBtn.addEventListener("click", () => {
+      if (!prepositionTrainingSession || !prepositionTrainingSession.wrongQuestionIds.length) return;
+      startPrepositionTraining(prepositionTrainingSession.scope, {
+        reviewQuestionIds: prepositionTrainingSession.wrongQuestionIds
+      });
+    });
+  }
+
+  const prepositionChooseScopeBtn = document.getElementById("prepositionChooseScopeBtn");
+  if (prepositionChooseScopeBtn) {
+    prepositionChooseScopeBtn.addEventListener("click", () => {
+      openPrepositionTrainingSelector();
+    });
+  }
+
+  const prepositionBackToMenuBtn = document.getElementById("prepositionBackToMenuBtn");
+  if (prepositionBackToMenuBtn) {
+    prepositionBackToMenuBtn.addEventListener("click", () => {
+      showScreen("trainingMenuScreen");
+    });
+  }
 
   const challengeBtn = document.getElementById("challengeBtn");
   if (challengeBtn) {
@@ -5424,6 +5901,7 @@ function init() {
   syncDaySelectOptions();
   bindEvents();
   renderDayCatalog();
+  renderPrepositionScopeSelector();
   renderHome();
   renderProgress();
   showScreen("homeScreen", { recordHistory: false });

@@ -917,6 +917,22 @@ p {
   gap: 10px;
 }
 
+.preposition-select-wrap {
+  display: grid;
+  gap: 12px;
+}
+
+.preposition-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.preposition-scope-btn {
+  text-transform: lowercase;
+  font-weight: 700;
+}
+
 .day-card {
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -1689,6 +1705,61 @@ select {
   color: var(--text);
 }
 
+.preposition-core-block {
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  padding-top: 10px;
+}
+
+.preposition-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.preposition-main-answer {
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  text-transform: lowercase;
+}
+
+.preposition-info-label {
+  margin: 8px 0 2px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.preposition-core-image {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffe7a0;
+}
+
+.preposition-context-image {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.preposition-sentence {
+  margin-top: 8px;
+  font-size: 0.96rem;
+}
+
+.preposition-representative-wrap {
+  margin-top: 8px;
+}
+
+.preposition-representative-wrap ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+
+.preposition-result-actions {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .feedback-box.success {
   border-color: rgba(55, 204, 137, 0.4);
 }
@@ -1830,6 +1901,10 @@ select {
   }
 
   .day-catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .preposition-scope-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

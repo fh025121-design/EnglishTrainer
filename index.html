@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260718-0357" />
+    <link rel="stylesheet" href="styles.css?v=20260719-0100" />
   </head>
   <body>
     <div class="app-shell">
@@ -277,10 +277,92 @@
           <div class="panel day-catalog-panel">
             <div class="study-actions-grid">
               <button id="trainingIdiomBtn" class="secondary-btn" type="button">💬 熟語特訓</button>
-              <button id="trainingPrepositionBtn" class="secondary-btn" type="button">🧭 前置詞特訓（準備中）</button>
+              <button id="trainingPrepositionBtn" class="secondary-btn" type="button">🧭 前置詞特訓</button>
               <button id="trainingInstantCompositionBtn" class="secondary-btn" type="button">⚡ 瞬間英作文（準備中）</button>
             </div>
-            <p class="subtext">準備中の特訓を押すと「準備中です」と表示されます。</p>
+            <p class="subtext">未実装の特訓を押すと「準備中です」と表示されます。</p>
+          </div>
+        </section>
+
+        <section id="prepositionSelectScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">前置詞特訓</p>
+              <h2>出題範囲を選択</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel day-catalog-panel">
+            <div class="preposition-select-wrap">
+              <button id="prepositionScopeAllBtn" class="primary-btn" type="button">すべて</button>
+              <div id="prepositionScopeButtons" class="preposition-scope-grid"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="prepositionPracticeScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">前置詞特訓</p>
+              <h2 id="prepositionPracticeTitle">前置詞特訓 すべて</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="question-stage">
+            <div class="panel question-card" id="prepositionQuestionCard">
+              <div class="question-meta">
+                <span id="prepositionScopeText" class="phase-progress-text">前置詞特訓 すべて</span>
+                <span id="prepositionCounterText">1 / 10</span>
+              </div>
+              <div class="question-copy">
+                <p id="prepositionQuestionText" class="meaning-text"></p>
+              </div>
+              <div class="answer-panel">
+                <div class="type-badge word">前置詞を入力</div>
+                <h3 class="input-label">英語を入力してください</h3>
+                <form id="prepositionAnswerForm" class="answer-form">
+                  <input id="prepositionAnswerInput" class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="例: at" />
+                  <button id="prepositionAnswerBtn" class="primary-btn mobile-answer-btn" type="submit">答える</button>
+                </form>
+              </div>
+              <div id="prepositionFeedbackBox" class="feedback-box hidden"></div>
+              <button id="prepositionNextBtn" class="primary-btn hidden" type="button">次へ</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="prepositionResultScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">前置詞特訓</p>
+              <h2>結果</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="result-shell">
+            <div class="panel result-card result-dashboard-card">
+              <h2 id="prepositionResultTitle">前置詞特訓 結果</h2>
+              <p id="prepositionResultScore" class="result-summary">0 / 0問 正解</p>
+              <div class="result-metric-list">
+                <div class="result-metric-row">
+                  <span class="result-metric-label">正答率</span>
+                  <span id="prepositionResultAccuracy" class="result-metric-value">0%</span>
+                </div>
+              </div>
+              <div id="prepositionWrongSummaryWrap" class="progress-list-wrap hidden">
+                <h3>今回間違えた前置詞</h3>
+                <ul id="prepositionWrongSummaryList" class="review-list"></ul>
+              </div>
+              <div class="result-actions preposition-result-actions">
+                <button id="prepositionRetryBtn" class="primary-btn" type="button">もう一度</button>
+                <button id="prepositionReviewWrongBtn" class="secondary-btn hidden" type="button">間違えた問題を復習</button>
+                <button id="prepositionChooseScopeBtn" class="secondary-btn" type="button">前置詞を選び直す</button>
+                <button id="prepositionBackToMenuBtn" class="secondary-btn" type="button">特訓メニューへ戻る</button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -642,7 +724,8 @@
       </div>
     </div>
 
-    <script src="data.js?v=20260718-0357"></script>
-    <script src="app.js?v=20260718-0357"></script>
+    <script src="data.js?v=20260719-0100"></script>
+    <script src="preposition-data.js?v=20260719-0100"></script>
+    <script src="app.js?v=20260719-0100"></script>
   </body>
 </html>
