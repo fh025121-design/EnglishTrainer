@@ -1148,6 +1148,39 @@ select {
   gap: 12px;
 }
 
+.weak-focus-actions > button {
+  min-width: 180px;
+}
+
+.weak-focus-actions > button:active {
+  transform: scale(0.96);
+}
+
+.weak-focus-keyboard-hint {
+  margin-top: 6px;
+  font-size: 0.88rem;
+}
+
+.kbd-selected {
+  animation: kbdPulse 1s ease-in-out infinite;
+  outline: 2px solid rgba(160, 238, 238, 0.9);
+  outline-offset: 2px;
+}
+
+@keyframes kbdPulse {
+  0%,
+  100% {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+    box-shadow: 0 0 0 1px rgba(160, 238, 238, 0.45), 0 0 14px rgba(94, 214, 214, 0.22);
+  }
+  50% {
+    transform: scale(1.08);
+    filter: brightness(1.15);
+    box-shadow: 0 0 0 2px rgba(160, 238, 238, 0.75), 0 0 24px rgba(94, 214, 214, 0.35);
+  }
+}
+
 .question-card.is-transitioning {
   opacity: 0;
   transform: translateY(6px);

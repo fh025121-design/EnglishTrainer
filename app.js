@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 05:45", note: "PC版で進行ボタンのキーボード操作（矢印選択・Enter決定・Esc終了）を統一し、苦手特訓5問後に『＋ あと5問／✓ 特訓を終了』選択UIとPulse強調を追加" },
     { version: "2026/07/18 05:20", note: "バージョン情報・更新履歴の日時表示をJSTへ統一し、自動取得日時もJST変換して表示するよう修正" },
     { version: "2026/07/18 05:05", note: "PC版タイトルをEnglish Typing Trainer for PCへ変更し、将来のスマホ版名称をEnglish Trainer for Mobileに統一" },
     { version: "2026/07/18 04:50", note: "通常学習の過去正解2問候補からLv1/Lv2・間違い復習対象・直近不正解問題を除外し、候補不足時は現在Dayで補完するよう修正" },
@@ -115,6 +116,14 @@ const levelTrendTracker = {
   lastL4: null,
   l1Reduced: 0,
   l4Increased: 0
+};
+const keyboardNavState = {
+  context: "",
+  buttons: [],
+  selectedIndex: -1,
+  lockEnterUntilKeyup: false,
+  isExecuting: false,
+  lastExecuteAt: 0
 };
 
 function createDefaultGameTicketStats() {
@@ -1310,6 +1319,7 @@ function renderPhaseIntro() {
   if (reviewCard) reviewCard.classList.add("hidden");
   introCard.classList.remove("hidden");
   showScreen("testScreen");
+  syncKeyboardNavigationUI(true);
 }
 
 function hidePhaseIntro() {
@@ -1329,6 +1339,7 @@ function startCurrentPhaseQuestions() {
     renderQuestionSession();
   }
   showScreen("testScreen");
+  scheduleKeyboardNavigationSync();
 }
 
 function buildWeakFocusPriorityBuckets(sessionLike) {
@@ -1437,6 +1448,9 @@ function getWeakPhasePool(sessionLike, limit = 10) {
 function hideWeakFocusDecisionPanel() {
   const decisionCard = document.getElementById("weakFocusDecisionCard");
   if (decisionCard) decisionCard.classList.add("hidden");
+  const keyboardHint = document.getElementById("weakFocusKeyboardHint");
+  if (keyboardHint) keyboardHint.classList.add("hidden");
+  scheduleKeyboardNavigationSync();
 }
 
 function renderWeakFocusDecisionPanel(sessionLike = state.session) {
@@ -1457,14 +1471,15 @@ function renderWeakFocusDecisionPanel(sessionLike = state.session) {
     : "苦手克服を5問完了しました。";
 
   continueBtn.classList.toggle("hidden", remainingRounds <= 0);
-  continueBtn.textContent = "さらに5問挑戦";
-  finishBtn.textContent = "今日はここまで";
+  continueBtn.textContent = "＋ あと5問";
+  finishBtn.textContent = "✓ 特訓を終了";
 
   if (questionCard) questionCard.classList.add("hidden");
   if (reviewCard) reviewCard.classList.add("hidden");
   if (introCard) introCard.classList.add("hidden");
   decisionCard.classList.remove("hidden");
   showScreen("testScreen");
+  syncKeyboardNavigationUI(true);
 }
 
 function beginSessionPhase(sessionLike, phase, questions, options = {}) {
@@ -2830,6 +2845,7 @@ function showScreen(screenId, options = {}) {
     target.classList.add("active");
     currentScreenId = screenId;
   }
+  scheduleKeyboardNavigationSync();
 }
 
 function goBackScreen() {
@@ -3768,6 +3784,7 @@ function renderQuestionSession() {
   session.currentQuestionAttempted = false;
   session.currentQuestionState = "idle";
   session.currentQuestion = question;
+  scheduleKeyboardNavigationSync();
 }
 
 function renderReviewSession() {
@@ -3842,20 +3859,22 @@ function renderReviewSession() {
   session.currentQuestionAttempted = false;
   session.currentQuestionState = "idle";
   session.currentQuestion = question;
+  scheduleKeyboardNavigationSync();
 }
 
 function handleEnterAdvanceKey(event) {
-  if (event.key !== "Enter") return;
+  if (event.key !== "Enter") return false;
   const session = state.session;
   if (!session || !session.answered || !session.awaitingEnter || session.enterLocked) {
-    return;
+    return false;
   }
   if (session.enterLockUntil && Date.now() < session.enterLockUntil) {
-    return;
+    return false;
   }
   event.preventDefault();
   event.stopPropagation();
   startSecondAudioAndAutoAdvance(session.currentQuestion);
+  return true;
 }
 
 function advanceToNextQuestion() {
@@ -3951,6 +3970,7 @@ function showResultScreen(summary = state.stats.lastResultSummary) {
   }
   showScreen("resultScreen");
   showPendingGameTicketModalIfAny();
+  syncKeyboardNavigationUI(true);
 }
 
 function buildFeedbackMarkup(isCorrect, answer, prompt) {
@@ -4320,12 +4340,262 @@ function renderProgress() {
   if (progressTotalSolved) progressTotalSolved.textContent = state.stats.totalSolvedQuestions;
 }
 
+function isDesktopKeyboardMode() {
+  return typeof window !== "undefined" && Number(window.innerWidth) > 860;
+}
+
+function isTypingFieldFocused() {
+  const active = document.activeElement;
+  if (!active) return false;
+  const tag = String(active.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea") return true;
+  return Boolean(active.isContentEditable);
+}
+
+function isButtonVisibleAndEnabled(button) {
+  if (!button || button.disabled) return false;
+  if (button.classList.contains("hidden")) return false;
+  const rect = button.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+function clearKeyboardSelectionClasses() {
+  keyboardNavState.buttons.forEach((button) => button?.classList?.remove("kbd-selected"));
+}
+
+function setKeyboardSelection(index) {
+  clearKeyboardSelectionClasses();
+  if (!keyboardNavState.buttons.length) {
+    keyboardNavState.selectedIndex = -1;
+    return;
+  }
+  const safeIndex = Math.max(0, Math.min(keyboardNavState.buttons.length - 1, index));
+  keyboardNavState.selectedIndex = safeIndex;
+  const target = keyboardNavState.buttons[safeIndex];
+  if (target) target.classList.add("kbd-selected");
+}
+
+function findDefaultButtonIndex(buttons) {
+  if (!buttons.length) return -1;
+  const idPriority = ["weakFocusContinueBtn", "resultNextDayBtn", "resultRecommendationBtn", "phaseIntroStartBtn", "nextQuestionBtn", "reviewNextBtn", "resultHomeBtn", "weakFocusFinishBtn"];
+  for (const id of idPriority) {
+    const index = buttons.findIndex((button) => button.id === id);
+    if (index >= 0) return index;
+  }
+  return 0;
+}
+
+function collectProgressButtonsForKeyboard() {
+  if (currentScreenId === "testScreen") {
+    const weakFocusCard = document.getElementById("weakFocusDecisionCard");
+    if (weakFocusCard && !weakFocusCard.classList.contains("hidden")) {
+      const buttons = [document.getElementById("weakFocusContinueBtn"), document.getElementById("weakFocusFinishBtn")].filter(isButtonVisibleAndEnabled);
+      return { context: "weak-focus", buttons };
+    }
+
+    const introButton = document.getElementById("phaseIntroStartBtn");
+    const introCard = document.getElementById("phaseIntroCard");
+    if (introCard && !introCard.classList.contains("hidden") && isButtonVisibleAndEnabled(introButton)) {
+      return { context: "phase-intro", buttons: [introButton] };
+    }
+
+    const nextQuestionBtn = document.getElementById("nextQuestionBtn");
+    if (isButtonVisibleAndEnabled(nextQuestionBtn)) {
+      return { context: "question-next", buttons: [nextQuestionBtn] };
+    }
+
+    const reviewNextBtn = document.getElementById("reviewNextBtn");
+    if (isButtonVisibleAndEnabled(reviewNextBtn)) {
+      return { context: "review-next", buttons: [reviewNextBtn] };
+    }
+  }
+
+  if (currentScreenId === "resultScreen") {
+    const buttons = [
+      document.getElementById("resultRecommendationBtn"),
+      document.getElementById("resultNextDayBtn"),
+      document.getElementById("resultHomeBtn")
+    ].filter(isButtonVisibleAndEnabled);
+    return { context: "result", buttons };
+  }
+
+  return { context: "", buttons: [] };
+}
+
+function updateKeyboardHintByContext(context, buttonCount) {
+  const hint = document.getElementById("weakFocusKeyboardHint");
+  if (!hint) return;
+  const showWeakFocusHint = context === "weak-focus" && buttonCount >= 2;
+  hint.classList.toggle("hidden", !showWeakFocusHint);
+}
+
+function syncKeyboardNavigationUI(lockEnter = false) {
+  if (lockEnter) {
+    keyboardNavState.lockEnterUntilKeyup = true;
+  }
+
+  if (!isDesktopKeyboardMode()) {
+    clearKeyboardSelectionClasses();
+    keyboardNavState.context = "";
+    keyboardNavState.buttons = [];
+    keyboardNavState.selectedIndex = -1;
+    updateKeyboardHintByContext("", 0);
+    return;
+  }
+
+  const { context, buttons } = collectProgressButtonsForKeyboard();
+  const contextChanged = keyboardNavState.context !== context;
+  const idsChanged = buttons.map((button) => button.id).join("|") !== keyboardNavState.buttons.map((button) => button.id).join("|");
+
+  keyboardNavState.context = context;
+  keyboardNavState.buttons = buttons;
+  updateKeyboardHintByContext(context, buttons.length);
+
+  if (!buttons.length) {
+    clearKeyboardSelectionClasses();
+    keyboardNavState.selectedIndex = -1;
+    return;
+  }
+
+  if (contextChanged || idsChanged || keyboardNavState.selectedIndex < 0 || keyboardNavState.selectedIndex >= buttons.length) {
+    setKeyboardSelection(findDefaultButtonIndex(buttons));
+    return;
+  }
+
+  setKeyboardSelection(keyboardNavState.selectedIndex);
+}
+
+function scheduleKeyboardNavigationSync(lockEnter = false) {
+  if (lockEnter) {
+    keyboardNavState.lockEnterUntilKeyup = true;
+  }
+  if (typeof window === "undefined") return;
+  window.requestAnimationFrame(() => {
+    syncKeyboardNavigationUI();
+  });
+}
+
+function moveKeyboardSelectionByDirection(directionKey) {
+  const buttons = keyboardNavState.buttons;
+  if (buttons.length < 2) return;
+
+  const currentIndex = keyboardNavState.selectedIndex >= 0 ? keyboardNavState.selectedIndex : findDefaultButtonIndex(buttons);
+  const currentRect = buttons[currentIndex].getBoundingClientRect();
+  const currentCenterX = currentRect.left + currentRect.width / 2;
+  const currentCenterY = currentRect.top + currentRect.height / 2;
+
+  let bestIndex = currentIndex;
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  buttons.forEach((button, index) => {
+    if (index === currentIndex) return;
+    const rect = button.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = centerX - currentCenterX;
+    const dy = centerY - currentCenterY;
+
+    if (directionKey === "ArrowLeft" && dx >= -2) return;
+    if (directionKey === "ArrowRight" && dx <= 2) return;
+    if (directionKey === "ArrowUp" && dy >= -2) return;
+    if (directionKey === "ArrowDown" && dy <= 2) return;
+
+    const primary = directionKey === "ArrowLeft" || directionKey === "ArrowRight" ? Math.abs(dx) : Math.abs(dy);
+    const secondary = directionKey === "ArrowLeft" || directionKey === "ArrowRight" ? Math.abs(dy) : Math.abs(dx);
+    const score = primary + secondary * 1.6;
+    if (score < bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+
+  if (bestIndex !== currentIndex) {
+    setKeyboardSelection(bestIndex);
+  }
+}
+
+function executeKeyboardSelectedButton() {
+  const target = keyboardNavState.buttons[keyboardNavState.selectedIndex];
+  if (!target) return false;
+  if (keyboardNavState.isExecuting) return true;
+  const now = Date.now();
+  if (now - keyboardNavState.lastExecuteAt < 220) return true;
+
+  keyboardNavState.isExecuting = true;
+  keyboardNavState.lastExecuteAt = now;
+  target.click();
+  window.setTimeout(() => {
+    keyboardNavState.isExecuting = false;
+  }, 220);
+  return true;
+}
+
+function handleKeyboardNavigationKeydown(event) {
+  if (!isDesktopKeyboardMode()) return false;
+
+  syncKeyboardNavigationUI();
+
+  if (!keyboardNavState.buttons.length) return false;
+
+  const isTyping = isTypingFieldFocused();
+  const key = event.key;
+
+  if (key === "Escape" && keyboardNavState.context === "weak-focus") {
+    const finishBtn = document.getElementById("weakFocusFinishBtn");
+    if (isButtonVisibleAndEnabled(finishBtn)) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (keyboardNavState.lockEnterUntilKeyup) return true;
+      finishBtn.click();
+      return true;
+    }
+  }
+
+  if (!isTyping && (key === "ArrowLeft" || key === "ArrowRight" || key === "ArrowUp" || key === "ArrowDown")) {
+    if (keyboardNavState.buttons.length > 1) {
+      event.preventDefault();
+      event.stopPropagation();
+      moveKeyboardSelectionByDirection(key);
+      return true;
+    }
+    return false;
+  }
+
+  if (key === "Enter") {
+    if (event.repeat) {
+      event.preventDefault();
+      return true;
+    }
+    if (keyboardNavState.lockEnterUntilKeyup) {
+      event.preventDefault();
+      event.stopPropagation();
+      return true;
+    }
+    if (isTyping) {
+      return false;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    return executeKeyboardSelectedButton();
+  }
+
+  return false;
+}
+
+function handleKeyboardNavigationKeyup(event) {
+  if (event.key === "Enter") {
+    keyboardNavState.lockEnterUntilKeyup = false;
+  }
+}
+
 function handleEnterKey(event) {
-  handleEnterAdvanceKey(event);
+  if (handleEnterAdvanceKey(event)) return;
+  handleKeyboardNavigationKeydown(event);
 }
 
 function bindEvents() {
   document.addEventListener("keydown", handleEnterKey);
+  document.addEventListener("keyup", handleKeyboardNavigationKeyup);
   document.addEventListener("keydown", (event) => {
     if (currentScreenId !== "resultScreen") return;
     const summary = state.stats.lastResultSummary;
