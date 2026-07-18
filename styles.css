@@ -891,6 +891,10 @@ p {
   background: rgba(255, 255, 255, 0.12);
 }
 
+.day-card:disabled {
+  cursor: not-allowed;
+}
+
 .day-card-title {
   font-weight: 700;
 }
@@ -915,6 +919,23 @@ p {
 
 .day-card.is-unavailable {
   opacity: 0.62;
+}
+
+.day-card.is-locked {
+  opacity: 0.5;
+  color: rgba(244, 248, 255, 0.72);
+  background: rgba(130, 140, 155, 0.16);
+  border-color: rgba(170, 180, 195, 0.28);
+}
+
+.day-card.is-locked:hover {
+  background: rgba(130, 140, 155, 0.16);
+}
+
+.day-card-lock {
+  color: #cfd6df;
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 @keyframes dayPerfectGlow {

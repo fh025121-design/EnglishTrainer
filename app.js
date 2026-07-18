@@ -194,6 +194,17 @@ function sanitizeGameTicketStats(value) {
   };
 }
 
+function sanitizeUnlockedDayMax(value, items) {
+  const dayValues = Array.isArray(items)
+    ? items.map((item) => Number(item?.day)).filter((day) => Number.isFinite(day))
+    : [];
+  const minDay = dayValues.length ? Math.min(...dayValues) : 1;
+  const maxDay = dayValues.length ? Math.max(...dayValues) : 1;
+  const raw = Number(value);
+  if (!Number.isFinite(raw)) return minDay;
+  return Math.max(minDay, Math.min(maxDay, Math.round(raw)));
+}
+
 function isDesktopGameTicketEnabled() {
   const hasWideViewport = typeof window !== "undefined" ? Number(window.innerWidth) > 860 : true;
   if (typeof shouldUseDesktopAutoAudioFlow === "function") {
@@ -1543,24 +1554,31 @@ function renderDayCatalog() {
     dayStudyEndDaySelect.innerHTML = "";
     return;
   }
+  const unlockedDayMax = getUnlockedDayMax();
+  const unlockedDays = allDays.filter((day) => day <= unlockedDayMax);
+  const selectableDays = unlockedDays.length ? unlockedDays : [allDays[0]];
   const buildDayOptions = (days) => days.map((day) => `<option value="${day}">Day${day}</option>`).join("");
 
-  dayStudyStartDaySelect.innerHTML = buildDayOptions(allDays);
+  dayStudyStartDaySelect.innerHTML = buildDayOptions(selectableDays);
 
-  const minDay = allDays[0];
-  const maxDay = allDays[allDays.length - 1];
-  const storedStart = Number(state.settings.dayStudy?.start ?? state.settings.dayStudy?.day ?? state.settings.studyRange?.start ?? minDay);
-  const storedEnd = Number(state.settings.dayStudy?.end ?? state.settings.dayStudy?.day ?? state.settings.studyRange?.end ?? maxDay);
-  const safeStart = Number.isFinite(storedStart) ? Math.max(minDay, Math.min(maxDay, storedStart)) : minDay;
-  const safeEnd = Number.isFinite(storedEnd) ? Math.max(safeStart, Math.min(maxDay, storedEnd)) : maxDay;
+  const minSelectableDay = selectableDays[0];
+  const maxSelectableDay = selectableDays[selectableDays.length - 1];
+  const storedStart = Number(state.settings.dayStudy?.start ?? state.settings.dayStudy?.day ?? state.settings.studyRange?.start ?? minSelectableDay);
+  const storedEnd = Number(state.settings.dayStudy?.end ?? state.settings.dayStudy?.day ?? state.settings.studyRange?.end ?? maxSelectableDay);
+  const safeStart = Number.isFinite(storedStart)
+    ? Math.max(minSelectableDay, Math.min(maxSelectableDay, storedStart))
+    : minSelectableDay;
+  const safeEnd = Number.isFinite(storedEnd)
+    ? Math.max(safeStart, Math.min(maxSelectableDay, storedEnd))
+    : maxSelectableDay;
   const storedType = state.settings.dayStudy?.type;
   const safeType = storedType === "word" || storedType === "phrase" || storedType === "all" ? storedType : "all";
 
   dayStudyStartDaySelect.value = String(safeStart);
 
   const syncEndDayOptions = (preferredEnd) => {
-    const selectedStart = Number(dayStudyStartDaySelect.value) || minDay;
-    const selectableEndDays = allDays.filter((day) => day >= selectedStart);
+    const selectedStart = Number(dayStudyStartDaySelect.value) || minSelectableDay;
+    const selectableEndDays = selectableDays.filter((day) => day >= selectedStart);
     dayStudyEndDaySelect.innerHTML = buildDayOptions(selectableEndDays);
     const normalizedPreferred = Number.isFinite(Number(preferredEnd)) ? Number(preferredEnd) : safeEnd;
     const fallbackEnd = selectableEndDays[selectableEndDays.length - 1];
@@ -1575,8 +1593,12 @@ function renderDayCatalog() {
     const accuracy = Math.max(0, Math.min(100, Number(state.stats.dayBestAccuracy?.[String(day)]) || 0));
     const stars = getStarTextFromAccuracy(accuracy);
     const perfectClass = accuracy === 100 ? "is-perfect" : "";
-    const unavailableClass = "";
-    return `<button type="button" class="day-card ${perfectClass} ${unavailableClass}" data-day="${day}"><span class="day-card-title">Day${day}</span><span class="day-card-stars">${stars}</span><span class="day-card-percent">${Math.round(accuracy)}%</span></button>`;
+    const isLocked = day > unlockedDayMax;
+    const lockClass = isLocked ? "is-locked" : "";
+    const scoreMarkup = isLocked
+      ? '<span class="day-card-lock">🔒 未解放</span>'
+      : `<span class="day-card-percent">${Math.round(accuracy)}%</span>`;
+    return `<button type="button" class="day-card ${perfectClass} ${lockClass}" data-day="${day}" ${isLocked ? "disabled" : ""}><span class="day-card-title">Day${day}</span><span class="day-card-stars">${isLocked ? "-" : stars}</span>${scoreMarkup}</button>`;
   }).join("");
 
   dayStudyStartDaySelect.onchange = () => {
@@ -1585,8 +1607,9 @@ function renderDayCatalog() {
 
   dayCatalogGrid.querySelectorAll(".day-card").forEach((button) => {
     button.addEventListener("click", () => {
+      if (button.disabled) return;
       const day = Number(button.dataset.day);
-      const nextDay = Math.max(minDay, Math.min(maxDay, day));
+      const nextDay = Math.max(minSelectableDay, Math.min(maxSelectableDay, day));
       dayStudyStartDaySelect.value = String(nextDay);
       syncEndDayOptions(nextDay);
     });
@@ -1595,7 +1618,7 @@ function renderDayCatalog() {
 
 const defaultState = {
   settings: {
-    studyRange: { start: 1, end: 3 },
+    studyRange: { start: 1, end: 1 },
     type: "all",
     dayStudy: {
       day: 1,
@@ -1618,6 +1641,7 @@ const defaultState = {
     lastResultSummary: null,
     completedSessions: [],
     pendingSessionNotice: "",
+    unlockedDayMax: 1,
     gameTickets: createDefaultGameTicketStats(),
     savedNormalSession: null
   },
@@ -1653,6 +1677,10 @@ function loadState() {
     mergedState.stats.pendingSessionNotice = typeof parsed.stats?.pendingSessionNotice === "string"
       ? parsed.stats.pendingSessionNotice
       : "";
+    mergedState.stats.unlockedDayMax = sanitizeUnlockedDayMax(
+      parsed.stats?.unlockedDayMax ?? parsed.settings?.studyRange?.end ?? 1,
+      mergedState.items
+    );
     mergedState.stats.gameTickets = sanitizeGameTicketStats(parsed.stats?.gameTickets);
     delete mergedState.stats.gameTicket;
     delete mergedState.stats.pendingGameTicket;
@@ -2567,6 +2595,7 @@ function syncDerivedStats() {
   state.stats.tickets = state.stats.tickets || 0;
   state.stats.weeklySolved = getWeeklySolvedCount();
   state.stats.dayBestAccuracy = state.stats.dayBestAccuracy || {};
+  state.stats.unlockedDayMax = sanitizeUnlockedDayMax(state.stats.unlockedDayMax, state.items);
   syncGameTicketState();
 }
 
@@ -2691,8 +2720,7 @@ function renderHome() {
   const daySelectWordBtn = document.getElementById("daySelectWordBtn");
   const daySelectPhraseBtn = document.getElementById("daySelectPhraseBtn");
   const challengeBtn = document.getElementById("challengeBtn");
-  const availableDays = getAvailableDays();
-  const nextDay = availableDays.length ? Math.min(availableDays[availableDays.length - 1], state.settings.studyRange.end + 1) : state.settings.studyRange.end;
+  const nextDay = getNextAdvanceDay();
 
   if (advanceDayText) advanceDayText.textContent = `Day${nextDay}`;
   if (progressMasterCount) progressMasterCount.textContent = state.stats.masterCount;
@@ -2760,11 +2788,29 @@ function goBackScreen() {
 function startNextDaySession() {
   const availableDays = getAvailableDays();
   if (!availableDays.length) return;
-  const maxDay = availableDays[availableDays.length - 1];
-  const nextDay = Math.min(maxDay, state.settings.studyRange.end + 1);
+  const nextDay = getNextAdvanceDay();
   state.settings.studyRange = { start: nextDay, end: nextDay };
   saveState();
   prepareSession("normal");
+}
+
+function getNextAdvanceDay() {
+  const availableDays = getAvailableDays();
+  if (!availableDays.length) return 1;
+  const minDay = availableDays[0];
+  const maxDay = availableDays[availableDays.length - 1];
+  const unlockedDay = getUnlockedDayMax();
+  return Math.max(minDay, Math.min(maxDay, unlockedDay));
+}
+
+function getUnlockedDayMax() {
+  const availableDays = getAvailableDays();
+  if (!availableDays.length) return 1;
+  const minDay = availableDays[0];
+  const maxDay = availableDays[availableDays.length - 1];
+  const raw = Number(state.stats?.unlockedDayMax);
+  if (!Number.isFinite(raw)) return minDay;
+  return Math.max(minDay, Math.min(maxDay, Math.round(raw)));
 }
 
 function getDayStudyPool(day, type) {
@@ -2797,9 +2843,16 @@ function getDayStudyPool(day, type) {
 
 function startDayStudySession(startDay, endDay, type) {
   const maxDay = getMaxAvailableDay();
+  const unlockedDayMax = getUnlockedDayMax();
   const safeStart = Math.max(1, Math.min(maxDay, Number(startDay) || 1));
   const safeEnd = Math.max(safeStart, Math.min(maxDay, Number(endDay) || safeStart));
   const normalizedType = type === "word" || type === "phrase" || type === "all" ? type : "all";
+
+  if (safeStart > unlockedDayMax || safeEnd > unlockedDayMax) {
+    alert("未解放のDayです。通常学習で解放してください。");
+    return;
+  }
+
   const customPool = getDayStudyPool({ startDay: safeStart, endDay: safeEnd }, normalizedType);
 
   state.settings.dayStudy = {
@@ -3046,6 +3099,7 @@ function completeCurrentSession(reason = "completed", options = {}) {
   }
   processStreakBonusTicket(reason);
   updateBestAccuracyFromSession(session);
+  updateUnlockedDayByNormalCompletion(session, reason);
   const summary = buildResultSummary(session);
   state.stats.lastResultSummary = summary;
   if (session.mode === "normal") {
@@ -3061,6 +3115,22 @@ function completeCurrentSession(reason = "completed", options = {}) {
   if (options.showResult !== false) {
     showResultScreen(summary);
   }
+}
+
+function updateUnlockedDayByNormalCompletion(session, reason) {
+  if (!session || reason !== "completed") return;
+  if (session.mode !== "normal") return;
+  if (session.isDayStudySession) return;
+
+  const availableDays = getAvailableDays();
+  if (!availableDays.length) return;
+  const maxDay = availableDays[availableDays.length - 1];
+  const unlockedDayMax = getUnlockedDayMax();
+  const completedDay = Number(session.studyRangeEnd);
+  if (!Number.isFinite(completedDay)) return;
+  if (completedDay !== unlockedDayMax) return;
+
+  state.stats.unlockedDayMax = Math.min(maxDay, unlockedDayMax + 1);
 }
 
 function extractWeakQuestionIdsFromSession(session) {
@@ -3436,7 +3506,10 @@ function prepareSession(mode, options = {}) {
     weakFocusLastQuestionId: "",
     awaitingWeakFocusDecision: false,
     isFinishingSession: false,
-    isSessionCompleted: false
+    isSessionCompleted: false,
+    isDayStudySession: Boolean(options.dayStudy),
+    studyRangeStart: Number(state.settings.studyRange?.start) || 1,
+    studyRangeEnd: Number(state.settings.studyRange?.end) || 1
   };
 
   setTestScreenActive(true);
