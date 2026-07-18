@@ -1,7 +1,7 @@
 (function () {
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
   const MOBILE_DAY_MIN = 1;
-  const MOBILE_DAY_MAX = 7;
+  const MOBILE_DAY_MAX = 40;
   const SESSION_QUESTION_COUNT = 10;
   const MOBILE_SPEECH_RATES = {
     slow: 0.82,
