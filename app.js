@@ -29,6 +29,16 @@ const SETTINGS_INFO = {
   ]
 };
 const APP_VERSION = SETTINGS_INFO.releaseHistory[0]?.version || "0/0000/0000";
+const TYPING_CONFIG_DEFAULTS = Object.freeze({
+  audioRepeatCount: 2,
+  audioPlaybackRate: 1.0,
+  questionToAudioDelaySec: 0.2,
+  repeatGapDelaySec: 0.3,
+  audioToInputDelaySec: 0.3,
+  judgementToNextDelaySec: 0.3
+});
+const TYPING_AUDIO_REPEAT_OPTIONS = [1, 2, 3];
+const TYPING_AUDIO_RATE_OPTIONS = [0.8, 1.0, 1.2];
 let currentAudio = null;
 let isResettingLearningData = false;
 const LEVEL_DEFINITIONS = [
@@ -251,6 +261,35 @@ function sanitizeUnlockedDayMax(value, items) {
   const raw = Number(value);
   if (!Number.isFinite(raw)) return minDay;
   return Math.max(minDay, Math.min(maxDay, Math.round(raw)));
+}
+
+function toTenthsClamped(value, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(0, Math.min(1, Math.round(numeric * 10) / 10));
+}
+
+function sanitizeTypingConfig(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const repeatCount = Number(source.audioRepeatCount);
+  const playbackRate = Number(source.audioPlaybackRate);
+  return {
+    audioRepeatCount: TYPING_AUDIO_REPEAT_OPTIONS.includes(repeatCount) ? repeatCount : TYPING_CONFIG_DEFAULTS.audioRepeatCount,
+    audioPlaybackRate: TYPING_AUDIO_RATE_OPTIONS.includes(playbackRate) ? playbackRate : TYPING_CONFIG_DEFAULTS.audioPlaybackRate,
+    questionToAudioDelaySec: toTenthsClamped(source.questionToAudioDelaySec, TYPING_CONFIG_DEFAULTS.questionToAudioDelaySec),
+    repeatGapDelaySec: toTenthsClamped(source.repeatGapDelaySec, TYPING_CONFIG_DEFAULTS.repeatGapDelaySec),
+    audioToInputDelaySec: toTenthsClamped(source.audioToInputDelaySec, TYPING_CONFIG_DEFAULTS.audioToInputDelaySec),
+    judgementToNextDelaySec: toTenthsClamped(source.judgementToNextDelaySec, TYPING_CONFIG_DEFAULTS.judgementToNextDelaySec)
+  };
+}
+
+function getTypingConfig() {
+  state.settings.typingConfig = sanitizeTypingConfig(state.settings?.typingConfig);
+  return state.settings.typingConfig;
+}
+
+function typingDelaySecToMs(value) {
+  return Math.round(toTenthsClamped(value, 0) * 1000);
 }
 
 function isDesktopGameTicketEnabled() {
@@ -1755,6 +1794,7 @@ const defaultState = {
   settings: {
     studyRange: { start: 1, end: 1 },
     type: "all",
+    typingConfig: sanitizeTypingConfig(),
     dayStudy: {
       day: 1,
       type: "all"
@@ -1797,6 +1837,7 @@ function loadState() {
       ...mergedState.settings,
       ...(parsed.settings || {})
     };
+    mergedState.settings.typingConfig = sanitizeTypingConfig(mergedState.settings.typingConfig);
     mergedState.stats = {
       ...mergedState.stats,
       ...(parsed.stats || {})
@@ -2554,7 +2595,7 @@ function stopCurrentAudio() {
   currentAudio = null;
 }
 
-function playQuestionAudio(question, onComplete, onError) {
+function playQuestionAudio(question, onComplete, onError, options = {}) {
   const questionId = String(question?.id || "").trim();
   const rawAudioFile = String(question?.audioFile || "").trim();
 
@@ -2615,7 +2656,10 @@ function playQuestionAudio(question, onComplete, onError) {
     currentAudio = audio;
     audio.preload = "auto";
     audio.volume = 1;
-    audio.playbackRate = 1;
+    const requestedRate = Number(options.playbackRate);
+    audio.playbackRate = Number.isFinite(requestedRate)
+      ? Math.max(0.5, Math.min(2, requestedRate))
+      : getTypingConfig().audioPlaybackRate;
 
     const handleFailure = (error) => {
       console.error("音声再生失敗:", audio.src, error);
@@ -2647,6 +2691,50 @@ function playQuestionAudio(question, onComplete, onError) {
   return true;
 }
 
+function playQuestionAudioSequence(question, options = {}) {
+  const repeatCount = Math.max(1, Math.min(3, Number(options.repeatCount) || 1));
+  const initialDelayMs = Math.max(0, Number(options.initialDelayMs) || 0);
+  const repeatGapMs = Math.max(0, Number(options.repeatGapMs) || 0);
+  const playbackRate = Number(options.playbackRate);
+  const onComplete = typeof options.onComplete === "function" ? options.onComplete : () => {};
+  const onError = typeof options.onError === "function" ? options.onError : () => {};
+
+  let remaining = repeatCount;
+  let isFinished = false;
+
+  const finish = () => {
+    if (isFinished) return;
+    isFinished = true;
+    onComplete();
+  };
+
+  const fail = () => {
+    if (isFinished) return;
+    onError();
+    finish();
+  };
+
+  const playNext = () => {
+    if (isFinished) return;
+    playQuestionAudio(
+      question,
+      () => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          finish();
+          return;
+        }
+        setTimeout(playNext, repeatGapMs);
+      },
+      fail,
+      { playbackRate }
+    );
+  };
+
+  setTimeout(playNext, initialDelayMs);
+  return true;
+}
+
 function shouldUseDesktopAutoAudioFlow() {
   const hasTouchDevice =
     (typeof window !== "undefined" && "ontouchstart" in window) ||
@@ -2663,6 +2751,7 @@ function isDesktopAutoAudioFlow(session, question) {
 
 function startDesktopDoubleAudioAndAutoAdvance(session, question, feedbackBox) {
   if (!session || !question) return false;
+  const typingConfig = getTypingConfig();
 
   // 回答後は Enter を不要にし、2回再生後に自動遷移する。
   session.awaitingEnter = false;
@@ -2680,7 +2769,7 @@ function startDesktopDoubleAudioAndAutoAdvance(session, question, feedbackBox) {
     setTimeout(() => {
       if (state.session !== session) return;
       advanceToNextQuestion();
-    }, 200);
+    }, typingDelaySecToMs(typingConfig.judgementToNextDelaySec));
   };
 
   const handleError = () => {
@@ -2690,25 +2779,21 @@ function startDesktopDoubleAudioAndAutoAdvance(session, question, feedbackBox) {
     advanceAfterDelay();
   };
 
-  playQuestionAudio(
-    question,
-    () => {
-      playQuestionAudio(
-        question,
-        () => {
-          advanceAfterDelay();
-        },
-        handleError
-      );
-    },
-    handleError
-  );
+  playQuestionAudioSequence(question, {
+    repeatCount: typingConfig.audioRepeatCount,
+    initialDelayMs: typingDelaySecToMs(typingConfig.questionToAudioDelaySec),
+    repeatGapMs: typingDelaySecToMs(typingConfig.repeatGapDelaySec),
+    playbackRate: typingConfig.audioPlaybackRate,
+    onComplete: advanceAfterDelay,
+    onError: handleError
+  });
 
   return true;
 }
 
 function startSecondAudioAndAutoAdvance(question) {
   const session = state.session;
+  const typingConfig = getTypingConfig();
   if (!session || !session.answered || !session.awaitingEnter || session.enterLocked || session.enterConsumed) {
     return false;
   }
@@ -2724,8 +2809,17 @@ function startSecondAudioAndAutoAdvance(question) {
     return true;
   }
 
-  playQuestionAudio(targetQuestion, () => {
-    advanceToNextQuestion();
+  playQuestionAudioSequence(targetQuestion, {
+    repeatCount: typingConfig.audioRepeatCount,
+    initialDelayMs: 0,
+    repeatGapMs: typingDelaySecToMs(typingConfig.repeatGapDelaySec),
+    playbackRate: typingConfig.audioPlaybackRate,
+    onComplete: () => {
+      setTimeout(() => {
+        if (state.session !== session) return;
+        advanceToNextQuestion();
+      }, typingDelaySecToMs(typingConfig.judgementToNextDelaySec));
+    }
   });
   return true;
 }
@@ -4293,10 +4387,20 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
         feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "音声を2回再生後、自動で次へ進みます");
         startDesktopDoubleAudioAndAutoAdvance(session, question, feedbackBox);
       } else {
-        playQuestionAudio(question, () => {
-          enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
-        }, () => {
-          showAudioPlaybackError(feedbackBox);
+        const typingConfig = getTypingConfig();
+        playQuestionAudioSequence(question, {
+          repeatCount: typingConfig.audioRepeatCount,
+          initialDelayMs: typingDelaySecToMs(typingConfig.questionToAudioDelaySec),
+          repeatGapMs: typingDelaySecToMs(typingConfig.repeatGapDelaySec),
+          playbackRate: typingConfig.audioPlaybackRate,
+          onComplete: () => {
+            setTimeout(() => {
+              enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
+            }, typingDelaySecToMs(typingConfig.audioToInputDelaySec));
+          },
+          onError: () => {
+            showAudioPlaybackError(feedbackBox);
+          }
         });
       }
 
@@ -4381,10 +4485,20 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "音声を2回再生後、自動で次へ進みます");
     startDesktopDoubleAudioAndAutoAdvance(session, question, feedbackBox);
   } else {
-    playQuestionAudio(question, () => {
-      enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
-    }, () => {
-      showAudioPlaybackError(feedbackBox);
+    const typingConfig = getTypingConfig();
+    playQuestionAudioSequence(question, {
+      repeatCount: typingConfig.audioRepeatCount,
+      initialDelayMs: typingDelaySecToMs(typingConfig.questionToAudioDelaySec),
+      repeatGapMs: typingDelaySecToMs(typingConfig.repeatGapDelaySec),
+      playbackRate: typingConfig.audioPlaybackRate,
+      onComplete: () => {
+        setTimeout(() => {
+          enableSecondAudioTrigger(state.session === session ? session : null, input, answerBtn);
+        }, typingDelaySecToMs(typingConfig.audioToInputDelaySec));
+      },
+      onError: () => {
+        showAudioPlaybackError(feedbackBox);
+      }
     });
   }
 
@@ -4806,6 +4920,64 @@ function handleEnterKey(event) {
 }
 
 function bindEvents() {
+  const typingAudioRepeatSelect = document.getElementById("typingAudioRepeatSelect");
+  const typingAudioRateSelect = document.getElementById("typingAudioRateSelect");
+  const typingDelayQuestionToAudioSelect = document.getElementById("typingDelayQuestionToAudioSelect");
+  const typingDelayRepeatGapSelect = document.getElementById("typingDelayRepeatGapSelect");
+  const typingDelayAudioToInputSelect = document.getElementById("typingDelayAudioToInputSelect");
+  const typingDelayJudgeToNextSelect = document.getElementById("typingDelayJudgeToNextSelect");
+  const typingControls = [
+    typingAudioRepeatSelect,
+    typingAudioRateSelect,
+    typingDelayQuestionToAudioSelect,
+    typingDelayRepeatGapSelect,
+    typingDelayAudioToInputSelect,
+    typingDelayJudgeToNextSelect
+  ];
+
+  if (typingControls.every((control) => Boolean(control))) {
+    const delayValues = Array.from({ length: 11 }, (_, index) => (index / 10).toFixed(1));
+    typingAudioRepeatSelect.innerHTML = TYPING_AUDIO_REPEAT_OPTIONS.map((value) => `<option value="${value}">${value}回</option>`).join("");
+    typingAudioRateSelect.innerHTML = [
+      { value: 0.8, label: "ゆっくり (0.8)" },
+      { value: 1.0, label: "標準 (1.0)" },
+      { value: 1.2, label: "少し速い (1.2)" }
+    ].map((entry) => `<option value="${entry.value}">${entry.label}</option>`).join("");
+    const delayMarkup = delayValues.map((value) => `<option value="${value}">${value}秒</option>`).join("");
+    typingDelayQuestionToAudioSelect.innerHTML = delayMarkup;
+    typingDelayRepeatGapSelect.innerHTML = delayMarkup;
+    typingDelayAudioToInputSelect.innerHTML = delayMarkup;
+    typingDelayJudgeToNextSelect.innerHTML = delayMarkup;
+
+    const applyTypingConfigToControls = () => {
+      const typingConfig = getTypingConfig();
+      typingAudioRepeatSelect.value = String(typingConfig.audioRepeatCount);
+      typingAudioRateSelect.value = typingConfig.audioPlaybackRate.toFixed(1);
+      typingDelayQuestionToAudioSelect.value = typingConfig.questionToAudioDelaySec.toFixed(1);
+      typingDelayRepeatGapSelect.value = typingConfig.repeatGapDelaySec.toFixed(1);
+      typingDelayAudioToInputSelect.value = typingConfig.audioToInputDelaySec.toFixed(1);
+      typingDelayJudgeToNextSelect.value = typingConfig.judgementToNextDelaySec.toFixed(1);
+    };
+
+    const syncTypingConfigFromControls = () => {
+      state.settings.typingConfig = sanitizeTypingConfig({
+        audioRepeatCount: Number(typingAudioRepeatSelect.value),
+        audioPlaybackRate: Number(typingAudioRateSelect.value),
+        questionToAudioDelaySec: Number(typingDelayQuestionToAudioSelect.value),
+        repeatGapDelaySec: Number(typingDelayRepeatGapSelect.value),
+        audioToInputDelaySec: Number(typingDelayAudioToInputSelect.value),
+        judgementToNextDelaySec: Number(typingDelayJudgeToNextSelect.value)
+      });
+      saveState();
+      applyTypingConfigToControls();
+    };
+
+    applyTypingConfigToControls();
+    typingControls.forEach((control) => {
+      control.addEventListener("change", syncTypingConfigFromControls);
+    });
+  }
+
   document.addEventListener("keydown", handleEnterKey);
   document.addEventListener("keyup", handleKeyboardNavigationKeyup);
   document.addEventListener("keydown", (event) => {

@@ -128,6 +128,35 @@
               </div>
             </div>
             <div id="adminHistoryPanel" class="settings-update-history hidden"></div>
+            <div class="settings-typing-wrap" aria-label="タイピング設定">
+              <h3 class="settings-section-title">タイピング設定</h3>
+              <div class="settings-typing-grid">
+                <label class="settings-typing-field">
+                  <span>音声再生回数</span>
+                  <select id="typingAudioRepeatSelect"></select>
+                </label>
+                <label class="settings-typing-field">
+                  <span>音声再生速度</span>
+                  <select id="typingAudioRateSelect"></select>
+                </label>
+                <label class="settings-typing-field">
+                  <span>問題表示 → 音声再生まで</span>
+                  <select id="typingDelayQuestionToAudioSelect"></select>
+                </label>
+                <label class="settings-typing-field">
+                  <span>1回目音声 → 2回目音声まで</span>
+                  <select id="typingDelayRepeatGapSelect"></select>
+                </label>
+                <label class="settings-typing-field">
+                  <span>最後の音声終了 → 入力開始まで</span>
+                  <select id="typingDelayAudioToInputSelect"></select>
+                </label>
+                <label class="settings-typing-field">
+                  <span>判定後 → 次の問題表示まで</span>
+                  <select id="typingDelayJudgeToNextSelect"></select>
+                </label>
+              </div>
+            </div>
             <div class="settings-backup-wrap" aria-label="学習記録バックアップ操作">
               <button id="backupLearningDataBtn" class="secondary-btn settings-backup-btn" type="button">💾 学習記録をバックアップ</button>
               <button id="restoreLearningDataBtn" class="secondary-btn settings-backup-btn" type="button">📂 学習記録を復元</button>
