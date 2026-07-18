@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/18 05:20", note: "バージョン情報・更新履歴の日時表示をJSTへ統一し、自動取得日時もJST変換して表示するよう修正" },
     { version: "2026/07/18 05:05", note: "PC版タイトルをEnglish Typing Trainer for PCへ変更し、将来のスマホ版名称をEnglish Trainer for Mobileに統一" },
     { version: "2026/07/18 04:50", note: "通常学習の過去正解2問候補からLv1/Lv2・間違い復習対象・直近不正解問題を除外し、候補不足時は現在Dayで補完するよう修正" },
     { version: "2026/07/18 04:30", note: "通常学習のスパイラル復習（現在Day8問+過去正解2問）を追加・Dayアンロック条件を通常学習完了のみに統一・初期化後はDay1開始へ固定・学習記録のバックアップ/復元機能を設定画面へ追加" },
@@ -1904,6 +1905,55 @@ function formatDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
+function formatTimestampToJstDisplay(timestamp) {
+  if (!Number.isFinite(Number(timestamp))) return "";
+  const date = new Date(Number(timestamp));
+  const formatter = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+  const parts = formatter.formatToParts(date);
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${byType.year}/${byType.month}/${byType.day} ${byType.hour}:${byType.minute}`;
+}
+
+function parseVersionValueToTimestamp(value) {
+  const source = String(value || "").trim();
+  if (!source) return null;
+
+  const numeric = Number(source);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return numeric;
+  }
+
+  let match = source.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+  if (match) {
+    const [, year, month, day, hour, minute] = match;
+    return Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour) - 9, Number(minute), 0, 0);
+  }
+
+  match = source.match(/^(\d{2})\/(\d{2})(\d{2})\/(\d{2})(\d{2})$/);
+  if (match) {
+    const [, yy, month, day, hour, minute] = match;
+    const fullYear = 2000 + Number(yy);
+    return Date.UTC(fullYear, Number(month) - 1, Number(day), Number(hour) - 9, Number(minute), 0, 0);
+  }
+
+  const parsed = Date.parse(source);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatVersionForJstDisplay(value) {
+  const timestamp = parseVersionValueToTimestamp(value);
+  if (!Number.isFinite(timestamp)) return String(value || "");
+  return formatTimestampToJstDisplay(timestamp);
+}
+
 function todayKey() {
   return formatDateKey(new Date());
 }
@@ -2745,7 +2795,7 @@ function renderHomeUpdateHistory() {
   const list = document.getElementById("homeUpdateHistoryList");
   if (!list) return;
   list.innerHTML = SETTINGS_INFO.releaseHistory
-    .map((entry) => `<li><span class="home-update-version">${entry.version}</span><span>${entry.note}</span></li>`)
+    .map((entry) => `<li><span class="home-update-version">${formatVersionForJstDisplay(entry.version)}</span><span>${entry.note}</span></li>`)
     .join("");
 }
 
@@ -4473,7 +4523,7 @@ function bindEvents() {
     }
 
     const historyMarkup = SETTINGS_INFO.releaseHistory
-      .map((entry) => `<li><span class="settings-history-version">${entry.version}</span><span>${entry.note}</span></li>`)
+      .map((entry) => `<li><span class="settings-history-version">${formatVersionForJstDisplay(entry.version)}</span><span>${entry.note}</span></li>`)
       .join("");
     adminHistoryPanel.innerHTML = `<ul class="settings-history-list">${historyMarkup}</ul>`;
     adminHistoryPanel.classList.remove("hidden");
@@ -4645,7 +4695,7 @@ let state = loadState();
 function init() {
   const settingsVersionText = document.getElementById("settingsVersionText");
   if (settingsVersionText) {
-    settingsVersionText.textContent = `Ver ${APP_VERSION}`;
+    settingsVersionText.textContent = `Ver ${formatVersionForJstDisplay(APP_VERSION)}`;
   }
   const itemsSynced = ensureItemsSyncedWithVocabularyBank();
   clampStudyRangeToAvailableDays();
