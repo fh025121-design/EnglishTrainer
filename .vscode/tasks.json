@@ -242,6 +242,76 @@
 			"command": "$a = Get-FileHash data.js -Algorithm SHA256; $b = Get-FileHash data.js.bak_day1_14_before_pos_20260720.js -Algorithm SHA256; if ($a.Hash -eq $b.Hash) { Write-Output \"MATCH\" } else { Write-Output \"DIFF\"; Write-Output $a.Hash; Write-Output $b.Hash }",
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "analyze-duplicate-japanese-words",
+			"type": "shell",
+			"command": "py -3 -c \"import re,collections,pathlib; t=pathlib.Path('data.js').read_text(encoding='utf-8'); p=re.compile(r'id:\\s*\\\"D(\\\\d{2})-W\\\\d{2}\\\"[^\\\\n]*?type:\\s*\\\"word\\\"[^\\\\n]*?japanese:\\s*\\\"([^\\\"]+)\\\"[^\\\\n]*?answer:\\s*\\\"([^\\\"]+)\\\"'); g=collections.defaultdict(set); [g[j].add(a.strip().lower()) for d,j,a in p.findall(t) if 1<=int(d)<=40]; rows=sorted((j,sorted(v)) for j,v in g.items() if len(v)>=2); print('COUNT',len(rows)); [print(j+'\\t'+' | '.join(v)) for j,v in rows]\"",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "run-analyze-duplicate-words",
+			"type": "shell",
+			"command": "py -3 _analyze_duplicate_words.py",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "list-similar-entries",
+			"type": "shell",
+			"command": "py -3 _list_similar_entries.py",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "update-word-hints",
+			"type": "shell",
+			"command": "py -3 _update_word_hints.py",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "extract-changed-hints",
+			"type": "shell",
+			"command": "py -3 _extract_changed_hints.py",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "report-hint-changes",
+			"type": "shell",
+			"command": "py -3 _report_hint_changes.py",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "restore-data-after-bad-hint-edit",
+			"type": "shell",
+			"command": "Copy-Item -LiteralPath data.js.bak_day1_14_before_pos_20260720.js -Destination data.js -Force",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "force-restore-datajs-absolute",
+			"type": "shell",
+			"command": "Copy-Item -LiteralPath \"C:\\Users\\hiroshiinoue\\Downloads\\GitHub\\EnglishTrainer\\data.js.bak_day1_14_before_pos_20260720.js\" -Destination \"C:\\Users\\hiroshiinoue\\Downloads\\GitHub\\EnglishTrainer\\data.js\" -Force",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "apply-meaning-hints-safe",
+			"type": "shell",
+			"command": "py -3 _apply_meaning_hints_safe.py",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "prune-hints-by-answer",
+			"type": "shell",
+			"command": "py -3 _prune_hints_by_answer.py",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }
