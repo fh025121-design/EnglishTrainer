@@ -1323,8 +1323,8 @@ const responseTrainingAppendedItems = [
     answer: ["Why", "wants"],
     completedResponse: "Why does your English teacher always speak slowly when explaining new words?She wants everyone to understand them.",
     translationQuestion: "英語の先生は新しい単語を説明するとき、なぜいつもゆっくり話すのですか。",
-    translationAnswer: "みんなに理解してほしいと思っているからです。",
-    point: "want の三単現 wants と want 人 to ～ の形を一緒に覚える。"
+    translationAnswer: "みんなに理解してもらいたいからです。",
+    point: "「～したい」が wants のヒントになる。"
   },
   {
     id: "response_102",
@@ -1444,7 +1444,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always ask students to read aloud?She believes it improves our pronunciation.",
     translationQuestion: "英語の先生はなぜいつも音読をさせるのですか。",
     translationAnswer: "発音が良くなると信じているからです。",
-    point: "believe の三単現は believes。また improves も三単現なので、1問で2つの三単現に触れられる。"
+    point: "「～と信じている」が believes のヒントになる。"
   },
   {
     id: "response_112",
@@ -1564,7 +1564,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always give us short quizzes at the beginning of class?She wants to check our understanding.",
     translationQuestion: "英語の先生はなぜ授業の最初にいつも小テストをするのですか。",
     translationAnswer: "私たちの理解度を確認したいからです。",
-    point: "wants to は英検3級で非常によく使う形。三単現も同時に身につける。"
+    point: "「～したい」が wants のヒントになる。"
   },
   {
     id: "response_122",
@@ -1683,8 +1683,8 @@ const responseTrainingAppendedItems = [
     answer: ["Why", "wants"],
     completedResponse: "Why does your homeroom teacher always check everyone's homework so carefully?He wants every student to improve.",
     translationQuestion: "担任の先生はなぜみんなの宿題をいつも丁寧に確認するのですか。",
-    translationAnswer: "全員に成長してほしいと思っているからです。",
-    point: "wants＋人＋to＋動詞 の形に慣れよう。これは高校入試・英検3級でも非常によく使われる重要表現。"
+    translationAnswer: "全員に成長してもらいたいからです。",
+    point: "「～したい」が wants のヒントになる。"
   },
   {
     id: "response_132",
@@ -1803,8 +1803,8 @@ const responseTrainingAppendedItems = [
     answer: ["Why", "wants"],
     completedResponse: "Why does your science teacher always prepare interesting experiments?He wants students to enjoy science.",
     translationQuestion: "理科の先生はなぜいつも面白い実験を準備するのですか。",
-    translationAnswer: "生徒に理科を好きになってほしいと思っているからです。",
-    point: "wants 人 to ～ は非常によく使う重要表現。今回は students を目的語にして自然な英文にしている。"
+    translationAnswer: "生徒に理科を好きになってもらいたいからです。",
+    point: "「～したい」が wants のヒントになる。"
   },
   {
     id: "response_142",
@@ -1816,7 +1816,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your mother always bring her own shopping bag?She wants to reduce plastic waste.",
     translationQuestion: "お母さんはなぜいつも自分の買い物袋を持って行くのですか。",
     translationAnswer: "プラスチックごみを減らしたいからです。",
-    point: "want to と三単現 wants を同時に覚える。"
+    point: "「～したい」が wants のヒントになる。"
   },
   {
     id: "response_143",
@@ -1924,7 +1924,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your homeroom teacher always encourage everyone to ask questions?He believes students learn better that way.",
     translationQuestion: "担任の先生はなぜみんなに質問するよう勧めるのですか。",
     translationAnswer: "その方が生徒はよく学べると信じているからです。",
-    point: "believe の三単現は believes。believe (that) ～ の形もよく使われる。"
+    point: "「～と信じている」が believes のヒントになる。"
   },
   {
     id: "response_152",
@@ -1936,7 +1936,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your father always check the weather before leaving home?He wants to know if he needs an umbrella.",
     translationQuestion: "お父さんはなぜ家を出る前にいつも天気を確認するのですか。",
     translationAnswer: "傘が必要か知りたいからです。",
-    point: "want to know if ～ は会話でよく使う。"
+    point: "「～したい」が wants のヒントになる。"
   },
   {
     id: "response_153",
@@ -2043,8 +2043,8 @@ const responseTrainingAppendedItems = [
     answer: ["Why", "wants"],
     completedResponse: "Why does your English teacher always ask everyone to speak loudly?She wants everyone to speak with confidence.",
     translationQuestion: "英語の先生はなぜいつもみんなに大きな声で話すよう言うのですか。",
-    translationAnswer: "みんなに自信を持って話してほしいと思っているからです。",
-    point: "want＋人＋to＋動詞 は高校入試でも頻出の重要構文。"
+    translationAnswer: "みんなに自信を持って話してもらいたいからです。",
+    point: "「～したい」が wants のヒントになる。"
   },
   {
     id: "response_162",
@@ -2140,7 +2140,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always review yesterday's lesson first?She helps students remember it better.",
     translationQuestion: "英語の先生はなぜいつも昨日の授業を最初に復習するのですか。",
     translationAnswer: "生徒がよりよく覚えられるようにするためです。",
-    point: "help の三単現は helps。"
+    point: "「～できるようにする」が helps のヒントになる。"
   },
   {
     id: "response_170",
@@ -2164,7 +2164,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your science teacher always ask students to write down their observations?He believes careful observation is important.",
     translationQuestion: "理科の先生はなぜいつも観察したことを書き留めるように言うのですか。",
     translationAnswer: "注意深い観察が大切だと信じているからです。",
-    point: "believe (that) ～ の形を自然に使えるようになろう。"
+    point: "「～と信じている」が believes のヒントになる。"
   },
   {
     id: "response_172",
@@ -2284,7 +2284,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always encourage students to read English books?She believes reading improves our vocabulary.",
     translationQuestion: "英語の先生はなぜいつも英語の本を読むよう勧めるのですか。",
     translationAnswer: "読書は語彙力を伸ばすと信じているからです。",
-    point: "reading improves ... のように、動名詞を主語にした英文にも少しずつ慣れていこう。これは英検3級～準2級への橋渡しになる。"
+    point: "「～と信じている」が believes のヒントになる。"
   },
   {
     id: "response_182",
@@ -2404,7 +2404,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always ask students to use complete sentences?She believes it helps us communicate more clearly.",
     translationQuestion: "英語の先生はなぜいつも完全な文で答えるように言うのですか。",
     translationAnswer: "その方がより分かりやすく伝えられると信じているからです。",
-    point: "communicate は英検3級でも見かける重要動詞。help＋人＋動詞 の形も意識して覚えよう。"
+    point: "「～と信じている」が believes のヒントになる。"
   },
   {
     id: "response_192",

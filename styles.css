@@ -1534,7 +1534,8 @@ select {
 
 #responsePracticeScreen #responseQuestionCard.response-answered {
   justify-content: flex-start;
-  overflow-y: auto;
+  overflow: hidden;
+  gap: 6px;
 }
 
 #responsePracticeScreen #responseQuestionCard.response-answered .question-meta {
@@ -1543,8 +1544,27 @@ select {
 }
 
 #responsePracticeScreen #responseQuestionCard.response-answered .feedback-box {
-  max-height: 36vh;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
+  padding: 9px 11px;
+  font-size: 0.98rem;
+  line-height: 1.2;
+  margin-bottom: 0;
+}
+
+#responsePracticeScreen #responseQuestionCard.response-answered #responseQuestionText,
+#responsePracticeScreen #responseQuestionCard.response-answered #responseTemplateText {
+  min-height: 1.45em;
+}
+
+#responsePracticeScreen #responseQuestionCard.response-answered #responseQuestionTranslationText {
+  min-height: 1.7em;
+  font-size: 1.42rem;
+  line-height: 1.32;
+}
+
+#responsePracticeScreen #responseQuestionCard.response-answered #responseNextBtn {
+  margin-top: 6px;
 }
 
 .phase-progress-text {
