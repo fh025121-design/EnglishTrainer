@@ -2,6 +2,8 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/20 04:25", note: "応答文特訓の採点後に入力ボックスを非表示化し、『あなたの答え／正解』表示を復元" },
+    { version: "2026/07/20 04:15", note: "応答文特訓の回答ページから『応答を入力』『英語を入力してください』と解答表示ラベルを削除" },
     { version: "2026/07/20 04:05", note: "ホームの『過去の間違いに挑戦』ボタン文字を『通常学習を再開』と同サイズへ拡大" },
     { version: "2026/07/20 03:55", note: "ホームの『通常学習を再開』ボタン文字をさらに2段階拡大して視認性を向上" },
     { version: "2026/07/20 03:45", note: "ホーム学習エリア4ボックスの文字を全体バランスを保ちながら拡大（次へ進む・Day学習・特訓・過去の間違い）" },
@@ -1008,6 +1010,7 @@ function renderResponseTrainingQuestion() {
   const answerTranslationText = document.getElementById("responseAnswerTranslationText");
   const answerInput = document.getElementById("responseAnswerInput");
   const answerBtn = document.getElementById("responseAnswerBtn");
+  const answerPanel = document.getElementById("responseAnswerPanel");
   const feedbackBox = document.getElementById("responseFeedbackBox");
   const nextBtn = document.getElementById("responseNextBtn");
   if (!title || !scopeText || !counterText || !questionText || !questionLabel || !templateText || !questionTranslationText || !answerLabel || !answerTranslationText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
@@ -1027,6 +1030,9 @@ function renderResponseTrainingQuestion() {
   answerInput.value = "";
   answerInput.disabled = false;
   answerBtn.disabled = false;
+  if (answerPanel) {
+    answerPanel.classList.remove("hidden");
+  }
   feedbackBox.className = "feedback-box hidden";
   feedbackBox.innerHTML = "";
   nextBtn.disabled = false;
@@ -1044,6 +1050,7 @@ function submitResponseTrainingAnswer() {
 
   const answerInput = document.getElementById("responseAnswerInput");
   const answerBtn = document.getElementById("responseAnswerBtn");
+  const answerPanel = document.getElementById("responseAnswerPanel");
   const feedbackBox = document.getElementById("responseFeedbackBox");
   const nextBtn = document.getElementById("responseNextBtn");
   if (!answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
@@ -1106,6 +1113,9 @@ function submitResponseTrainingAnswer() {
   nextBtn.disabled = false;
   answerInput.disabled = true;
   answerBtn.disabled = true;
+  if (answerPanel) {
+    answerPanel.classList.add("hidden");
+  }
   nextBtn.focus();
 }
 

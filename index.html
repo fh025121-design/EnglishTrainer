@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260720-0405" />
+    <link rel="stylesheet" href="styles.css?v=20260720-0425" />
   </head>
   <body>
     <div class="app-shell">
@@ -28,7 +28,7 @@
                 <button id="advanceBtn" class="primary-btn home-advance-btn"><span class="advance-main">▶ 次へ進む</span><span id="advanceDayText" class="advance-sub">Day1</span></button>
                 <button id="resumeSessionBtn" class="primary-btn hidden" type="button">▶ 通常学習を再開</button>
                 <button id="daySelectWordBtn" class="secondary-btn">📘 Day学習（予習・復習）</button>
-                <button id="daySelectPhraseBtn" class="secondary-btn home-training-single-btn" type="button"><span class="home-training-main"><img class="home-training-icon" src="assets/training-icon.svg?v=20260720-0405" alt="特訓" />特訓</span><span class="home-training-sublist"><span>熟語</span><span>前置詞</span><span>応答文</span></span></button>
+                <button id="daySelectPhraseBtn" class="secondary-btn home-training-single-btn" type="button"><span class="home-training-main"><img class="home-training-icon" src="assets/training-icon.svg?v=20260720-0425" alt="特訓" />特訓</span><span class="home-training-sublist"><span>熟語</span><span>前置詞</span><span>応答文</span></span></button>
                 <button id="challengeBtn" class="primary-btn challenge-primary-btn">▶ 過去の間違いに挑戦</button>
               </div>
             </div>
@@ -408,9 +408,7 @@
                 <p id="responseTemplateText" class="response-template-text meaning-text"></p>
                 <p id="responseAnswerTranslationText" class="response-question-translation hidden"></p>
               </div>
-              <div class="answer-panel">
-                <div class="type-badge word">応答を入力</div>
-                <h3 class="input-label">英語を入力してください</h3>
+              <div id="responseAnswerPanel" class="answer-panel">
                 <form id="responseAnswerForm" class="answer-form">
                   <input id="responseAnswerInput" class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="例: isn't" />
                   <button id="responseAnswerBtn" class="primary-btn mobile-answer-btn" type="submit">答える</button>
@@ -813,9 +811,9 @@
       </div>
     </div>
 
-    <script src="data.js?v=20260720-0405"></script>
-    <script src="preposition-data.js?v=20260720-0405"></script>
-    <script src="response-data.js?v=20260720-0405"></script>
-    <script src="app.js?v=20260720-0405"></script>
+    <script src="data.js?v=20260720-0425"></script>
+    <script src="preposition-data.js?v=20260720-0425"></script>
+    <script src="response-data.js?v=20260720-0425"></script>
+    <script src="app.js?v=20260720-0425"></script>
   </body>
 </html>
