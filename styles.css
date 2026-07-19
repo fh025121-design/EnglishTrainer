@@ -483,15 +483,15 @@ p {
 .study-actions-grid {
   display: grid;
   grid-template-columns: 1fr;
-  grid-auto-rows: var(--home-list-item-height);
+  grid-auto-rows: minmax(var(--home-list-item-height), auto);
   gap: 8px;
 }
 
 .study-actions-grid > button {
   width: 100%;
   min-height: var(--home-list-item-height);
-  height: var(--home-list-item-height);
-  font-size: 1.2em;
+  height: auto;
+  font-size: 1.3em;
 }
 
 .home-advance-btn {
@@ -522,11 +522,58 @@ p {
   box-shadow: inset 0 1px 0 rgba(255, 249, 214, 0.72), inset 0 -2px 6px rgba(110, 77, 10, 0.28), 0 8px 18px rgba(120, 88, 12, 0.34);
 }
 
-.study-actions-grid #daySelectWordBtn,
-.study-actions-grid #daySelectPhraseBtn {
+.study-actions-grid #daySelectWordBtn {
   min-height: 0;
   font-weight: 800;
-  font-size: 1.35em;
+  font-size: 1.46em;
+}
+
+.study-actions-grid #resumeSessionBtn {
+  font-size: 1.72em;
+  font-weight: 800;
+}
+
+.study-actions-grid #challengeBtn {
+  font-size: 1.72em;
+}
+
+.home-training-single-btn {
+  min-height: var(--home-list-item-height);
+  height: var(--home-list-item-height);
+  font-size: 2.16rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.home-training-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2em;
+  white-space: nowrap;
+}
+
+.home-training-icon {
+  width: 1.5cm;
+  height: 1.5cm;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.home-training-sublist {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1em;
+  line-height: 1;
+  font-weight: 800;
+  color: inherit;
+  white-space: nowrap;
 }
 
 .level-collection-list,

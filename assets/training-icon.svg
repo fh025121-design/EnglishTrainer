@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="crossed silver pen icon">
+  <defs>
+    <linearGradient id="silverBody" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7fafc"/>
+      <stop offset="16%" stop-color="#d8dee5"/>
+      <stop offset="32%" stop-color="#aeb7c1"/>
+      <stop offset="50%" stop-color="#eef2f6"/>
+      <stop offset="68%" stop-color="#9da7b2"/>
+      <stop offset="84%" stop-color="#dce2e9"/>
+      <stop offset="100%" stop-color="#8a949f"/>
+    </linearGradient>
+    <linearGradient id="silverNib" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f1f4f7"/>
+      <stop offset="100%" stop-color="#9ca6b1"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="rotate(-38 128 128)">
+    <path fill="url(#silverBody)" d="M104 42 L152 42 L142 196 L114 196 Z"/>
+    <path fill="url(#silverNib)" d="M104 42 L152 42 L128 10 Z"/>
+    <path fill="url(#gloss)" d="M110 44 L126 44 L122 194 L112 194 Z"/>
+    <path fill="#7e8793" d="M128 14 L131 42 L125 42 Z"/>
+    <circle cx="128" cy="27" r="3.8" fill="#7e8793"/>
+    <path fill="url(#silverBody)" d="M114 196 L142 196 Q139 220 128 232 Q117 220 114 196 Z"/>
+  </g>
+
+  <g transform="rotate(38 128 128)">
+    <path fill="url(#silverBody)" d="M104 42 L152 42 L142 196 L114 196 Z"/>
+    <path fill="url(#silverNib)" d="M104 42 L152 42 L128 10 Z"/>
+    <path fill="url(#gloss)" d="M110 44 L126 44 L122 194 L112 194 Z"/>
+    <path fill="#7e8793" d="M128 14 L131 42 L125 42 Z"/>
+    <circle cx="128" cy="27" r="3.8" fill="#7e8793"/>
+    <path fill="url(#silverBody)" d="M114 196 L142 196 Q139 220 128 232 Q117 220 114 196 Z"/>
+  </g>
+</svg>
