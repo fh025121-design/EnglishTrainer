@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/19 13:10", note: "PC専用レイアウトを画面サイズ依存で自動縮小するレスポンシブ調整を実施。解像度・ブラウザサイズ・表示倍率に応じてUIスケールを再計算し、フォント・ボタン・余白・入力欄サイズを自動最適化。主要学習画面でページ全体の縦スクロールを抑制" },
     { version: "2026/07/19 12:40", note: "更新履歴の運用ルールを明確化。履歴の統合作業は当日には行わず、前日分を翌日以降にまとめる方式へ統一" },
     { version: "2026-07-19T03:30:00Z", note: "（2026/07/19分まとめ）学習集計を通常学習と特訓で分離しつつ日次総量を維持。前置詞特訓に和訳表示を追加。PC版『応答文特訓』を全231問へ拡張（既存31問＋追加200問）し、全ランダム出題・1入力欄・空欄数連動（isn't=1 / is not=2 / do not have to=4）・複数空欄は出現順1行入力で判定に統一。さらに採点を大文字小文字区別へ変更し、文頭5W1H（What/When/Where/Who/Why/How）は先頭大文字必須化" },
     { version: "2026-07-18T09:20:00Z", note: "PC版に初回限定ボーナスを追加。通常学習の追加特訓を3回達成すると、ランダム抽選とは別枠でゲームチケット5分券を1回獲得できるよう変更" },
@@ -157,6 +158,11 @@ let activeItemDetailId = null;
 let prepositionTrainingSession = null;
 let responseTrainingSession = null;
 let currentScreenId = "homeScreen";
+const DESKTOP_FIT_REFERENCE = Object.freeze({
+  width: 1366,
+  height: 920,
+  minScale: 0.34
+});
 const screenHistory = [];
 const levelTrendTracker = {
   date: "",
@@ -4359,7 +4365,36 @@ function showScreen(screenId, options = {}) {
     target.classList.add("active");
     currentScreenId = screenId;
   }
+  applyDesktopResponsiveScale();
   scheduleKeyboardNavigationSync();
+}
+
+function applyDesktopResponsiveScale() {
+  const doc = typeof document !== "undefined" ? document.documentElement : null;
+  if (!doc || typeof window === "undefined") return;
+  const width = Math.max(1, Number(window.innerWidth) || 1);
+  const height = Math.max(1, Number(window.innerHeight) || 1);
+  const scaleByWidth = width / DESKTOP_FIT_REFERENCE.width;
+  const scaleByHeight = height / DESKTOP_FIT_REFERENCE.height;
+  let scale = Math.max(
+    DESKTOP_FIT_REFERENCE.minScale,
+    Math.min(1, scaleByWidth, scaleByHeight)
+  );
+
+  for (let i = 0; i < 3; i += 1) {
+    doc.style.setProperty("--pc-ui-scale", scale.toFixed(4));
+    const active = document.querySelector(".screen.active");
+    if (!active) break;
+    const activeHeight = Math.max(1, active.clientHeight);
+    const activeScrollHeight = Math.max(1, active.scrollHeight);
+    if (activeScrollHeight <= activeHeight + 1) break;
+    const ratio = activeHeight / activeScrollHeight;
+    const nextScale = Math.max(DESKTOP_FIT_REFERENCE.minScale, scale * ratio);
+    if (Math.abs(nextScale - scale) < 0.001) break;
+    scale = nextScale;
+  }
+
+  doc.style.setProperty("--pc-ui-scale", scale.toFixed(4));
 }
 
 function goBackScreen() {
@@ -6742,11 +6777,16 @@ function bindEvents() {
     }
     saveState();
   });
+
+  window.addEventListener("resize", () => {
+    applyDesktopResponsiveScale();
+  });
 }
 
 let state = loadState();
 
 function init() {
+  applyDesktopResponsiveScale();
   const settingsVersionText = document.getElementById("settingsVersionText");
   if (settingsVersionText) {
     settingsVersionText.textContent = `Ver ${formatVersionForJstDisplay(APP_VERSION)}`;
