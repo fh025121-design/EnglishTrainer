@@ -2,8 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
-    { version: "2026-07-19T03:15:00Z", note: "PC版『応答文特訓』を拡張し、既存31問を保持したまま200問（No.1-200）を追加して全231問化。出題を1入力欄へ統一し、空欄数を基本解答語数に連動（isn't=1、is not=2、do not have to=4）。Question/Responseの複数空欄問題は出現順の1行入力で判定し、大文字小文字・前後空白・連続スペースのみ無視する厳密採点へ更新" },
-    { version: "2026-07-19T02:30:00Z", note: "学習集計を通常学習と特訓で分離しつつ日次の総学習量は維持するよう改善。前置詞特訓に和訳表示を追加し、PC版『応答文特訓』をPart2仕様へ拡張（全ランダム出題・文法トピック表示・回答後の簡潔フィードバック・正式形は入力欄1つへ統一）" },
+    { version: "2026-07-19T03:30:00Z", note: "（2026/07/19分まとめ）学習集計を通常学習と特訓で分離しつつ日次総量を維持。前置詞特訓に和訳表示を追加。PC版『応答文特訓』を全231問へ拡張（既存31問＋追加200問）し、全ランダム出題・1入力欄・空欄数連動（isn't=1 / is not=2 / do not have to=4）・複数空欄は出現順1行入力で判定に統一。さらに採点を大文字小文字区別へ変更し、文頭5W1H（What/When/Where/Who/Why/How）は先頭大文字必須化" },
     { version: "2026-07-18T09:20:00Z", note: "PC版に初回限定ボーナスを追加。通常学習の追加特訓を3回達成すると、ランダム抽選とは別枠でゲームチケット5分券を1回獲得できるよう変更" },
     { version: "2026-07-18T09:05:00Z", note: "ホーム画面の『通常学習を再開』と『次へ進む Day○』を排他表示に変更し、各回答時点での学習実績保存と日別学習時間の途中保存を強化。Day進行と日付集計を分離し、日付をまたいでも通常学習を継続できるよう修正" },
     { version: "2026-07-18T08:20:00Z", note: "中断機能を通常学習専用へ変更し、Day学習・熟語特訓・過去の間違い・苦手特訓などの復習モードは途中終了時に結果画面へ集計して終了、再開データは保存しない仕様へ統一" },
@@ -698,9 +697,28 @@ function getResponseTrainingCategoryLabel(category) {
 function normalizeResponseInput(raw) {
   return String(raw || "")
     .trim()
-    .toLowerCase()
     .replace(/[.!?]+$/g, "")
     .replace(/\s+/g, " ");
+}
+
+function normalizeResponseWhLeadingCase(text) {
+  const value = String(text || "").trim();
+  if (!value) return "";
+  const tokens = value.split(" ").filter(Boolean);
+  if (!tokens.length) return "";
+  const head = tokens[0].toLowerCase();
+  const canonicalMap = {
+    what: "What",
+    when: "When",
+    where: "Where",
+    who: "Who",
+    why: "Why",
+    how: "How"
+  };
+  if (canonicalMap[head]) {
+    tokens[0] = canonicalMap[head];
+  }
+  return tokens.join(" ");
 }
 
 function dedupeStringList(values) {
@@ -730,7 +748,7 @@ function buildRepeatedBlankTokens(count) {
 
 function deriveResponseAnswerSpec(rawAnswers, questionText, responseText) {
   const rawList = dedupeStringList((Array.isArray(rawAnswers) ? rawAnswers : []).map((value) => String(value || "").trim()));
-  const normalizedList = dedupeStringList(rawList.map((value) => normalizeResponseInput(value)).filter(Boolean));
+  const normalizedList = dedupeStringList(rawList.map((value) => normalizeResponseWhLeadingCase(normalizeResponseInput(value))).filter(Boolean));
   if (!normalizedList.length) {
     return {
       canonicalAnswer: "",
@@ -747,7 +765,7 @@ function deriveResponseAnswerSpec(rawAnswers, questionText, responseText) {
   const responseBlankCount = countResponseBlanks(responsePromptBase);
   const totalBlankCount = questionBlankCount + responseBlankCount;
 
-  const normalizedRawTokens = rawList.map((value) => normalizeResponseInput(value)).filter(Boolean);
+  const normalizedRawTokens = rawList.map((value) => normalizeResponseWhLeadingCase(normalizeResponseInput(value))).filter(Boolean);
   const allSingleTokenInputs = rawList.length > 1 && rawList.every((value) => !/\s/.test(value));
   const isTokenSequence = allSingleTokenInputs && (
     (totalBlankCount >= 2 && rawList.length === totalBlankCount) ||
