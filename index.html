@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260719-0530" />
+    <link rel="stylesheet" href="styles.css?v=20260719-0600" />
   </head>
   <body>
     <div class="app-shell">
@@ -406,16 +406,13 @@
                 <p id="responseQuestionTranslationText" class="response-question-translation"></p>
                 <p id="responseAnswerLabel" class="response-copy-label">Answer</p>
                 <p id="responseTemplateText" class="response-template-text meaning-text"></p>
-                <p id="responseAnswerTranslationText" class="response-question-translation"></p>
+                <p id="responseAnswerTranslationText" class="response-question-translation hidden"></p>
               </div>
               <div class="answer-panel">
                 <div class="type-badge word">応答を入力</div>
                 <h3 class="input-label">英語を入力してください</h3>
                 <form id="responseAnswerForm" class="answer-form">
                   <input id="responseAnswerInput" class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="例: isn't" />
-                  <div id="responseAnswerInputSecondWrap" class="hidden">
-                    <input id="responseAnswerInputSecond" class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="例: not" />
-                  </div>
                   <button id="responseAnswerBtn" class="primary-btn mobile-answer-btn" type="submit">答える</button>
                 </form>
               </div>
@@ -814,9 +811,9 @@
       </div>
     </div>
 
-    <script src="data.js?v=20260719-0530"></script>
-    <script src="preposition-data.js?v=20260719-0530"></script>
-    <script src="response-data.js?v=20260719-0530"></script>
-    <script src="app.js?v=20260719-0530"></script>
+    <script src="data.js?v=20260719-0600"></script>
+    <script src="preposition-data.js?v=20260719-0600"></script>
+    <script src="response-data.js?v=20260719-0600"></script>
+    <script src="app.js?v=20260719-0600"></script>
   </body>
 </html>

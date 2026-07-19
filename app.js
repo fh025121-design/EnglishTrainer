@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026-07-19T02:30:00Z", note: "学習集計を通常学習と特訓で分離しつつ日次の総学習量は維持するよう改善。前置詞特訓に和訳表示を追加し、PC版『応答文特訓』をPart2仕様へ拡張（全ランダム出題・文法トピック表示・回答後の簡潔フィードバック・正式形は入力欄1つへ統一）" },
     { version: "2026-07-18T09:20:00Z", note: "PC版に初回限定ボーナスを追加。通常学習の追加特訓を3回達成すると、ランダム抽選とは別枠でゲームチケット5分券を1回獲得できるよう変更" },
     { version: "2026-07-18T09:05:00Z", note: "ホーム画面の『通常学習を再開』と『次へ進む Day○』を排他表示に変更し、各回答時点での学習実績保存と日別学習時間の途中保存を強化。Day進行と日付集計を分離し、日付をまたいでも通常学習を継続できるよう修正" },
     { version: "2026-07-18T08:20:00Z", note: "中断機能を通常学習専用へ変更し、Day学習・熟語特訓・過去の間違い・苦手特訓などの復習モードは途中終了時に結果画面へ集計して終了、再開データは保存しない仕様へ統一" },
@@ -693,19 +694,6 @@ function getResponseTrainingCategoryLabel(category) {
   return String(category || "").trim() || "その他";
 }
 
-const RESPONSE_CONTRACTION_TO_FORMAL_MAP = Object.freeze({
-  "can't": ["can", "not"],
-  "won't": ["will", "not"],
-  "isn't": ["is", "not"],
-  "aren't": ["are", "not"],
-  "wasn't": ["was", "not"],
-  "weren't": ["were", "not"],
-  "don't": ["do", "not"],
-  "doesn't": ["does", "not"],
-  "didn't": ["did", "not"],
-  "mustn't": ["must", "not"]
-});
-
 function normalizeResponseInput(raw) {
   return String(raw || "")
     .trim()
@@ -726,70 +714,62 @@ function dedupeStringList(values) {
   return out;
 }
 
-function buildResponseAnswerForms(rawAnswers) {
-  const normalizedAnswers = dedupeStringList(rawAnswers.map((value) => normalizeResponseInput(value)));
-  const oneWordAnswers = [];
-  const formalTwoWordAnswers = [];
-  const contractedAnswers = [];
+function normalizeResponseBlankMarkers(text) {
+  return String(text || "").replace(/\(\s*[　 ]*\)/g, "(      )");
+}
 
-  normalizedAnswers.forEach((answer) => {
-    if (!answer) return;
-    const tokens = answer.split(" ").filter(Boolean);
-    if (tokens.length === 1) {
-      const token = tokens[0];
-      if (token === "cannot") {
-        formalTwoWordAnswers.push("can not");
-        contractedAnswers.push("can't");
-        return;
-      }
-      if (RESPONSE_CONTRACTION_TO_FORMAL_MAP[token]) {
-        contractedAnswers.push(token);
-        formalTwoWordAnswers.push(RESPONSE_CONTRACTION_TO_FORMAL_MAP[token].join(" "));
-        return;
-      }
-      oneWordAnswers.push(token);
-      return;
-    }
+function countResponseBlanks(text) {
+  const normalized = normalizeResponseBlankMarkers(text);
+  return (normalized.match(/\(\s{6}\)/g) || []).length;
+}
 
-    if (tokens.length === 2) {
-      const formal = tokens.join(" ");
-      formalTwoWordAnswers.push(formal);
-      Object.entries(RESPONSE_CONTRACTION_TO_FORMAL_MAP).forEach(([contracted, expanded]) => {
-        if (expanded.join(" ") === formal) contractedAnswers.push(contracted);
-      });
-      return;
-    }
-  });
+function buildRepeatedBlankTokens(count) {
+  return Array.from({ length: Math.max(1, count) }, () => "(      )").join("");
+}
+
+function deriveResponseAnswerSpec(rawAnswers, questionText, responseText) {
+  const rawList = dedupeStringList((Array.isArray(rawAnswers) ? rawAnswers : []).map((value) => String(value || "").trim()));
+  const normalizedList = dedupeStringList(rawList.map((value) => normalizeResponseInput(value)).filter(Boolean));
+  if (!normalizedList.length) {
+    return {
+      canonicalAnswer: "",
+      acceptedAnswers: [],
+      canonicalTokens: [],
+      questionPrompt: normalizeResponseBlankMarkers(questionText),
+      responsePrompt: normalizeResponseBlankMarkers(responseText)
+    };
+  }
+
+  const questionPromptBase = normalizeResponseBlankMarkers(questionText);
+  const responsePromptBase = normalizeResponseBlankMarkers(responseText);
+  const questionBlankCount = countResponseBlanks(questionPromptBase);
+  const responseBlankCount = countResponseBlanks(responsePromptBase);
+  const totalBlankCount = questionBlankCount + responseBlankCount;
+
+  const normalizedRawTokens = rawList.map((value) => normalizeResponseInput(value)).filter(Boolean);
+  const allSingleTokenInputs = rawList.length > 1 && rawList.every((value) => !/\s/.test(value));
+  const isTokenSequence = allSingleTokenInputs && (
+    (totalBlankCount >= 2 && rawList.length === totalBlankCount) ||
+    (totalBlankCount === 1)
+  );
+  const canonicalAnswer = isTokenSequence
+    ? normalizedRawTokens.join(" ")
+    : normalizedList[0];
+  const canonicalTokens = canonicalAnswer.split(" ").filter(Boolean);
+  const acceptedAnswers = isTokenSequence ? [canonicalAnswer] : normalizedList;
+
+  let responsePrompt = responsePromptBase;
+  if (questionBlankCount === 0 && responseBlankCount === 1 && canonicalTokens.length > 1) {
+    responsePrompt = responsePromptBase.replace(/\(\s{6}\)/, buildRepeatedBlankTokens(canonicalTokens.length));
+  }
 
   return {
-    oneWordAnswers: dedupeStringList(oneWordAnswers),
-    formalTwoWordAnswers: dedupeStringList(formalTwoWordAnswers),
-    contractedAnswers: dedupeStringList(contractedAnswers)
+    canonicalAnswer,
+    acceptedAnswers,
+    canonicalTokens,
+    questionPrompt: questionPromptBase,
+    responsePrompt
   };
-}
-
-function detectResponsePromptMode(answerForms) {
-  const hasFormal = answerForms.formalTwoWordAnswers.length > 0;
-  const hasContracted = answerForms.contractedAnswers.length > 0;
-  if (hasFormal && hasContracted) {
-    return Math.random() < 0.7 ? "formal" : "contracted";
-  }
-  if (hasFormal) return "formal";
-  if (hasContracted) return "contracted";
-  return "single";
-}
-
-function getResponseInputMode(question, promptMode) {
-  if (promptMode === "formal") {
-    return "formal-single";
-  }
-  return promptMode;
-}
-
-function buildResponsePromptTemplate(responseTemplate, inputMode) {
-  const safeTemplate = String(responseTemplate || "");
-  if (!safeTemplate) return "";
-  return safeTemplate;
 }
 
 function getResponseTopicBadgeLabel(question) {
@@ -832,10 +812,10 @@ function getResponseQuestionBank() {
       const translationQuestion = String(row.translationQuestion || "").trim();
       const translationAnswer = String(row.translationAnswer || "").trim();
       const point = String(row.point || "").trim();
-      const normalizedAnswers = Array.isArray(row.answer)
-        ? row.answer.map((value) => normalizeResponseInput(value)).filter(Boolean)
+      const answerList = Array.isArray(row.answer)
+        ? row.answer.map((value) => String(value || "").trim()).filter(Boolean)
         : [];
-      const answerForms = buildResponseAnswerForms(normalizedAnswers);
+      const answerSpec = deriveResponseAnswerSpec(answerList, question, response);
       if (
         !id ||
         !category ||
@@ -846,11 +826,8 @@ function getResponseQuestionBank() {
         !translationQuestion ||
         !translationAnswer ||
         !point ||
-        (
-          !answerForms.oneWordAnswers.length &&
-          !answerForms.formalTwoWordAnswers.length &&
-          !answerForms.contractedAnswers.length
-        )
+        !answerSpec.canonicalAnswer ||
+        !answerSpec.acceptedAnswers.length
       ) return null;
       return {
         id,
@@ -859,7 +836,7 @@ function getResponseQuestionBank() {
         question,
         response,
         completedResponse,
-        answerForms,
+        answerSpec,
         translationQuestion,
         translationAnswer,
         point
@@ -905,7 +882,7 @@ function buildResponseQuestionSet() {
     seen.add(key);
     uniquePool.push(question);
   });
-  const selected = shuffle(uniquePool).slice(0, Math.min(RESPONSE_TRAINING_QUESTION_LIMIT, uniquePool.length));
+  const selected = shuffle(uniquePool);
   return orderResponseQuestionsForVariety(selected);
 }
 
@@ -915,21 +892,10 @@ function startResponseTraining(scope = "all") {
     alert("出題可能な応答文問題がありません。");
     return;
   }
-  const scriptedQuestions = questions.map((question) => {
-    const promptMode = detectResponsePromptMode(question.answerForms);
-    const inputMode = getResponseInputMode(question, promptMode);
-    return {
-      ...question,
-      promptMode,
-      inputMode,
-      promptTemplate: buildResponsePromptTemplate(question.response, inputMode)
-    };
-  });
-
   responseTrainingSession = {
     scope: "all",
     scopeLabel: "すべて",
-    questions: scriptedQuestions,
+    questions,
     currentIndex: 0,
     answered: false,
     correctCount: 0,
@@ -949,35 +915,18 @@ function fillResponseTemplate(responseTemplate, value) {
 }
 
 function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText) {
-  const canonicalContracted = question.answerForms.contractedAnswers[0] || "";
-  const canonicalFormal = question.answerForms.formalTwoWordAnswers[0] || "";
-  const canonicalSingle = question.answerForms.oneWordAnswers[0] || "";
-  const canonicalAnswer = question.promptMode === "formal"
-    ? (canonicalFormal || canonicalSingle || canonicalContracted)
-    : question.promptMode === "contracted"
-      ? (canonicalContracted || canonicalSingle || canonicalFormal)
-      : (canonicalSingle || canonicalContracted || canonicalFormal);
+  const canonicalAnswer = question.answerSpec.canonicalAnswer || "";
   const userRow = isCorrect
-    ? ""
+    ? `<div class="answer-line">あなたの答え：${userAnswerText || "-"}</div>`
     : `<div class="answer-line">あなたの答え：${userAnswerText || "-"}</div><div class="answer-line">正解：${canonicalAnswer}</div>`;
   const completedResponse = question.completedResponse || fillResponseTemplate(question.response, canonicalAnswer);
-  const formsRow = canonicalContracted && canonicalFormal
-    ? `<div class="response-form-pair"><span>${canonicalContracted}</span><span>= ${canonicalFormal}</span></div>`
-    : "";
-  const topicBadge = getResponseTopicBadgeLabel(question);
-  const topicToneClass = getResponseTopicToneClass(question);
   return [
     `<strong>${isCorrect ? "✅ 正解" : "❌ 不正解"}</strong>`,
     userRow,
-    `<p class="response-feedback-answer">${canonicalAnswer}</p>`,
-    `<div class="response-feedback-divider"></div>`,
-    `<p class="response-topic-label ${topicToneClass}">${topicBadge}</p>`,
-    `<div class="response-feedback-divider"></div>`,
     `<p class="response-feedback-line">${question.question}</p>`,
     question.translationQuestion ? `<p class="response-feedback-translation">${question.translationQuestion}</p>` : "",
     `<p class="response-feedback-line">${completedResponse}</p>`,
     question.translationAnswer ? `<p class="response-feedback-translation">${question.translationAnswer}</p>` : "",
-    formsRow,
     `<div class="response-feedback-divider"></div>`,
     `<p class="response-feedback-point-title">ポイント</p>`,
     question.point ? `<p class="response-feedback-point">${question.point}</p>` : ""
@@ -1005,37 +954,25 @@ function renderResponseTrainingQuestion() {
   const answerLabel = document.getElementById("responseAnswerLabel");
   const answerTranslationText = document.getElementById("responseAnswerTranslationText");
   const answerInput = document.getElementById("responseAnswerInput");
-  const answerInputSecond = document.getElementById("responseAnswerInputSecond");
-  const answerInputSecondWrap = document.getElementById("responseAnswerInputSecondWrap");
   const answerBtn = document.getElementById("responseAnswerBtn");
   const feedbackBox = document.getElementById("responseFeedbackBox");
   const nextBtn = document.getElementById("responseNextBtn");
-  if (!title || !scopeText || !counterText || !questionText || !questionLabel || !templateText || !questionTranslationText || !answerLabel || !answerTranslationText || !answerInput || !answerInputSecond || !answerInputSecondWrap || !answerBtn || !feedbackBox || !nextBtn) return;
+  if (!title || !scopeText || !counterText || !questionText || !questionLabel || !templateText || !questionTranslationText || !answerLabel || !answerTranslationText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
 
   const currentQuestion = session.questions[session.currentIndex];
   title.textContent = "応答文特訓";
   scopeText.textContent = "応答文特訓";
   counterText.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
   questionLabel.textContent = "Question";
-  questionText.textContent = currentQuestion.question;
+  questionText.textContent = currentQuestion.answerSpec.questionPrompt || currentQuestion.question;
   questionTranslationText.textContent = currentQuestion.translationQuestion || "";
   answerLabel.textContent = "Answer";
-  templateText.textContent = currentQuestion.promptTemplate || currentQuestion.response;
-  answerTranslationText.textContent = currentQuestion.translationAnswer || "";
-
-  const usesTwoInput = false;
-  answerInputSecondWrap.classList.toggle("hidden", !usesTwoInput);
-  answerInput.placeholder = currentQuestion.inputMode === "formal-single"
-    ? "例: is not"
-    : usesTwoInput
-      ? "例: can"
-      : "例: isn't";
-  answerInputSecond.placeholder = "例: not";
+  templateText.textContent = currentQuestion.answerSpec.responsePrompt || currentQuestion.response;
+  answerTranslationText.textContent = "";
+  answerInput.placeholder = currentQuestion.answerSpec.canonicalAnswer ? `例: ${currentQuestion.answerSpec.canonicalAnswer}` : "例: isn't";
 
   answerInput.value = "";
-  answerInputSecond.value = "";
   answerInput.disabled = false;
-  answerInputSecond.disabled = !usesTwoInput;
   answerBtn.disabled = false;
   feedbackBox.className = "feedback-box hidden";
   feedbackBox.innerHTML = "";
@@ -1053,27 +990,22 @@ function submitResponseTrainingAnswer() {
   if (!currentQuestion) return;
 
   const answerInput = document.getElementById("responseAnswerInput");
-  const answerInputSecond = document.getElementById("responseAnswerInputSecond");
   const answerBtn = document.getElementById("responseAnswerBtn");
   const feedbackBox = document.getElementById("responseFeedbackBox");
   const nextBtn = document.getElementById("responseNextBtn");
-  if (!answerInput || !answerInputSecond || !answerBtn || !feedbackBox || !nextBtn) return;
+  if (!answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
 
   const primaryRaw = String(answerInput.value || "");
-  const secondaryRaw = String(answerInputSecond.value || "");
-  const usesTwoInput = false;
-  if (!primaryRaw.trim() || (usesTwoInput && !secondaryRaw.trim())) {
+  if (!primaryRaw.trim()) {
     feedbackBox.className = "feedback-box error";
     feedbackBox.innerHTML = "<strong>入力してください</strong><span class=\"hint\">英字で入力してください</span>";
     answerInput.focus();
     return;
   }
-  const primaryPattern = currentQuestion.inputMode === "formal-single" ? /^[a-zA-Z' ]+$/ : /^[a-zA-Z']+$/;
-  if (!primaryPattern.test(primaryRaw.trim()) || (usesTwoInput && !/^[a-zA-Z']+$/.test(secondaryRaw.trim()))) {
+  const primaryPattern = /^[a-zA-Z' ]+$/;
+  if (!primaryPattern.test(primaryRaw.trim())) {
     feedbackBox.className = "feedback-box error";
-    feedbackBox.innerHTML = currentQuestion.inputMode === "formal-single"
-      ? "<strong>英字・スペース・' のみ入力できます</strong>"
-      : "<strong>英字と ' のみ入力できます</strong>";
+    feedbackBox.innerHTML = "<strong>英字・スペース・' のみ入力できます</strong>";
     answerInput.focus();
     return;
   }
@@ -1096,20 +1028,8 @@ function submitResponseTrainingAnswer() {
   }
 
   const normalizedPrimary = normalizeResponseInput(primaryRaw);
-  const normalizedSecondary = normalizeResponseInput(secondaryRaw);
-  const normalized = usesTwoInput
-    ? `${normalizedPrimary} ${normalizedSecondary}`.trim()
-    : normalizedPrimary;
-
-  let isCorrect = false;
-  if (currentQuestion.promptMode === "formal") {
-    isCorrect = currentQuestion.answerForms.formalTwoWordAnswers.some((answer) => answer === normalized);
-  } else if (currentQuestion.promptMode === "contracted") {
-    isCorrect = currentQuestion.answerForms.contractedAnswers.some((answer) => answer === normalized);
-  } else {
-    isCorrect = currentQuestion.answerForms.oneWordAnswers.some((answer) => answer === normalized)
-      || currentQuestion.answerForms.contractedAnswers.some((answer) => answer === normalized);
-  }
+  const normalized = normalizedPrimary;
+  const isCorrect = currentQuestion.answerSpec.acceptedAnswers.some((answer) => answer === normalized);
 
   session.answered = true;
   if (isCorrect) {
@@ -1127,12 +1047,11 @@ function submitResponseTrainingAnswer() {
   saveState();
 
   feedbackBox.className = `feedback-box ${isCorrect ? "success" : "error"}`;
-  const userAnswerText = usesTwoInput ? `${primaryRaw.trim()} ${secondaryRaw.trim()}`.trim() : primaryRaw.trim();
+  const userAnswerText = primaryRaw.trim();
   feedbackBox.innerHTML = buildResponseFeedbackMarkup(currentQuestion, isCorrect, userAnswerText);
   nextBtn.classList.remove("hidden");
   nextBtn.disabled = false;
   answerInput.disabled = true;
-  answerInputSecond.disabled = true;
   answerBtn.disabled = true;
   nextBtn.focus();
 }

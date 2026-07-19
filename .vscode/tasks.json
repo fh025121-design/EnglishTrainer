@@ -154,6 +154,31 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "test-python-task",
+			"type": "shell",
+			"command": "py -3 -c \"print('ok-task')\""
+		},
+		{
+			"label": "inspect-response-docx",
+			"type": "shell",
+			"command": "py -3 _inspect_response_docx.py"
+		},
+		{
+			"label": "merge-response-docx",
+			"type": "shell",
+			"command": "py -3 _merge_response_docx.py"
+		},
+		{
+			"label": "build-response-appended-from-docx",
+			"type": "shell",
+			"command": "py -3 _build_response_appended_from_docx.py"
+		},
+		{
+			"label": "apply-response-appended",
+			"type": "shell",
+			"command": "py -3 _apply_response_appended.py"
 		}
 	]
 }
