@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/20", note: "単語ヒントを調整。similar設定語は意味の違いが分かる区別ヒントを優先し、迷いにくい重複語や指定対象（do/play、depart/leave、class/lesson、borrow/lend、start/begin、finish/stop）のヒントは削除して空欄へ統一" },
     { version: "2026/07/19 13:10", note: "PC専用レイアウトを画面サイズ依存で自動縮小するレスポンシブ調整を実施。解像度・ブラウザサイズ・表示倍率に応じてUIスケールを再計算し、フォント・ボタン・余白・入力欄サイズを自動最適化。主要学習画面でページ全体の縦スクロールを抑制" },
     { version: "2026/07/19 12:40", note: "更新履歴の運用ルールを明確化。履歴の統合作業は当日には行わず、前日分を翌日以降にまとめる方式へ統一" },
     { version: "2026-07-19T03:30:00Z", note: "（2026/07/19分まとめ）学習集計を通常学習と特訓で分離しつつ日次総量を維持。前置詞特訓に和訳表示を追加。PC版『応答文特訓』を全231問へ拡張（既存31問＋追加200問）し、全ランダム出題・1入力欄・空欄数連動（isn't=1 / is not=2 / do not have to=4）・複数空欄は出現順1行入力で判定に統一。さらに採点を大文字小文字区別へ変更し、文頭5W1H（What/When/Where/Who/Why/How）は先頭大文字必須化" },
