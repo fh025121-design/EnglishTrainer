@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/20", note: "学習画面（通常/復習）の問題文直下にhint表示を追加。hintが空欄の問題では表示を自動非表示にし、similar表示や採点・進行ロジックは変更なし" },
     { version: "2026/07/20", note: "単語ヒントを調整。similar設定語は意味の違いが分かる区別ヒントを優先し、迷いにくい重複語や指定対象（do/play、depart/leave、class/lesson、borrow/lend、start/begin、finish/stop）のヒントは削除して空欄へ統一" },
     { version: "2026/07/19 13:10", note: "PC専用レイアウトを画面サイズ依存で自動縮小するレスポンシブ調整を実施。解像度・ブラウザサイズ・表示倍率に応じてUIスケールを再計算し、フォント・ボタン・余白・入力欄サイズを自動最適化。主要学習画面でページ全体の縦スクロールを抑制" },
     { version: "2026/07/19 12:40", note: "更新履歴の運用ルールを明確化。履歴の統合作業は当日には行わず、前日分を翌日以降にまとめる方式へ統一" },
