@@ -1490,6 +1490,15 @@ select {
   text-align: center;
 }
 
+.question-hint-text {
+  margin: 2px 0 0;
+  color: rgba(232, 242, 255, 0.9);
+  font-size: clamp(15px, calc(18px * var(--pc-ui-scale)), 18px);
+  line-height: 1.35;
+  font-weight: 700;
+  text-align: center;
+}
+
 .similar-hints {
   width: 100%;
   margin: 0;

@@ -5296,6 +5296,7 @@ function renderQuestionSession() {
   const questionPhaseText = document.getElementById("questionPhaseText");
   const questionTypeBadge = document.getElementById("questionTypeBadge");
   const meaningText = document.getElementById("meaningText");
+  const questionHintText = document.getElementById("questionHintText");
   const similarHints = document.getElementById("similarHints");
   const feedbackBox = document.getElementById("feedbackBox");
   const nextQuestionBtn = document.getElementById("nextQuestionBtn");
@@ -5310,6 +5311,11 @@ function renderQuestionSession() {
   questionTypeBadge.textContent = question.type === "phrase" ? "熟語で答える" : "単語で答える";
   questionTypeBadge.className = `type-badge ${question.type === "phrase" ? "phrase" : "word"}`;
   meaningText.textContent = getQuestionPromptText(question);
+  const hintText = String(question.hint || "").trim();
+  if (questionHintText) {
+    questionHintText.classList.toggle("hidden", !hintText);
+    questionHintText.textContent = hintText ? `（${hintText}）` : "";
+  }
   similarHints.classList.toggle("hidden", !(question.similar || []).length);
   similarHints.innerHTML = (question.similar || []).length
     ? `<strong>類義語ヒント</strong><ul>${(question.similar || []).map((item) => `<li>${item.answer} = ${item.reason}</li>`).join("")}</ul>`
@@ -5372,6 +5378,7 @@ function renderReviewSession() {
   const reviewPhaseText = document.getElementById("reviewPhaseText");
   const reviewTypeBadge = document.getElementById("reviewTypeBadge");
   const reviewMeaningText = document.getElementById("reviewMeaningText");
+  const reviewHintText = document.getElementById("reviewHintText");
   const reviewSimilarHints = document.getElementById("reviewSimilarHints");
   const reviewFeedbackBox = document.getElementById("reviewFeedbackBox");
   const reviewNextBtn = document.getElementById("reviewNextBtn");
@@ -5386,6 +5393,11 @@ function renderReviewSession() {
   reviewTypeBadge.textContent = question.type === "phrase" ? "熟語で答える" : "単語で答える";
   reviewTypeBadge.className = `type-badge ${question.type === "phrase" ? "phrase" : "word"}`;
   reviewMeaningText.textContent = getQuestionPromptText(question);
+  const reviewHintTextValue = String(question.hint || "").trim();
+  if (reviewHintText) {
+    reviewHintText.classList.toggle("hidden", !reviewHintTextValue);
+    reviewHintText.textContent = reviewHintTextValue ? `（${reviewHintTextValue}）` : "";
+  }
   reviewSimilarHints.classList.toggle("hidden", !(question.similar || []).length);
   reviewSimilarHints.innerHTML = (question.similar || []).length
     ? `<strong>類義語ヒント</strong><ul>${(question.similar || []).map((item) => `<li>${item.answer} = ${item.reason}</li>`).join("")}</ul>`
