@@ -997,6 +997,21 @@ function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText) {
   ].join("");
 }
 
+function shouldShowResponsePreAnswerHint(question) {
+  if (!question) return false;
+  const idNumber = parseResponseIdNumber(question.id);
+  if (!Number.isFinite(idNumber) || idNumber < 132 || idNumber > 231) return false;
+
+  const categoryText = String(question.category || "");
+  const topicText = String(question.topic || question.title || "");
+  if (!categoryText.includes("5W1H") && !topicText.includes("5W1H")) return false;
+
+  const responseText = String(question.answerSpec?.responsePrompt || question.response || "");
+  if (!/\(\s*\)/.test(responseText) && !responseText.includes("(      )")) return false;
+
+  return Boolean(String(question.translationAnswer || "").trim());
+}
+
 function renderResponseTrainingQuestion() {
   const session = responseTrainingSession;
   if (!session) {
@@ -1034,7 +1049,9 @@ function renderResponseTrainingQuestion() {
   questionTranslationText.textContent = currentQuestion.translationQuestion || "";
   answerLabel.textContent = "Answer";
   templateText.textContent = currentQuestion.answerSpec.responsePrompt || currentQuestion.response;
-  answerTranslationText.textContent = "";
+  const preAnswerHintText = shouldShowResponsePreAnswerHint(currentQuestion) ? String(currentQuestion.translationAnswer || "") : "";
+  answerTranslationText.textContent = preAnswerHintText;
+  answerTranslationText.classList.toggle("hidden", !preAnswerHintText);
   answerInput.placeholder = currentQuestion.answerSpec.canonicalAnswer ? `例: ${currentQuestion.answerSpec.canonicalAnswer}` : "例: isn't";
 
   answerInput.value = "";
