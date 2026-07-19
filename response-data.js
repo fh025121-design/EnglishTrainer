@@ -1696,7 +1696,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your father always leave home so early on Mondays?He has an important meeting every Monday morning.",
     translationQuestion: "お父さんは月曜日になると、なぜいつもそんなに早く家を出るのですか。",
     translationAnswer: "毎週月曜日の朝に大事な会議があるからです。",
-    point: "have の三単現は has。"
+    point: "「会議がある」が has のヒントです。"
   },
   {
     id: "response_133",
@@ -1732,7 +1732,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "How does your English teacher usually begin every class?She begins with a short quiz.",
     translationQuestion: "英語の先生は授業をいつもどのように始めますか。",
     translationAnswer: "最初に小テストから始めます。",
-    point: "begin の三単現は begins。"
+    point: "「始めます」が begins のヒントです。"
   },
   {
     id: "response_136",
@@ -1756,7 +1756,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "How do you usually spend your summer vacation?I read a lot of books and play baseball.",
     translationQuestion: "夏休みは普段どのように過ごしますか。",
     translationAnswer: "たくさん本を読んで、野球をします。",
-    point: "How は「どのように」。"
+    point: "「本を読む」が read のヒントです。"
   },
   {
     id: "response_138",
@@ -1779,8 +1779,8 @@ const responseTrainingAppendedItems = [
     answer: ["Why", "makes"],
     completedResponse: "Why does your grandmother make such delicious bread?She makes it every weekend.",
     translationQuestion: "おばあさんはどうしてそんなにおいしいパンを作れるのですか。",
-    translationAnswer: "毎週末作っているからです。",
-    point: "make の三単現は makes。"
+    translationAnswer: "毎週末それを作るからです。",
+    point: "「作る」が makes のヒントです。"
   },
   {
     id: "response_140",
@@ -1803,8 +1803,8 @@ const responseTrainingAppendedItems = [
     answer: ["Why", "wants"],
     completedResponse: "Why does your science teacher always prepare interesting experiments?He wants students to enjoy science.",
     translationQuestion: "理科の先生はなぜいつも面白い実験を準備するのですか。",
-    translationAnswer: "生徒に理科を好きになってもらいたいからです。",
-    point: "「～したい」が wants のヒントになる。"
+    translationAnswer: "生徒に理科を好きになってほしいからです。",
+    point: "「してほしい」が wants のヒントです。"
   },
   {
     id: "response_142",
@@ -1816,7 +1816,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your mother always bring her own shopping bag?She wants to reduce plastic waste.",
     translationQuestion: "お母さんはなぜいつも自分の買い物袋を持って行くのですか。",
     translationAnswer: "プラスチックごみを減らしたいからです。",
-    point: "「～したい」が wants のヒントになる。"
+    point: "「したい」が wants のヒントです。"
   },
   {
     id: "response_143",
@@ -1852,7 +1852,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Where does your father usually have lunch?He has lunch at a small restaurant near his office.",
     translationQuestion: "お父さんは普段どこで昼食を食べますか。",
     translationAnswer: "会社の近くの小さなレストランで昼食を食べます。",
-    point: "have の三単現は has。"
+    point: "「昼食を食べる」が has のヒントです。"
   },
   {
     id: "response_146",
@@ -1875,8 +1875,8 @@ const responseTrainingAppendedItems = [
     answer: ["Where", "practice"],
     completedResponse: "Where do you usually practice speaking English?I practice at home.",
     translationQuestion: "普段どこで英語を話す練習をしていますか。",
-    translationAnswer: "家で練習しています。",
-    point: "practice speaking は頻出表現。"
+    translationAnswer: "家で練習します。",
+    point: "「練習する」が practice のヒントです。"
   },
   {
     id: "response_148",
@@ -1899,8 +1899,8 @@ const responseTrainingAppendedItems = [
     answer: ["Why", "teaches"],
     completedResponse: "How does your English teacher remember all the students' names?She teaches everyone carefully.",
     translationQuestion: "英語の先生はなぜ全員の名前を覚えているのですか。",
-    translationAnswer: "一人ひとり丁寧に教えているからです。",
-    point: "teach の三単現は teaches。"
+    translationAnswer: "一人ひとりを丁寧に教えるからです。",
+    point: "「教える」が teaches のヒントです。"
   },
   {
     id: "response_150",
@@ -1924,7 +1924,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your homeroom teacher always encourage everyone to ask questions?He believes students learn better that way.",
     translationQuestion: "担任の先生はなぜみんなに質問するよう勧めるのですか。",
     translationAnswer: "その方が生徒はよく学べると信じているからです。",
-    point: "「～と信じている」が believes のヒントになる。"
+    point: "「信じている」が believes のヒントです。"
   },
   {
     id: "response_152",
@@ -1936,7 +1936,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your father always check the weather before leaving home?He wants to know if he needs an umbrella.",
     translationQuestion: "お父さんはなぜ家を出る前にいつも天気を確認するのですか。",
     translationAnswer: "傘が必要か知りたいからです。",
-    point: "「～したい」が wants のヒントになる。"
+    point: "「知りたい」が wants のヒントです。"
   },
   {
     id: "response_153",
@@ -1972,7 +1972,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "What does your sister usually study after she gets home?She studies math first.",
     translationQuestion: "お姉さん（妹）は家に帰ると、まず何を勉強しますか。",
     translationAnswer: "最初に数学を勉強します。",
-    point: "study の三単現は studies。"
+    point: "「勉強する」が studies のヒントです。"
   },
   {
     id: "response_156",
@@ -1996,7 +1996,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Where do you usually meet your friends after school?We meet at the school gate.",
     translationQuestion: "放課後はどこで友達と会いますか。",
     translationAnswer: "学校の門で会います。",
-    point: "meet は「会う」。"
+    point: "「会う」が meet のヒントです。"
   },
   {
     id: "response_158",
@@ -2020,7 +2020,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "What does your grandfather usually read every morning?He reads the newspaper.",
     translationQuestion: "おじいさんは毎朝何を読みますか。",
     translationAnswer: "新聞を読みます。",
-    point: "read の三単現は reads。"
+    point: "「読む」が reads のヒントです。"
   },
   {
     id: "response_160",
@@ -2043,8 +2043,8 @@ const responseTrainingAppendedItems = [
     answer: ["Why", "wants"],
     completedResponse: "Why does your English teacher always ask everyone to speak loudly?She wants everyone to speak with confidence.",
     translationQuestion: "英語の先生はなぜいつもみんなに大きな声で話すよう言うのですか。",
-    translationAnswer: "みんなに自信を持って話してもらいたいからです。",
-    point: "「～したい」が wants のヒントになる。"
+    translationAnswer: "みんなに自信を持って話してほしいからです。",
+    point: "「話してほしい」が wants のヒントです。"
   },
   {
     id: "response_162",
@@ -2056,7 +2056,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your father usually drive to work instead of taking the train?He visits many customers during the day.",
     translationQuestion: "お父さんはなぜ普段電車ではなく車で通勤するのですか。",
     translationAnswer: "日中にたくさんのお客様を訪問するからです。",
-    point: "visit の三単現は visits。"
+    point: "「訪問する」が visits のヒントです。"
   },
   {
     id: "response_163",
@@ -2092,7 +2092,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Where does your mother usually buy fresh vegetables?She buys them at the local market.",
     translationQuestion: "お母さんは普段どこで新鮮な野菜を買いますか。",
     translationAnswer: "近所の市場で買います。",
-    point: "buy の三単現は buys。"
+    point: "「買う」が buys のヒントです。"
   },
   {
     id: "response_166",
@@ -2116,7 +2116,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "When do you usually go to bed on school nights?I go to bed at ten.",
     translationQuestion: "学校がある日は普段何時に寝ますか。",
     translationAnswer: "10時に寝ます。",
-    point: "go to bed は基本熟語。"
+    point: "「寝る」が go のヒントです。"
   },
   {
     id: "response_168",
@@ -2140,7 +2140,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always review yesterday's lesson first?She helps students remember it better.",
     translationQuestion: "英語の先生はなぜいつも昨日の授業を最初に復習するのですか。",
     translationAnswer: "生徒がよりよく覚えられるようにするためです。",
-    point: "「～できるようにする」が helps のヒントになる。"
+    point: "「できるようにする」が helps のヒントです。"
   },
   {
     id: "response_170",
@@ -2164,7 +2164,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your science teacher always ask students to write down their observations?He believes careful observation is important.",
     translationQuestion: "理科の先生はなぜいつも観察したことを書き留めるように言うのですか。",
     translationAnswer: "注意深い観察が大切だと信じているからです。",
-    point: "「～と信じている」が believes のヒントになる。"
+    point: "「信じている」が believes のヒントです。"
   },
   {
     id: "response_172",
@@ -2176,7 +2176,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "When does your mother usually water the flowers?She waters them every morning.",
     translationQuestion: "お母さんは普段いつ花に水をあげますか。",
     translationAnswer: "毎朝水をあげます。",
-    point: "water の三単現は waters。"
+    point: "「水をあげる」が waters のヒントです。"
   },
   {
     id: "response_173",
@@ -2212,7 +2212,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "When does your brother usually finish his homework?He finishes it before dinner.",
     translationQuestion: "お兄さん（弟）は普段何時に宿題を終えますか。",
     translationAnswer: "夕食前に終わらせます。",
-    point: "finish の三単現は finishes。"
+    point: "「終わらせる」が finishes のヒントです。"
   },
   {
     id: "response_176",
@@ -2236,7 +2236,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Who do you usually study with after school?I study with my best friend.",
     translationQuestion: "放課後は普段誰と勉強しますか。",
     translationAnswer: "親友と勉強します。",
-    point: "Who ... with? の語順に慣れよう。"
+    point: "「勉強する」が study のヒントです。"
   },
   {
     id: "response_178",
@@ -2260,7 +2260,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Where does your grandfather usually take a walk?He walks in the nearby park.",
     translationQuestion: "おじいさんは普段どこを散歩しますか。",
     translationAnswer: "近くの公園を散歩します。",
-    point: "walk の三単現は walks。"
+    point: "「散歩する」が walks のヒントです。"
   },
   {
     id: "response_180",
@@ -2284,7 +2284,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always encourage students to read English books?She believes reading improves our vocabulary.",
     translationQuestion: "英語の先生はなぜいつも英語の本を読むよう勧めるのですか。",
     translationAnswer: "読書は語彙力を伸ばすと信じているからです。",
-    point: "「～と信じている」が believes のヒントになる。"
+    point: "「信じている」が believes のヒントです。"
   },
   {
     id: "response_182",
@@ -2295,8 +2295,8 @@ const responseTrainingAppendedItems = [
     answer: ["When", "arrives"],
     completedResponse: "When does your father usually arrive at his office?He arrives there at eight thirty.",
     translationQuestion: "お父さんは普段何時に会社へ着きますか。",
-    translationAnswer: "8時30分に会社へ着きます。",
-    point: "arrive の三単現は arrives。"
+    translationAnswer: "8時30分に会社に到着します。",
+    point: "「到着する」が arrives のヒントです。"
   },
   {
     id: "response_183",
@@ -2332,7 +2332,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "What does your sister usually spend her allowance on?She buys books and stationery.",
     translationQuestion: "お姉さん（妹）はお小遣いを何に使いますか。",
     translationAnswer: "本や文房具を買います。",
-    point: "実際の会話では spend A on B がよく使われる。"
+    point: "「買う」が buys のヒントです。"
   },
   {
     id: "response_186",
@@ -2356,7 +2356,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "What do you usually do when you have free time?I read books or listen to music.",
     translationQuestion: "時間があるときは普段何をしますか。",
     translationAnswer: "本を読んだり、音楽を聞いたりします。",
-    point: "What do you do...? は非常によく使う質問。"
+    point: "「本を読む」が read のヒントです。"
   },
   {
     id: "response_188",
@@ -2380,7 +2380,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "What does your grandfather usually watch on TV every evening?He watches the news.",
     translationQuestion: "おじいさんは毎晩テレビで何を見ますか。",
     translationAnswer: "ニュースを見ます。",
-    point: "watch の三単現は watches。"
+    point: "「見る」が watches のヒントです。"
   },
   {
     id: "response_190",
@@ -2404,7 +2404,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always ask students to use complete sentences?She believes it helps us communicate more clearly.",
     translationQuestion: "英語の先生はなぜいつも完全な文で答えるように言うのですか。",
     translationAnswer: "その方がより分かりやすく伝えられると信じているからです。",
-    point: "「～と信じている」が believes のヒントになる。"
+    point: "「信じている」が believes のヒントです。"
   },
   {
     id: "response_192",
@@ -2416,7 +2416,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Where does your father usually keep his important documents?He keeps them in a locked drawer.",
     translationQuestion: "お父さんは大切な書類を普段どこに保管していますか。",
     translationAnswer: "鍵のかかる引き出しに保管しています。",
-    point: "keep の三単現は keeps。"
+    point: "「保管している」が keeps のヒントです。"
   },
   {
     id: "response_193",
@@ -2452,7 +2452,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "What does your mother usually make for breakfast?She makes toast and eggs.",
     translationQuestion: "お母さんは朝食に普段何を作りますか。",
     translationAnswer: "トーストと卵料理を作ります。",
-    point: "make の三単現は makes。"
+    point: "「作る」が makes のヒントです。"
   },
   {
     id: "response_196",
@@ -2476,7 +2476,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "How do you usually help your parents at home?I wash the dishes after dinner.",
     translationQuestion: "家ではどのように両親を手伝っていますか。",
     translationAnswer: "夕食後にお皿を洗います。",
-    point: "wash the dishes は基本熟語。"
+    point: "「お皿を洗う」が wash のヒントです。"
   },
   {
     id: "response_198",
@@ -2500,7 +2500,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "When does your grandfather usually feed the birds?He feeds them every morning.",
     translationQuestion: "おじいさんは普段いつ鳥にえさをあげますか。",
     translationAnswer: "毎朝えさをあげます。",
-    point: "feed の三単現は feeds。"
+    point: "「えさをあげる」が feeds のヒントです。"
   },
   {
     id: "response_200",
@@ -2524,7 +2524,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always ask students to read books outside class?She believes it helps us learn new words naturally.",
     translationQuestion: "英語の先生はなぜ授業以外でも本を読むよう勧めるのですか。",
     translationAnswer: "自然に新しい単語を覚えられると信じているからです。",
-    point: "learn ... naturally や outside class は英検3級レベルでも使いやすい自然な表現。"
+    point: "「信じている」が believes のヒントです。"
   },
   {
     id: "response_202",
@@ -2536,7 +2536,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "When does your father usually take a vacation?He takes a vacation in August.",
     translationQuestion: "お父さんは普段いつ休暇を取りますか。",
     translationAnswer: "8月に休暇を取ります。",
-    point: "take a vacation は重要表現。"
+    point: "「休暇を取る」が takes のヒントです。"
   },
   {
     id: "response_203",
@@ -2572,7 +2572,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "What does your mother usually clean first on weekends?She cleans the living room.",
     translationQuestion: "お母さんは週末、最初にどこを掃除しますか。",
     translationAnswer: "最初にリビングを掃除します。",
-    point: "clean の三単現は cleans。"
+    point: "「掃除する」が cleans のヒントです。"
   },
   {
     id: "response_206",
@@ -2596,7 +2596,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "How do you usually spend your Sunday mornings?I play baseball with my friends.",
     translationQuestion: "日曜日の午前中は普段どのように過ごしますか。",
     translationAnswer: "友達と野球をします。",
-    point: "How do you spend ～? は頻出表現。"
+    point: "「野球をする」が play のヒントです。"
   },
   {
     id: "response_208",
@@ -2620,7 +2620,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "What does your grandfather usually grow in his garden?He grows tomatoes and cucumbers.",
     translationQuestion: "おじいさんは庭で普段何を育てていますか。",
     translationAnswer: "トマトときゅうりを育てています。",
-    point: "grow の三単現は grows。"
+    point: "「育てる」が grows のヒントです。"
   },
   {
     id: "response_210",
@@ -2644,7 +2644,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always encourage students to speak English in class?She believes speaking English builds confidence.",
     translationQuestion: "英語の先生はなぜ授業中に英語で話すよう勧めるのですか。",
     translationAnswer: "英語で話すことが自信につながると信じているからです。",
-    point: "build confidence（自信をつける） は中学生にも覚えてほしい便利な表現です。"
+    point: "「信じている」が believes のヒントです。"
   },
   {
     id: "response_212",
@@ -2656,7 +2656,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Where does your father usually park his car?He parks it behind his office.",
     translationQuestion: "お父さんは普段どこに車を止めますか。",
     translationAnswer: "会社の裏に止めます。",
-    point: "park の三単現は parks。"
+    point: "「止める」が parks のヒントです。"
   },
   {
     id: "response_213",
@@ -2692,7 +2692,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "When does your sister usually listen to music?She listens to music before going to bed.",
     translationQuestion: "お姉さん（妹）はいつ音楽を聞きますか。",
     translationAnswer: "寝る前に聞きます。",
-    point: "listen の三単現は listens。"
+    point: "「聞く」が listens のヒントです。"
   },
   {
     id: "response_216",
@@ -2716,7 +2716,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why do you usually use your computer?I use it to study English.",
     translationQuestion: "普段何のためにパソコンを使いますか。",
     translationAnswer: "英語を勉強するために使います。",
-    point: "use A to ～ は非常に重要な形。"
+    point: "「使う」が use のヒントです。"
   },
   {
     id: "response_218",
@@ -2740,7 +2740,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "What does your grandfather usually read before breakfast?He reads the newspaper.",
     translationQuestion: "おじいさんは朝食前に普段何を読みますか。",
     translationAnswer: "新聞を読みます。",
-    point: "read の三単現は reads。"
+    point: "「読む」が reads のヒントです。"
   },
   {
     id: "response_220",
@@ -2763,8 +2763,8 @@ const responseTrainingAppendedItems = [
     answer: ["Why", "believes"],
     completedResponse: "Why does your English teacher always ask students to read aloud?She believes it improves our pronunciation.",
     translationQuestion: "英語の先生はなぜいつも音読をさせるのですか。",
-    translationAnswer: "音読は発音が良くなると信じているからです。",
-    point: "pronunciation（発音） は英検3級頻出単語。"
+    translationAnswer: "音読で発音が良くなると信じているからです。",
+    point: "「信じている」が believes のヒントです。"
   },
   {
     id: "response_222",
@@ -2776,7 +2776,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Where does your father usually buy coffee on his way to work?He buys it at a convenience store.",
     translationQuestion: "お父さんは通勤途中のどこでコーヒーを買いますか。",
     translationAnswer: "コンビニで買います。",
-    point: "on one's way to ～ は便利な表現。"
+    point: "「買う」が buys のヒントです。"
   },
   {
     id: "response_223",
@@ -2812,7 +2812,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Where does your mother usually buy bread?She buys it at a bakery.",
     translationQuestion: "お母さんは普段どこでパンを買いますか。",
     translationAnswer: "パン屋で買います。",
-    point: "bakery（パン屋）も覚えよう。"
+    point: "「買う」が buys のヒントです。"
   },
   {
     id: "response_226",
@@ -2836,7 +2836,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Who do you usually go shopping with?I go with my mother.",
     translationQuestion: "普段誰と買い物へ行きますか。",
     translationAnswer: "母と行きます。",
-    point: "Who ... with? の語順に慣れよう。"
+    point: "「行く」が go のヒントです。"
   },
   {
     id: "response_228",
@@ -2860,7 +2860,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "How does your grandfather usually spend his evenings?He reads books and watches TV.",
     translationQuestion: "おじいさんは夕方を普段どのように過ごしますか。",
     translationAnswer: "本を読んだりテレビを見たりして過ごします。",
-    point: "read と watch の両方に触れられる問題。"
+    point: "「本を読む」が reads のヒントです。"
   },
   {
     id: "response_230",
@@ -2884,7 +2884,7 @@ const responseTrainingAppendedItems = [
     completedResponse: "Why does your English teacher always tell students to keep studying every day?She believes daily practice leads to success.",
     translationQuestion: "英語の先生はなぜ毎日勉強を続けるように言うのですか。",
     translationAnswer: "毎日の積み重ねが成功につながると信じているからです。",
-    point: "lead to ～（～につながる） は高校入試でもよく使われる重要表現です。"
+    point: "「信じている」が believes のヒントです。"
   }
 ];
 
