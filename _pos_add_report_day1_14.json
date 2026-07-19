@@ -1,0 +1,955 @@
+{
+  "backupExistsBefore": true,
+  "docsPresent": {
+    "STEP1単語熟語_Day1-7.docx": true,
+    "STEP1_単語熟語_Day8-9(1).docx": true,
+    "STEP1_単語熟語_Day10-14(1).docx": true
+  },
+  "addedCount": 149,
+  "targetWordCount": 280,
+  "unprocessed": [
+    {
+      "id": "D01-W01",
+      "day": 1,
+      "answer": "be",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W03",
+      "day": 1,
+      "answer": "do",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W04",
+      "day": 1,
+      "answer": "make",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W06",
+      "day": 1,
+      "answer": "get",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W07",
+      "day": 1,
+      "answer": "go",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W08",
+      "day": 1,
+      "answer": "come",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W09",
+      "day": 1,
+      "answer": "see",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W11",
+      "day": 1,
+      "answer": "watch",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W13",
+      "day": 1,
+      "answer": "listen",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W14",
+      "day": 1,
+      "answer": "speak",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W15",
+      "day": 1,
+      "answer": "say",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W18",
+      "day": 1,
+      "answer": "ask",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W19",
+      "day": 1,
+      "answer": "answer",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D01-W20",
+      "day": 1,
+      "answer": "know",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W02",
+      "day": 2,
+      "answer": "understand",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W03",
+      "day": 2,
+      "answer": "learn",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W04",
+      "day": 2,
+      "answer": "study",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W05",
+      "day": 2,
+      "answer": "teach",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W06",
+      "day": 2,
+      "answer": "read",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W07",
+      "day": 2,
+      "answer": "write",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W08",
+      "day": 2,
+      "answer": "use",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W09",
+      "day": 2,
+      "answer": "help",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W10",
+      "day": 2,
+      "answer": "work",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W11",
+      "day": 2,
+      "answer": "go",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W12",
+      "day": 2,
+      "answer": "come",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W13",
+      "day": 2,
+      "answer": "listen",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W14",
+      "day": 2,
+      "answer": "speak",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W15",
+      "day": 2,
+      "answer": "ask",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W16",
+      "day": 2,
+      "answer": "answer",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W17",
+      "day": 2,
+      "answer": "know",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W19",
+      "day": 2,
+      "answer": "make",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D02-W20",
+      "day": 2,
+      "answer": "get",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W01",
+      "day": 3,
+      "answer": "play",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W02",
+      "day": 3,
+      "answer": "run",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W03",
+      "day": 3,
+      "answer": "walk",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W04",
+      "day": 3,
+      "answer": "eat",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W05",
+      "day": 3,
+      "answer": "drink",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W06",
+      "day": 3,
+      "answer": "buy",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W07",
+      "day": 3,
+      "answer": "sell",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W08",
+      "day": 3,
+      "answer": "pay",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W09",
+      "day": 3,
+      "answer": "give",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W10",
+      "day": 3,
+      "answer": "show",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W12",
+      "day": 3,
+      "answer": "study",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W13",
+      "day": 3,
+      "answer": "read",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W14",
+      "day": 3,
+      "answer": "write",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W15",
+      "day": 3,
+      "answer": "use",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W16",
+      "day": 3,
+      "answer": "help",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W17",
+      "day": 3,
+      "answer": "know",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W18",
+      "day": 3,
+      "answer": "speak",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D03-W20",
+      "day": 3,
+      "answer": "teach",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W01",
+      "day": 4,
+      "answer": "bring",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W02",
+      "day": 4,
+      "answer": "send",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W03",
+      "day": 4,
+      "answer": "meet",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W04",
+      "day": 4,
+      "answer": "visit",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W05",
+      "day": 4,
+      "answer": "travel",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W06",
+      "day": 4,
+      "answer": "stay",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W07",
+      "day": 4,
+      "answer": "live",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W08",
+      "day": 4,
+      "answer": "move",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W09",
+      "day": 4,
+      "answer": "open",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W10",
+      "day": 4,
+      "answer": "close",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W11",
+      "day": 4,
+      "answer": "play",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W12",
+      "day": 4,
+      "answer": "run",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W13",
+      "day": 4,
+      "answer": "walk",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W14",
+      "day": 4,
+      "answer": "eat",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W15",
+      "day": 4,
+      "answer": "drink",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W16",
+      "day": 4,
+      "answer": "buy",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W17",
+      "day": 4,
+      "answer": "pay",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W18",
+      "day": 4,
+      "answer": "give",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W19",
+      "day": 4,
+      "answer": "show",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D04-W20",
+      "day": 4,
+      "answer": "help",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W01",
+      "day": 5,
+      "answer": "start",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W02",
+      "day": 5,
+      "answer": "begin",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W03",
+      "day": 5,
+      "answer": "finish",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W04",
+      "day": 5,
+      "answer": "stop",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W05",
+      "day": 5,
+      "answer": "wait",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W06",
+      "day": 5,
+      "answer": "call",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W07",
+      "day": 5,
+      "answer": "find",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W08",
+      "day": 5,
+      "answer": "lose",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W09",
+      "day": 5,
+      "answer": "win",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W10",
+      "day": 5,
+      "answer": "try",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W11",
+      "day": 5,
+      "answer": "bring",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W12",
+      "day": 5,
+      "answer": "send",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W13",
+      "day": 5,
+      "answer": "meet",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W14",
+      "day": 5,
+      "answer": "visit",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W15",
+      "day": 5,
+      "answer": "travel",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W16",
+      "day": 5,
+      "answer": "stay",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W17",
+      "day": 5,
+      "answer": "live",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W18",
+      "day": 5,
+      "answer": "open",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W19",
+      "day": 5,
+      "answer": "close",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D05-W20",
+      "day": 5,
+      "answer": "move",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W01",
+      "day": 6,
+      "answer": "hope",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W02",
+      "day": 6,
+      "answer": "decide",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W03",
+      "day": 6,
+      "answer": "remember",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W04",
+      "day": 6,
+      "answer": "forget",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W05",
+      "day": 6,
+      "answer": "need",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W06",
+      "day": 6,
+      "answer": "want",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W07",
+      "day": 6,
+      "answer": "enjoy",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W08",
+      "day": 6,
+      "answer": "arrive",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W09",
+      "day": 6,
+      "answer": "become",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W10",
+      "day": 6,
+      "answer": "leave",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W11",
+      "day": 6,
+      "answer": "start",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W12",
+      "day": 6,
+      "answer": "finish",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W13",
+      "day": 6,
+      "answer": "wait",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W14",
+      "day": 6,
+      "answer": "call",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W15",
+      "day": 6,
+      "answer": "find",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W16",
+      "day": 6,
+      "answer": "lose",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W17",
+      "day": 6,
+      "answer": "win",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W18",
+      "day": 6,
+      "answer": "try",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W19",
+      "day": 6,
+      "answer": "visit",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D06-W20",
+      "day": 6,
+      "answer": "stay",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W01",
+      "day": 7,
+      "answer": "return",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W02",
+      "day": 7,
+      "answer": "choose",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W03",
+      "day": 7,
+      "answer": "borrow",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W04",
+      "day": 7,
+      "answer": "lend",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W05",
+      "day": 7,
+      "answer": "join",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W06",
+      "day": 7,
+      "answer": "grow",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W07",
+      "day": 7,
+      "answer": "improve",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W08",
+      "day": 7,
+      "answer": "change",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W09",
+      "day": 7,
+      "answer": "carry",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W10",
+      "day": 7,
+      "answer": "invite",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W11",
+      "day": 7,
+      "answer": "hope",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W12",
+      "day": 7,
+      "answer": "decide",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W13",
+      "day": 7,
+      "answer": "remember",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W14",
+      "day": 7,
+      "answer": "forget",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W15",
+      "day": 7,
+      "answer": "need",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W16",
+      "day": 7,
+      "answer": "want",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W17",
+      "day": 7,
+      "answer": "enjoy",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W18",
+      "day": 7,
+      "answer": "arrive",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W19",
+      "day": 7,
+      "answer": "become",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D07-W20",
+      "day": 7,
+      "answer": "leave",
+      "reason": "answer_not_found_in_word_doc"
+    },
+    {
+      "id": "D08-W01",
+      "day": 8,
+      "answer": "ask someone to",
+      "reason": "answer_not_found_in_word_doc"
+    }
+  ],
+  "uncertainFromWord": [],
+  "duplicateId": false,
+  "missingIds": [],
+  "existingFieldsChanged": false,
+  "jsSyntaxLike": false,
+  "status": "ok",
+  "addedIds": [
+    "D01-W02",
+    "D01-W05",
+    "D01-W10",
+    "D01-W12",
+    "D01-W16",
+    "D01-W17",
+    "D02-W01",
+    "D02-W18",
+    "D03-W11",
+    "D03-W19",
+    "D08-W02",
+    "D08-W03",
+    "D08-W04",
+    "D08-W05",
+    "D08-W06",
+    "D08-W07",
+    "D08-W08",
+    "D08-W09",
+    "D08-W10",
+    "D08-W11",
+    "D08-W12",
+    "D08-W13",
+    "D08-W14",
+    "D08-W15",
+    "D08-W16",
+    "D08-W17",
+    "D08-W18",
+    "D08-W19",
+    "D08-W20",
+    "D09-W01",
+    "D09-W02",
+    "D09-W03",
+    "D09-W04",
+    "D09-W05",
+    "D09-W06",
+    "D09-W07",
+    "D09-W08",
+    "D09-W09",
+    "D09-W10",
+    "D09-W11",
+    "D09-W12",
+    "D09-W13",
+    "D09-W14",
+    "D09-W15",
+    "D09-W16",
+    "D09-W17",
+    "D09-W18",
+    "D09-W19",
+    "D09-W20",
+    "D10-W01",
+    "D10-W02",
+    "D10-W03",
+    "D10-W04",
+    "D10-W05",
+    "D10-W06",
+    "D10-W07",
+    "D10-W08",
+    "D10-W09",
+    "D10-W10",
+    "D10-W11",
+    "D10-W12",
+    "D10-W13",
+    "D10-W14",
+    "D10-W15",
+    "D10-W16",
+    "D10-W17",
+    "D10-W18",
+    "D10-W19",
+    "D10-W20",
+    "D11-W01",
+    "D11-W02",
+    "D11-W03",
+    "D11-W04",
+    "D11-W05",
+    "D11-W06",
+    "D11-W07",
+    "D11-W08",
+    "D11-W09",
+    "D11-W10",
+    "D11-W11",
+    "D11-W12",
+    "D11-W13",
+    "D11-W14",
+    "D11-W15",
+    "D11-W16",
+    "D11-W17",
+    "D11-W18",
+    "D11-W19",
+    "D11-W20",
+    "D12-W01",
+    "D12-W02",
+    "D12-W03",
+    "D12-W04",
+    "D12-W05",
+    "D12-W06",
+    "D12-W07",
+    "D12-W08",
+    "D12-W09",
+    "D12-W10",
+    "D12-W11",
+    "D12-W12",
+    "D12-W13",
+    "D12-W14",
+    "D12-W15",
+    "D12-W16",
+    "D12-W17",
+    "D12-W18",
+    "D12-W19",
+    "D12-W20",
+    "D13-W01",
+    "D13-W02",
+    "D13-W03",
+    "D13-W04",
+    "D13-W05",
+    "D13-W06",
+    "D13-W07",
+    "D13-W08",
+    "D13-W09",
+    "D13-W10",
+    "D13-W11",
+    "D13-W12",
+    "D13-W13",
+    "D13-W14",
+    "D13-W15",
+    "D13-W16",
+    "D13-W17",
+    "D13-W18",
+    "D13-W19",
+    "D13-W20",
+    "D14-W01",
+    "D14-W02",
+    "D14-W03",
+    "D14-W04",
+    "D14-W05",
+    "D14-W06",
+    "D14-W07",
+    "D14-W08",
+    "D14-W09",
+    "D14-W10",
+    "D14-W11",
+    "D14-W12",
+    "D14-W13",
+    "D14-W14",
+    "D14-W15",
+    "D14-W16",
+    "D14-W17",
+    "D14-W18",
+    "D14-W19",
+    "D14-W20"
+  ]
+}

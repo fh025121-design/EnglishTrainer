@@ -179,6 +179,55 @@
 			"label": "apply-response-appended",
 			"type": "shell",
 			"command": "py -3 _apply_response_appended.py"
+		},
+		{
+			"label": "backup-datajs-day1-14-pos",
+			"type": "shell",
+			"command": "Copy-Item -LiteralPath data.js -Destination data.js.bak_day1_14_before_pos_20260720.js -Force",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "run-add-pos-day1-14",
+			"type": "shell",
+			"command": "py -3 _add_pos_day1_14.py",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "run-add-pos-day1-14-2",
+			"type": "shell",
+			"command": "py -3 _add_pos_day1_14.py",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "run-add-pos-day1-14-log",
+			"type": "shell",
+			"command": "py -3 _add_pos_day1_14.py *> _add_pos_run.log",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "run-add-pos-day1-14-3",
+			"type": "shell",
+			"command": "py -3 _add_pos_day1_14.py *> _add_pos_run.log",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "restore-datajs-from-backup-pos",
+			"type": "shell",
+			"command": "Copy-Item -LiteralPath data.js.bak_day1_14_before_pos_20260720.js -Destination data.js -Force",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "git-check-datajs-state",
+			"type": "shell",
+			"command": "git rev-parse --is-inside-work-tree; git status --short -- data.js",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }
