@@ -353,6 +353,22 @@ p {
   overflow: hidden;
 }
 
+.app-shell.non-home-screen {
+  padding-top: 0;
+}
+
+.app-shell.non-home-screen .topbar {
+  display: none;
+}
+
+.app-shell.non-home-screen .main-content {
+  margin-top: 0;
+}
+
+.app-shell.non-home-screen .screen-header {
+  margin-top: 0;
+}
+
 .screen {
   display: none;
 }
@@ -1049,6 +1065,29 @@ p {
   line-height: 1.55;
 }
 
+#responsePracticeScreen .question-copy {
+  gap: 6px;
+}
+
+#responseQuestionText,
+#responseTemplateText {
+  min-height: 2.45em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+}
+
+#responseQuestionTranslationText {
+  margin-top: 0;
+  min-height: 2.9em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.58rem;
+  line-height: 1.45;
+}
+
 #responseAnswerInputSecondWrap {
   margin-top: 8px;
 }
@@ -1485,6 +1524,27 @@ select {
   gap: 12px;
   color: var(--muted);
   margin-bottom: 4px;
+}
+
+#responsePracticeScreen .question-meta {
+  position: relative;
+  top: -5cm;
+  margin-bottom: calc(4px - 5cm);
+}
+
+#responsePracticeScreen #responseQuestionCard.response-answered {
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+
+#responsePracticeScreen #responseQuestionCard.response-answered .question-meta {
+  top: -2.2cm;
+  margin-bottom: calc(4px - 2.2cm);
+}
+
+#responsePracticeScreen #responseQuestionCard.response-answered .feedback-box {
+  max-height: 36vh;
+  overflow-y: auto;
 }
 
 .phase-progress-text {
