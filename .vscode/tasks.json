@@ -228,6 +228,20 @@
 			"command": "git rev-parse --is-inside-work-tree; git status --short -- data.js",
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "restore-datajs-from-backup-now",
+			"type": "shell",
+			"command": "Copy-Item -LiteralPath data.js.bak_day1_14_before_pos_20260720.js -Destination data.js -Force",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "verify-datajs-equals-backup",
+			"type": "shell",
+			"command": "$a = Get-FileHash data.js -Algorithm SHA256; $b = Get-FileHash data.js.bak_day1_14_before_pos_20260720.js -Algorithm SHA256; if ($a.Hash -eq $b.Hash) { Write-Output \"MATCH\" } else { Write-Output \"DIFF\"; Write-Output $a.Hash; Write-Output $b.Hash }",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }
