@@ -1154,9 +1154,27 @@ p {
   letter-spacing: 0.08em;
 }
 
+.response-feedback-status-notice {
+  color: #ff3b3b;
+  font-weight: 900;
+}
+
 .response-feedback-translation {
   margin-top: 4px;
   color: var(--muted);
+}
+
+.response-feedback-case-hint {
+  margin-top: 6px;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: #ffd2d2;
+}
+
+.response-feedback-case-uppercase {
+  color: #ff3b3b;
+  font-weight: 900;
+  letter-spacing: 0.05em;
 }
 
 .response-form-pair {
@@ -1550,6 +1568,12 @@ select {
   font-size: 0.98rem;
   line-height: 1.2;
   margin-bottom: 0;
+}
+
+#responsePracticeScreen #responseQuestionCard.response-answered .response-feedback-line,
+#responsePracticeScreen #responseQuestionCard.response-answered .response-feedback-translation {
+  font-size: 1.38rem;
+  line-height: 1.35;
 }
 
 #responsePracticeScreen #responseQuestionCard.response-answered #responseQuestionText,

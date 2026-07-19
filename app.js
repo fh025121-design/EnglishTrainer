@@ -974,8 +974,10 @@ function fillResponseTemplate(responseTemplate, value) {
   return safeTemplate.replace(/\(\s*\)/, value);
 }
 
-function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText) {
+function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText, statusNotice = "") {
   const canonicalAnswer = question.answerSpec.canonicalAnswer || "";
+  const statusNoticeHtml = statusNotice ? ` <span class="response-feedback-status-notice">${statusNotice}</span>` : "";
+  const statusLabel = isCorrect ? "✅ 正解" : `❌ 不正解${statusNoticeHtml}`;
   const userRow = isCorrect
     ? `<div class="answer-line">あなたの答え：${userAnswerText || "-"}</div>`
     : `<div class="answer-line">あなたの答え：${userAnswerText || "-"}</div><div class="answer-line">正解：${canonicalAnswer}</div>`;
@@ -985,7 +987,7 @@ function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText) {
   const filledQuestion = fillByTokens(question.question);
   const completedResponse = fillByTokens(question.response);
   return [
-    `<strong>${isCorrect ? "✅ 正解" : "❌ 不正解"}</strong>`,
+    `<strong>${statusLabel}</strong>`,
     userRow,
     `<p class="response-feedback-line">${filledQuestion}</p>`,
     question.translationQuestion ? `<p class="response-feedback-translation">${question.translationQuestion}</p>` : "",
@@ -995,6 +997,33 @@ function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText) {
     `<p class="response-feedback-point-title">ポイント</p>`,
     question.point ? `<p class="response-feedback-point">${question.point}</p>` : ""
   ].join("");
+}
+
+function getResponseWhCaseStatusNotice(question, userAnswerText) {
+  if (!question) return "";
+  const categoryText = String(question.category || "");
+  const topicText = String(question.topic || question.title || "");
+  if (!categoryText.includes("5W1H") && !topicText.includes("5W1H")) return "";
+
+  const canonical = String(question.answerSpec?.canonicalAnswer || "").trim();
+  const user = normalizeResponseInput(userAnswerText);
+  if (!canonical || !user || user === canonical) return "";
+  if (user.toLowerCase() !== canonical.toLowerCase()) return "";
+
+  const canonicalTokens = canonical.split(" ").filter(Boolean);
+  const userTokens = user.split(" ").filter(Boolean);
+  if (!canonicalTokens.length || canonicalTokens.length !== userTokens.length) return "";
+
+  const headCanonical = canonicalTokens[0];
+  const headUser = userTokens[0];
+  const whHeads = new Set(["What", "When", "Where", "Who", "Why", "How"]);
+  if (!whHeads.has(headCanonical)) return "";
+  if (headUser !== headCanonical.toLowerCase()) return "";
+
+  const remainMatches = canonicalTokens.slice(1).every((token, idx) => token === userTokens[idx + 1]);
+  if (!remainMatches) return "";
+
+  return "大文字にすること！";
 }
 
 function shouldShowResponsePreAnswerHint(question) {
@@ -1139,7 +1168,8 @@ function submitResponseTrainingAnswer() {
 
   feedbackBox.className = `feedback-box ${isCorrect ? "success" : "error"}`;
   const userAnswerText = primaryRaw.trim();
-  feedbackBox.innerHTML = buildResponseFeedbackMarkup(currentQuestion, isCorrect, userAnswerText);
+  const statusNotice = isCorrect ? "" : getResponseWhCaseStatusNotice(currentQuestion, userAnswerText);
+  feedbackBox.innerHTML = buildResponseFeedbackMarkup(currentQuestion, isCorrect, userAnswerText, statusNotice);
   nextBtn.classList.remove("hidden");
   nextBtn.disabled = false;
   answerInput.disabled = true;
