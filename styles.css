@@ -998,7 +998,7 @@ p {
 .response-question-translation {
   margin-top: 6px;
   color: var(--muted);
-  font-size: 0.98rem;
+  font-size: 1.96rem;
   line-height: 1.55;
 }
 
@@ -1083,8 +1083,9 @@ p {
 
 .response-feedback-point {
   margin-top: 4px;
-  color: var(--muted);
-  font-size: 0.95rem;
+  color: #ffffff;
+  font-size: 1.9rem;
+  font-weight: 800;
 }
 
 .day-card {

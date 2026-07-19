@@ -2,6 +2,12 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/20 01:20", note: "応答文特訓の解答フィードバック『ポイント』説明文を白の太字に変更し、フォントサイズを約2倍へ拡大" },
+    { version: "2026/07/20 01:10", note: "応答文特訓の解答表示で複数語解答の空欄補完順を修正。問題文と応答文それぞれの空欄に語を順番に割り当て、不自然な並びを解消" },
+    { version: "2026/07/20 01:00", note: "応答文特訓の解答表示を調整。問題英文は空欄補完後を表示し、英語表示は問題文と応答文の重複併記をやめて応答文のみ表示" },
+    { version: "2026/07/20 00:40", note: "応答文特訓の和訳表示を白抜きから通常表示へ戻し、フォントサイズ2倍は維持" },
+    { version: "2026/07/20 00:30", note: "応答文特訓の問題画面に表示する和訳テキストを白抜き表示へ変更し、フォントサイズを約2倍に拡大" },
+    { version: "2026/07/20 00:15", note: "Day学習で data.js 側の更新（hint等）が反映されない問題を修正。ID/件数一致時でも語彙の差分を検知して state.items を同期し、Day9『速く/quickly』のhint表示漏れを解消" },
     { version: "2026/07/20", note: "学習画面（通常/復習）の問題文直下にhint表示を追加。hintが空欄の問題では表示を自動非表示にし、similar表示や採点・進行ロジックは変更なし" },
     { version: "2026/07/20", note: "単語ヒントを調整。similar設定語は意味の違いが分かる区別ヒントを優先し、迷いにくい重複語や指定対象（do/play、depart/leave、class/lesson、borrow/lend、start/begin、finish/stop）のヒントは削除して空欄へ統一" },
     { version: "2026/07/19 13:10", note: "PC専用レイアウトを画面サイズ依存で自動縮小するレスポンシブ調整を実施。解像度・ブラウザサイズ・表示倍率に応じてUIスケールを再計算し、フォント・ボタン・余白・入力欄サイズを自動最適化。主要学習画面でページ全体の縦スクロールを抑制" },
@@ -947,11 +953,15 @@ function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText) {
   const userRow = isCorrect
     ? `<div class="answer-line">あなたの答え：${userAnswerText || "-"}</div>`
     : `<div class="answer-line">あなたの答え：${userAnswerText || "-"}</div><div class="answer-line">正解：${canonicalAnswer}</div>`;
-  const completedResponse = question.completedResponse || fillResponseTemplate(question.response, canonicalAnswer);
+  const answerTokens = String(canonicalAnswer || userAnswerText || "").split(/\s+/).filter(Boolean);
+  let tokenIndex = 0;
+  const fillByTokens = (template) => String(template || "").replace(/\(\s*\)/g, () => answerTokens[tokenIndex++] || "");
+  const filledQuestion = fillByTokens(question.question);
+  const completedResponse = fillByTokens(question.response);
   return [
     `<strong>${isCorrect ? "✅ 正解" : "❌ 不正解"}</strong>`,
     userRow,
-    `<p class="response-feedback-line">${question.question}</p>`,
+    `<p class="response-feedback-line">${filledQuestion}</p>`,
     question.translationQuestion ? `<p class="response-feedback-translation">${question.translationQuestion}</p>` : "",
     `<p class="response-feedback-line">${completedResponse}</p>`,
     question.translationAnswer ? `<p class="response-feedback-translation">${question.translationAnswer}</p>` : "",
@@ -4173,9 +4183,23 @@ function ensureItemsSyncedWithVocabularyBank() {
   const currentItems = Array.isArray(state.items) ? state.items : [];
   const latestIds = latestItems.map((item) => String(item.id));
   const currentById = new Map(currentItems.map((item) => [String(item.id), item]));
+  const hasVocabularyDrift = latestItems.some((latest) => {
+    const existing = currentById.get(String(latest.id));
+    if (!existing) return true;
+    const latestHint = String(latest.hint || "").trim();
+    const existingHint = String(existing.hint || "").trim();
+    return (
+      Number(existing.day) !== Number(latest.day) ||
+      String(existing.type || "") !== String(latest.type || "") ||
+      String(existing.japanese || "") !== String(latest.japanese || "") ||
+      String(existing.answer || existing.english || "") !== String(latest.answer || latest.english || "") ||
+      existingHint !== latestHint
+    );
+  });
   const needsSync =
     currentItems.length !== latestItems.length ||
-    latestIds.some((id) => !currentById.has(id));
+    latestIds.some((id) => !currentById.has(id)) ||
+    hasVocabularyDrift;
 
   if (!needsSync) return false;
 
