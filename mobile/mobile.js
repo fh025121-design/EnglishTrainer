@@ -39,6 +39,7 @@
     speakingProgress: null,
     speakingTranslationVisible: false,
     speakingAudioPlaying: false,
+    speakingAudioWatchdogId: null,
     speakingUtterance: null,
     currentScreen: "homeScreen",
     confirmAction: null,
@@ -288,6 +289,10 @@
   }
 
   function stopSpeakingAudio() {
+    if (state.speakingAudioWatchdogId) {
+      window.clearTimeout(state.speakingAudioWatchdogId);
+      state.speakingAudioWatchdogId = null;
+    }
     state.speakingAudioPlaying = false;
     state.speakingUtterance = null;
     if (typeof window.speechSynthesis !== "undefined") {
@@ -727,6 +732,13 @@
 
     state.speakingAudioPlaying = true;
     state.speakingUtterance = utterance;
+    state.speakingAudioWatchdogId = window.setTimeout(() => {
+      if (!state.speakingAudioPlaying) return;
+      state.speakingAudioPlaying = false;
+      state.speakingUtterance = null;
+      state.speakingAudioWatchdogId = null;
+      renderConversationPractice();
+    }, 6000);
     renderConversationPractice();
 
     try {
@@ -755,7 +767,10 @@
     elements.conversationEnglishText.textContent = line.english;
     elements.conversationJapaneseText.textContent = line.japanese;
     elements.conversationJapaneseBlock.classList.toggle("hidden", !state.speakingTranslationVisible || !line.japanese);
-    elements.conversationStatusText.textContent = state.speakingAudioPlaying ? "再生中…" : "🎤 シャドーイングしてください";
+    const statusPromptText = line.speaker === "A"
+      ? "🎤 質問文をシャドーイングし、続きの文章を\n声に出してみよう。"
+      : "🎤 シャドーイングしてください";
+    elements.conversationStatusText.textContent = state.speakingAudioPlaying ? "再生中…" : statusPromptText;
     elements.toggleJapaneseBtn.disabled = state.speakingAudioPlaying || !line.japanese;
     elements.replayConversationAudioBtn.disabled = state.speakingAudioPlaying;
     elements.nextConversationLineBtn.disabled = state.speakingAudioPlaying;
@@ -1089,6 +1104,7 @@
           speakingProgress: null,
           speakingTranslationVisible: false,
           speakingAudioPlaying: false,
+          speakingAudioWatchdogId: null,
           speakingUtterance: null,
           currentScreen: "homeScreen",
           confirmAction: null,

@@ -342,6 +342,7 @@ select,
   font-size: 1rem;
   font-weight: 800;
   color: #c8d5e8;
+  white-space: pre-line;
 }
 
 .conversation-action-area {
