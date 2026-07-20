@@ -2030,6 +2030,15 @@ select {
   color: var(--text);
 }
 
+.answer-diff {
+  display: inline-block;
+  white-space: pre;
+}
+
+.answer-diff-char.is-wrong {
+  color: var(--danger);
+}
+
 .preposition-core-block {
   margin-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.14);

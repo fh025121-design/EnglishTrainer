@@ -5729,9 +5729,44 @@ function showResultScreen(summary = state.stats.lastResultSummary) {
   syncKeyboardNavigationUI(true);
 }
 
-function buildFeedbackMarkup(isCorrect, answer, prompt) {
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function getTypingCanonicalAnswer(question) {
+  const phraseSpec = buildPhraseTypingSpec(question);
+  if (phraseSpec?.canonicalAnswer) return phraseSpec.canonicalAnswer;
+  return String(question?.answer || question?.english || "");
+}
+
+function buildAnswerDiffMarkup(userAnswer, canonicalAnswer) {
+  const userText = String(userAnswer || "");
+  if (!userText) return "-";
+
+  const expectedText = String(canonicalAnswer || "");
+  const parts = [];
+  for (let index = 0; index < userText.length; index += 1) {
+    const userChar = userText[index];
+    const expectedChar = expectedText[index] || "";
+    const isMismatch = !expectedChar || userChar.toLowerCase() !== expectedChar.toLowerCase();
+    const displayChar = userChar === " " ? "&nbsp;" : escapeHtml(userChar);
+    parts.push(`<span class="answer-diff-char${isMismatch ? " is-wrong" : ""}">${displayChar}</span>`);
+  }
+  return `<span class="answer-diff">${parts.join("")}</span>`;
+}
+
+function buildFeedbackMarkup(question, isCorrect, answer, prompt, userAnswer = "") {
   const symbol = isCorrect ? "〇 正解！" : "× 不正解";
-  return `<strong>${symbol}</strong><div class="answer-line">${answer}</div><span class="hint">${prompt}</span>`;
+  const canonicalAnswer = getTypingCanonicalAnswer(question) || answer;
+  const answerMarkup = isCorrect
+    ? `<div class="answer-line">${escapeHtml(answer)}</div>`
+    : `<div class="answer-line">あなたの答え：${buildAnswerDiffMarkup(userAnswer, canonicalAnswer)}</div><div class="answer-line">正解：${escapeHtml(canonicalAnswer)}</div>`;
+  return `<strong>${symbol}</strong>${answerMarkup}<span class="hint">${escapeHtml(prompt)}</span>`;
 }
 
 function showAudioPlaybackError(targetFeedbackBox = null) {
@@ -5842,7 +5877,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       }
       session.currentQuestionState = "correct";
       feedbackBox.className = "feedback-box success";
-      feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterまたは答えるで2回目音声を再生");
+      feedbackBox.innerHTML = buildFeedbackMarkup(question, true, question.answer || question.english, "Enterまたは答えるで2回目音声を再生");
       nextButton.classList.add("hidden");
       input.disabled = true;
       input.blur();
@@ -5858,7 +5893,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       }
 
       if (isDesktopAutoAudioFlow(session, question)) {
-        feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "音声を2回再生後、自動で次へ進みます");
+        feedbackBox.innerHTML = buildFeedbackMarkup(question, true, question.answer || question.english, "音声を2回再生後、自動で次へ進みます");
         startDesktopDoubleAudioAndAutoAdvance(session, question, feedbackBox);
       } else {
         const typingConfig = getTypingConfig();
@@ -5911,7 +5946,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     }
     session.currentQuestionState = "retrying";
     feedbackBox.className = "feedback-box error";
-    feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正しい英語をもう一度入力");
+    feedbackBox.innerHTML = buildFeedbackMarkup(question, false, question.answer || question.english, "正しい英語をもう一度入力", trimmedAnswer);
     nextButton.classList.add("hidden");
     input.value = "";
     input.disabled = false;
@@ -5927,7 +5962,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     input.disabled = false;
     input.focus();
     feedbackBox.className = "feedback-box error";
-    feedbackBox.innerHTML = buildFeedbackMarkup(false, question.answer || question.english, "正しい英語をもう一度入力");
+    feedbackBox.innerHTML = buildFeedbackMarkup(question, false, question.answer || question.english, "正しい英語をもう一度入力", trimmedAnswer);
     return;
   }
 
@@ -5946,7 +5981,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   session.currentQuestionState = "correct";
 
   feedbackBox.className = "feedback-box success";
-  feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "Enterまたは答えるで2回目音声を再生");
+  feedbackBox.innerHTML = buildFeedbackMarkup(question, true, question.answer || question.english, "Enterまたは答えるで2回目音声を再生");
   nextButton.classList.add("hidden");
   input.disabled = true;
   input.blur();
@@ -5962,7 +5997,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   }
 
   if (isDesktopAutoAudioFlow(session, question)) {
-    feedbackBox.innerHTML = buildFeedbackMarkup(true, question.answer || question.english, "音声を2回再生後、自動で次へ進みます");
+    feedbackBox.innerHTML = buildFeedbackMarkup(question, true, question.answer || question.english, "音声を2回再生後、自動で次へ進みます");
     startDesktopDoubleAudioAndAutoAdvance(session, question, feedbackBox);
   } else {
     const typingConfig = getTypingConfig();
