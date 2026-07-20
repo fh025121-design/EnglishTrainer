@@ -13,7 +13,9 @@
             {
               speaker: "A",
               english: "What subject do you like?",
-              japanese: "どの科目が好きですか。"
+              japanese: "どの科目が好きですか。",
+              hintType: "noun",
+              hints: ["英語"]
             },
             {
               speaker: "B",
@@ -23,7 +25,9 @@
             {
               speaker: "A",
               english: "Where do you study English?",
-              japanese: "どこで英語を勉強しますか。"
+              japanese: "どこで英語を勉強しますか。",
+              hintType: "noun",
+              hints: ["家"]
             },
             {
               speaker: "B",
@@ -33,7 +37,9 @@
             {
               speaker: "A",
               english: "When do you study?",
-              japanese: "いつ勉強しますか。"
+              japanese: "いつ勉強しますか。",
+              hintType: "noun",
+              hints: ["夕方"]
             },
             {
               speaker: "B",
@@ -49,7 +55,9 @@
             {
               speaker: "A",
               english: "Do you study English every day?",
-              japanese: "毎日英語を勉強しますか。"
+              japanese: "毎日英語を勉強しますか。",
+              hintType: "none",
+              hints: []
             },
             {
               speaker: "B",
@@ -59,7 +67,9 @@
             {
               speaker: "A",
               english: "Where do you have lunch?",
-              japanese: "どこで昼食を食べますか。"
+              japanese: "どこで昼食を食べますか。",
+              hintType: "noun",
+              hints: ["学校"]
             },
             {
               speaker: "B",
@@ -69,7 +79,9 @@
             {
               speaker: "A",
               english: "What do you do at night?",
-              japanese: "夜に何をしますか。"
+              japanese: "夜に何をしますか。",
+              hintType: "noun",
+              hints: ["本を読む"]
             },
             {
               speaker: "B",
@@ -85,7 +97,9 @@
             {
               speaker: "A",
               english: "Who is your friend?",
-              japanese: "あなたの友達は誰ですか。"
+              japanese: "あなたの友達は誰ですか。",
+              hintType: "noun",
+              hints: ["ケン"]
             },
             {
               speaker: "B",
@@ -95,7 +109,9 @@
             {
               speaker: "A",
               english: "What sport does he play?",
-              japanese: "彼は何のスポーツをしますか。"
+              japanese: "彼は何のスポーツをしますか。",
+              hintType: "noun",
+              hints: ["サッカー"]
             },
             {
               speaker: "B",
@@ -105,7 +121,9 @@
             {
               speaker: "A",
               english: "Does he study English?",
-              japanese: "彼は英語を勉強しますか。"
+              japanese: "彼は英語を勉強しますか。",
+              hintType: "none",
+              hints: []
             },
             {
               speaker: "B",
@@ -121,7 +139,9 @@
             {
               speaker: "A",
               english: "Can you swim?",
-              japanese: "泳ぐことができますか。"
+              japanese: "泳ぐことができますか。",
+              hintType: "none",
+              hints: []
             },
             {
               speaker: "B",
@@ -131,7 +151,9 @@
             {
               speaker: "A",
               english: "Can you play the piano?",
-              japanese: "ピアノを弾くことができますか。"
+              japanese: "ピアノを弾くことができますか。",
+              hintType: "none",
+              hints: []
             },
             {
               speaker: "B",
@@ -141,7 +163,9 @@
             {
               speaker: "A",
               english: "What can you do?",
-              japanese: "何ができますか。"
+              japanese: "何ができますか。",
+              hintType: "noun",
+              hints: ["速く走る"]
             },
             {
               speaker: "B",
@@ -157,7 +181,9 @@
             {
               speaker: "A",
               english: "Is this your notebook?",
-              japanese: "これはあなたのノートですか。"
+              japanese: "これはあなたのノートですか。",
+              hintType: "none",
+              hints: []
             },
             {
               speaker: "B",
@@ -167,7 +193,9 @@
             {
               speaker: "A",
               english: "Are these your pens?",
-              japanese: "これらはあなたのペンですか。"
+              japanese: "これらはあなたのペンですか。",
+              hintType: "none",
+              hints: []
             },
             {
               speaker: "B",
@@ -177,7 +205,9 @@
             {
               speaker: "A",
               english: "What are these?",
-              japanese: "これらは何ですか。"
+              japanese: "これらは何ですか。",
+              hintType: "noun",
+              hints: ["本"]
             },
             {
               speaker: "B",
@@ -193,7 +223,9 @@
             {
               speaker: "A",
               english: "Did you study English yesterday?",
-              japanese: "昨日英語を勉強しましたか。"
+              japanese: "昨日英語を勉強しましたか。",
+              hintType: "none",
+              hints: []
             },
             {
               speaker: "B",
@@ -203,7 +235,9 @@
             {
               speaker: "A",
               english: "What did you do yesterday?",
-              japanese: "昨日何をしましたか。"
+              japanese: "昨日何をしましたか。",
+              hintType: "noun",
+              hints: ["サッカー"]
             },
             {
               speaker: "B",
@@ -213,7 +247,9 @@
             {
               speaker: "A",
               english: "Did you read a book?",
-              japanese: "本を読みましたか。"
+              japanese: "本を読みましたか。",
+              hintType: "none",
+              hints: []
             },
             {
               speaker: "B",
@@ -239,7 +275,9 @@
             {
               speaker: "A",
               english: "What can you do in English?",
-              japanese: "英語で何ができますか。"
+              japanese: "英語で何ができますか。",
+              hintType: "noun",
+              hints: ["短い文を書く"]
             },
             {
               speaker: "B",
