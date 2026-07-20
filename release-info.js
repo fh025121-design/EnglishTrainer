@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/21 01:40", note: "スマホ版会話練習ホームの最近の進捗を3枚カード表示に再設計し、開始Week／終了Weekを横並び化" },
     { version: "2026/07/21 01:21", note: "スマホ版ホームにキャッシュ更新ボタンを追加し、更新日時の反映と再読込導線を整備" },
     { version: "2026/07/20 23:25", note: "スマホ版Speaking会話練習にヒント機能を追加。問題タイプ別（none/noun/pattern）で最大2回表示し、データ未設定時は『ヒントなし』を表示" },
     { version: "2026/07/20 23:05", note: "スマホ版Speakingの開始Week／終了WeekでWeek5以降も日付範囲を自動表示するよう修正" },

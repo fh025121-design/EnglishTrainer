@@ -874,6 +874,94 @@
     };
   }
 
+  function getRecentSpeakingProgressEntries() {
+    const progress = state.speakingProgress;
+    const currentWeek = getSpeakingProgressWeek();
+    const currentWeekNumber = parseWeekNumber(progress?.weekId);
+    if (!progress || !currentWeek || !Number.isFinite(currentWeekNumber)) return [];
+
+    const targetRounds = getSpeakingTargetRounds(progress);
+    const entries = [];
+
+    for (let offset = 0; offset < 3; offset += 1) {
+      const week = getSpeakingWeek(`W${currentWeekNumber - offset}`);
+      if (!week) continue;
+
+      if (offset === 0) {
+        const completedRounds = getSpeakingCompletedRounds(progress);
+        const currentRound = getSpeakingCurrentRound(progress);
+        const isComplete = progress.phase === "conversationComplete" || completedRounds >= targetRounds;
+        entries.push({
+          week,
+          isCurrent: true,
+          summaryText: isComplete
+            ? `${targetRounds} / ${targetRounds}周 完了`
+            : `${completedRounds} / ${targetRounds}周 完了`,
+          statusText: isComplete ? "🌟 Excellent!" : `${currentRound}周目の途中`
+        });
+      } else {
+        entries.push({
+          week,
+          isCurrent: false,
+          summaryText: `${targetRounds} / ${targetRounds}周 完了`,
+          statusText: "🌟 Excellent!"
+        });
+      }
+    }
+
+    return entries;
+  }
+
+  function renderRecentProgressList() {
+    if (!elements.recentProgressList) return;
+
+    const entries = getRecentSpeakingProgressEntries();
+    elements.recentProgressList.innerHTML = "";
+
+    if (!entries.length) {
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    const currentEntry = entries[0];
+
+    entries.forEach((entry) => {
+      const card = document.createElement("article");
+      card.className = `recent-progress-card${entry.isCurrent ? " recent-progress-card-current" : ""}`;
+
+      const weekText = document.createElement("p");
+      weekText.className = "recent-progress-week";
+      weekText.textContent = getSpeakingWeekDisplayLabel(entry.week);
+
+      const summaryText = document.createElement("p");
+      summaryText.className = "recent-progress-summary";
+      summaryText.textContent = entry.summaryText;
+
+      const statusText = document.createElement("p");
+      statusText.className = "recent-progress-status";
+      statusText.textContent = entry.statusText;
+
+      card.append(weekText, summaryText, statusText);
+
+      if (entry.isCurrent) {
+        const actionRow = document.createElement("div");
+        actionRow.className = "recent-progress-actions";
+        actionRow.append(elements.continueConversationBtn, elements.restartConversationWeekBtn);
+        card.append(actionRow);
+      }
+
+      fragment.append(card);
+    });
+
+    elements.recentProgressList.append(fragment);
+
+    if (currentEntry) {
+      const currentWeekName = getSpeakingWeekDisplayName(currentEntry.week);
+      elements.continueConversationBtn.textContent = `${currentWeekName}を続きから`;
+      elements.restartConversationWeekBtn.textContent = `${currentWeekName}を最初から`;
+    }
+  }
+
   function renderSpeakingHome() {
     showScreen("speakingHomeScreen");
   }
@@ -890,8 +978,9 @@
 
     elements.conversationContinuePanel.classList.toggle("hidden", !resumeInfo);
     if (resumeInfo) {
-      renderButtonLines(elements.continueConversationBtn, resumeInfo.lines);
-      elements.restartConversationWeekBtn.textContent = `${getSpeakingWeekDisplayName(resumeInfo.week)}を最初から`;
+      renderRecentProgressList();
+    } else if (elements.recentProgressList) {
+      elements.recentProgressList.innerHTML = "";
     }
 
     showScreen("conversationSelectScreen");
@@ -1684,6 +1773,7 @@
     elements.conversationStartWeekSelect = document.getElementById("conversationStartWeekSelect");
     elements.conversationEndWeekSelect = document.getElementById("conversationEndWeekSelect");
     elements.conversationContinuePanel = document.getElementById("conversationContinuePanel");
+    elements.recentProgressList = document.getElementById("recentProgressList");
     elements.continueConversationBtn = document.getElementById("continueConversationBtn");
     elements.restartConversationWeekBtn = document.getElementById("restartConversationWeekBtn");
     elements.speakingWordDayRangeFields = document.getElementById("speakingWordDayRangeFields");

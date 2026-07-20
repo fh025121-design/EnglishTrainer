@@ -137,6 +137,9 @@ select {
 
 .day-range-fields {
   margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
 }
 
 .field-block {
@@ -231,11 +234,90 @@ select,
 }
 
 #continueConversationBtn {
-  min-height: 124px;
-  padding: 14px 16px;
-  line-height: 1.45;
+  min-height: 46px;
+  padding: 0 16px;
+  line-height: 1.2;
   text-align: center;
   white-space: normal;
+}
+
+#conversationContinuePanel {
+  padding: 16px 14px 14px;
+}
+
+#conversationContinuePanel h2 {
+  margin-bottom: 10px;
+}
+
+.recent-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recent-progress-card {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(18, 37, 61, 0.94), rgba(9, 21, 36, 0.94));
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.recent-progress-card-current {
+  border-color: var(--line-strong);
+}
+
+.recent-progress-week,
+.recent-progress-summary,
+.recent-progress-status {
+  margin: 0;
+}
+
+.recent-progress-week {
+  color: var(--primary);
+  font-size: 0.96rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.recent-progress-summary {
+  margin-top: 4px;
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.recent-progress-status {
+  margin-top: 2px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.recent-progress-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.recent-progress-actions:empty {
+  display: none;
+}
+
+.recent-progress-card .primary-btn,
+.recent-progress-card .secondary-btn {
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: 0.94rem;
+}
+
+.recent-progress-card .primary-btn {
+  width: 100%;
+}
+
+.recent-progress-card .secondary-btn {
+  width: 100%;
 }
 
 .continue-btn-line {
@@ -516,6 +598,26 @@ select,
 
   .conversation-english {
     font-size: 1.56rem;
+  }
+
+  .day-range-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .recent-progress-card {
+    padding: 11px 12px;
+  }
+
+  .recent-progress-week {
+    font-size: 0.92rem;
+  }
+
+  .recent-progress-summary {
+    font-size: 0.9rem;
+  }
+
+  .recent-progress-status {
+    font-size: 0.82rem;
   }
 
   .conversation-japanese {
