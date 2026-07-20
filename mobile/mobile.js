@@ -848,9 +848,14 @@
   }
 
   function refreshMobileCache() {
-    const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.set("v", String(Date.now()));
-    window.location.replace(nextUrl.toString());
+    const cacheToken = String(Date.now());
+    try {
+      window.localStorage.setItem("englishTrainerMobileCacheToken", cacheToken);
+    } catch (error) {
+      // Ignore storage failures and still reload with the in-memory token.
+    }
+    window.name = cacheToken;
+    window.location.reload();
   }
 
   function getSpeakingResumeInfo() {

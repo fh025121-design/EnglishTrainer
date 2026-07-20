@@ -6,8 +6,10 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const cacheToken = new URLSearchParams(window.location.search).get("v") || "20260721-0121";
+        const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
+        const cacheToken = window.name || storedToken || "20260721-0121";
         window.MOBILE_CACHE_TOKEN = cacheToken;
+        window.name = cacheToken;
         const link = document.createElement("link");
         link.rel = "stylesheet";
         link.href = `mobile.css?v=${encodeURIComponent(cacheToken)}`;
