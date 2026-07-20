@@ -1826,5 +1826,9 @@
     renderHome();
   }
 
-  window.addEventListener("DOMContentLoaded", initialize);
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", initialize);
+  } else {
+    initialize();
+  }
 })();
