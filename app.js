@@ -978,9 +978,11 @@ function buildResponseFeedbackMarkup(question, isCorrect, userAnswerText, status
   const canonicalAnswer = question.answerSpec.canonicalAnswer || "";
   const statusNoticeHtml = statusNotice ? ` <span class="response-feedback-status-notice">${statusNotice}</span>` : "";
   const statusLabel = isCorrect ? "✅ 正解" : `❌ 不正解${statusNoticeHtml}`;
+  const safeUserAnswer = escapeHtml(userAnswerText || "-");
+  const safeCanonicalAnswer = escapeHtml(canonicalAnswer || "");
   const userRow = isCorrect
-    ? `<div class="answer-line">あなたの答え：${userAnswerText || "-"}</div>`
-    : `<div class="answer-line">あなたの答え：${userAnswerText || "-"}</div><div class="answer-line">正解：${canonicalAnswer}</div>`;
+    ? `<div class="answer-line">あなたの答え：${safeUserAnswer}</div>`
+    : `<div class="answer-line">あなたの答え：${buildAnswerDiffMarkup(userAnswerText || "", canonicalAnswer)}</div><div class="answer-line">正解：${safeCanonicalAnswer}</div>`;
   const answerTokens = String(canonicalAnswer || userAnswerText || "").split(/\s+/).filter(Boolean);
   let tokenIndex = 0;
   const fillByTokens = (template) => String(template || "").replace(/\(\s*\)/g, () => answerTokens[tokenIndex++] || "");
