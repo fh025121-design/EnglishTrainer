@@ -326,6 +326,7 @@
       conversationIndex: Math.max(0, Number(raw.conversationIndex) || 0),
       lineIndex: Math.max(0, Number(raw.lineIndex) || 0),
       completedRounds: Math.max(0, Number(raw.completedRounds) || 0),
+      conversationSetCount: Math.max(0, Number(raw.conversationSetCount) || 0),
       completedConversationIds,
       phase: raw.phase === "conversationComplete" ? "conversationComplete" : "line",
       updatedAt: Number(raw.updatedAt) || Date.now()
@@ -602,6 +603,7 @@
       conversationIndex: 0,
       lineIndex: 0,
       completedRounds: 0,
+      conversationSetCount: 0,
       completedConversationIds: [],
       phase: "line",
       updatedAt: Date.now()
@@ -1288,17 +1290,18 @@
       renderConversationSelectScreen();
       return;
     }
-    const completedRounds = getSpeakingCompletedRounds(progress);
-    const targetRounds = getSpeakingTargetRounds(progress);
-    if (completedRounds >= 5) {
-      elements.conversationCompleteMetaText.innerHTML = "5 / 5周 完了<br>🌟 Excellent!";
-      elements.nextConversationBtn.textContent = `${getSpeakingWeekDisplayName(week)}を最初から`;
+    const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
+    const targetSets = 5;
+    const hasNextConversation = progress.conversationIndex < week.shortConversations.length - 1;
+    if (conversationSetCount >= targetSets) {
+      elements.conversationCompleteMetaText.innerHTML = "5 / 5セット 完了<br>🌟 Excellent!";
+      elements.nextConversationBtn.textContent = hasNextConversation ? "次のConversation" : "会話練習を終了";
     } else if (progress.conversationIndex >= week.shortConversations.length - 1) {
-      elements.conversationCompleteMetaText.textContent = `${completedRounds} / ${targetRounds}周 完了`;
-      elements.nextConversationBtn.textContent = `${completedRounds + 1}周目へ進む`;
+      elements.conversationCompleteMetaText.textContent = `${conversationSetCount} / ${targetSets}セット 完了`;
+      elements.nextConversationBtn.textContent = "このConversationを続ける";
     } else {
-      elements.conversationCompleteMetaText.textContent = `${getSpeakingCurrentRound(progress)}周目  ${Math.min(progress.conversationIndex + 1, week.shortConversations.length)} / ${week.shortConversations.length}`;
-      elements.nextConversationBtn.textContent = "次のConversation";
+      elements.conversationCompleteMetaText.textContent = `${conversationSetCount} / ${targetSets}セット 完了`;
+      elements.nextConversationBtn.textContent = "このConversationを続ける";
     }
     showScreen("conversationCompleteScreen");
   }
@@ -1368,6 +1371,7 @@
     if (conversationId && !progress.completedConversationIds.includes(conversationId)) {
       progress.completedConversationIds.push(conversationId);
     }
+    progress.conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0) + 1;
     if (progress.conversationIndex >= week.shortConversations.length - 1) {
       progress.completedRounds += 1;
     }
@@ -1376,7 +1380,8 @@
     renderConversationCompleteScreen();
   }
 
-  function moveToNextSpeakingConversation() {
+    const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
+    elements.conversationProgressText.textContent = `${conversationSetCount} / 5セット  ${progress.conversationIndex + 1} / ${week.shortConversations.length}`;
     const progress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
     if (!progress || !week) {
@@ -1384,16 +1389,11 @@
       return;
     }
 
-    if (progress.conversationIndex >= week.shortConversations.length - 1) {
-      if (progress.completedRounds >= 5) {
-        startSpeakingWeek(progress.weekId);
-        return;
-      }
-      const nextRound = progress.completedRounds + 1;
-      progress.conversationOrder = getSpeakingConversationOrderForRound(week, nextRound);
-      progress.conversationIndex = 0;
+    const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
+    const targetSets = 5;
+
+    if (conversationSetCount < targetSets) {
       progress.lineIndex = 0;
-      progress.completedConversationIds = [];
       progress.phase = "line";
       resetSpeakingHintState();
       state.speakingTranslationVisible = false;
@@ -1403,8 +1403,14 @@
       return;
     }
 
+    if (progress.conversationIndex >= week.shortConversations.length - 1) {
+      renderConversationSelectScreen();
+      return;
+    }
+
     progress.conversationIndex += 1;
     progress.lineIndex = 0;
+    progress.conversationSetCount = 0;
     progress.phase = "line";
     resetSpeakingHintState();
     state.speakingTranslationVisible = false;
