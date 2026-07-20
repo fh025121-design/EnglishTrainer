@@ -480,58 +480,19 @@
     state.speakingHintText = "";
   }
 
-  function inferSpeakingHintType(line) {
-    const question = String(line?.english || "").trim();
-    if (!question || line?.speaker !== "A") return "none";
-
-    const yesNoPattern = /^(do|does|did|can|are|is|was|were|will|have|has|had)\b/i;
-    if (yesNoPattern.test(question)) return "none";
-
-    const patternQuestion = /^(what do you do|what did you do|what do you want|what are you going to do)\b/i;
-    if (patternQuestion.test(question)) return "pattern";
-
-    const nounQuestion = /^(what(?:'s| is) your favorite|what\s+.+\s+do you like|what sport do you like|where do you want to go|what animal do you like)\b/i;
-    if (nounQuestion.test(question)) return "noun";
-
-    return "none";
-  }
-
-  function buildPatternHintTemplate(question) {
-    if (/^what do you do after school\b/i.test(question)) {
-      return "I ～ and ～.";
-    }
-    if (/^what did you do yesterday\b/i.test(question)) {
-      return "I ～ yesterday.";
-    }
-    if (/^what do you want for christmas\b/i.test(question)) {
-      return "I want ～.";
-    }
-    if (/^what are you going to do this weekend\b/i.test(question)) {
-      return "I am going to ～.";
-    }
-    if (/^what did you do\b/i.test(question)) {
-      return "I ～.";
-    }
-    if (/^what do you do\b/i.test(question)) {
-      return "I ～ and ～.";
-    }
-    if (/^what do you want\b/i.test(question)) {
-      return "I want ～.";
-    }
-    return "I ～.";
-  }
-
   function getSpeakingHintSpec(line) {
     const hintType = ["none", "noun", "pattern"].includes(line?.hintType)
       ? line.hintType
-      : inferSpeakingHintType(line);
+      : "none";
 
     if (hintType === "none") {
       return { hintType, hints: [], patternHint: "" };
     }
 
     if (hintType === "noun") {
-      const hints = Array.isArray(line?.hints) ? line.hints : [];
+      const hints = Array.isArray(line?.hints)
+        ? line.hints.map((hint) => String(hint || "").trim()).filter(Boolean)
+        : [];
       if (!hints.length) {
         return { hintType: "none", hints: [], patternHint: "" };
       }
@@ -542,14 +503,16 @@
       };
     }
 
-    const hints = Array.isArray(line?.hints) ? line.hints : [];
+    const hints = Array.isArray(line?.hints)
+      ? line.hints.map((hint) => String(hint || "").trim()).filter(Boolean)
+      : [];
     const patternHint = String(line?.patternHint || "").trim();
-    if (!patternHint && !hints.length) {
+    if (!patternHint) {
       return { hintType: "none", hints: [], patternHint: "" };
     }
     return {
       hintType,
-      patternHint: patternHint || buildPatternHintTemplate(String(line?.english || "")),
+      patternHint,
       hints
     };
   }
@@ -573,19 +536,23 @@
       return;
     }
 
-    const nextStep = Math.min(2, state.speakingHintStep + 1);
-    state.speakingHintStep = Math.max(1, nextStep);
     state.speakingHintVisible = true;
 
     if (spec.hintType === "noun") {
+      const hasSecondHint = Boolean(spec.hints[1]);
+      const nextStep = hasSecondHint ? Math.min(2, state.speakingHintStep + 1) : 1;
+      state.speakingHintStep = Math.max(1, nextStep);
       if (state.speakingHintStep === 1) {
         state.speakingHintTitle = "💡 ヒント①";
         state.speakingHintText = spec.hints[0] || "ヒントなし";
-      } else if (spec.hints[1]) {
+      } else {
         state.speakingHintTitle = "💡 ヒント②";
         state.speakingHintText = spec.hints[1];
       }
     } else {
+      const hasSecondHint = Boolean(spec.hints[0]);
+      const nextStep = hasSecondHint ? Math.min(2, state.speakingHintStep + 1) : 1;
+      state.speakingHintStep = Math.max(1, nextStep);
       state.speakingHintTitle = `💡 ヒント${state.speakingHintStep === 1 ? "①" : "②"}`;
       state.speakingHintText = state.speakingHintStep === 1
         ? (spec.patternHint || "ヒントなし")
