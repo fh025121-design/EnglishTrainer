@@ -1251,7 +1251,8 @@
     }
 
     elements.conversationWeekText.textContent = getSpeakingWeekDisplayLabel(week);
-    elements.conversationProgressText.textContent = `${getSpeakingCurrentRound(progress)}周目  ${progress.conversationIndex + 1} / ${week.shortConversations.length}`;
+    const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
+    elements.conversationProgressText.textContent = `${conversationSetCount} / 5セット  ${progress.conversationIndex + 1} / ${week.shortConversations.length}`;
     elements.conversationSpeakerText.textContent = line.speaker;
     elements.conversationEnglishText.textContent = line.english;
     elements.conversationJapaneseText.textContent = line.japanese;
@@ -1292,10 +1293,9 @@
     }
     const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
     const targetSets = 5;
-    const hasNextConversation = progress.conversationIndex < week.shortConversations.length - 1;
     if (conversationSetCount >= targetSets) {
       elements.conversationCompleteMetaText.innerHTML = "5 / 5セット 完了<br>🌟 Excellent!";
-      elements.nextConversationBtn.textContent = hasNextConversation ? "次のConversation" : "会話練習を終了";
+      elements.nextConversationBtn.textContent = "このConversationを続ける";
     } else if (progress.conversationIndex >= week.shortConversations.length - 1) {
       elements.conversationCompleteMetaText.textContent = `${conversationSetCount} / ${targetSets}セット 完了`;
       elements.nextConversationBtn.textContent = "このConversationを続ける";
@@ -1347,6 +1347,7 @@
     if (state.speakingAudioPlaying) return;
     state.speakingTranslationVisible = !state.speakingTranslationVisible;
     renderConversationPractice();
+
   }
 
   function moveToNextSpeakingLine() {
@@ -1380,8 +1381,15 @@
     renderConversationCompleteScreen();
   }
 
-    const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
-    elements.conversationProgressText.textContent = `${conversationSetCount} / 5セット  ${progress.conversationIndex + 1} / ${week.shortConversations.length}`;
+  function leaveSpeakingPractice() {
+    stopSpeakingAudio();
+    resetSpeakingHintState();
+    state.speakingLineStatus = "awaitingStart";
+    saveSpeakingProgress();
+    renderConversationSelectScreen();
+  }
+
+  function moveToNextSpeakingConversation() {
     const progress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
     if (!progress || !week) {
@@ -1403,12 +1411,6 @@
       return;
     }
 
-    if (progress.conversationIndex >= week.shortConversations.length - 1) {
-      renderConversationSelectScreen();
-      return;
-    }
-
-    progress.conversationIndex += 1;
     progress.lineIndex = 0;
     progress.conversationSetCount = 0;
     progress.phase = "line";
@@ -1417,14 +1419,6 @@
     state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
     renderConversationPractice();
-  }
-
-  function leaveSpeakingPractice() {
-    stopSpeakingAudio();
-    resetSpeakingHintState();
-    state.speakingLineStatus = "awaitingStart";
-    saveSpeakingProgress();
-    renderConversationSelectScreen();
   }
 
   function handlePageVisibilityChange() {
@@ -1443,6 +1437,10 @@
     }
   }
 
+  function handlePageHide() {
+    stopSpeakingAudio();
+  }
+
   function handlePageShow() {
     const speechSynthesis = getSpeechSynthesisEngine();
     if (!speechSynthesis || !speechSynthesis.paused) return;
@@ -1451,10 +1449,6 @@
     } catch (_error) {
       // noop
     }
-  }
-
-  function handlePageHide() {
-    stopSpeakingAudio();
   }
 
   function resolveQuestion(correct, primaryTranscript, transcriptList) {
