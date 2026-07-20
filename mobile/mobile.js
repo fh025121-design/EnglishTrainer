@@ -497,13 +497,6 @@
   }
 
   function renderHome() {
-    const dayMode = state.settings.rangeMode === "day";
-    elements.dayRangeFields.classList.toggle("hidden", !dayMode);
-    [...document.querySelectorAll('input[name="studyRangeMode"]')].forEach((radio) => {
-      radio.checked = radio.value === state.settings.rangeMode;
-    });
-    elements.startDaySelect.value = String(state.settings.startDay);
-    elements.endDaySelect.value = String(state.settings.endDay);
     showScreen("homeScreen");
   }
 
@@ -1208,8 +1201,12 @@
   }
 
   function syncFormFromState() {
-    elements.startDaySelect.innerHTML = "";
-    elements.endDaySelect.innerHTML = "";
+    if (elements.startDaySelect) {
+      elements.startDaySelect.innerHTML = "";
+    }
+    if (elements.endDaySelect) {
+      elements.endDaySelect.innerHTML = "";
+    }
     elements.speakingWordStartDaySelect.innerHTML = "";
     elements.speakingWordEndDaySelect.innerHTML = "";
     elements.conversationStartWeekSelect.innerHTML = "";
@@ -1221,8 +1218,12 @@
       const endOption = startOption.cloneNode(true);
       const speakingStartOption = startOption.cloneNode(true);
       const speakingEndOption = startOption.cloneNode(true);
-      elements.startDaySelect.appendChild(startOption);
-      elements.endDaySelect.appendChild(endOption);
+      if (elements.startDaySelect) {
+        elements.startDaySelect.appendChild(startOption);
+      }
+      if (elements.endDaySelect) {
+        elements.endDaySelect.appendChild(endOption);
+      }
       elements.speakingWordStartDaySelect.appendChild(speakingStartOption);
       elements.speakingWordEndDaySelect.appendChild(speakingEndOption);
     }
@@ -1234,8 +1235,12 @@
       elements.conversationStartWeekSelect.appendChild(startOption);
       elements.conversationEndWeekSelect.appendChild(endOption);
     }
-    elements.startDaySelect.value = String(state.settings.startDay);
-    elements.endDaySelect.value = String(state.settings.endDay);
+    if (elements.startDaySelect) {
+      elements.startDaySelect.value = String(state.settings.startDay);
+    }
+    if (elements.endDaySelect) {
+      elements.endDaySelect.value = String(state.settings.endDay);
+    }
     elements.speakingWordStartDaySelect.value = String(state.speakingUi.startDay);
     elements.speakingWordEndDaySelect.value = String(state.speakingUi.endDay);
     elements.conversationStartWeekSelect.value = String(state.speakingUi.startWeek);
@@ -1342,9 +1347,6 @@
       submitTypingAnswer();
     });
 
-    [...document.querySelectorAll('input[name="studyRangeMode"]')].forEach((radio) => {
-      radio.addEventListener("change", () => updateRangeMode(radio.value));
-    });
     [...document.querySelectorAll('input[name="speechRateMode"]')].forEach((radio) => {
       radio.addEventListener("change", () => updateSpeechRateMode(radio.value));
     });
@@ -1354,8 +1356,10 @@
     [...document.querySelectorAll('input[name="speakingWordRangeMode"]')].forEach((radio) => {
       radio.addEventListener("change", () => updateSpeakingVocabularyRangeMode(radio.value));
     });
-    elements.startDaySelect.addEventListener("change", () => updateDayRange(elements.startDaySelect.value, elements.endDaySelect.value));
-    elements.endDaySelect.addEventListener("change", () => updateDayRange(elements.startDaySelect.value, elements.endDaySelect.value));
+    if (elements.startDaySelect && elements.endDaySelect) {
+      elements.startDaySelect.addEventListener("change", () => updateDayRange(elements.startDaySelect.value, elements.endDaySelect.value));
+      elements.endDaySelect.addEventListener("change", () => updateDayRange(elements.startDaySelect.value, elements.endDaySelect.value));
+    }
     elements.conversationStartWeekSelect.addEventListener("change", () => updateConversationWeekRange(elements.conversationStartWeekSelect.value, elements.conversationEndWeekSelect.value));
     elements.conversationEndWeekSelect.addEventListener("change", () => updateConversationWeekRange(elements.conversationStartWeekSelect.value, elements.conversationEndWeekSelect.value));
     elements.speakingWordStartDaySelect.addEventListener("change", () => updateSpeakingVocabularyDayRange(elements.speakingWordStartDaySelect.value, elements.speakingWordEndDaySelect.value));
