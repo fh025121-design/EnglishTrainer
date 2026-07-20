@@ -147,6 +147,7 @@
       conversationOrder,
       conversationIndex: Math.max(0, Number(raw.conversationIndex) || 0),
       lineIndex: Math.max(0, Number(raw.lineIndex) || 0),
+      completedRounds: Math.max(0, Number(raw.completedRounds) || 0),
       completedConversationIds,
       phase: raw.phase === "conversationComplete" ? "conversationComplete" : "line",
       updatedAt: Number(raw.updatedAt) || Date.now()
@@ -325,9 +326,10 @@
     if (!week || !week.shortConversations.length) return null;
     return {
       weekId,
-      conversationOrder: shuffleArray(week.shortConversations.map((conversation) => conversation.id)),
+      conversationOrder: getSpeakingConversationOrderForRound(week, 1),
       conversationIndex: 0,
       lineIndex: 0,
+      completedRounds: 0,
       completedConversationIds: [],
       phase: "line",
       updatedAt: Date.now()
@@ -339,6 +341,83 @@
     if (!match) return null;
     const numeric = Number(match[1]);
     return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  function getSpeakingWeekDisplayName(week) {
+    const weekNumber = parseWeekNumber(week?.weekId);
+    if (Number.isFinite(weekNumber)) {
+      return `Week${weekNumber}`;
+    }
+    return String(week?.weekId || "Week");
+  }
+
+  function getSpeakingWeekDisplayLabel(week) {
+    return `${getSpeakingWeekDisplayName(week)}（${String(week?.label || "")}）`;
+  }
+
+  function getSpeakingConversationOrderForRound(week, roundNumber) {
+    const orderedConversationIds = week.shortConversations.map((conversation) => conversation.id);
+    if (roundNumber >= 4) {
+      return shuffleArray(orderedConversationIds);
+    }
+    return orderedConversationIds;
+  }
+
+  function getSpeakingCompletedRounds(progress = state.speakingProgress) {
+    return Math.max(0, Number(progress?.completedRounds) || 0);
+  }
+
+  function getSpeakingCurrentRound(progress = state.speakingProgress) {
+    const completedRounds = getSpeakingCompletedRounds(progress);
+    if (progress?.phase === "conversationComplete") {
+      return Math.max(1, completedRounds);
+    }
+    return completedRounds + 1;
+  }
+
+  function getSpeakingTargetRounds(progress = state.speakingProgress) {
+    const completedRounds = getSpeakingCompletedRounds(progress);
+    const currentRound = getSpeakingCurrentRound(progress);
+    return completedRounds >= 3 || currentRound >= 4 ? 5 : 3;
+  }
+
+  function buildSpeakingContinueLines(progress, week) {
+    const completedRounds = getSpeakingCompletedRounds(progress);
+    const currentRound = getSpeakingCurrentRound(progress);
+    const targetRounds = getSpeakingTargetRounds(progress);
+
+    if (progress.phase === "conversationComplete") {
+      if (completedRounds >= 5) {
+        return ["5 / 5周 完了", "🌟 Excellent!"];
+      }
+      if (completedRounds === 3) {
+        return ["🎉 3周達成！", "3 / 5周 完了"];
+      }
+      return [`${completedRounds} / ${targetRounds}周 完了`];
+    }
+
+    return [
+      getSpeakingWeekDisplayLabel(week),
+      `${completedRounds} / ${targetRounds}周 完了`,
+      `${currentRound}周目の途中`
+    ];
+  }
+
+  function renderButtonLines(button, lines) {
+    button.innerHTML = "";
+    lines.forEach((line, index) => {
+      const span = document.createElement("span");
+      span.className = "continue-btn-line";
+      if (index === 0) {
+        span.classList.add("continue-btn-title");
+      } else if (index === 1) {
+        span.classList.add("continue-btn-progress");
+      } else {
+        span.classList.add("continue-btn-detail");
+      }
+      span.textContent = line;
+      button.appendChild(span);
+    });
   }
 
   function pickConversationWeekBySelector() {
@@ -506,11 +585,13 @@
     if (!progress || !week) return null;
     const total = week.shortConversations.length;
     if (!total) return null;
-    const currentPosition = Math.min(progress.conversationIndex + 1, total);
     return {
       week,
       total,
-      currentPosition
+      completedRounds: getSpeakingCompletedRounds(progress),
+      currentRound: getSpeakingCurrentRound(progress),
+      targetRounds: getSpeakingTargetRounds(progress),
+      lines: buildSpeakingContinueLines(progress, week)
     };
   }
 
@@ -530,8 +611,8 @@
 
     elements.conversationContinuePanel.classList.toggle("hidden", !resumeInfo);
     if (resumeInfo) {
-      elements.continueConversationBtn.textContent = `続きから (${resumeInfo.week.label} / ${resumeInfo.currentPosition} / ${resumeInfo.total})`;
-      elements.restartConversationWeekBtn.textContent = `${resumeInfo.week.label} を最初から`;
+      renderButtonLines(elements.continueConversationBtn, resumeInfo.lines);
+      elements.restartConversationWeekBtn.textContent = `${getSpeakingWeekDisplayName(resumeInfo.week)}を最初から`;
     }
 
     showScreen("conversationSelectScreen");
@@ -799,8 +880,8 @@
       return;
     }
 
-    elements.conversationWeekText.textContent = `Week${week.weekId.replace(/^W/i, "")}`;
-    elements.conversationProgressText.textContent = `Conversation ${progress.conversationIndex + 1} / ${week.shortConversations.length}`;
+    elements.conversationWeekText.textContent = getSpeakingWeekDisplayLabel(week);
+    elements.conversationProgressText.textContent = `${getSpeakingCurrentRound(progress)}周目  ${progress.conversationIndex + 1} / ${week.shortConversations.length}`;
     elements.conversationSpeakerText.textContent = line.speaker;
     elements.conversationEnglishText.textContent = line.english;
     elements.conversationJapaneseText.textContent = line.japanese;
@@ -833,10 +914,21 @@
       renderConversationSelectScreen();
       return;
     }
-    const total = week.shortConversations.length;
-    const hasNextConversation = progress.conversationIndex < total - 1;
-    elements.conversationCompleteMetaText.textContent = `Week${week.weekId.replace(/^W/i, "")} / Conversation ${Math.min(progress.conversationIndex + 1, total)} / ${total}`;
-    elements.nextConversationBtn.textContent = hasNextConversation ? "次のConversation" : `もう一度 ${week.label}`;
+    const completedRounds = getSpeakingCompletedRounds(progress);
+    const targetRounds = getSpeakingTargetRounds(progress);
+    if (completedRounds >= 5) {
+      elements.conversationCompleteMetaText.innerHTML = "5 / 5周 完了<br>🌟 Excellent!";
+      elements.nextConversationBtn.textContent = `${getSpeakingWeekDisplayName(week)}を最初から`;
+    } else if (completedRounds === 3 && progress.conversationIndex >= week.shortConversations.length - 1) {
+      elements.conversationCompleteMetaText.innerHTML = "🎉 3周達成！<br>3 / 5周 完了";
+      elements.nextConversationBtn.textContent = "4周目へ進む";
+    } else if (progress.conversationIndex >= week.shortConversations.length - 1) {
+      elements.conversationCompleteMetaText.textContent = `${completedRounds} / ${targetRounds}周 完了`;
+      elements.nextConversationBtn.textContent = `${completedRounds + 1}周目へ進む`;
+    } else {
+      elements.conversationCompleteMetaText.textContent = `${getSpeakingCurrentRound(progress)}周目  ${Math.min(progress.conversationIndex + 1, week.shortConversations.length)} / ${week.shortConversations.length}`;
+      elements.nextConversationBtn.textContent = "次のConversation";
+    }
     showScreen("conversationCompleteScreen");
   }
 
@@ -885,7 +977,8 @@
     if (state.speakingLineStatus !== "completed") return;
     const progress = state.speakingProgress;
     const conversation = getCurrentSpeakingConversation();
-    if (!progress || !conversation) return;
+    const week = getSpeakingProgressWeek();
+    if (!progress || !conversation || !week) return;
 
     if (progress.lineIndex < conversation.lines.length - 1) {
       progress.lineIndex += 1;
@@ -901,6 +994,9 @@
     if (conversationId && !progress.completedConversationIds.includes(conversationId)) {
       progress.completedConversationIds.push(conversationId);
     }
+    if (progress.conversationIndex >= week.shortConversations.length - 1) {
+      progress.completedRounds += 1;
+    }
     progress.phase = "conversationComplete";
     saveSpeakingProgress();
     renderConversationCompleteScreen();
@@ -915,7 +1011,20 @@
     }
 
     if (progress.conversationIndex >= week.shortConversations.length - 1) {
-      startSpeakingWeek(progress.weekId);
+      if (progress.completedRounds >= 5) {
+        startSpeakingWeek(progress.weekId);
+        return;
+      }
+      const nextRound = progress.completedRounds + 1;
+      progress.conversationOrder = getSpeakingConversationOrderForRound(week, nextRound);
+      progress.conversationIndex = 0;
+      progress.lineIndex = 0;
+      progress.completedConversationIds = [];
+      progress.phase = "line";
+      state.speakingTranslationVisible = false;
+      state.speakingLineStatus = "awaitingStart";
+      saveSpeakingProgress();
+      renderConversationPractice();
       return;
     }
 

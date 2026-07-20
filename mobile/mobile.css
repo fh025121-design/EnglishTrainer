@@ -230,6 +230,27 @@ select,
   width: 100%;
 }
 
+#continueConversationBtn {
+  min-height: 124px;
+  padding: 14px 16px;
+  line-height: 1.45;
+  text-align: center;
+  white-space: normal;
+}
+
+.continue-btn-line {
+  display: block;
+}
+
+.continue-btn-title {
+  font-size: 1rem;
+}
+
+.continue-btn-progress,
+.continue-btn-detail {
+  margin-top: 4px;
+}
+
 .screen-topbar {
   margin-bottom: 10px;
 }
