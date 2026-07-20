@@ -128,7 +128,8 @@ select {
 .study-layout,
 .study-action-area,
 .response-block,
-.feedback-block {
+.feedback-block,
+.speaking-week-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -268,6 +269,22 @@ select,
   background: linear-gradient(145deg, rgba(18, 37, 61, 0.94), rgba(9, 21, 36, 0.94));
 }
 
+.speaking-panel,
+.speaking-complete-panel {
+  text-align: center;
+}
+
+.speaking-feature-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.speaking-week-list .primary-btn,
+.speaking-week-list .secondary-btn {
+  width: 100%;
+}
+
 .study-type-text {
   margin: 0;
   font-size: 0.86rem;
@@ -283,6 +300,52 @@ select,
   font-weight: 900;
   letter-spacing: 0.02em;
   color: var(--text);
+}
+
+.conversation-card {
+  text-align: left;
+}
+
+.conversation-speaker,
+.conversation-english,
+.conversation-japanese,
+.conversation-status {
+  margin: 0;
+}
+
+.conversation-speaker {
+  text-align: center;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--primary);
+  letter-spacing: 0.08em;
+}
+
+.conversation-english {
+  font-size: 1.8rem;
+  line-height: 1.45;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.conversation-japanese {
+  margin-top: 6px;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.conversation-status {
+  min-height: 1.6em;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #c8d5e8;
+}
+
+.conversation-action-area {
+  margin-top: 6px;
 }
 
 .mic-btn.listening {
@@ -373,6 +436,18 @@ select,
 @media (max-width: 360px) {
   .prompt-text {
     font-size: 2.2rem;
+  }
+
+  .conversation-speaker {
+    font-size: 1.96rem;
+  }
+
+  .conversation-english {
+    font-size: 1.56rem;
+  }
+
+  .conversation-japanese {
+    font-size: 1rem;
   }
 
   .recognized-text,

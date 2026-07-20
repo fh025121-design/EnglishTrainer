@@ -41,9 +41,161 @@
           </section>
 
           <section class="panel action-panel">
-            <button id="startSpeakingBtn" class="primary-btn large-btn" type="button">🎤 スピーキングで学習</button>
+            <button id="openSpeakingFeatureBtn" class="primary-btn large-btn" type="button">🎤 Speaking</button>
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
             <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
+          </section>
+        </main>
+      </section>
+
+      <section id="speakingHomeScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="speakingHomeBackBtn" class="back-btn" type="button">← ホーム</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel speaking-panel">
+            <p class="hero-icon">🎤 Speaking</p>
+            <h2>学習メニュー</h2>
+          </section>
+
+          <section class="panel speaking-feature-panel">
+            <button id="openConversationSelectBtn" class="primary-btn large-btn" type="button">💬 会話練習</button>
+            <p class="status-text">Weekごとの会話練習</p>
+            <button id="openSpeakingVocabBtn" class="secondary-btn large-btn" type="button">📚 単語・熟語</button>
+            <p class="status-text">単語・熟語を声に出して練習</p>
+          </section>
+        </main>
+      </section>
+
+      <section id="conversationSelectScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="conversationSelectBackBtn" class="back-btn" type="button">← Speaking</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel">
+            <h2>会話練習</h2>
+            <div class="range-options" role="radiogroup" aria-label="会話練習の範囲">
+              <label class="option-card">
+                <input type="radio" name="conversationRangeMode" value="auto" checked />
+                <span>お任せ</span>
+              </label>
+              <label class="option-card">
+                <input type="radio" name="conversationRangeMode" value="week" />
+                <span>Week指定</span>
+              </label>
+            </div>
+
+            <div id="conversationWeekRangeFields" class="day-range-fields hidden">
+              <label class="field-block">
+                <span>開始 Week</span>
+                <select id="conversationStartWeekSelect"></select>
+              </label>
+              <label class="field-block">
+                <span>終了 Week</span>
+                <select id="conversationEndWeekSelect"></select>
+              </label>
+            </div>
+          </section>
+
+          <section id="conversationContinuePanel" class="panel hidden">
+            <h2>続きから</h2>
+            <div class="action-panel compact-actions">
+              <button id="continueConversationBtn" class="primary-btn large-btn" type="button">続きから</button>
+              <button id="restartConversationWeekBtn" class="secondary-btn large-btn" type="button">最初から</button>
+            </div>
+          </section>
+
+          <section class="panel action-panel">
+            <button id="startConversationBtn" class="primary-btn large-btn" type="button">スタート</button>
+          </section>
+        </main>
+      </section>
+
+      <section id="speakingVocabScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="speakingVocabBackBtn" class="back-btn" type="button">← Speaking</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel">
+            <h2>単語・熟語</h2>
+            <div class="range-options" role="radiogroup" aria-label="単語・熟語の範囲">
+              <label class="option-card">
+                <input type="radio" name="speakingWordRangeMode" value="auto" checked />
+                <span>お任せ</span>
+              </label>
+              <label class="option-card">
+                <input type="radio" name="speakingWordRangeMode" value="day" />
+                <span>Day指定</span>
+              </label>
+            </div>
+
+            <div id="speakingWordDayRangeFields" class="day-range-fields hidden">
+              <label class="field-block">
+                <span>開始 Day</span>
+                <select id="speakingWordStartDaySelect"></select>
+              </label>
+              <label class="field-block">
+                <span>終了 Day</span>
+                <select id="speakingWordEndDaySelect"></select>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel action-panel">
+            <button id="startSpeakingWordPracticeBtn" class="primary-btn large-btn" type="button">スタート</button>
+          </section>
+        </main>
+      </section>
+
+      <section id="conversationPracticeScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="conversationBackBtn" class="back-btn" type="button">← 戻る</button>
+        </header>
+
+        <main class="study-layout">
+          <div class="study-meta">
+            <p class="day-badge">Conversation Practice</p>
+            <p id="conversationWeekText" class="progress-text">Week1</p>
+            <p id="conversationProgressText" class="progress-text">Conversation 1 / 7</p>
+          </div>
+
+          <section class="study-card conversation-card">
+            <p id="conversationSpeakerText" class="conversation-speaker">A</p>
+            <p id="conversationEnglishText" class="conversation-english">What subject do you like?</p>
+
+            <div id="conversationJapaneseBlock" class="recognized-block hidden">
+              <p class="recognized-label">日本語</p>
+              <p id="conversationJapaneseText" class="conversation-japanese"></p>
+            </div>
+
+            <p id="conversationStatusText" class="conversation-status">再生中…</p>
+
+            <div class="study-action-area conversation-action-area">
+              <button id="toggleJapaneseBtn" class="secondary-btn" type="button">日本語</button>
+              <button id="replayConversationAudioBtn" class="secondary-btn" type="button">▶ もう一度聞く</button>
+              <button id="nextConversationLineBtn" class="primary-btn" type="button">次へ</button>
+            </div>
+          </section>
+        </main>
+      </section>
+
+      <section id="conversationCompleteScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="conversationCompleteBackBtn" class="back-btn" type="button">← 戻る</button>
+        </header>
+
+        <main class="stack-layout result-layout">
+          <section class="panel result-panel speaking-complete-panel">
+            <p class="hero-icon">Good Job!</p>
+            <h2>Conversation Complete!</h2>
+            <p id="conversationCompleteMetaText" class="status-text">Week1</p>
+            <div class="action-panel compact-actions">
+              <button id="nextConversationBtn" class="primary-btn large-btn" type="button">次のConversation</button>
+              <button id="returnConversationSelectBtn" class="secondary-btn large-btn" type="button">会話練習へ戻る</button>
+            </div>
           </section>
         </main>
       </section>
@@ -168,6 +320,7 @@
     </div>
 
     <script src="../data.js"></script>
+    <script src="speaking-data.js"></script>
     <script src="mobile.js"></script>
   </body>
   </html>
