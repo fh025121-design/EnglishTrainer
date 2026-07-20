@@ -1045,8 +1045,13 @@ p {
 .preposition-translation-after {
   margin-top: 8px;
   color: var(--muted);
-  font-size: 1.18rem;
+  font-size: inherit;
   line-height: 1.6;
+}
+
+.preposition-translation-focus {
+  color: var(--danger);
+  font-weight: 900;
 }
 
 .response-scope-btn {
@@ -2048,14 +2053,37 @@ select {
 .preposition-icon {
   font-size: 1.7rem;
   line-height: 1;
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .preposition-main-answer {
   font-size: 1.7rem;
   font-weight: 800;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   text-transform: lowercase;
+}
+
+.preposition-head-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.preposition-usage-inline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preposition-usage-inline .preposition-info-label {
+  margin: 0;
+}
+
+.preposition-usage-inline .preposition-context-image {
+  margin: 0;
 }
 
 .preposition-info-label {
@@ -2064,10 +2092,59 @@ select {
   font-size: 0.85rem;
 }
 
-.preposition-core-image {
-  font-size: 1.25rem;
+.preposition-correct-sentence {
+  margin: 8px 0 10px;
+  font-size: inherit;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.preposition-correct-answer-value {
+  color: var(--danger);
+  font-weight: 900;
+}
+
+.preposition-answer-status {
+  margin-right: 10px;
+  font-size: 0.9em;
   font-weight: 800;
-  color: #ffe7a0;
+}
+
+.preposition-result-inline {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.preposition-answer-inline {
+  font-weight: 700;
+}
+
+.preposition-answer-usage-inline {
+  margin-left: 10px;
+  color: var(--muted);
+  font-size: 0.84em;
+  font-weight: 700;
+}
+
+.preposition-answer-status.is-correct {
+  color: var(--success);
+}
+
+.preposition-answer-status.is-wrong {
+  color: var(--danger);
+}
+
+.preposition-core-image {
+  display: inline-block;
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: #fff0b3;
+  background: rgba(255, 214, 112, 0.16);
+  border: 1px solid rgba(255, 214, 112, 0.45);
+  border-radius: 10px;
+  padding: 4px 10px;
 }
 
 .preposition-context-image {
@@ -2087,6 +2164,11 @@ select {
 .preposition-representative-wrap ul {
   margin: 4px 0 0;
   padding-left: 20px;
+  font-size: 1.45rem;
+}
+
+.preposition-representative-wrap li {
+  font-size: 1.45rem;
 }
 
 .preposition-result-actions {

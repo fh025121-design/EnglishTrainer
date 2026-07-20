@@ -2908,27 +2908,88 @@ function buildPrepositionFeedbackMarkup(question, isCorrect, userAnswer) {
   const meta = getPrepositionMetaMap()[question.preposition] || { icon: "●", coreImage: "位置関係", representative: [] };
   const representative = (meta.representative || []).slice(0, 2);
   const translation = question.translation || "";
-  const answerRow = isCorrect
-    ? ""
-    : `<div class="answer-line">あなたの答え：${userAnswer || "-"}</div><div class="answer-line">正解：${question.answer}</div>`;
+  const usageText = question.contextImage || "文脈での位置関係";
+  const safeAnswer = escapeHtml(String(question.answer || "").toLowerCase());
+  const rawSentence = String(question.sentence || question.question || "").trim();
+  const rawAnswer = String(question.answer || "").trim();
+  const escapedAnswerForRegex = rawAnswer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const answerPattern = escapedAnswerForRegex ? new RegExp(`\\b${escapedAnswerForRegex}\\b`, "i") : null;
+  let sentenceWithAnswer = escapeHtml(rawSentence);
+  if (rawSentence && answerPattern) {
+    const match = rawSentence.match(answerPattern);
+    if (match && Number.isInteger(match.index)) {
+      const start = match.index;
+      const end = start + match[0].length;
+      sentenceWithAnswer = `${escapeHtml(rawSentence.slice(0, start))}(<span class="preposition-correct-answer-value">${safeAnswer}</span>)${escapeHtml(rawSentence.slice(end))}`;
+    } else {
+      sentenceWithAnswer = `${escapeHtml(rawSentence)}（<span class="preposition-correct-answer-value">${safeAnswer}</span>）`;
+    }
+  }
+  const correctSentenceMarkup = `<div class="answer-line preposition-correct-sentence">正しい文章：${sentenceWithAnswer || `（<span class="preposition-correct-answer-value">${safeAnswer}</span>）`}</div>`;
+  const safeUserAnswer = escapeHtml(userAnswer || "-");
+  const answerStatus = isCorrect
+    ? `<span class="preposition-answer-status is-correct">〇 正解</span>`
+    : `<span class="preposition-answer-status is-wrong">× 不正解</span>`;
+  const answerInlineText = isCorrect
+    ? `<span class="preposition-answer-inline">${safeUserAnswer}</span>`
+    : `<span class="preposition-answer-inline">${safeUserAnswer} ではなく<span class="preposition-correct-answer-value">${safeAnswer}</span></span>`;
+  const usageInline = `<span class="preposition-answer-usage-inline">今回の使い方「${escapeHtml(usageText)}」</span>`;
+  const answerRow = `<div class="answer-line preposition-result-inline">${answerStatus}${answerInlineText}${usageInline}</div>`;
+  const translationMarkup = translation ? `<div class="answer-line preposition-translation-after">${buildPrepositionTranslationWithFocus(question)}</div>` : "";
   const representativeMarkup = representative.length
     ? `<div class="preposition-representative-wrap"><p class="preposition-info-label">代表例</p><ul>${representative.map((entry) => `<li>${entry}</li>`).join("")}</ul></div>`
     : "";
   return [
-    `<strong>${isCorrect ? "✅ 正解" : "❌ 不正解"}</strong>`,
+    correctSentenceMarkup,
+    translationMarkup,
     answerRow,
     `<div class="preposition-core-block">`,
-    `<div class="preposition-icon">${meta.icon}</div>`,
-    `<div class="preposition-main-answer">${question.answer}</div>`,
+    `<div class="preposition-head-row"><div class="preposition-icon">${meta.icon}</div><div class="preposition-main-answer">${question.answer}</div></div>`,
     `<p class="preposition-info-label">基本イメージ</p>`,
     `<p class="preposition-core-image">「${meta.coreImage}」</p>`,
-    `<p class="preposition-info-label">今回の使い方</p>`,
-    `<p class="preposition-context-image">「${question.contextImage || "文脈での位置関係"}」</p>`,
-    `<p class="preposition-sentence">${question.sentence}</p>`,
-    translation ? `<p class="preposition-translation-after">${translation}</p>` : "",
     representativeMarkup,
     `</div>`
   ].join("");
+}
+
+function buildPrepositionTranslationWithFocus(question) {
+  const rawTranslation = String(question?.translation || "");
+  if (!rawTranslation) return "";
+
+  const preposition = String(question?.answer || question?.preposition || "").toLowerCase().trim();
+  const focusPatternMap = {
+    at: /(で|に)/,
+    in: /(中に|で|に)/,
+    on: /(どおりに|に)/,
+    to: /(へ|に)/,
+    from: /(から)/,
+    for: /(について|を|に|ために)/,
+    with: /(と)/,
+    by: /(で)/,
+    about: /(について)/,
+    after: /(あとで|後で|後に|放課後に)/,
+    before: /(前に)/,
+    near: /(近くに)/,
+    during: /(中に)/,
+    without: /(なしで)/,
+    of: /(の)/,
+    around: /(世界中を|中を|周囲を)/
+  };
+
+  const pattern = focusPatternMap[preposition];
+  if (!pattern) return escapeHtml(rawTranslation);
+
+  const match = rawTranslation.match(pattern);
+  if (!match || !Number.isInteger(match.index)) {
+    return escapeHtml(rawTranslation);
+  }
+
+  const start = match.index;
+  const end = start + match[0].length;
+  const before = escapeHtml(rawTranslation.slice(0, start));
+  const focus = escapeHtml(rawTranslation.slice(start, end));
+  const after = escapeHtml(rawTranslation.slice(end));
+  return `${before}<span class="preposition-translation-focus">${focus}</span>${after}`;
 }
 
 function renderPrepositionQuestion() {
@@ -2948,16 +3009,20 @@ function renderPrepositionQuestion() {
   const counterText = document.getElementById("prepositionCounterText");
   const questionText = document.getElementById("prepositionQuestionText");
   const translationText = document.getElementById("prepositionTranslationText");
+  const answerPanel = document.getElementById("prepositionAnswerPanel");
   const answerInput = document.getElementById("prepositionAnswerInput");
   const answerBtn = document.getElementById("prepositionAnswerBtn");
   const feedbackBox = document.getElementById("prepositionFeedbackBox");
   const nextBtn = document.getElementById("prepositionNextBtn");
-  if (!title || !scopeText || !counterText || !questionText || !translationText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
+  if (!title || !scopeText || !counterText || !questionText || !translationText || !answerInput || !answerBtn || !feedbackBox || !nextBtn || !answerPanel) return;
 
   const currentQuestion = session.questions[session.currentIndex];
   title.textContent = `前置詞特訓 ${session.scopeLabel}`;
   scopeText.textContent = `前置詞特訓 ${session.scopeLabel}`;
   counterText.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
+  questionText.classList.remove("hidden");
+  translationText.classList.remove("hidden");
+  answerPanel.classList.remove("hidden");
   questionText.textContent = currentQuestion.question;
   translationText.textContent = currentQuestion.translation || "";
 
@@ -2983,6 +3048,9 @@ function submitPrepositionAnswer() {
   const answerBtn = document.getElementById("prepositionAnswerBtn");
   const feedbackBox = document.getElementById("prepositionFeedbackBox");
   const nextBtn = document.getElementById("prepositionNextBtn");
+  const questionText = document.getElementById("prepositionQuestionText");
+  const translationText = document.getElementById("prepositionTranslationText");
+  const answerPanel = document.getElementById("prepositionAnswerPanel");
   if (!answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
 
   const raw = String(answerInput.value || "");
@@ -3031,6 +3099,9 @@ function submitPrepositionAnswer() {
 
   feedbackBox.className = `feedback-box ${isCorrect ? "success" : "error"}`;
   feedbackBox.innerHTML = buildPrepositionFeedbackMarkup(currentQuestion, isCorrect, normalized);
+  if (questionText) questionText.classList.add("hidden");
+  if (translationText) translationText.classList.add("hidden");
+  if (answerPanel) answerPanel.classList.add("hidden");
   nextBtn.classList.add("hidden");
   answerInput.disabled = true;
   answerBtn.disabled = true;
