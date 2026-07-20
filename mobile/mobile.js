@@ -550,9 +550,8 @@
   }
 
   function getSpeakingTargetRounds(progress = state.speakingProgress) {
-    const completedRounds = getSpeakingCompletedRounds(progress);
-    const currentRound = getSpeakingCurrentRound(progress);
-    return completedRounds >= 3 || currentRound >= 4 ? 5 : 3;
+    void progress;
+    return 5;
   }
 
   function buildSpeakingContinueLines(progress, week) {
@@ -563,9 +562,6 @@
     if (progress.phase === "conversationComplete") {
       if (completedRounds >= 5) {
         return ["5 / 5周 完了", "🌟 Excellent!"];
-      }
-      if (completedRounds === 3) {
-        return ["🎉 3周達成！", "3 / 5周 完了"];
       }
       return [`${completedRounds} / ${targetRounds}周 完了`];
     }
@@ -1093,9 +1089,6 @@
     if (completedRounds >= 5) {
       elements.conversationCompleteMetaText.innerHTML = "5 / 5周 完了<br>🌟 Excellent!";
       elements.nextConversationBtn.textContent = `${getSpeakingWeekDisplayName(week)}を最初から`;
-    } else if (completedRounds === 3 && progress.conversationIndex >= week.shortConversations.length - 1) {
-      elements.conversationCompleteMetaText.innerHTML = "🎉 3周達成！<br>3 / 5周 完了";
-      elements.nextConversationBtn.textContent = "4周目へ進む";
     } else if (progress.conversationIndex >= week.shortConversations.length - 1) {
       elements.conversationCompleteMetaText.textContent = `${completedRounds} / ${targetRounds}周 完了`;
       elements.nextConversationBtn.textContent = `${completedRounds + 1}周目へ進む`;

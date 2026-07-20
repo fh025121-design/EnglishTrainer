@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/20 16:40", note: "スマホ版Speakingの会話練習で、3周で切り替わっていた進捗表示を5周基準へ変更" },
     { version: "2026/07/20 16:25", note: "スマホ版SpeakingのWeek選択上限を40から20へ変更" },
     { version: "2026/07/20 16:10", note: "スマホ版設定画面にPC版と共通のバージョン情報・更新内容表示を追加。更新内容はPC版と同じパスワードで開けるよう対応" },
     { version: "2026/07/20 15:20", note: "スマホ版Speakingの会話練習を周回管理へ変更。『Week指定』を『Weekを選ぶ』へ修正し、続きから表示を周回数ベースへ刷新。1〜3周目は順番通り、4〜5周目はランダム、途中の周回数と位置も保存するよう対応" },
