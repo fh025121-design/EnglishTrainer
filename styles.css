@@ -95,6 +95,7 @@ p {
   margin: 0;
   font-size: 0.75rem;
   color: var(--muted);
+  line-height: 1.5;
 }
 
 .settings-version-row {
@@ -131,6 +132,7 @@ p {
 
 .settings-update-history {
   margin-top: 10px;
+  line-height: 1.45;
 }
 
 .settings-typing-wrap {
@@ -159,6 +161,7 @@ p {
   gap: 6px;
   font-size: 0.8rem;
   color: var(--muted);
+  line-height: 1.35;
 }
 
 .settings-typing-field select {
@@ -223,6 +226,7 @@ p {
   gap: 8px;
   color: var(--muted);
   font-size: 0.75rem;
+  line-height: 1.45;
 }
 
 .settings-history-list li {
@@ -379,6 +383,11 @@ p {
   height: 100%;
   overflow: hidden;
   animation: fadeIn 140ms ease-out;
+}
+
+#settingsScreen.active {
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 @keyframes fadeIn {

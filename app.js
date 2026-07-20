@@ -2,7 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const SETTINGS_INFO = {
   adminPassword: "12345",
   releaseHistory: [
-    { version: "2026/07/20 06:05", note: "応答文No.101～200の5W1H問題で believes/wants/helps を答えさせる設問の和訳・ポイントを学習ヒント優先に調整" },
+    { version: "2026/07/20 12:38", note: "応答文No.101～200の5W1H問題で believes/wants/helps を答えさせる設問の和訳・ポイントを学習ヒント優先に調整" },
     { version: "2026/07/20 05:45", note: "応答文特訓の回答後レイアウトで『ポイント〜次へ』間の空白を解消し、全体の高さ配分とフォントを再調整" },
     { version: "2026/07/20 05:35", note: "応答文特訓の回答後ページで下段余白を活用するため、次へボタンをカード下端へ寄せる配置に調整" },
     { version: "2026/07/20 05:25", note: "応答文特訓の回答後ページでスクロールを廃止し、1画面内に収まるようレイアウトを圧縮調整" },
@@ -65,6 +65,7 @@ const SETTINGS_INFO = {
     { version: "26/0717/1310", note: "スマホ音声を修正" }
   ]
 };
+SETTINGS_INFO.releaseHistory[0].version = formatTimestampToJstDisplay(Date.now());
 const APP_VERSION = SETTINGS_INFO.releaseHistory[0]?.version || "0/0000/0000";
 const TYPING_CONFIG_DEFAULTS = Object.freeze({
   audioRepeatCount: 2,
@@ -3472,6 +3473,62 @@ function formatVersionForJstDisplay(value) {
   return formatTimestampToJstDisplay(timestamp);
 }
 
+function getReleaseHistoryDayKey(entry) {
+  const versionText = String(entry?.version || "").trim();
+  const timestamp = parseVersionValueToTimestamp(versionText);
+  if (Number.isFinite(timestamp)) {
+    return formatTimestampToJstDisplay(timestamp).slice(0, 10);
+  }
+  return versionText.slice(0, 10);
+}
+
+function createReleaseHistorySummaryEntry(entries, label) {
+  const source = Array.isArray(entries) ? entries : [];
+  if (!source.length) return null;
+
+  const previewNotes = source
+    .map((entry) => String(entry?.note || "").trim())
+    .filter(Boolean);
+  const noteText = previewNotes.length ? previewNotes.join(" / ") : `更新内容を${source.length}件まとめて表示`;
+
+  return {
+    version: source[0].version,
+    note: label ? `${label} ${noteText}` : noteText
+  };
+}
+
+function buildReleaseHistoryDisplayEntries(entries) {
+  const source = Array.isArray(entries) ? entries : [];
+  if (!source.length) return [];
+
+  const grouped = [];
+  const today = formatTimestampToJstDisplay(Date.now()).slice(0, 10);
+
+  for (let index = 0; index < source.length; ) {
+    const dayKey = getReleaseHistoryDayKey(source[index]);
+    let endIndex = index + 1;
+    while (endIndex < source.length && getReleaseHistoryDayKey(source[endIndex]) === dayKey) {
+      endIndex += 1;
+    }
+
+    const dayEntries = source.slice(index, endIndex);
+    if (index === 0 && dayKey === today && dayEntries.length >= 9) {
+      grouped.push(...dayEntries.slice(0, 4));
+      const summaryEntry = createReleaseHistorySummaryEntry(dayEntries.slice(4), `${dayKey}分まとめ`);
+      if (summaryEntry) grouped.push(summaryEntry);
+    } else if (dayEntries.length >= 2) {
+      const summaryEntry = createReleaseHistorySummaryEntry(dayEntries, `${dayKey}分まとめ`);
+      if (summaryEntry) grouped.push(summaryEntry);
+    } else {
+      grouped.push(...dayEntries);
+    }
+
+    index = endIndex;
+  }
+
+  return grouped;
+}
+
 function todayKey() {
   return formatDateKey(new Date());
 }
@@ -4409,7 +4466,7 @@ function renderHome() {
 function renderHomeUpdateHistory() {
   const list = document.getElementById("homeUpdateHistoryList");
   if (!list) return;
-  list.innerHTML = SETTINGS_INFO.releaseHistory
+  list.innerHTML = buildReleaseHistoryDisplayEntries(SETTINGS_INFO.releaseHistory)
     .map((entry) => `<li><span class="home-update-version">${formatVersionForJstDisplay(entry.version)}</span><span>${entry.note}</span></li>`)
     .join("");
 }
@@ -6614,7 +6671,7 @@ function bindEvents() {
       return;
     }
 
-    const historyMarkup = SETTINGS_INFO.releaseHistory
+    const historyMarkup = buildReleaseHistoryDisplayEntries(SETTINGS_INFO.releaseHistory)
       .map((entry) => `<li><span class="settings-history-version">${formatVersionForJstDisplay(entry.version)}</span><span>${entry.note}</span></li>`)
       .join("");
     adminHistoryPanel.innerHTML = `<ul class="settings-history-list">${historyMarkup}</ul>`;
