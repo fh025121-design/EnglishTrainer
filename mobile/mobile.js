@@ -1503,10 +1503,17 @@
       elements.speakingWordStartDaySelect.appendChild(speakingStartOption);
       elements.speakingWordEndDaySelect.appendChild(speakingEndOption);
     }
+    const speakingWeekLabelByNumber = new Map();
+    getSpeakingWeeks().forEach((weekInfo) => {
+      const weekNumber = parseWeekNumber(weekInfo.weekId);
+      if (!Number.isFinite(weekNumber) || !weekInfo.label) return;
+      speakingWeekLabelByNumber.set(weekNumber, String(weekInfo.label));
+    });
     for (let week = SPEAKING_WEEK_MIN; week <= SPEAKING_WEEK_MAX; week += 1) {
       const startOption = document.createElement("option");
       startOption.value = String(week);
-      startOption.textContent = `Week${week}`;
+      const weekLabel = speakingWeekLabelByNumber.get(week);
+      startOption.textContent = weekLabel ? `Week${week}（${weekLabel}）` : `Week${week}`;
       const endOption = startOption.cloneNode(true);
       elements.conversationStartWeekSelect.appendChild(startOption);
       elements.conversationEndWeekSelect.appendChild(endOption);

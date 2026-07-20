@@ -1,6 +1,8 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/20 22:45", note: "更新日時の運用を日本時間（JST）で固定する方針を明確化" },
+    { version: "2026/07/20 16:55", note: "スマホ版Speakingの開始Week／終了Weekプルダウンに日付範囲を併記（例: Week4（7/13～7/19））" },
     { version: "2026/07/20 16:40", note: "スマホ版Speakingの会話練習で、3周で切り替わっていた進捗表示を5周基準へ変更" },
     { version: "2026/07/20 16:25", note: "スマホ版SpeakingのWeek選択上限を40から20へ変更" },
     { version: "2026/07/20 16:10", note: "スマホ版設定画面にPC版と共通のバージョン情報・更新内容表示を追加。更新内容はPC版と同じパスワードで開けるよう対応" },
