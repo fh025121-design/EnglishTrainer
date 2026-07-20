@@ -40,6 +40,7 @@
     speakingTranslationVisible: false,
     speakingAudioPlaying: false,
     speakingAudioWatchdogId: null,
+    speakingLineStatus: "idle",
     speakingUtterance: null,
     currentScreen: "homeScreen",
     confirmAction: null,
@@ -288,15 +289,34 @@
     return conversation?.lines?.[lineIndex] || null;
   }
 
-  function stopSpeakingAudio() {
+  function getSpeechSynthesisEngine() {
+    return typeof window.speechSynthesis === "undefined" ? null : window.speechSynthesis;
+  }
+
+  function pickEnglishVoice() {
+    const speechSynthesis = getSpeechSynthesisEngine();
+    if (!speechSynthesis || typeof speechSynthesis.getVoices !== "function") return null;
+    const voices = speechSynthesis.getVoices() || [];
+    if (!voices.length) return null;
+    return voices.find((voice) => /^en-US$/i.test(String(voice.lang || "")))
+      || voices.find((voice) => /^en/i.test(String(voice.lang || "")))
+      || null;
+  }
+
+  function clearSpeakingWatchdog() {
     if (state.speakingAudioWatchdogId) {
       window.clearTimeout(state.speakingAudioWatchdogId);
       state.speakingAudioWatchdogId = null;
     }
+  }
+
+  function stopSpeakingAudio() {
+    clearSpeakingWatchdog();
     state.speakingAudioPlaying = false;
     state.speakingUtterance = null;
-    if (typeof window.speechSynthesis !== "undefined") {
-      window.speechSynthesis.cancel();
+    const speechSynthesis = getSpeechSynthesisEngine();
+    if (speechSynthesis) {
+      speechSynthesis.cancel();
     }
   }
 
@@ -708,8 +728,10 @@
     if (!line) return;
     stopSpeakingAudio();
 
-    if (typeof window.speechSynthesis === "undefined") {
+    const speechSynthesis = getSpeechSynthesisEngine();
+    if (!speechSynthesis) {
       state.speakingAudioPlaying = false;
+      state.speakingLineStatus = "error";
       renderConversationPractice();
       return;
     }
@@ -717,36 +739,59 @@
     const utterance = new SpeechSynthesisUtterance(line.english);
     utterance.lang = "en-US";
     utterance.rate = MOBILE_SPEECH_RATES[state.settings.speechRateMode] || MOBILE_SPEECH_RATES.slow;
-    utterance.onend = () => {
+    const voice = pickEnglishVoice();
+    if (voice) {
+      utterance.voice = voice;
+    }
+    utterance.onstart = () => {
       if (state.speakingUtterance !== utterance) return;
-      state.speakingAudioPlaying = false;
-      state.speakingUtterance = null;
+      state.speakingAudioPlaying = true;
+      state.speakingLineStatus = "playing";
       renderConversationPractice();
     };
-    utterance.onerror = () => {
+    utterance.onend = () => {
       if (state.speakingUtterance !== utterance) return;
+      clearSpeakingWatchdog();
       state.speakingAudioPlaying = false;
       state.speakingUtterance = null;
+      state.speakingLineStatus = "completed";
+      renderConversationPractice();
+    };
+    utterance.onerror = (event) => {
+      if (state.speakingUtterance !== utterance) return;
+      clearSpeakingWatchdog();
+      state.speakingAudioPlaying = false;
+      state.speakingUtterance = null;
+      state.speakingLineStatus = "error";
+      console.error("Speaking playback error:", event?.error || event);
       renderConversationPractice();
     };
 
     state.speakingAudioPlaying = true;
+    state.speakingLineStatus = "playing";
     state.speakingUtterance = utterance;
     state.speakingAudioWatchdogId = window.setTimeout(() => {
-      if (!state.speakingAudioPlaying) return;
+      if (state.speakingUtterance !== utterance) return;
       state.speakingAudioPlaying = false;
       state.speakingUtterance = null;
-      state.speakingAudioWatchdogId = null;
+      state.speakingLineStatus = "error";
+      clearSpeakingWatchdog();
+      console.error("Speaking playback watchdog timeout");
       renderConversationPractice();
     }, 6000);
-    renderConversationPractice();
 
     try {
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-    } catch (_error) {
+      if (speechSynthesis.paused) {
+        speechSynthesis.resume();
+      }
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+    } catch (error) {
+      clearSpeakingWatchdog();
       state.speakingAudioPlaying = false;
       state.speakingUtterance = null;
+      state.speakingLineStatus = "error";
+      console.error("Speaking playback start failed:", error);
       renderConversationPractice();
     }
   }
@@ -770,10 +815,20 @@
     const statusPromptText = line.speaker === "A"
       ? "🎤 質問文をシャドーイングし、続きの文章を\n声に出してみよう。"
       : "🎤 シャドーイングしてください";
-    elements.conversationStatusText.textContent = state.speakingAudioPlaying ? "再生中…" : statusPromptText;
-    elements.toggleJapaneseBtn.disabled = state.speakingAudioPlaying || !line.japanese;
-    elements.replayConversationAudioBtn.disabled = state.speakingAudioPlaying;
-    elements.nextConversationLineBtn.disabled = state.speakingAudioPlaying;
+    const hasSpeechSynthesis = Boolean(getSpeechSynthesisEngine());
+    if (state.speakingLineStatus === "playing") {
+      elements.conversationStatusText.textContent = "再生中…";
+    } else if (state.speakingLineStatus === "error") {
+      elements.conversationStatusText.textContent = "音声を再生できませんでした。";
+    } else if (state.speakingLineStatus === "awaitingStart") {
+      elements.conversationStatusText.textContent = "▶ 音声を開始してください";
+    } else {
+      elements.conversationStatusText.textContent = statusPromptText;
+    }
+    elements.toggleJapaneseBtn.disabled = state.speakingLineStatus === "playing" || !line.japanese;
+    elements.replayConversationAudioBtn.textContent = state.speakingLineStatus === "awaitingStart" ? "▶ 音声を開始" : "▶ もう一度聞く";
+    elements.replayConversationAudioBtn.disabled = !hasSpeechSynthesis || state.speakingLineStatus === "playing";
+    elements.nextConversationLineBtn.disabled = state.speakingLineStatus !== "completed";
 
     showScreen("conversationPracticeScreen");
   }
@@ -798,11 +853,12 @@
       window.alert("このWeekの会話データはまだありません。");
       return;
     }
+    stopSpeakingAudio();
     state.speakingProgress = progress;
     state.speakingTranslationVisible = false;
+    state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
     renderConversationPractice();
-    playCurrentSpeakingLine();
   }
 
   function resumeSpeakingProgress() {
@@ -816,6 +872,7 @@
       renderConversationCompleteScreen();
       return;
     }
+    state.speakingLineStatus = "awaitingStart";
     renderConversationPractice();
   }
 
@@ -832,7 +889,7 @@
   }
 
   function moveToNextSpeakingLine() {
-    if (state.speakingAudioPlaying) return;
+    if (state.speakingLineStatus !== "completed") return;
     const progress = state.speakingProgress;
     const conversation = getCurrentSpeakingConversation();
     if (!progress || !conversation) return;
@@ -873,15 +930,46 @@
     progress.lineIndex = 0;
     progress.phase = "line";
     state.speakingTranslationVisible = false;
+    state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
     renderConversationPractice();
-    playCurrentSpeakingLine();
   }
 
   function leaveSpeakingPractice() {
     stopSpeakingAudio();
+    state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
     renderConversationSelectScreen();
+  }
+
+  function handlePageVisibilityChange() {
+    const speechSynthesis = getSpeechSynthesisEngine();
+    if (!speechSynthesis) return;
+    if (document.visibilityState === "hidden") {
+      stopSpeakingAudio();
+      return;
+    }
+    if (speechSynthesis.paused) {
+      try {
+        speechSynthesis.resume();
+      } catch (_error) {
+        // noop
+      }
+    }
+  }
+
+  function handlePageShow() {
+    const speechSynthesis = getSpeechSynthesisEngine();
+    if (!speechSynthesis || !speechSynthesis.paused) return;
+    try {
+      speechSynthesis.resume();
+    } catch (_error) {
+      // noop
+    }
+  }
+
+  function handlePageHide() {
+    stopSpeakingAudio();
   }
 
   function resolveQuestion(correct, primaryTranscript, transcriptList) {
@@ -1105,6 +1193,7 @@
           speakingTranslationVisible: false,
           speakingAudioPlaying: false,
           speakingAudioWatchdogId: null,
+          speakingLineStatus: "idle",
           speakingUtterance: null,
           currentScreen: "homeScreen",
           confirmAction: null,
@@ -1271,6 +1360,9 @@
     elements.conversationEndWeekSelect.addEventListener("change", () => updateConversationWeekRange(elements.conversationStartWeekSelect.value, elements.conversationEndWeekSelect.value));
     elements.speakingWordStartDaySelect.addEventListener("change", () => updateSpeakingVocabularyDayRange(elements.speakingWordStartDaySelect.value, elements.speakingWordEndDaySelect.value));
     elements.speakingWordEndDaySelect.addEventListener("change", () => updateSpeakingVocabularyDayRange(elements.speakingWordStartDaySelect.value, elements.speakingWordEndDaySelect.value));
+    document.addEventListener("visibilitychange", handlePageVisibilityChange);
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("pagehide", handlePageHide);
   }
 
   function initialize() {
