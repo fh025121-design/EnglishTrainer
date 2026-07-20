@@ -260,6 +260,20 @@
                 </label>
               </div>
             </div>
+            <div class="field-block settings-version-block">
+              <span>バージョン情報</span>
+              <p id="mobileVersionText" class="settings-version-text">-</p>
+            </div>
+            <div class="field-block settings-update-block">
+              <span>更新内容</span>
+              <button id="showMobileUpdateHistoryBtn" class="secondary-btn large-btn" type="button">更新内容を見る</button>
+              <div id="mobileUpdateHistoryGate" class="field-block hidden">
+                <input id="mobileUpdateHistoryPasswordInput" class="typing-input" type="password" inputmode="numeric" autocomplete="off" placeholder="パスワード" />
+                <button id="mobileUpdateHistoryUnlockBtn" class="primary-btn large-btn" type="button">表示する</button>
+                <p id="mobileUpdateHistoryStatusText" class="status-text hidden"></p>
+              </div>
+              <div id="mobileUpdateHistoryPanel" class="settings-history-panel hidden"></div>
+            </div>
           </section>
 
           <section class="panel action-panel">
@@ -295,7 +309,8 @@
     </div>
 
     <script src="../data.js"></script>
+    <script src="../release-info.js?v=20260720-1610"></script>
     <script src="speaking-data.js"></script>
-    <script src="mobile.js"></script>
+    <script src="mobile.js?v=20260720-1610"></script>
   </body>
   </html>

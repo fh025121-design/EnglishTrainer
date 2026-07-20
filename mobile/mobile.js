@@ -1,6 +1,11 @@
 (function () {
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
   const SPEAKING_PROGRESS_KEY = "englishTrainerSpeakingProgress";
+  const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
+    adminPassword: "12345",
+    releaseHistory: []
+  });
+  const APP_VERSION = SETTINGS_INFO.releaseHistory[0]?.version || "0/0000/0000";
   const MOBILE_DAY_MIN = 1;
   const MOBILE_DAY_MAX = 40;
   const SPEAKING_WEEK_MIN = 1;
@@ -48,6 +53,175 @@
   };
 
   const elements = {};
+
+  function formatTimestampToJstDisplay(timestamp) {
+    if (!Number.isFinite(Number(timestamp))) return "";
+    const date = new Date(Number(timestamp));
+    const formatter = new Intl.DateTimeFormat("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    });
+    const parts = formatter.formatToParts(date);
+    const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${byType.year}/${byType.month}/${byType.day} ${byType.hour}:${byType.minute}`;
+  }
+
+  function parseVersionValueToTimestamp(value) {
+    const source = String(value || "").trim();
+    if (!source) return null;
+
+    const numeric = Number(source);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return numeric;
+    }
+
+    const toUtcFromJstParts = (year, month, day, hour, minute, second = 0) => Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour) - 9,
+      Number(minute),
+      Number(second),
+      0
+    );
+
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:?\d{2})$/i.test(source)) {
+      const parsedUtc = Date.parse(source);
+      return Number.isFinite(parsedUtc) ? parsedUtc : null;
+    }
+
+    if (/\b(UTC|GMT)\b/i.test(source)) {
+      const parsedUtc = Date.parse(source);
+      return Number.isFinite(parsedUtc) ? parsedUtc : null;
+    }
+
+    let match = source.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+    if (match) {
+      const [, year, month, day, hour, minute] = match;
+      return toUtcFromJstParts(year, month, day, hour, minute, 0);
+    }
+
+    match = source.match(/^(\d{4})-(\d{2})-(\d{2})[\sT](\d{2}):(\d{2})(?::(\d{2}))?(?:\s*JST)?$/i);
+    if (match) {
+      const [, year, month, day, hour, minute, second = "0"] = match;
+      return toUtcFromJstParts(year, month, day, hour, minute, second);
+    }
+
+    match = source.match(/^(\d{2})\/(\d{2})(\d{2})\/(\d{2})(\d{2})$/);
+    if (match) {
+      const [, yy, month, day, hour, minute] = match;
+      const fullYear = 2000 + Number(yy);
+      return toUtcFromJstParts(fullYear, month, day, hour, minute, 0);
+    }
+
+    return null;
+  }
+
+  function formatVersionForJstDisplay(value) {
+    const timestamp = parseVersionValueToTimestamp(value);
+    if (!Number.isFinite(timestamp)) return String(value || "");
+    return formatTimestampToJstDisplay(timestamp);
+  }
+
+  function getReleaseHistoryDayKey(entry) {
+    const versionText = String(entry?.version || "").trim();
+    const timestamp = parseVersionValueToTimestamp(versionText);
+    if (Number.isFinite(timestamp)) {
+      return formatTimestampToJstDisplay(timestamp).slice(0, 10);
+    }
+    return versionText.slice(0, 10);
+  }
+
+  function createReleaseHistorySummaryEntry(entries, label) {
+    const source = Array.isArray(entries) ? entries : [];
+    if (!source.length) return null;
+
+    const previewNotes = source
+      .map((entry) => String(entry?.note || "").trim())
+      .filter(Boolean);
+    const noteText = previewNotes.length ? previewNotes.join(" / ") : `更新内容を${source.length}件まとめて表示`;
+
+    return {
+      version: source[0].version,
+      note: label ? `${label} ${noteText}` : noteText
+    };
+  }
+
+  function buildReleaseHistoryDisplayEntries(entries) {
+    const source = Array.isArray(entries) ? entries : [];
+    if (!source.length) return [];
+
+    const grouped = [];
+    const today = formatTimestampToJstDisplay(Date.now()).slice(0, 10);
+
+    for (let index = 0; index < source.length; ) {
+      const dayKey = getReleaseHistoryDayKey(source[index]);
+      let endIndex = index + 1;
+      while (endIndex < source.length && getReleaseHistoryDayKey(source[endIndex]) === dayKey) {
+        endIndex += 1;
+      }
+
+      const dayEntries = source.slice(index, endIndex);
+      if (index === 0 && dayKey === today && dayEntries.length >= 9) {
+        grouped.push(...dayEntries.slice(0, 4));
+        const summaryEntry = createReleaseHistorySummaryEntry(dayEntries.slice(4), `${dayKey}分まとめ`);
+        if (summaryEntry) grouped.push(summaryEntry);
+      } else if (dayEntries.length >= 2) {
+        const summaryEntry = createReleaseHistorySummaryEntry(dayEntries, `${dayKey}分まとめ`);
+        if (summaryEntry) grouped.push(summaryEntry);
+      } else {
+        grouped.push(...dayEntries);
+      }
+
+      index = endIndex;
+    }
+
+    return grouped;
+  }
+
+  function hideMobileUpdateHistory() {
+    if (elements.mobileUpdateHistoryPanel) {
+      elements.mobileUpdateHistoryPanel.classList.add("hidden");
+      elements.mobileUpdateHistoryPanel.innerHTML = "";
+    }
+    if (elements.mobileUpdateHistoryStatusText) {
+      elements.mobileUpdateHistoryStatusText.textContent = "";
+      elements.mobileUpdateHistoryStatusText.classList.add("hidden");
+    }
+  }
+
+  function renderMobileVersionInfo() {
+    if (elements.mobileVersionText) {
+      elements.mobileVersionText.textContent = formatVersionForJstDisplay(APP_VERSION);
+    }
+  }
+
+  function unlockMobileUpdateHistory() {
+    if (!elements.mobileUpdateHistoryPasswordInput || !elements.mobileUpdateHistoryPanel) return;
+    if (elements.mobileUpdateHistoryPasswordInput.value !== SETTINGS_INFO.adminPassword) {
+      hideMobileUpdateHistory();
+      if (elements.mobileUpdateHistoryStatusText) {
+        elements.mobileUpdateHistoryStatusText.textContent = "パスワードが違います。";
+        elements.mobileUpdateHistoryStatusText.classList.remove("hidden");
+      }
+      return;
+    }
+
+    const historyMarkup = buildReleaseHistoryDisplayEntries(SETTINGS_INFO.releaseHistory)
+      .map((entry) => `<li><span class="settings-history-version">${formatVersionForJstDisplay(entry.version)}</span><span>${entry.note}</span></li>`)
+      .join("");
+    elements.mobileUpdateHistoryPanel.innerHTML = `<ul class="settings-history-list">${historyMarkup}</ul>`;
+    elements.mobileUpdateHistoryPanel.classList.remove("hidden");
+    if (elements.mobileUpdateHistoryStatusText) {
+      elements.mobileUpdateHistoryStatusText.textContent = "";
+      elements.mobileUpdateHistoryStatusText.classList.add("hidden");
+    }
+  }
 
   function createDefaultMobileState() {
     return {
@@ -1408,6 +1582,13 @@
     elements.resultSecondTryText = document.getElementById("resultSecondTryText");
     elements.resultFailedText = document.getElementById("resultFailedText");
     elements.micTestStatusText = document.getElementById("micTestStatusText");
+    elements.mobileVersionText = document.getElementById("mobileVersionText");
+    elements.showMobileUpdateHistoryBtn = document.getElementById("showMobileUpdateHistoryBtn");
+    elements.mobileUpdateHistoryGate = document.getElementById("mobileUpdateHistoryGate");
+    elements.mobileUpdateHistoryPasswordInput = document.getElementById("mobileUpdateHistoryPasswordInput");
+    elements.mobileUpdateHistoryUnlockBtn = document.getElementById("mobileUpdateHistoryUnlockBtn");
+    elements.mobileUpdateHistoryStatusText = document.getElementById("mobileUpdateHistoryStatusText");
+    elements.mobileUpdateHistoryPanel = document.getElementById("mobileUpdateHistoryPanel");
     elements.confirmModal = document.getElementById("confirmModal");
     elements.confirmMessage = document.getElementById("confirmMessage");
     elements.confirmOkBtn = document.getElementById("confirmOkBtn");
@@ -1440,6 +1621,18 @@
     document.getElementById("returnHomeBtn").addEventListener("click", renderHome);
     document.getElementById("runMicTestBtn").addEventListener("click", runMicTest);
     document.getElementById("resetMobileDataBtn").addEventListener("click", resetMobileData);
+    elements.showMobileUpdateHistoryBtn.addEventListener("click", () => {
+      elements.mobileUpdateHistoryGate.classList.remove("hidden");
+      hideMobileUpdateHistory();
+      elements.mobileUpdateHistoryPasswordInput.value = "";
+      elements.mobileUpdateHistoryPasswordInput.focus();
+    });
+    elements.mobileUpdateHistoryUnlockBtn.addEventListener("click", unlockMobileUpdateHistory);
+    elements.mobileUpdateHistoryPasswordInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      unlockMobileUpdateHistory();
+    });
     document.getElementById("confirmCancelBtn").addEventListener("click", hideConfirm);
     elements.confirmOkBtn.addEventListener("click", () => {
       const action = state.confirmAction;
@@ -1482,6 +1675,7 @@
     loadState();
     loadSpeakingProgress();
     bindElements();
+    renderMobileVersionInfo();
     syncFormFromState();
     bindEvents();
     renderHome();
