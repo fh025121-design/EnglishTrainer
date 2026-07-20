@@ -149,9 +149,18 @@
             <p id="conversationStatusText" class="conversation-status">再生中…</p>
 
             <div class="study-action-area conversation-action-area">
+              <button id="speakingHintBtn" class="secondary-btn" type="button">💡 ヒント</button>
               <button id="toggleJapaneseBtn" class="secondary-btn" type="button">日本語</button>
               <button id="replayConversationAudioBtn" class="secondary-btn" type="button">▶ もう一度聞く</button>
               <button id="nextConversationLineBtn" class="primary-btn" type="button">次へ</button>
+            </div>
+
+            <div id="speakingHintBlock" class="recognized-block hidden">
+              <div class="speaking-hint-header">
+                <p id="speakingHintTitleText" class="recognized-label">💡 ヒント①</p>
+                <button id="closeSpeakingHintBtn" class="ghost-btn speaking-hint-close-btn" type="button">閉じる</button>
+              </div>
+              <p id="speakingHintText" class="conversation-japanese"></p>
             </div>
           </section>
         </main>
@@ -309,8 +318,8 @@
     </div>
 
     <script src="../data.js"></script>
-    <script src="../release-info.js?v=20260720-2245"></script>
+    <script src="../release-info.js?v=20260720-2325"></script>
     <script src="speaking-data.js"></script>
-    <script src="mobile.js?v=20260720-2245"></script>
+    <script src="mobile.js?v=20260720-2325"></script>
   </body>
   </html>

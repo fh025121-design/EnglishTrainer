@@ -47,6 +47,10 @@
     speakingAudioWatchdogId: null,
     speakingLineStatus: "idle",
     speakingUtterance: null,
+    speakingHintVisible: false,
+    speakingHintStep: 0,
+    speakingHintTitle: "",
+    speakingHintText: "",
     currentScreen: "homeScreen",
     confirmAction: null,
     micTestRecognition: null
@@ -426,7 +430,12 @@
                   .map((line) => ({
                     speaker: String(line?.speaker || "").trim(),
                     english: String(line?.english || "").trim(),
-                    japanese: String(line?.japanese || "").trim()
+                    japanese: String(line?.japanese || "").trim(),
+                    hintType: String(line?.hintType || "").trim().toLowerCase(),
+                    patternHint: String(line?.patternHint || "").trim(),
+                    hints: Array.isArray(line?.hints)
+                      ? line.hints.map((hint) => String(hint || "").trim()).filter(Boolean)
+                      : []
                   }))
                   .filter((line) => line.speaker && line.english)
                 : []
@@ -462,6 +471,128 @@
     const conversation = getCurrentSpeakingConversation();
     const lineIndex = Math.max(0, Number(state.speakingProgress?.lineIndex) || 0);
     return conversation?.lines?.[lineIndex] || null;
+  }
+
+  function resetSpeakingHintState() {
+    state.speakingHintVisible = false;
+    state.speakingHintStep = 0;
+    state.speakingHintTitle = "";
+    state.speakingHintText = "";
+  }
+
+  function inferSpeakingHintType(line) {
+    const question = String(line?.english || "").trim();
+    if (!question || line?.speaker !== "A") return "none";
+
+    const yesNoPattern = /^(do|does|did|can|are|is|was|were|will|have|has|had)\b/i;
+    if (yesNoPattern.test(question)) return "none";
+
+    const patternQuestion = /^(what do you do|what did you do|what do you want|what are you going to do)\b/i;
+    if (patternQuestion.test(question)) return "pattern";
+
+    const nounQuestion = /^(what(?:'s| is) your favorite|what\s+.+\s+do you like|what sport do you like|where do you want to go|what animal do you like)\b/i;
+    if (nounQuestion.test(question)) return "noun";
+
+    return "none";
+  }
+
+  function buildPatternHintTemplate(question) {
+    if (/^what do you do after school\b/i.test(question)) {
+      return "I ～ and ～.";
+    }
+    if (/^what did you do yesterday\b/i.test(question)) {
+      return "I ～ yesterday.";
+    }
+    if (/^what do you want for christmas\b/i.test(question)) {
+      return "I want ～.";
+    }
+    if (/^what are you going to do this weekend\b/i.test(question)) {
+      return "I am going to ～.";
+    }
+    if (/^what did you do\b/i.test(question)) {
+      return "I ～.";
+    }
+    if (/^what do you do\b/i.test(question)) {
+      return "I ～ and ～.";
+    }
+    if (/^what do you want\b/i.test(question)) {
+      return "I want ～.";
+    }
+    return "I ～.";
+  }
+
+  function getSpeakingHintSpec(line) {
+    const hintType = ["none", "noun", "pattern"].includes(line?.hintType)
+      ? line.hintType
+      : inferSpeakingHintType(line);
+
+    if (hintType === "none") {
+      return { hintType, hints: [], patternHint: "" };
+    }
+
+    if (hintType === "noun") {
+      const hints = Array.isArray(line?.hints) ? line.hints : [];
+      if (!hints.length) {
+        return { hintType: "none", hints: [], patternHint: "" };
+      }
+      return {
+        hintType,
+        hints,
+        patternHint: ""
+      };
+    }
+
+    const hints = Array.isArray(line?.hints) ? line.hints : [];
+    const patternHint = String(line?.patternHint || "").trim();
+    if (!patternHint && !hints.length) {
+      return { hintType: "none", hints: [], patternHint: "" };
+    }
+    return {
+      hintType,
+      patternHint: patternHint || buildPatternHintTemplate(String(line?.english || "")),
+      hints
+    };
+  }
+
+  function closeSpeakingHint() {
+    state.speakingHintVisible = false;
+    renderConversationPractice();
+  }
+
+  function showNextSpeakingHint() {
+    const line = getCurrentSpeakingLine();
+    if (!line) return;
+    const spec = getSpeakingHintSpec(line);
+
+    if (spec.hintType === "none") {
+      state.speakingHintVisible = true;
+      state.speakingHintStep = 1;
+      state.speakingHintTitle = "ヒントなし";
+      state.speakingHintText = "";
+      renderConversationPractice();
+      return;
+    }
+
+    const nextStep = Math.min(2, state.speakingHintStep + 1);
+    state.speakingHintStep = Math.max(1, nextStep);
+    state.speakingHintVisible = true;
+
+    if (spec.hintType === "noun") {
+      if (state.speakingHintStep === 1) {
+        state.speakingHintTitle = "💡 ヒント①";
+        state.speakingHintText = spec.hints[0] || "ヒントなし";
+      } else if (spec.hints[1]) {
+        state.speakingHintTitle = "💡 ヒント②";
+        state.speakingHintText = spec.hints[1];
+      }
+    } else {
+      state.speakingHintTitle = `💡 ヒント${state.speakingHintStep === 1 ? "①" : "②"}`;
+      state.speakingHintText = state.speakingHintStep === 1
+        ? (spec.patternHint || "ヒントなし")
+        : (spec.hints[0] || "ヒントなし");
+    }
+
+    renderConversationPractice();
   }
 
   function getSpeechSynthesisEngine() {
@@ -1056,6 +1187,9 @@
     elements.conversationEnglishText.textContent = line.english;
     elements.conversationJapaneseText.textContent = line.japanese;
     elements.conversationJapaneseBlock.classList.toggle("hidden", !state.speakingTranslationVisible || !line.japanese);
+    elements.speakingHintBlock.classList.toggle("hidden", !state.speakingHintVisible);
+    elements.speakingHintTitleText.textContent = state.speakingHintTitle || "💡 ヒント";
+    elements.speakingHintText.textContent = state.speakingHintText || "";
     const statusPromptText = line.speaker === "A"
       ? "🎤 質問文をシャドーイングし、続きの文章を\n声に出してみよう。"
       : "🎤 シャドーイングしてください";
@@ -1070,6 +1204,7 @@
       elements.conversationStatusText.textContent = statusPromptText;
     }
     elements.toggleJapaneseBtn.disabled = state.speakingLineStatus === "playing" || !line.japanese;
+    elements.speakingHintBtn.disabled = state.speakingLineStatus === "playing";
     elements.replayConversationAudioBtn.textContent = state.speakingLineStatus === "awaitingStart" ? "▶ 音声を開始" : "▶ もう一度聞く";
     elements.replayConversationAudioBtn.disabled = !hasSpeechSynthesis || state.speakingLineStatus === "playing";
     elements.nextConversationLineBtn.disabled = state.speakingLineStatus !== "completed";
@@ -1107,6 +1242,7 @@
     }
     stopSpeakingAudio();
     state.speakingProgress = progress;
+    resetSpeakingHintState();
     state.speakingTranslationVisible = false;
     state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
@@ -1124,6 +1260,7 @@
       renderConversationCompleteScreen();
       return;
     }
+    resetSpeakingHintState();
     state.speakingLineStatus = "awaitingStart";
     renderConversationPractice();
   }
@@ -1149,6 +1286,7 @@
 
     if (progress.lineIndex < conversation.lines.length - 1) {
       progress.lineIndex += 1;
+      resetSpeakingHintState();
       state.speakingTranslationVisible = false;
       progress.phase = "line";
       saveSpeakingProgress();
@@ -1188,6 +1326,7 @@
       progress.lineIndex = 0;
       progress.completedConversationIds = [];
       progress.phase = "line";
+      resetSpeakingHintState();
       state.speakingTranslationVisible = false;
       state.speakingLineStatus = "awaitingStart";
       saveSpeakingProgress();
@@ -1198,6 +1337,7 @@
     progress.conversationIndex += 1;
     progress.lineIndex = 0;
     progress.phase = "line";
+    resetSpeakingHintState();
     state.speakingTranslationVisible = false;
     state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
@@ -1206,6 +1346,7 @@
 
   function leaveSpeakingPractice() {
     stopSpeakingAudio();
+    resetSpeakingHintState();
     state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
     renderConversationSelectScreen();
@@ -1464,6 +1605,10 @@
           speakingAudioWatchdogId: null,
           speakingLineStatus: "idle",
           speakingUtterance: null,
+          speakingHintVisible: false,
+          speakingHintStep: 0,
+          speakingHintTitle: "",
+          speakingHintText: "",
           currentScreen: "homeScreen",
           confirmAction: null,
           micTestRecognition: null
@@ -1503,17 +1648,34 @@
       elements.speakingWordStartDaySelect.appendChild(speakingStartOption);
       elements.speakingWordEndDaySelect.appendChild(speakingEndOption);
     }
+    const speakingWeeks = getSpeakingWeeks();
     const speakingWeekLabelByNumber = new Map();
-    getSpeakingWeeks().forEach((weekInfo) => {
+    speakingWeeks.forEach((weekInfo) => {
       const weekNumber = parseWeekNumber(weekInfo.weekId);
       if (!Number.isFinite(weekNumber) || !weekInfo.label) return;
       speakingWeekLabelByNumber.set(weekNumber, String(weekInfo.label));
     });
+    const baseWeekStart = (() => {
+      const weekOne = speakingWeeks.find((weekInfo) => parseWeekNumber(weekInfo.weekId) === 1);
+      const parsed = Date.parse(String(weekOne?.startDate || ""));
+      return Number.isFinite(parsed) ? new Date(parsed) : new Date("2026-06-22T00:00:00");
+    })();
+    const formatMonthDay = (date) => `${date.getMonth() + 1}/${date.getDate()}`;
+    const buildWeekLabelByNumber = (weekNumber) => {
+      const directLabel = speakingWeekLabelByNumber.get(weekNumber);
+      if (directLabel) return directLabel;
+      const offsetDays = (weekNumber - 1) * 7;
+      const startDate = new Date(baseWeekStart);
+      startDate.setDate(baseWeekStart.getDate() + offsetDays);
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      return `${formatMonthDay(startDate)}～${formatMonthDay(endDate)}`;
+    };
     for (let week = SPEAKING_WEEK_MIN; week <= SPEAKING_WEEK_MAX; week += 1) {
       const startOption = document.createElement("option");
       startOption.value = String(week);
-      const weekLabel = speakingWeekLabelByNumber.get(week);
-      startOption.textContent = weekLabel ? `Week${week}（${weekLabel}）` : `Week${week}`;
+      const weekLabel = buildWeekLabelByNumber(week);
+      startOption.textContent = `Week${week}（${weekLabel}）`;
       const endOption = startOption.cloneNode(true);
       elements.conversationStartWeekSelect.appendChild(startOption);
       elements.conversationEndWeekSelect.appendChild(endOption);
@@ -1554,6 +1716,11 @@
     elements.conversationJapaneseBlock = document.getElementById("conversationJapaneseBlock");
     elements.conversationJapaneseText = document.getElementById("conversationJapaneseText");
     elements.conversationStatusText = document.getElementById("conversationStatusText");
+    elements.speakingHintBtn = document.getElementById("speakingHintBtn");
+    elements.speakingHintBlock = document.getElementById("speakingHintBlock");
+    elements.speakingHintTitleText = document.getElementById("speakingHintTitleText");
+    elements.speakingHintText = document.getElementById("speakingHintText");
+    elements.closeSpeakingHintBtn = document.getElementById("closeSpeakingHintBtn");
     elements.toggleJapaneseBtn = document.getElementById("toggleJapaneseBtn");
     elements.replayConversationAudioBtn = document.getElementById("replayConversationAudioBtn");
     elements.nextConversationLineBtn = document.getElementById("nextConversationLineBtn");
@@ -1610,6 +1777,8 @@
     document.getElementById("returnConversationSelectBtn").addEventListener("click", renderConversationSelectScreen);
     elements.continueConversationBtn.addEventListener("click", resumeSpeakingProgress);
     elements.restartConversationWeekBtn.addEventListener("click", restartSpeakingWeek);
+    elements.speakingHintBtn.addEventListener("click", showNextSpeakingHint);
+    elements.closeSpeakingHintBtn.addEventListener("click", closeSpeakingHint);
     elements.toggleJapaneseBtn.addEventListener("click", toggleSpeakingJapanese);
     elements.replayConversationAudioBtn.addEventListener("click", playCurrentSpeakingLine);
     elements.nextConversationLineBtn.addEventListener("click", moveToNextSpeakingLine);

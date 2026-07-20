@@ -1,4 +1,4 @@
-window.speakingData = {
+﻿window.speakingData = {
   weeks: [
     {
       weekId: "W1",
