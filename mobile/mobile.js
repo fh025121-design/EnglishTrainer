@@ -1,7 +1,6 @@
 (function () {
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
   const SPEAKING_PROGRESS_KEY = "englishTrainerSpeakingProgress";
-  const SPEAKING_LAST_WEEK_KEY = "englishTrainerSpeakingLastWeek";
   const MOBILE_DAY_MIN = 1;
   const MOBILE_DAY_MAX = 40;
   const SPEAKING_WEEK_MIN = 1;
@@ -43,7 +42,6 @@
     speakingAudioWatchdogId: null,
     speakingLineStatus: "idle",
     speakingUtterance: null,
-    lastSelectedSpeakingWeek: null,
     currentScreen: "homeScreen",
     confirmAction: null,
     micTestRecognition: null
@@ -134,26 +132,6 @@
     }
   }
 
-  function loadLastSelectedSpeakingWeek() {
-    const raw = String(window.localStorage.getItem(SPEAKING_LAST_WEEK_KEY) || "").trim();
-    if (!raw) {
-      state.lastSelectedSpeakingWeek = null;
-      return;
-    }
-    state.lastSelectedSpeakingWeek = /^W\d+$/i.test(raw) ? raw.toUpperCase() : null;
-  }
-
-  function saveLastSelectedSpeakingWeek(weekId) {
-    const normalizedWeekId = String(weekId || "").trim().toUpperCase();
-    if (!/^W\d+$/.test(normalizedWeekId)) {
-      state.lastSelectedSpeakingWeek = null;
-      window.localStorage.removeItem(SPEAKING_LAST_WEEK_KEY);
-      return;
-    }
-    state.lastSelectedSpeakingWeek = normalizedWeekId;
-    window.localStorage.setItem(SPEAKING_LAST_WEEK_KEY, normalizedWeekId);
-  }
-
   function sanitizeSpeakingProgress(raw) {
     if (!raw || typeof raw !== "object") return null;
     const weekId = String(raw.weekId || "").trim();
@@ -171,7 +149,6 @@
       lineIndex: Math.max(0, Number(raw.lineIndex) || 0),
       completedConversationIds,
       phase: raw.phase === "conversationComplete" ? "conversationComplete" : "line",
-      launchMode: raw.launchMode === "auto" ? "auto" : "week",
       updatedAt: Number(raw.updatedAt) || Date.now()
     };
   }
@@ -343,7 +320,7 @@
     }
   }
 
-  function createSpeakingProgress(weekId, launchMode) {
+  function createSpeakingProgress(weekId) {
     const week = getSpeakingWeek(weekId);
     if (!week || !week.shortConversations.length) return null;
     return {
@@ -353,7 +330,6 @@
       lineIndex: 0,
       completedConversationIds: [],
       phase: "line",
-      launchMode: launchMode === "auto" ? "auto" : "week",
       updatedAt: Date.now()
     };
   }
@@ -363,20 +339,6 @@
     if (!match) return null;
     const numeric = Number(match[1]);
     return Number.isFinite(numeric) ? numeric : null;
-  }
-
-  function getAutoConversationWeeks(availableWeeks) {
-    const baseWeekNumber = parseWeekNumber(state.lastSelectedSpeakingWeek);
-    if (!Number.isFinite(baseWeekNumber)) {
-      return availableWeeks;
-    }
-    const minWeek = Math.max(SPEAKING_WEEK_MIN, baseWeekNumber - 3);
-    const maxWeek = Math.min(SPEAKING_WEEK_MAX, baseWeekNumber + 3);
-    const nearbyWeeks = availableWeeks.filter((week) => {
-      const weekNumber = parseWeekNumber(week.weekId);
-      return Number.isFinite(weekNumber) && weekNumber >= minWeek && weekNumber <= maxWeek;
-    });
-    return nearbyWeeks.length ? nearbyWeeks : availableWeeks;
   }
 
   function pickConversationWeekBySelector() {
@@ -393,26 +355,19 @@
         return Number.isFinite(weekNumber) && weekNumber >= minWeek && weekNumber <= maxWeek;
       });
       if (!scoped.length) return null;
-      return {
-        week: scoped[Math.floor(Math.random() * scoped.length)],
-        launchMode: "week"
-      };
+      return scoped[Math.floor(Math.random() * scoped.length)];
     }
 
-    const autoWeeks = getAutoConversationWeeks(availableWeeks);
-    return {
-      week: autoWeeks[Math.floor(Math.random() * autoWeeks.length)],
-      launchMode: "auto"
-    };
+    return availableWeeks[Math.floor(Math.random() * availableWeeks.length)];
   }
 
   function startConversationPracticeFromSelector() {
-    const selection = pickConversationWeekBySelector();
-    if (!selection?.week) {
+    const selectedWeek = pickConversationWeekBySelector();
+    if (!selectedWeek) {
       window.alert("選択した範囲に会話データがありません。");
       return;
     }
-    startSpeakingWeek(selection.week.weekId, { launchMode: selection.launchMode });
+    startSpeakingWeek(selectedWeek.weekId);
   }
 
   function startSpeakingVocabularyPractice() {
@@ -545,11 +500,26 @@
     showScreen("homeScreen");
   }
 
+  function getSpeakingResumeInfo() {
+    const progress = state.speakingProgress;
+    const week = getSpeakingProgressWeek();
+    if (!progress || !week) return null;
+    const total = week.shortConversations.length;
+    if (!total) return null;
+    const currentPosition = Math.min(progress.conversationIndex + 1, total);
+    return {
+      week,
+      total,
+      currentPosition
+    };
+  }
+
   function renderSpeakingHome() {
     showScreen("speakingHomeScreen");
   }
 
   function renderConversationSelectScreen() {
+    const resumeInfo = getSpeakingResumeInfo();
     const weekMode = state.speakingUi.conversationRangeMode === "week";
     elements.conversationWeekRangeFields.classList.toggle("hidden", !weekMode);
     [...document.querySelectorAll('input[name="conversationRangeMode"]')].forEach((radio) => {
@@ -557,6 +527,12 @@
     });
     elements.conversationStartWeekSelect.value = String(state.speakingUi.startWeek);
     elements.conversationEndWeekSelect.value = String(state.speakingUi.endWeek);
+
+    elements.conversationContinuePanel.classList.toggle("hidden", !resumeInfo);
+    if (resumeInfo) {
+      elements.continueConversationBtn.textContent = `続きから (${resumeInfo.week.label} / ${resumeInfo.currentPosition} / ${resumeInfo.total})`;
+      elements.restartConversationWeekBtn.textContent = `${resumeInfo.week.label} を最初から`;
+    }
 
     showScreen("conversationSelectScreen");
   }
@@ -864,20 +840,39 @@
     showScreen("conversationCompleteScreen");
   }
 
-  function startSpeakingWeek(weekId, options = {}) {
-    const launchMode = options.launchMode === "auto" ? "auto" : "week";
-    const progress = createSpeakingProgress(weekId, launchMode);
+  function startSpeakingWeek(weekId) {
+    const progress = createSpeakingProgress(weekId);
     if (!progress) {
       window.alert("このWeekの会話データはまだありません。");
       return;
     }
     stopSpeakingAudio();
     state.speakingProgress = progress;
-    saveLastSelectedSpeakingWeek(progress.weekId);
     state.speakingTranslationVisible = false;
     state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
     renderConversationPractice();
+  }
+
+  function resumeSpeakingProgress() {
+    const progress = state.speakingProgress;
+    const week = getSpeakingProgressWeek();
+    if (!progress || !week) {
+      renderConversationSelectScreen();
+      return;
+    }
+    if (progress.phase === "conversationComplete") {
+      renderConversationCompleteScreen();
+      return;
+    }
+    state.speakingLineStatus = "awaitingStart";
+    renderConversationPractice();
+  }
+
+  function restartSpeakingWeek() {
+    const weekId = state.speakingProgress?.weekId;
+    if (!weekId) return;
+    startSpeakingWeek(weekId);
   }
 
   function toggleSpeakingJapanese() {
@@ -936,11 +931,7 @@
   function leaveSpeakingPractice() {
     stopSpeakingAudio();
     state.speakingLineStatus = "awaitingStart";
-    if (state.speakingProgress?.launchMode === "auto") {
-      clearSpeakingProgress();
-    } else {
-      saveSpeakingProgress();
-    }
+    saveSpeakingProgress();
     renderConversationSelectScreen();
   }
 
@@ -1267,6 +1258,9 @@
     elements.conversationWeekRangeFields = document.getElementById("conversationWeekRangeFields");
     elements.conversationStartWeekSelect = document.getElementById("conversationStartWeekSelect");
     elements.conversationEndWeekSelect = document.getElementById("conversationEndWeekSelect");
+    elements.conversationContinuePanel = document.getElementById("conversationContinuePanel");
+    elements.continueConversationBtn = document.getElementById("continueConversationBtn");
+    elements.restartConversationWeekBtn = document.getElementById("restartConversationWeekBtn");
     elements.speakingWordDayRangeFields = document.getElementById("speakingWordDayRangeFields");
     elements.speakingWordStartDaySelect = document.getElementById("speakingWordStartDaySelect");
     elements.speakingWordEndDaySelect = document.getElementById("speakingWordEndDaySelect");
@@ -1324,6 +1318,8 @@
     document.getElementById("conversationBackBtn").addEventListener("click", leaveSpeakingPractice);
     document.getElementById("conversationCompleteBackBtn").addEventListener("click", leaveSpeakingPractice);
     document.getElementById("returnConversationSelectBtn").addEventListener("click", renderConversationSelectScreen);
+    elements.continueConversationBtn.addEventListener("click", resumeSpeakingProgress);
+    elements.restartConversationWeekBtn.addEventListener("click", restartSpeakingWeek);
     elements.toggleJapaneseBtn.addEventListener("click", toggleSpeakingJapanese);
     elements.replayConversationAudioBtn.addEventListener("click", playCurrentSpeakingLine);
     elements.nextConversationLineBtn.addEventListener("click", moveToNextSpeakingLine);
@@ -1375,7 +1371,6 @@
 
   function initialize() {
     loadState();
-    loadLastSelectedSpeakingWeek();
     loadSpeakingProgress();
     bindElements();
     syncFormFromState();
