@@ -1154,7 +1154,9 @@
     elements.conversationEnglishText.textContent = line.english;
     elements.conversationJapaneseText.textContent = line.japanese;
     elements.conversationJapaneseBlock.classList.toggle("hidden", !state.speakingTranslationVisible || !line.japanese);
-    elements.speakingHintBlock.classList.toggle("hidden", !state.speakingHintVisible);
+    const showSpeakingHintUi = line.speaker === "A";
+    elements.speakingHintBtn.classList.toggle("hidden", !showSpeakingHintUi);
+    elements.speakingHintBlock.classList.toggle("hidden", !showSpeakingHintUi || !state.speakingHintVisible);
     elements.speakingHintTitleText.textContent = state.speakingHintTitle || "💡 ヒント";
     elements.speakingHintText.textContent = state.speakingHintText || "";
     const statusPromptText = line.speaker === "A"
@@ -1171,7 +1173,7 @@
       elements.conversationStatusText.textContent = statusPromptText;
     }
     elements.toggleJapaneseBtn.disabled = state.speakingLineStatus === "playing" || !line.japanese;
-    elements.speakingHintBtn.disabled = state.speakingLineStatus === "playing";
+    elements.speakingHintBtn.disabled = !showSpeakingHintUi || state.speakingLineStatus === "playing";
     elements.replayConversationAudioBtn.textContent = state.speakingLineStatus === "awaitingStart" ? "▶ 音声を開始" : "▶ もう一度聞く";
     elements.replayConversationAudioBtn.disabled = !hasSpeechSynthesis || state.speakingLineStatus === "playing";
     elements.nextConversationLineBtn.disabled = state.speakingLineStatus !== "completed";
