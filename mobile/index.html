@@ -4,7 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>English Trainer Mobile</title>
-    <link rel="stylesheet" href="mobile.css" />
+    <script>
+      (function () {
+        const cacheToken = new URLSearchParams(window.location.search).get("v") || "20260721-0121";
+        window.MOBILE_CACHE_TOKEN = cacheToken;
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = `mobile.css?v=${encodeURIComponent(cacheToken)}`;
+        document.head.appendChild(link);
+      })();
+    </script>
   </head>
   <body>
     <div class="mobile-app-shell">
@@ -18,6 +27,7 @@
           <section class="panel action-panel">
             <button id="openSpeakingFeatureBtn" class="primary-btn large-btn" type="button">🎤 Speaking</button>
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
+            <button id="refreshCacheBtn" class="secondary-btn large-btn" type="button">♻ キャッシュ更新</button>
             <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
           </section>
         </main>
@@ -317,9 +327,28 @@
       </div>
     </div>
 
-    <script src="../data.js"></script>
-    <script src="../release-info.js?v=20260720-2325"></script>
-    <script src="speaking-data.js"></script>
-    <script src="mobile.js?v=20260720-2325"></script>
+    <script>
+      (function () {
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260721-0121";
+        const scriptSources = [
+          "../data.js",
+          "../release-info.js",
+          "speaking-data.js",
+          "mobile.js"
+        ];
+
+        let index = 0;
+        const loadNext = () => {
+          if (index >= scriptSources.length) return;
+          const script = document.createElement("script");
+          script.src = `${scriptSources[index]}?v=${encodeURIComponent(cacheToken)}`;
+          script.onload = loadNext;
+          document.body.appendChild(script);
+          index += 1;
+        };
+
+        loadNext();
+      })();
+    </script>
   </body>
   </html>

@@ -847,6 +847,12 @@
     showScreen("homeScreen");
   }
 
+  function refreshMobileCache() {
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set("v", String(Date.now()));
+    window.location.replace(nextUrl.toString());
+  }
+
   function getSpeakingResumeInfo() {
     const progress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
@@ -1733,6 +1739,7 @@
   function bindEvents() {
     document.getElementById("openSpeakingFeatureBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
+    document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
     document.getElementById("openSettingsBtn").addEventListener("click", () => showScreen("settingsScreen"));
     document.getElementById("speakingHomeBackBtn").addEventListener("click", renderHome);
     document.getElementById("openConversationSelectBtn").addEventListener("click", renderConversationSelectScreen);
