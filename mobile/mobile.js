@@ -9,7 +9,7 @@
   const MOBILE_DAY_MIN = 1;
   const MOBILE_DAY_MAX = 40;
   const SPEAKING_WEEK_MIN = 1;
-  const SPEAKING_WEEK_MAX = 40;
+  const SPEAKING_WEEK_MAX = 20;
   const SESSION_QUESTION_COUNT = 10;
   const MOBILE_SPEECH_RATES = {
     slow: 0.82,
