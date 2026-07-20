@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/21 02:35", note: "スマホ版Speaking会話練習の完了画面を『このConversationを続ける』『戻る』の2択に変更" },
     { version: "2026/07/21 02:10", note: "スマホ版Speaking会話練習を、同じConversationをAB 5セット繰り返してから次へ進む進行に変更" },
     { version: "2026/07/21 01:40", note: "スマホ版会話練習ホームの最近の進捗を3枚カード表示に再設計し、開始Week／終了Weekを横並び化" },
     { version: "2026/07/21 01:21", note: "スマホ版ホームにキャッシュ更新ボタンを追加し、更新日時の反映と再読込導線を整備" },
