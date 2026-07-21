@@ -1192,7 +1192,11 @@
 
       const title = document.createElement("p");
       title.className = "recent-progress-title";
-      title.textContent = `${getSpeakingWeekDisplayName(week)}　Day${entry.dayNumber}`;
+      const weekRangeLabel = String(week?.label || "").replace(/[～〜]/g, "-");
+      const weekTitle = weekRangeLabel
+        ? `${getSpeakingWeekDisplayName(week)}（${weekRangeLabel}）`
+        : getSpeakingWeekDisplayName(week);
+      title.textContent = `${weekTitle}　Day${entry.dayNumber}`;
 
       const statusText = document.createElement("p");
       const isDayComplete = entry.phase === "conversationComplete" || entry.daySetNumber >= entry.totalDaySets;
