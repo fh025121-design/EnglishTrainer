@@ -7,7 +7,7 @@
     <script>
       (function () {
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
-        const cacheToken = window.name || storedToken || "20260722-0122";
+        const cacheToken = window.name || storedToken || "20260722-0133";
         window.MOBILE_CACHE_TOKEN = cacheToken;
         window.name = cacheToken;
         const link = document.createElement("link");
@@ -111,6 +111,12 @@
             <h2>学習するDayを選択</h2>
             <p id="conversationDaySelectWeekText" class="status-text">Week1</p>
             <div id="conversationDayChecklist" class="conversation-day-list"></div>
+          </section>
+
+          <section class="panel learning-rule-panel">
+            <p class="learning-rule-title">📚 学習ルール</p>
+            <p class="learning-rule-item">🟡 同じ会話を3回話すと宿題クリア！</p>
+            <p class="learning-rule-item">🟢 その後は1回話すごとに<br />2周目・3周目になります。</p>
           </section>
 
           <section class="panel action-panel">
@@ -350,7 +356,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260722-0122";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260722-0133";
         const scriptSources = [
           "../data.js",
           "../release-info.js",
