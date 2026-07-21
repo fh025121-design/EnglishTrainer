@@ -1244,7 +1244,7 @@
       renderConversationCompleteScreen();
       return;
     }
-    renderConversationPractice();
+    renderConversationPracticeWithAutoPlay();
   }
 
   function renderSpeakingHome() {
@@ -1546,18 +1546,21 @@
       elements.conversationStatusText.textContent = "再生中…";
     } else if (state.speakingLineStatus === "error") {
       elements.conversationStatusText.textContent = "音声を再生できませんでした。";
-    } else if (state.speakingLineStatus === "awaitingStart") {
-      elements.conversationStatusText.textContent = "▶ 音声を開始してください";
     } else {
       elements.conversationStatusText.textContent = statusPromptText;
     }
     elements.toggleJapaneseBtn.disabled = state.speakingLineStatus === "playing" || !line.japanese;
     elements.speakingHintBtn.disabled = !showSpeakingHintUi || state.speakingLineStatus === "playing";
-    elements.replayConversationAudioBtn.textContent = state.speakingLineStatus === "awaitingStart" ? "▶ 音声を開始" : "▶ もう一度聞く";
+    elements.replayConversationAudioBtn.textContent = "▶ もう一度聞く";
     elements.replayConversationAudioBtn.disabled = !hasSpeechSynthesis || state.speakingLineStatus === "playing";
     elements.nextConversationLineBtn.disabled = state.speakingLineStatus !== "completed";
 
     showScreen("conversationPracticeScreen");
+  }
+
+  function renderConversationPracticeWithAutoPlay() {
+    renderConversationPractice();
+    playCurrentSpeakingLine();
   }
 
   function renderConversationCompleteScreen() {
@@ -1597,7 +1600,7 @@
     state.speakingTranslationVisible = false;
     state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
-    renderConversationPractice();
+    renderConversationPracticeWithAutoPlay();
   }
 
   function resumeSpeakingProgress() {
@@ -1613,7 +1616,7 @@
     }
     resetSpeakingHintState();
     state.speakingLineStatus = "awaitingStart";
-    renderConversationPractice();
+    renderConversationPracticeWithAutoPlay();
   }
 
   function restartSpeakingWeek() {
@@ -1704,7 +1707,7 @@
       state.speakingTranslationVisible = false;
       state.speakingLineStatus = "awaitingStart";
       saveSpeakingProgress();
-      renderConversationPractice();
+      renderConversationPracticeWithAutoPlay();
       return;
     }
 
@@ -1721,7 +1724,7 @@
       state.speakingTranslationVisible = false;
       state.speakingLineStatus = "awaitingStart";
       saveSpeakingProgress();
-      renderConversationPractice();
+      renderConversationPracticeWithAutoPlay();
       return;
     }
 
