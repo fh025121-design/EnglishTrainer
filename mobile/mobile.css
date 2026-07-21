@@ -571,12 +571,21 @@ select,
   word-break: break-word;
 }
 
+.conversation-english .speaking-missing-keyword {
+  color: #ff4d5a;
+}
+
 .conversation-japanese {
   margin-top: 6px;
   font-size: 1.1rem;
   line-height: 1.7;
   font-weight: 700;
   color: var(--text);
+}
+
+.conversation-japanese.speaking-missing-hint {
+  color: #ff4d5a;
+  font-weight: 800;
 }
 
 .conversation-status {

@@ -1,6 +1,8 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/22 09:10", note: "スマホ版Speaking Level1の不正解フィードバックを強化。1回目/2回目とも最新認識結果で不足keywordsのみを赤表示し、英文中の該当keywordsも赤ハイライト。2回目不正解は不足表示を約1秒見せた後に自動で次の問題へ遷移" },
+    { version: "2026/07/22 08:45", note: "スマホ版Speaking Level1の不正解ヒントを改善。1回目不正解時は現在行keywordsのうち未認識語のみをMissing表示（赤色）し、2回目不正解時は自動で次の問題へ進む仕様に統一" },
     { version: "2026/07/22 07:35", note: "スマホ版Speaking Level1の音声判定を改善。A/B共通で現在行keywordsのみを使用し、認識結果が全keywordsを含む場合のみ正解とする方式へ変更（大文字小文字・句読点は無視、順不同、余分語許容）" },
     { version: "2026/07/22 07:25", note: "スマホ版Speaking Level1（Week3〜Week5）でB（Answer）画面の遷移とヒント表示を修正。A/Bとも音声再生後に『話す』ボタンで音読判定、Level1中は『次へ』非表示、B不正解時は現在行keywordsを順序通り Key phrases 表示、2回目不正解または正解で次会話Aへ自動遷移" },
     { version: "2026/07/22 06:55", note: "スマホ版Speaking Level1（Week3〜Week5）の表示遷移バグを修正。開始時にA（Question）を表示しA音声を再生、Question完了時のみB（Answer）へ遷移、Answer完了時のみ次会話へ進むようにlineIndex参照を統一" },

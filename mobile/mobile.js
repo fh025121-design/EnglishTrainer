@@ -63,6 +63,7 @@
     speakingHintStep: 0,
     speakingHintTitle: "",
     speakingHintText: "",
+    speakingLevel1MissingKeywords: [],
     speakingLevel1Session: null,
     speakingLevel1AttemptUsed: 0,
     speakingLevel1AttemptKey: "",
@@ -1019,6 +1020,7 @@
     state.speakingHintStep = 0;
     state.speakingHintTitle = "";
     state.speakingHintText = "";
+    state.speakingLevel1MissingKeywords = [];
   }
 
   function getSpeakingHintSpec(line) {
@@ -1280,15 +1282,129 @@
     return normalizedCandidates.some((candidate) => keywords.every((keyword) => candidate.includes(keyword)));
   }
 
-  function getSpeakingLevel1HintText(conversation, targetLine) {
-    void conversation;
-    const lineKeywords = Array.isArray(targetLine?.keywords)
-      ? targetLine.keywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
+  function analyzeSpeakingLevel1KeywordMatch(lineKeywords, transcriptList) {
+    const rawKeywords = Array.isArray(lineKeywords)
+      ? lineKeywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
       : [];
-    if (!lineKeywords.length) {
-      return "Key phrases:";
+    const normalizedCandidates = (Array.isArray(transcriptList) ? transcriptList : [])
+      .map((entry) => normalizeSpeakingKeywordToken(entry))
+      .filter(Boolean);
+    const normalizedKeywordMap = new Map();
+    rawKeywords.forEach((keyword) => {
+      const normalized = normalizeSpeakingKeywordToken(keyword);
+      if (!normalized || normalizedKeywordMap.has(normalized)) return;
+      normalizedKeywordMap.set(normalized, keyword);
+    });
+    const normalizedKeywords = Array.from(normalizedKeywordMap.keys());
+    if (!normalizedKeywords.length || !normalizedCandidates.length) {
+      return {
+        isCorrect: false,
+        missingKeywords: Array.from(normalizedKeywordMap.values())
+      };
     }
-    return `Key phrases: ${lineKeywords.join(" / ")}`;
+
+    const matchedKeywordSet = new Set();
+    normalizedKeywords.forEach((keyword) => {
+      if (normalizedCandidates.some((candidate) => candidate.includes(keyword))) {
+        matchedKeywordSet.add(keyword);
+      }
+    });
+    const missingKeywords = normalizedKeywords
+      .filter((keyword) => !matchedKeywordSet.has(keyword))
+      .map((keyword) => normalizedKeywordMap.get(keyword))
+      .filter(Boolean);
+
+    return {
+      isCorrect: missingKeywords.length === 0,
+      missingKeywords
+    };
+  }
+
+  function getSpeakingLevel1HintText(conversation, targetLine, missingKeywords = []) {
+    void conversation;
+    void targetLine;
+    const visibleMissingKeywords = Array.isArray(missingKeywords)
+      ? missingKeywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
+      : [];
+    if (!visibleMissingKeywords.length) return "Missing:";
+    return `Missing: ${visibleMissingKeywords.map((keyword) => `🔴 ${keyword}`).join(" / ")}`;
+  }
+
+  function escapeHtml(text) {
+    return String(text || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function escapeRegExp(text) {
+    return String(text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function buildSpeakingLevel1MissingEnglishHtml(englishText, missingKeywords = []) {
+    const source = String(englishText || "");
+    const visibleMissingKeywords = Array.isArray(missingKeywords)
+      ? missingKeywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
+      : [];
+    if (!source || !visibleMissingKeywords.length) return escapeHtml(source);
+
+    const normalizedMissingSet = new Set();
+    const uniqueMissingKeywords = [];
+    visibleMissingKeywords.forEach((keyword) => {
+      const normalized = normalizeSpeakingKeywordToken(keyword);
+      if (!normalized || normalizedMissingSet.has(normalized)) return;
+      normalizedMissingSet.add(normalized);
+      uniqueMissingKeywords.push(normalized);
+    });
+    if (!uniqueMissingKeywords.length) return escapeHtml(source);
+
+    const ranges = [];
+    uniqueMissingKeywords.forEach((normalizedKeyword) => {
+      const patternSource = normalizedKeyword
+        .split(" ")
+        .filter(Boolean)
+        .map((part) => escapeRegExp(part))
+        .join("\\s+");
+      if (!patternSource) return;
+      const pattern = new RegExp(`\\b${patternSource}\\b`, "gi");
+      let match;
+      while ((match = pattern.exec(source))) {
+        ranges.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          length: match[0].length
+        });
+        if (pattern.lastIndex === match.index) {
+          pattern.lastIndex += 1;
+        }
+      }
+    });
+    if (!ranges.length) return escapeHtml(source);
+
+    ranges.sort((a, b) => {
+      if (a.start !== b.start) return a.start - b.start;
+      return b.length - a.length;
+    });
+
+    const merged = [];
+    ranges.forEach((range) => {
+      const last = merged[merged.length - 1];
+      if (!last || range.start >= last.end) {
+        merged.push(range);
+      }
+    });
+
+    let cursor = 0;
+    let html = "";
+    merged.forEach((range) => {
+      html += escapeHtml(source.slice(cursor, range.start));
+      html += `<span class="speaking-missing-keyword">${escapeHtml(source.slice(range.start, range.end))}</span>`;
+      cursor = range.end;
+    });
+    html += escapeHtml(source.slice(cursor));
+    return html;
   }
 
   function formatSecondsToJa(durationSeconds) {
@@ -2439,8 +2555,10 @@
       settle();
 
       const level1Session = ensureSpeakingLevel1Session(progress, week, conversation.id);
-      const isCorrect = isSpeakingLevel1KeywordMatch(currentLine.keywords, transcripts);
+      const keywordAnalysis = analyzeSpeakingLevel1KeywordMatch(currentLine.keywords, transcripts);
+      const isCorrect = keywordAnalysis.isCorrect;
       if (isCorrect) {
+        state.speakingLevel1MissingKeywords = [];
         if (stage === "question") {
           level1Session.completedCount += 1;
         } else {
@@ -2464,10 +2582,13 @@
       if (state.speakingLevel1AttemptUsed <= 0) {
         state.speakingLevel1AttemptUsed = 1;
         state.speakingLineStatus = "retry";
+        state.speakingLevel1MissingKeywords = Array.isArray(keywordAnalysis.missingKeywords)
+          ? [...keywordAnalysis.missingKeywords]
+          : [];
         state.speakingHintVisible = true;
         state.speakingHintStep = 1;
-        state.speakingHintTitle = "💡 ヒント";
-        state.speakingHintText = getSpeakingLevel1HintText(conversation, currentLine);
+        state.speakingHintTitle = "Missing:";
+        state.speakingHintText = getSpeakingLevel1HintText(conversation, currentLine, keywordAnalysis.missingKeywords);
         renderConversationPractice();
         return;
       }
@@ -2475,6 +2596,13 @@
       if (stage === "answer") {
         level1Session.completedCount += 1;
       }
+      state.speakingLevel1MissingKeywords = Array.isArray(keywordAnalysis.missingKeywords)
+        ? [...keywordAnalysis.missingKeywords]
+        : [];
+      state.speakingHintVisible = true;
+      state.speakingHintStep = 2;
+      state.speakingHintTitle = "Missing:";
+      state.speakingHintText = getSpeakingLevel1HintText(conversation, currentLine, keywordAnalysis.missingKeywords);
       state.speakingLineStatus = "miss";
       renderConversationPractice();
       clearSpeakingAutoAdvanceTimer();
@@ -2485,7 +2613,7 @@
         } else {
           moveToNextSpeakingLevel1Conversation();
         }
-      }, 700);
+      }, 1000);
     };
 
     recognition.onerror = (event) => {
@@ -2539,6 +2667,7 @@
       elements.speakingHintBlock.classList.toggle("hidden", !showSpeakingHintUi || !state.speakingHintVisible);
       elements.speakingHintTitleText.textContent = state.speakingHintTitle || "💡 ヒント";
       elements.speakingHintText.textContent = state.speakingHintText || "";
+      elements.speakingHintText.classList.remove("speaking-missing-hint");
       const statusPromptText = line.speaker === "A"
         ? "🎤 質問文をシャドーイングし、続きの文章を\n声に出してみよう。"
         : "🎤 シャドーイングしてください";
@@ -2581,10 +2710,14 @@
       const level1Session = ensureSpeakingLevel1Session(progress, week, conversation.id);
       const level1LineIndex = Math.max(0, Number(progress.lineIndex) || 0);
       const isQuestionStage = level1LineIndex === 0;
+      const shouldHighlightMissingKeywords = state.speakingLineStatus === "retry" || state.speakingLineStatus === "miss";
       elements.conversationWeekText.textContent = `${getSpeakingWeekDisplayLabel(week)} / Level1`;
       elements.conversationProgressText.textContent = `${Math.max(0, Number(level1Session.completedCount) || 0)} / ${progress.conversationOrder.length}会話`;
       elements.conversationSpeakerText.textContent = line.speaker || (isQuestionStage ? "A" : "B");
-      elements.conversationEnglishText.textContent = line.english;
+      elements.conversationEnglishText.innerHTML = buildSpeakingLevel1MissingEnglishHtml(
+        line.english,
+        shouldHighlightMissingKeywords ? state.speakingLevel1MissingKeywords : []
+      );
       elements.conversationJapaneseText.textContent = line.japanese;
       elements.conversationJapaneseBlock.classList.toggle("hidden", !state.speakingTranslationVisible || !line.japanese);
 
@@ -2593,6 +2726,7 @@
       elements.speakingHintBlock.classList.toggle("hidden", !state.speakingHintVisible);
       elements.speakingHintTitleText.textContent = state.speakingHintTitle || "💡 ヒント";
       elements.speakingHintText.textContent = state.speakingHintText || "";
+      elements.speakingHintText.classList.toggle("speaking-missing-hint", state.speakingHintVisible && state.speakingHintTitle === "Missing:");
 
       const hasSpeechSynthesis = Boolean(getSpeechSynthesisEngine());
       if (state.speakingLineStatus === "playing") {
@@ -3184,6 +3318,7 @@
           speakingHintStep: 0,
           speakingHintTitle: "",
           speakingHintText: "",
+          speakingLevel1MissingKeywords: [],
           speakingLevel1Session: null,
           speakingLevel1AttemptUsed: 0,
           speakingLevel1AttemptKey: "",
