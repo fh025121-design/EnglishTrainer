@@ -663,6 +663,32 @@
     return qrCandidates.slice(0, Math.max(0, Number(maxSets) || 0));
   }
 
+  function getSpeakingDaySetProgress(week, conversation, lineIndex) {
+    const dayKey = String(conversation?.date || "").trim() || "no-date";
+    const dayBucket = { sc: [], qr: [] };
+
+    week.shortConversations.forEach((entry) => {
+      if (String(entry?.date || "").trim() !== dayKey) return;
+      if (getSpeakingConversationKind(entry) === "QR") {
+        dayBucket.qr.push(entry.id);
+      } else {
+        dayBucket.sc.push(entry.id);
+      }
+    });
+
+    const selectedQrIds = selectQuickResponseIds(getQuickResponseCandidates(dayBucket), DAILY_QUICK_RESPONSE_SETS);
+    const totalSets = 2 + selectedQrIds.length;
+
+    if (getSpeakingConversationKind(conversation) === "SC") {
+      const currentSet = Number(lineIndex) >= 2 ? 2 : 1;
+      return { currentSet, totalSets };
+    }
+
+    const qrIndex = selectedQrIds.indexOf(conversation.id);
+    const currentSet = qrIndex >= 0 ? 3 + qrIndex : 3;
+    return { currentSet, totalSets };
+  }
+
   function getSpeakingPracticeConversationIds(week) {
     const perDay = new Map();
 
@@ -1314,8 +1340,8 @@
     }
 
     elements.conversationWeekText.textContent = getSpeakingWeekDisplayLabel(week);
-    const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
-    elements.conversationProgressText.textContent = `${conversationSetCount} / 5セット  ${progress.conversationIndex + 1} / ${week.shortConversations.length}`;
+    const daySetProgress = getSpeakingDaySetProgress(week, conversation, progress.lineIndex);
+    elements.conversationProgressText.textContent = `${daySetProgress.currentSet} / ${daySetProgress.totalSets}セット  ${progress.conversationIndex + 1} / ${progress.conversationOrder.length}`;
     elements.conversationSpeakerText.textContent = line.speaker;
     elements.conversationEnglishText.textContent = line.english;
     elements.conversationJapaneseText.textContent = line.japanese;
