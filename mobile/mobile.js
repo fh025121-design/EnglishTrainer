@@ -715,13 +715,10 @@
         state.speakingHintText = spec.hints[1];
       }
     } else {
-      const hasSecondHint = Boolean(spec.hints[0]);
-      const nextStep = hasSecondHint ? Math.min(2, state.speakingHintStep + 1) : 1;
-      state.speakingHintStep = Math.max(1, nextStep);
-      state.speakingHintTitle = `💡 ヒント${state.speakingHintStep === 1 ? "①" : "②"}`;
-      state.speakingHintText = state.speakingHintStep === 1
-        ? (spec.patternHint || "ヒントなし")
-        : (spec.hints[0] || "ヒントなし");
+      // patternHint is kept in data for internal/reference use, but UI shows only Japanese hint text.
+      state.speakingHintStep = 1;
+      state.speakingHintTitle = "💡 ヒント①";
+      state.speakingHintText = spec.hints[0] || "ヒントなし";
     }
 
     renderConversationPractice();
