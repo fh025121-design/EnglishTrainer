@@ -1,6 +1,9 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/21 03:50", note: "スマホ版SpeakingでQuick Response出題数を定数管理へ変更し、候補取得と選択ロジックを分離（将来の抽選方式拡張に対応）" },
+    { version: "2026/07/21 03:35", note: "スマホ版SpeakingのWeek4/5 IDをWeek-Day-種別形式へ再編し、Quick Responseはデータ保存4セットでも1回の練習で各Day3セットまで使用するよう調整" },
+    { version: "2026/07/21 03:05", note: "スマホ版Speaking会話練習で次Conversation遷移を修正し、Week全体を5周してから完了へ進むよう改善" },
     { version: "2026/07/21 02:35", note: "スマホ版Speaking会話練習の完了画面を『このConversationを続ける』『戻る』の2択に変更" },
     { version: "2026/07/21 02:10", note: "スマホ版Speaking会話練習を、同じConversationをAB 5セット繰り返してから次へ進む進行に変更" },
     { version: "2026/07/21 01:40", note: "スマホ版会話練習ホームの最近の進捗を3枚カード表示に再設計し、開始Week／終了Weekを横並び化" },

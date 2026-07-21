@@ -10,6 +10,7 @@
   const MOBILE_DAY_MAX = 40;
   const SPEAKING_WEEK_MIN = 1;
   const SPEAKING_WEEK_MAX = 20;
+  const DAILY_QUICK_RESPONSE_SETS = 3;
   const SESSION_QUESTION_COUNT = 10;
   const MOBILE_SPEECH_RATES = {
     slow: 0.82,
@@ -340,7 +341,24 @@
       return;
     }
     try {
-      state.speakingProgress = sanitizeSpeakingProgress(JSON.parse(raw));
+      const progress = sanitizeSpeakingProgress(JSON.parse(raw));
+      const week = getSpeakingWeek(progress?.weekId);
+      if (!progress || !week) {
+        state.speakingProgress = null;
+        return;
+      }
+
+      const validConversationIds = new Set(week.shortConversations.map((conversation) => conversation.id));
+      const nextOrder = progress.conversationOrder.filter((conversationId) => validConversationIds.has(conversationId));
+      if (!nextOrder.length) {
+        state.speakingProgress = null;
+        return;
+      }
+
+      progress.conversationOrder = nextOrder;
+      progress.conversationIndex = Math.min(Math.max(0, progress.conversationIndex), nextOrder.length - 1);
+      progress.completedConversationIds = progress.completedConversationIds.filter((conversationId) => validConversationIds.has(conversationId));
+      state.speakingProgress = progress;
     } catch (_error) {
       state.speakingProgress = null;
     }
@@ -629,8 +647,53 @@
     return `${getSpeakingWeekDisplayName(week)}（${String(week?.label || "")}）`;
   }
 
+  function getSpeakingConversationKind(conversation) {
+    const conversationId = String(conversation?.id || "").trim();
+    if (/-QR\d+$/i.test(conversationId)) return "QR";
+    if (/-SC\d+$/i.test(conversationId)) return "SC";
+    return conversation?.lines?.length === 2 ? "QR" : "SC";
+  }
+
+  function getQuickResponseCandidates(dayBucket) {
+    return [...(dayBucket?.qr || [])];
+  }
+
+  function selectQuickResponseIds(qrCandidates, maxSets) {
+    // For now, keep stable order. Selection strategy can be swapped later.
+    return qrCandidates.slice(0, Math.max(0, Number(maxSets) || 0));
+  }
+
+  function getSpeakingPracticeConversationIds(week) {
+    const perDay = new Map();
+
+    week.shortConversations.forEach((conversation) => {
+      const dayKey = String(conversation?.date || "").trim() || "no-date";
+      if (!perDay.has(dayKey)) {
+        perDay.set(dayKey, { sc: [], qr: [] });
+      }
+      const bucket = perDay.get(dayKey);
+      if (getSpeakingConversationKind(conversation) === "QR") {
+        bucket.qr.push(conversation.id);
+      } else {
+        bucket.sc.push(conversation.id);
+      }
+    });
+
+    const orderedConversationIds = [];
+    perDay.forEach((bucket) => {
+      orderedConversationIds.push(...bucket.sc);
+      const qrCandidates = getQuickResponseCandidates(bucket);
+      const selectedQrIds = selectQuickResponseIds(qrCandidates, DAILY_QUICK_RESPONSE_SETS);
+      orderedConversationIds.push(...selectedQrIds);
+    });
+
+    return orderedConversationIds.length
+      ? orderedConversationIds
+      : week.shortConversations.map((conversation) => conversation.id);
+  }
+
   function getSpeakingConversationOrderForRound(week, roundNumber) {
-    const orderedConversationIds = week.shortConversations.map((conversation) => conversation.id);
+    const orderedConversationIds = getSpeakingPracticeConversationIds(week);
     if (roundNumber >= 4) {
       return shuffleArray(orderedConversationIds);
     }
@@ -1373,9 +1436,6 @@
       progress.completedConversationIds.push(conversationId);
     }
     progress.conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0) + 1;
-    if (progress.conversationIndex >= week.shortConversations.length - 1) {
-      progress.completedRounds += 1;
-    }
     progress.phase = "conversationComplete";
     saveSpeakingProgress();
     renderConversationCompleteScreen();
@@ -1400,8 +1460,29 @@
     const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
     const targetSets = 5;
 
-    if (conversationSetCount < targetSets) {
+    void conversationSetCount;
+
+    if (progress.conversationIndex < week.shortConversations.length - 1) {
+      progress.conversationIndex += 1;
       progress.lineIndex = 0;
+      progress.conversationSetCount = 0;
+      progress.phase = "line";
+      resetSpeakingHintState();
+      state.speakingTranslationVisible = false;
+      state.speakingLineStatus = "awaitingStart";
+      saveSpeakingProgress();
+      renderConversationPractice();
+      return;
+    }
+
+    progress.completedRounds = Math.max(0, Number(progress.completedRounds) || 0) + 1;
+    if (progress.completedRounds < targetSets) {
+      const nextRound = progress.completedRounds + 1;
+      progress.conversationOrder = getSpeakingConversationOrderForRound(week, nextRound);
+      progress.conversationIndex = 0;
+      progress.lineIndex = 0;
+      progress.conversationSetCount = 0;
+      progress.completedConversationIds = [];
       progress.phase = "line";
       resetSpeakingHintState();
       state.speakingTranslationVisible = false;
@@ -1413,12 +1494,10 @@
 
     progress.lineIndex = 0;
     progress.conversationSetCount = 0;
-    progress.phase = "line";
-    resetSpeakingHintState();
-    state.speakingTranslationVisible = false;
+    progress.phase = "conversationComplete";
     state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
-    renderConversationPractice();
+    renderConversationCompleteScreen();
   }
 
   function handlePageVisibilityChange() {
