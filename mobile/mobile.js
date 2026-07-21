@@ -1267,35 +1267,17 @@
       .trim();
   }
 
-  function extractSpeakingLevel1Keywords(englishText) {
-    const STOP_WORDS = new Set([
-      "a", "an", "the", "am", "is", "are", "was", "were", "be", "been", "being",
-      "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "them",
-      "my", "your", "his", "their", "our", "this", "that", "these", "those",
-      "to", "of", "in", "on", "at", "for", "from", "with", "and", "or", "but",
-      "do", "does", "did", "have", "has", "had"
-    ]);
-    const normalized = normalizeSpeakingKeywordToken(englishText);
-    if (!normalized) return [];
-    const tokens = normalized
-      .split(" ")
-      .map((token) => token.trim())
-      .filter((token) => token.length >= 2 && !STOP_WORDS.has(token));
-    const unique = [...new Set(tokens)];
-    if (unique.length) return unique;
-    return normalized.split(" ").filter(Boolean).slice(0, 2);
-  }
-
-  function isSpeakingLevel1KeywordMatch(englishText, transcriptList) {
-    const keywords = extractSpeakingLevel1Keywords(englishText);
+  function isSpeakingLevel1KeywordMatch(lineKeywords, transcriptList) {
+    const keywords = Array.isArray(lineKeywords)
+      ? lineKeywords
+        .map((keyword) => normalizeSpeakingKeywordToken(keyword))
+        .filter(Boolean)
+      : [];
     const normalizedCandidates = (Array.isArray(transcriptList) ? transcriptList : [])
       .map((entry) => normalizeSpeakingKeywordToken(entry))
       .filter(Boolean);
-    if (!normalizedCandidates.length) return false;
-    if (!keywords.length) {
-      return isCorrectRecognition(englishText, normalizedCandidates);
-    }
-    return normalizedCandidates.some((candidate) => keywords.some((keyword) => candidate.includes(keyword)));
+    if (!keywords.length || !normalizedCandidates.length) return false;
+    return normalizedCandidates.some((candidate) => keywords.every((keyword) => candidate.includes(keyword)));
   }
 
   function getSpeakingLevel1HintText(conversation, targetLine) {
@@ -2457,7 +2439,7 @@
       settle();
 
       const level1Session = ensureSpeakingLevel1Session(progress, week, conversation.id);
-      const isCorrect = isSpeakingLevel1KeywordMatch(currentLine.english, transcripts);
+      const isCorrect = isSpeakingLevel1KeywordMatch(currentLine.keywords, transcripts);
       if (isCorrect) {
         if (stage === "question") {
           level1Session.completedCount += 1;
