@@ -799,13 +799,14 @@
       .sort((a, b) => a.localeCompare(b));
   }
 
-  function sanitizeSelectedDayKeys(week, selectedDayKeys) {
+  function sanitizeSelectedDayKeys(week, selectedDayKeys, options = {}) {
+    const fallbackToAll = options?.fallbackToAll !== false;
     const orderedDayKeys = getSpeakingOrderedDayKeys(week);
     const validSet = new Set(orderedDayKeys);
     const requested = Array.isArray(selectedDayKeys)
       ? [...new Set(selectedDayKeys.map((value) => String(value || "").trim()).filter((value) => validSet.has(value)))]
       : [];
-    if (!requested.length) return orderedDayKeys;
+    if (!requested.length) return fallbackToAll ? orderedDayKeys : [];
     const requestedSet = new Set(requested);
     return orderedDayKeys.filter((dayKey) => requestedSet.has(dayKey));
   }
@@ -1021,23 +1022,15 @@
     if (!selectedWeek) {
       return;
     }
+    const previousWeekId = String(state.speakingUi.selectedConversationWeekId || "").trim();
     state.speakingUi.selectedConversationWeekId = selectedWeek.weekId;
-    state.speakingUi.selectedConversationDayKeys = getSpeakingOrderedDayKeys(selectedWeek);
+    if (previousWeekId !== selectedWeek.weekId) {
+      state.speakingUi.selectedConversationDayKeys = [];
+    }
     renderConversationDaySelectScreen();
   }
 
-  function startConversationPracticeFromSelectedDays() {
-    const week = getSpeakingWeek(state.speakingUi.selectedConversationWeekId);
-    if (!week) {
-      renderConversationSelectScreen();
-      return;
-    }
-    const selectedDayKeys = sanitizeSelectedDayKeys(week, state.speakingUi.selectedConversationDayKeys);
-    if (!selectedDayKeys.length) {
-      window.alert("学習する曜日を1つ以上選択してください。");
-      return;
-    }
-
+  function executeStartConversationPractice(week, selectedDayKeys) {
     const progress = createSpeakingProgress(week.weekId, selectedDayKeys);
     if (!progress) {
       window.alert("このWeekの会話データはまだありません。");
@@ -1053,12 +1046,58 @@
     renderConversationPracticeWithAutoPlay();
   }
 
-  function resumeSpeakingProgressFromDaySelect() {
-    const selectedWeekId = String(state.speakingUi.selectedConversationWeekId || "").trim();
-    if (!state.speakingProgress || !selectedWeekId || state.speakingProgress.weekId !== selectedWeekId) {
+  function hasMeaningfulSpeakingProgress(progress) {
+    if (!progress) return false;
+    const completedRounds = Math.max(0, Number(progress.completedRounds) || 0);
+    const conversationIndex = Math.max(0, Number(progress.conversationIndex) || 0);
+    const lineIndex = Math.max(0, Number(progress.lineIndex) || 0);
+    const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
+    const completedCount = Array.isArray(progress.completedConversationIds) ? progress.completedConversationIds.length : 0;
+    return completedRounds > 0
+      || completedCount > 0
+      || conversationIndex > 0
+      || lineIndex > 0
+      || conversationSetCount > 0
+      || progress.phase === "conversationComplete";
+  }
+
+  function startConversationPracticeFromSelectedDays() {
+    const week = getSpeakingWeek(state.speakingUi.selectedConversationWeekId);
+    if (!week) {
+      renderConversationSelectScreen();
       return;
     }
-    resumeSpeakingProgress();
+    const selectedDayKeys = sanitizeSelectedDayKeys(week, state.speakingUi.selectedConversationDayKeys, { fallbackToAll: false });
+    if (!selectedDayKeys.length) {
+      window.alert("学習する曜日を1つ以上選択してください。");
+      return;
+    }
+
+    const existingProgress = state.speakingProgress;
+    const canResume = hasMeaningfulSpeakingProgress(existingProgress)
+      && String(existingProgress?.weekId || "").trim() === String(week.weekId || "").trim()
+      && areSameSpeakingDaySelections(week, selectedDayKeys, existingProgress);
+    if (canResume) {
+      resumeSpeakingProgress();
+      return;
+    }
+
+    executeStartConversationPractice(week, selectedDayKeys);
+  }
+
+  function areSameSpeakingDaySelections(week, selectedDayKeys, progress) {
+    if (!week || !progress || !Array.isArray(progress.conversationOrder)) return false;
+    const selectedDays = sanitizeSelectedDayKeys(week, selectedDayKeys, { fallbackToAll: false });
+    const progressDays = getSpeakingSelectedDayKeysFromOrder(week, progress.conversationOrder);
+    if (!selectedDays.length || selectedDays.length !== progressDays.length) return false;
+    return selectedDays.every((dayKey, index) => dayKey === progressDays[index]);
+  }
+
+  function renderConversationDaySelectActionButtons(week, selectedDayKeys) {
+    void week;
+    const hasSelectedDays = Array.isArray(selectedDayKeys) && selectedDayKeys.length > 0;
+    elements.startSelectedConversationDaysBtn.disabled = !hasSelectedDays;
+    elements.startSelectedConversationDaysBtn.textContent = "▶ 学習を始める";
   }
 
   function startSpeakingVocabularyPractice() {
@@ -1437,7 +1476,7 @@
     }
 
     const orderedDayKeys = getSpeakingOrderedDayKeys(week);
-    const selectedDaySet = new Set(sanitizeSelectedDayKeys(week, state.speakingUi.selectedConversationDayKeys));
+    const selectedDaySet = new Set(sanitizeSelectedDayKeys(week, state.speakingUi.selectedConversationDayKeys, { fallbackToAll: false }));
     state.speakingUi.selectedConversationDayKeys = [...selectedDaySet];
 
     elements.conversationDaySelectWeekText.textContent = getSpeakingWeekDisplayLabel(week);
@@ -1462,7 +1501,7 @@
           selectedDaySet.delete(dayKey);
         }
         state.speakingUi.selectedConversationDayKeys = orderedDayKeys.filter((key) => selectedDaySet.has(key));
-        elements.startSelectedConversationDaysBtn.disabled = state.speakingUi.selectedConversationDayKeys.length === 0;
+        renderConversationDaySelectActionButtons(week, state.speakingUi.selectedConversationDayKeys);
       });
 
       const weekdayText = document.createElement("span");
@@ -1480,11 +1519,7 @@
     });
 
     elements.conversationDayChecklist.append(fragment);
-    elements.startSelectedConversationDaysBtn.disabled = state.speakingUi.selectedConversationDayKeys.length === 0;
-
-    const resumable = Boolean(state.speakingProgress && state.speakingProgress.weekId === week.weekId);
-    elements.resumeConversationFromDaySelectBtn.classList.toggle("hidden", !resumable);
-    elements.resumeConversationFromDaySelectBtn.disabled = !resumable;
+    renderConversationDaySelectActionButtons(week, state.speakingUi.selectedConversationDayKeys);
 
     showScreen("conversationDaySelectScreen");
   }
@@ -1830,21 +1865,6 @@
     showScreen("conversationCompleteScreen");
   }
 
-  function startSpeakingWeek(weekId, selectedDayKeys = null) {
-    const progress = createSpeakingProgress(weekId, selectedDayKeys);
-    if (!progress) {
-      window.alert("このWeekの会話データはまだありません。");
-      return;
-    }
-    stopSpeakingAudio();
-    state.speakingProgress = progress;
-    resetSpeakingHintState();
-    state.speakingTranslationVisible = false;
-    state.speakingLineStatus = "awaitingStart";
-    saveSpeakingProgress();
-    renderConversationPracticeWithAutoPlay();
-  }
-
   function resumeSpeakingProgress() {
     const progress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
@@ -1859,14 +1879,6 @@
     resetSpeakingHintState();
     state.speakingLineStatus = "awaitingStart";
     renderConversationPracticeWithAutoPlay();
-  }
-
-  function restartSpeakingWeek() {
-    const weekId = state.speakingProgress?.weekId;
-    if (!weekId) return;
-    const week = getSpeakingWeek(weekId);
-    const selectedDayKeys = getSpeakingSelectedDayKeysFromOrder(week, state.speakingProgress?.conversationOrder || []);
-    startSpeakingWeek(weekId, selectedDayKeys);
   }
 
   function toggleSpeakingJapanese() {
@@ -1923,7 +1935,15 @@
     resetSpeakingHintState();
     state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
-    renderConversationSelectScreen();
+    const progress = state.speakingProgress;
+    const week = getSpeakingProgressWeek();
+    if (!progress || !week) {
+      renderConversationSelectScreen();
+      return;
+    }
+    state.speakingUi.selectedConversationWeekId = week.weekId;
+    state.speakingUi.selectedConversationDayKeys = getSpeakingSelectedDayKeysFromOrder(week, progress.conversationOrder);
+    renderConversationDaySelectScreen();
   }
 
   function moveToNextSpeakingConversation() {
@@ -2338,7 +2358,6 @@
     elements.recentProgressList = document.getElementById("recentProgressList");
     elements.conversationDaySelectWeekText = document.getElementById("conversationDaySelectWeekText");
     elements.conversationDayChecklist = document.getElementById("conversationDayChecklist");
-    elements.resumeConversationFromDaySelectBtn = document.getElementById("resumeConversationFromDaySelectBtn");
     elements.startSelectedConversationDaysBtn = document.getElementById("startSelectedConversationDaysBtn");
     elements.speakingWordDayRangeFields = document.getElementById("speakingWordDayRangeFields");
     elements.speakingWordStartDaySelect = document.getElementById("speakingWordStartDaySelect");
@@ -2407,7 +2426,6 @@
     document.getElementById("conversationDaySelectBackBtn").addEventListener("click", renderConversationSelectScreen);
     document.getElementById("speakingVocabBackBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("startConversationBtn").addEventListener("click", startConversationPracticeFromSelector);
-    elements.resumeConversationFromDaySelectBtn.addEventListener("click", resumeSpeakingProgressFromDaySelect);
     elements.startSelectedConversationDaysBtn.addEventListener("click", startConversationPracticeFromSelectedDays);
     document.getElementById("startSpeakingWordPracticeBtn").addEventListener("click", startSpeakingVocabularyPractice);
     document.getElementById("conversationBackBtn").addEventListener("click", leaveSpeakingPractice);
