@@ -1005,6 +1005,93 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W4-D1-QR01",
+          "date": "2026-07-13",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What subject does Sota like?",
+              "japanese": "ソウタはどの科目が好きですか。",
+              "hintType": "noun",
+              "hints": [
+                "English"
+              ],
+              "lineId": "W4-D1-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He likes English.",
+              "japanese": "彼は英語が好きです。",
+              "lineId": "W4-D1-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D1-QR02",
+          "date": "2026-07-13",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Who practiced English with Sota?",
+              "japanese": "誰がソウタと一緒に英語を練習しましたか。",
+              "hintType": "noun",
+              "hints": [
+                "sister"
+              ],
+              "lineId": "W4-D1-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "His sister did.",
+              "japanese": "彼のお姉さん［妹］です。",
+              "lineId": "W4-D1-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D1-QR03",
+          "date": "2026-07-13",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Did Sota give a longer answer the second time?",
+              "japanese": "ソウタは2回目により長い答えを言いましたか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W4-D1-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, he did.",
+              "japanese": "はい、言いました。",
+              "lineId": "W4-D1-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D1-QR04",
+          "date": "2026-07-13",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Why does Sota like English?",
+              "japanese": "なぜソウタは英語が好きですか。",
+              "hintType": "pattern",
+              "patternHint": "Because + 主語 + be動詞 + 形容詞",
+              "hints": [
+                "おもしろいからです"
+              ],
+              "lineId": "W4-D1-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Because it is interesting.",
+              "japanese": "おもしろいからです。",
+              "lineId": "W4-D1-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W4-D2-SC01",
           "date": "2026-07-14",
           "lines": [
@@ -1041,6 +1128,90 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W4-D2-QR01",
+          "date": "2026-07-14",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What does Emi study every day?",
+              "japanese": "エミは毎日何を勉強しますか。",
+              "hintType": "noun",
+              "hints": [
+                "English"
+              ],
+              "lineId": "W4-D2-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "She studies English every day.",
+              "japanese": "彼女は毎日英語を勉強します。",
+              "lineId": "W4-D2-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D2-QR02",
+          "date": "2026-07-14",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Does Emi read before bed?",
+              "japanese": "エミは寝る前に本を読みますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W4-D2-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, she does.",
+              "japanese": "はい、読みます。",
+              "lineId": "W4-D2-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D2-QR03",
+          "date": "2026-07-14",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What does her brother play?",
+              "japanese": "彼女のお兄さん［弟］は何をしますか。",
+              "hintType": "noun",
+              "hints": [
+                "baseball"
+              ],
+              "lineId": "W4-D2-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He plays baseball.",
+              "japanese": "彼は野球をします。",
+              "lineId": "W4-D2-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D2-QR04",
+          "date": "2026-07-14",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Does her brother study English every day?",
+              "japanese": "彼女のお兄さん［弟］は毎日英語を勉強しますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W4-D2-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "No, he does not.",
+              "japanese": "いいえ、しません。",
+              "lineId": "W4-D2-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W4-D3-SC01",
           "date": "2026-07-15",
           "lines": [
@@ -1073,6 +1244,93 @@ window.speakingData = {
               "english": "I can make sandwiches.",
               "japanese": "サンドイッチを作ることができます。",
               "lineId": "W4-D3-SC01-04"
+            }
+          ]
+        },
+        {
+          "id": "W4-D3-QR01",
+          "date": "2026-07-15",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What can Kenta make?",
+              "japanese": "ケンタは何を作ることができますか。",
+              "hintType": "noun",
+              "hints": [
+                "sandwiches"
+              ],
+              "lineId": "W4-D3-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He can make sandwiches and eggs.",
+              "japanese": "彼はサンドイッチと卵料理を作ることができます。",
+              "lineId": "W4-D3-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D3-QR02",
+          "date": "2026-07-15",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Can Kenta cook curry yet?",
+              "japanese": "ケンタはもうカレーを作ることができますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W4-D3-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "No, he cannot.",
+              "japanese": "いいえ、まだできません。",
+              "lineId": "W4-D3-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D3-QR03",
+          "date": "2026-07-15",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Who cooks with Kenta?",
+              "japanese": "誰がケンタと一緒に料理をしますか。",
+              "hintType": "noun",
+              "hints": [
+                "father"
+              ],
+              "lineId": "W4-D3-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "His father cooks with him.",
+              "japanese": "彼のお父さんが一緒に料理をします。",
+              "lineId": "W4-D3-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D3-QR04",
+          "date": "2026-07-15",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "When does Kenta practice cooking?",
+              "japanese": "ケンタはいつ料理の練習をしますか。",
+              "hintType": "pattern",
+              "patternHint": "主語 + 動詞 + on + 曜日",
+              "hints": [
+                "日曜日に料理の練習をします"
+              ],
+              "lineId": "W4-D3-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He practices on Sundays.",
+              "japanese": "彼は日曜日に練習します。",
+              "lineId": "W4-D3-QR04-02"
             }
           ]
         },
@@ -1115,6 +1373,95 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W4-D4-QR01",
+          "date": "2026-07-16",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Where did Ayaka go yesterday?",
+              "japanese": "アヤカは昨日どこへ行きましたか。",
+              "hintType": "pattern",
+              "patternHint": "主語 + went to + 場所",
+              "hints": [
+                "図書館へ行きました"
+              ],
+              "lineId": "W4-D4-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "She went to the library.",
+              "japanese": "彼女は図書館へ行きました。",
+              "lineId": "W4-D4-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D4-QR02",
+          "date": "2026-07-16",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did she read?",
+              "japanese": "彼女は何を読みましたか。",
+              "hintType": "pattern",
+              "patternHint": "主語 + read + 名詞",
+              "hints": [
+                "短い英語の本を読みました"
+              ],
+              "lineId": "W4-D4-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "She read a short English book.",
+              "japanese": "彼女は短い英語の本を読みました。",
+              "lineId": "W4-D4-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D4-QR03",
+          "date": "2026-07-16",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did she write?",
+              "japanese": "彼女は何を書きましたか。",
+              "hintType": "pattern",
+              "patternHint": "主語 + wrote + 名詞",
+              "hints": [
+                "3つの文を書きました"
+              ],
+              "lineId": "W4-D4-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "She wrote three sentences.",
+              "japanese": "彼女は3つの文を書きました。",
+              "lineId": "W4-D4-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D4-QR04",
+          "date": "2026-07-16",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Did she play tennis?",
+              "japanese": "彼女はテニスをしましたか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W4-D4-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, she did.",
+              "japanese": "はい、しました。",
+              "lineId": "W4-D4-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W4-D5-SC01",
           "date": "2026-07-17",
           "lines": [
@@ -1145,6 +1492,94 @@ window.speakingData = {
               "english": "Yes, they are.",
               "japanese": "はい、そうです。",
               "lineId": "W4-D5-SC01-04"
+            }
+          ]
+        },
+        {
+          "id": "W4-D5-QR01",
+          "date": "2026-07-17",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What is this?",
+              "japanese": "これは何ですか。",
+              "hintType": "noun",
+              "hints": [
+                "dictionary"
+              ],
+              "lineId": "W4-D5-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "It is the writer's new English dictionary.",
+              "japanese": "筆者の新しい英語の辞書です。",
+              "lineId": "W4-D5-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D5-QR02",
+          "date": "2026-07-17",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Whose notebook is that?",
+              "japanese": "あれは誰のノートですか。",
+              "hintType": "pattern",
+              "patternHint": "It is + 所有格 + 名詞",
+              "hints": [
+                "姉のノートです"
+              ],
+              "lineId": "W4-D5-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "It is the writer's sister's notebook.",
+              "japanese": "筆者のお姉さん［妹］のノートです。",
+              "lineId": "W4-D5-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D5-QR03",
+          "date": "2026-07-17",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Are those the writer's pens?",
+              "japanese": "それらは筆者のペンですか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W4-D5-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "No, they are not.",
+              "japanese": "いいえ、違います。",
+              "lineId": "W4-D5-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D5-QR04",
+          "date": "2026-07-17",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What does the writer use every day?",
+              "japanese": "筆者は毎日何を使っていますか。",
+              "hintType": "pattern",
+              "patternHint": "主語 + uses + 名詞",
+              "hints": [
+                "辞書とカードを毎日使います"
+              ],
+              "lineId": "W4-D5-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "The writer uses the dictionary and the cards every day.",
+              "japanese": "筆者は毎日辞書とカードを使っています。",
+              "lineId": "W4-D5-QR04-02"
             }
           ]
         },
@@ -1185,6 +1620,95 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W4-D6-QR01",
+          "date": "2026-07-18",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did Ren do in the morning?",
+              "japanese": "レンは朝何を行いましたか。",
+              "hintType": "pattern",
+              "patternHint": "主語 + 過去形 + and + 過去形",
+              "hints": [
+                "部屋を掃除し、お母さんを手伝いました"
+              ],
+              "lineId": "W4-D6-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He cleaned his room and helped his mother make lunch.",
+              "japanese": "彼は自分の部屋を掃除し、お母さんが昼食を作るのを手伝いました。",
+              "lineId": "W4-D6-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D6-QR02",
+          "date": "2026-07-18",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did he do after lunch?",
+              "japanese": "彼は昼食後に何をしましたか。",
+              "hintType": "pattern",
+              "patternHint": "主語 + 過去形 + and + 過去形",
+              "hints": [
+                "英語を勉強し、宿題を終えました"
+              ],
+              "lineId": "W4-D6-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He studied English and finished his homework.",
+              "japanese": "彼は英語を勉強し、宿題を終わらせました。",
+              "lineId": "W4-D6-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D6-QR03",
+          "date": "2026-07-18",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Was Ren tired?",
+              "japanese": "レンは疲れていましたか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W4-D6-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, he was.",
+              "japanese": "はい、疲れていました。",
+              "lineId": "W4-D6-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D6-QR04",
+          "date": "2026-07-18",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Why was Ren happy?",
+              "japanese": "なぜレンは嬉しかったのですか。",
+              "hintType": "pattern",
+              "patternHint": "Because + 主語 + 過去形",
+              "hints": [
+                "家族を手伝い、宿題も終えたからです"
+              ],
+              "lineId": "W4-D6-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Because he helped his family and finished his work.",
+              "japanese": "家族を手伝い、自分のやることを終わらせたからです。",
+              "lineId": "W4-D6-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W4-D7-SC01",
           "date": "2026-07-19",
           "lines": [
@@ -1219,6 +1743,91 @@ window.speakingData = {
               "english": "I practiced speaking.",
               "japanese": "話す練習をしました。",
               "lineId": "W4-D7-SC01-04"
+            }
+          ]
+        },
+        {
+          "id": "W4-D7-QR01",
+          "date": "2026-07-19",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What do you study every day?",
+              "japanese": "あなたは毎日何を勉強しますか。",
+              "hintType": "noun",
+              "hints": [
+                "English"
+              ],
+              "lineId": "W4-D7-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I study English every day.",
+              "japanese": "私は毎日英語を勉強します。",
+              "lineId": "W4-D7-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D7-QR02",
+          "date": "2026-07-19",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Can you answer short questions?",
+              "japanese": "短い質問に答えることができますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W4-D7-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I can.",
+              "japanese": "はい、できます。／いいえ、できません。",
+              "lineId": "W4-D7-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D7-QR03",
+          "date": "2026-07-19",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did you do yesterday?",
+              "japanese": "あなたは昨日何をしましたか。",
+              "hintType": "pattern",
+              "patternHint": "I + 過去形 + and + 過去形",
+              "hints": [
+                "宿題を復習し、話す練習をしました"
+              ],
+              "lineId": "W4-D7-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I reviewed my homework and practiced speaking.",
+              "japanese": "私は宿題を復習し、話す練習をしました。",
+              "lineId": "W4-D7-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W4-D7-QR04",
+          "date": "2026-07-19",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Does your friend study English?",
+              "japanese": "あなたの友達は英語を勉強しますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W4-D7-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, he does.",
+              "japanese": "はい、勉強します。／いいえ、しません。",
+              "lineId": "W4-D7-QR04-02"
             }
           ]
         }

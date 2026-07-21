@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/21 15:14", note: "スマホ版SpeakingのWeek4（7/13～7/19）にQuick Response（各Day QR01〜QR04）を追加し、既存SCデータは維持したまま登録を拡張" },
     { version: "2026/07/21 14:17", note: "スマホ版Speaking会話練習で各セット1問目を画面表示直後に自動再生し、初回専用『音声を開始』分岐を廃止して『▶ もう一度聞く』へ統一" },
     { version: "2026/07/21 05:40", note: "スマホ版Speakingの『最近の進捗』リンク表示をさらに軽量化し、日時同列の青リンク表現とカード高さの圧縮を調整" },
     { version: "2026/07/21 05:25", note: "スマホ版Speakingの『最近の進捗』UIを調整し、進捗説明文とDay完了文言、日時と続きからボタンの同一行レイアウトへ更新" },
