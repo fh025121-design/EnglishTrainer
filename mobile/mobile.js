@@ -41,11 +41,14 @@
       endWeek: SPEAKING_WEEK_MAX,
       selectedConversationWeekId: "",
       selectedConversationDayKeys: [],
+      activeConversationDayKeys: [],
       vocabularyRangeMode: "auto",
       startDay: MOBILE_DAY_MIN,
       endDay: MOBILE_DAY_MAX
     },
     speakingProgress: null,
+    speakingDayProgressMap: {},
+    speakingLegacyUnresolvedProgress: null,
     recentSpeakingProgress: [],
     speakingTranslationVisible: false,
     speakingAudioPlaying: false,
@@ -257,6 +260,7 @@
       endWeek: SPEAKING_WEEK_MAX,
       selectedConversationWeekId: "",
       selectedConversationDayKeys: [],
+      activeConversationDayKeys: [],
       vocabularyRangeMode: "auto",
       startDay: MOBILE_DAY_MIN,
       endDay: MOBILE_DAY_MAX
@@ -320,6 +324,7 @@
   function sanitizeSpeakingProgress(raw) {
     if (!raw || typeof raw !== "object") return null;
     const weekId = String(raw.weekId || "").trim();
+    const dayKey = String(raw.dayKey || raw.date || raw.dayId || "").trim();
     const conversationOrder = Array.isArray(raw.conversationOrder)
       ? raw.conversationOrder.map((value) => String(value || "").trim()).filter(Boolean)
       : [];
@@ -329,6 +334,7 @@
     if (!weekId || !conversationOrder.length) return null;
     return {
       weekId,
+      dayKey,
       conversationOrder,
       conversationIndex: Math.max(0, Number(raw.conversationIndex) || 0),
       lineIndex: Math.max(0, Number(raw.lineIndex) || 0),
@@ -480,54 +486,147 @@
     saveRecentSpeakingProgress();
   }
 
+  function createEmptySpeakingProgressStore() {
+    return {
+      version: 2,
+      dayProgress: {},
+      legacyUnresolved: null
+    };
+  }
+
+  function persistSpeakingProgressStore() {
+    const snapshot = createEmptySpeakingProgressStore();
+    snapshot.dayProgress = { ...state.speakingDayProgressMap };
+    if (state.speakingLegacyUnresolvedProgress) {
+      snapshot.legacyUnresolved = state.speakingLegacyUnresolvedProgress;
+    }
+    window.localStorage.setItem(SPEAKING_PROGRESS_KEY, JSON.stringify(snapshot));
+  }
+
+  function sanitizeStoredSpeakingProgressEntry(raw) {
+    const progress = sanitizeSpeakingProgress(raw);
+    if (!progress) return null;
+    const week = getSpeakingWeek(progress.weekId);
+    if (!week) return null;
+
+    const validConversationIds = new Set(week.shortConversations.map((conversation) => conversation.id));
+    const nextOrder = progress.conversationOrder.filter((conversationId) => validConversationIds.has(conversationId));
+    if (!nextOrder.length) return null;
+
+    progress.conversationOrder = nextOrder;
+    progress.conversationIndex = Math.min(Math.max(0, progress.conversationIndex), nextOrder.length - 1);
+    progress.completedConversationIds = progress.completedConversationIds.filter((conversationId) => validConversationIds.has(conversationId));
+    progress.dayKey = resolveSpeakingProgressDayKey(week, progress);
+    if (!progress.dayKey) return null;
+    return progress;
+  }
+
+  function migrateLegacySpeakingProgress(rawLegacy) {
+    const migratedStore = createEmptySpeakingProgressStore();
+    const legacyProgress = sanitizeStoredSpeakingProgressEntry(rawLegacy);
+    if (!legacyProgress) {
+      migratedStore.legacyUnresolved = {
+        reason: "invalid-legacy-progress",
+        raw: rawLegacy
+      };
+      return { store: migratedStore, activeProgress: null };
+    }
+
+    const week = getSpeakingWeek(legacyProgress.weekId);
+    const selectedDayKeys = getSpeakingSelectedDayKeysFromOrder(week, legacyProgress.conversationOrder);
+    if (selectedDayKeys.length !== 1) {
+      migratedStore.legacyUnresolved = {
+        reason: "cannot-resolve-single-day",
+        missing: "conversationOrder maps to multiple or zero day keys",
+        raw: rawLegacy
+      };
+      return { store: migratedStore, activeProgress: null };
+    }
+
+    legacyProgress.dayKey = selectedDayKeys[0];
+    const storageId = buildSpeakingDayProgressId(legacyProgress.weekId, legacyProgress.dayKey);
+    migratedStore.dayProgress[storageId] = legacyProgress;
+    return { store: migratedStore, activeProgress: legacyProgress };
+  }
+
   function loadSpeakingProgress() {
     const raw = window.localStorage.getItem(SPEAKING_PROGRESS_KEY);
+    state.speakingDayProgressMap = {};
+    state.speakingLegacyUnresolvedProgress = null;
+    state.speakingProgress = null;
     if (!raw) {
-      state.speakingProgress = null;
       return;
     }
+
     try {
-      const progress = sanitizeSpeakingProgress(JSON.parse(raw));
-      const week = getSpeakingWeek(progress?.weekId);
-      if (!progress || !week) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.version === 2 && parsed?.dayProgress && typeof parsed.dayProgress === "object") {
+        const nextMap = {};
+        Object.keys(parsed.dayProgress).forEach((storageId) => {
+          const progress = sanitizeStoredSpeakingProgressEntry(parsed.dayProgress[storageId]);
+          if (!progress) return;
+          const normalizedStorageId = buildSpeakingDayProgressId(progress.weekId, progress.dayKey);
+          if (!normalizedStorageId) return;
+          nextMap[normalizedStorageId] = progress;
+        });
+        state.speakingDayProgressMap = nextMap;
+        if (parsed.legacyUnresolved && typeof parsed.legacyUnresolved === "object") {
+          state.speakingLegacyUnresolvedProgress = parsed.legacyUnresolved;
+        }
+      } else {
+        const migrated = migrateLegacySpeakingProgress(parsed);
+        state.speakingDayProgressMap = migrated.store.dayProgress;
+        state.speakingLegacyUnresolvedProgress = migrated.store.legacyUnresolved || null;
+        persistSpeakingProgressStore();
+      }
+
+      const entries = Object.values(state.speakingDayProgressMap);
+      if (!entries.length) {
         state.speakingProgress = null;
         return;
       }
-
-      const validConversationIds = new Set(week.shortConversations.map((conversation) => conversation.id));
-      const nextOrder = progress.conversationOrder.filter((conversationId) => validConversationIds.has(conversationId));
-      if (!nextOrder.length) {
-        state.speakingProgress = null;
-        return;
-      }
-
-      progress.conversationOrder = nextOrder;
-      progress.conversationIndex = Math.min(Math.max(0, progress.conversationIndex), nextOrder.length - 1);
-      progress.completedConversationIds = progress.completedConversationIds.filter((conversationId) => validConversationIds.has(conversationId));
-      state.speakingProgress = progress;
+      entries.sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
+      state.speakingProgress = { ...entries[0] };
+      setActiveSpeakingDayQueue([state.speakingProgress.dayKey], state.speakingProgress.dayKey);
     } catch (_error) {
+      state.speakingDayProgressMap = {};
+      state.speakingLegacyUnresolvedProgress = null;
       state.speakingProgress = null;
     }
   }
 
   function saveSpeakingProgress() {
     if (!state.speakingProgress) {
-      window.localStorage.removeItem(SPEAKING_PROGRESS_KEY);
+      persistSpeakingProgressStore();
       return;
     }
+
+    const week = getSpeakingWeek(state.speakingProgress.weekId);
+    const dayKey = resolveSpeakingProgressDayKey(week, state.speakingProgress);
+    if (!week || !dayKey) {
+      persistSpeakingProgressStore();
+      return;
+    }
+
+    state.speakingProgress.dayKey = dayKey;
     state.speakingProgress.updatedAt = Date.now();
-    window.localStorage.setItem(SPEAKING_PROGRESS_KEY, JSON.stringify(state.speakingProgress));
+    const storageId = buildSpeakingDayProgressId(state.speakingProgress.weekId, dayKey);
+    if (storageId) {
+      state.speakingDayProgressMap[storageId] = sanitizeSpeakingProgress(state.speakingProgress);
+    }
+    persistSpeakingProgressStore();
     upsertRecentSpeakingProgress(state.speakingProgress);
   }
 
   function clearSpeakingProgress() {
-    if (state.speakingProgress?.weekId) {
-      removeRecentSpeakingProgressByWeek(state.speakingProgress.weekId);
-    }
+    state.speakingDayProgressMap = {};
+    state.speakingLegacyUnresolvedProgress = null;
+    state.speakingUi.activeConversationDayKeys = [];
     state.speakingProgress = null;
     state.speakingTranslationVisible = false;
     state.speakingAudioPlaying = false;
     state.speakingUtterance = null;
+    state.recentSpeakingProgress = [];
     window.localStorage.removeItem(SPEAKING_PROGRESS_KEY);
   }
 
@@ -762,9 +861,12 @@
   function createSpeakingProgress(weekId, selectedDayKeys = null) {
     const week = getSpeakingWeek(weekId);
     if (!week || !week.shortConversations.length) return null;
+    const normalizedDayKeys = sanitizeSelectedDayKeys(week, selectedDayKeys, { fallbackToAll: false });
+    const dayKey = String(normalizedDayKeys[0] || "").trim();
     return {
       weekId,
-      conversationOrder: getSpeakingConversationOrderForRound(week, 1, selectedDayKeys),
+      dayKey,
+      conversationOrder: getSpeakingConversationOrderForRound(week, 1, normalizedDayKeys),
       conversationIndex: 0,
       lineIndex: 0,
       completedRounds: 0,
@@ -821,6 +923,52 @@
     });
     if (!orderSet.size) return orderedDayKeys;
     return orderedDayKeys.filter((dayKey) => orderSet.has(dayKey));
+  }
+
+  function buildSpeakingDayProgressId(weekId, dayKey) {
+    const normalizedWeekId = String(weekId || "").trim();
+    const normalizedDayKey = String(dayKey || "").trim();
+    if (!normalizedWeekId || !normalizedDayKey) return "";
+    return `${normalizedWeekId}__${normalizedDayKey}`;
+  }
+
+  function resolveSpeakingProgressDayKey(week, progress) {
+    const progressDayKey = String(progress?.dayKey || "").trim();
+    if (progressDayKey) return progressDayKey;
+    const selectedDayKeys = getSpeakingSelectedDayKeysFromOrder(week, progress?.conversationOrder || []);
+    return String(selectedDayKeys[0] || "").trim();
+  }
+
+  function getStoredSpeakingDayProgress(weekId, dayKey) {
+    const storageId = buildSpeakingDayProgressId(weekId, dayKey);
+    if (!storageId) return null;
+    return state.speakingDayProgressMap[storageId] || null;
+  }
+
+  function setActiveSpeakingDayQueue(dayKeys, currentDayKey) {
+    const queue = Array.isArray(dayKeys)
+      ? [...new Set(dayKeys.map((value) => String(value || "").trim()).filter(Boolean))]
+      : [];
+    const fallbackCurrentDayKey = String(currentDayKey || "").trim();
+    if (!queue.length && fallbackCurrentDayKey) {
+      queue.push(fallbackCurrentDayKey);
+    }
+    state.speakingUi.activeConversationDayKeys = queue;
+    if (!fallbackCurrentDayKey) return;
+    if (!state.speakingUi.activeConversationDayKeys.includes(fallbackCurrentDayKey)) {
+      state.speakingUi.activeConversationDayKeys.unshift(fallbackCurrentDayKey);
+    }
+  }
+
+  function getNextSpeakingDayKeyFromQueue(progress) {
+    const week = getSpeakingProgressWeek();
+    if (!week || !progress) return "";
+    const currentDayKey = resolveSpeakingProgressDayKey(week, progress);
+    const queue = sanitizeSelectedDayKeys(week, state.speakingUi.activeConversationDayKeys, { fallbackToAll: false });
+    if (!queue.length || !currentDayKey) return "";
+    const currentIndex = queue.indexOf(currentDayKey);
+    if (currentIndex < 0) return "";
+    return String(queue[currentIndex + 1] || "").trim();
   }
 
   function getSpeakingConversationKind(conversation) {
@@ -1046,6 +1194,32 @@
     renderConversationPracticeWithAutoPlay();
   }
 
+  function startOrResumeSpeakingDay(week, dayKey, dayQueue) {
+    const normalizedDayKey = String(dayKey || "").trim();
+    if (!week || !normalizedDayKey) {
+      renderConversationDaySelectScreen();
+      return;
+    }
+
+    const queue = sanitizeSelectedDayKeys(week, dayQueue, { fallbackToAll: false });
+    setActiveSpeakingDayQueue(queue, normalizedDayKey);
+
+    const storedProgress = getStoredSpeakingDayProgress(week.weekId, normalizedDayKey);
+    if (storedProgress && hasMeaningfulSpeakingProgress(storedProgress)) {
+      stopSpeakingAudio();
+      state.speakingProgress = { ...storedProgress };
+      resetSpeakingHintState();
+      state.speakingTranslationVisible = false;
+      state.speakingLineStatus = "awaitingStart";
+      saveSpeakingProgress();
+      renderConversationPracticeWithAutoPlay();
+      return;
+    }
+
+    executeStartConversationPractice(week, [normalizedDayKey]);
+    setActiveSpeakingDayQueue(queue, normalizedDayKey);
+  }
+
   function hasMeaningfulSpeakingProgress(progress) {
     if (!progress) return false;
     const completedRounds = Math.max(0, Number(progress.completedRounds) || 0);
@@ -1073,24 +1247,7 @@
       return;
     }
 
-    const existingProgress = state.speakingProgress;
-    const canResume = hasMeaningfulSpeakingProgress(existingProgress)
-      && String(existingProgress?.weekId || "").trim() === String(week.weekId || "").trim()
-      && areSameSpeakingDaySelections(week, selectedDayKeys, existingProgress);
-    if (canResume) {
-      resumeSpeakingProgress();
-      return;
-    }
-
-    executeStartConversationPractice(week, selectedDayKeys);
-  }
-
-  function areSameSpeakingDaySelections(week, selectedDayKeys, progress) {
-    if (!week || !progress || !Array.isArray(progress.conversationOrder)) return false;
-    const selectedDays = sanitizeSelectedDayKeys(week, selectedDayKeys, { fallbackToAll: false });
-    const progressDays = getSpeakingSelectedDayKeysFromOrder(week, progress.conversationOrder);
-    if (!selectedDays.length || selectedDays.length !== progressDays.length) return false;
-    return selectedDays.every((dayKey, index) => dayKey === progressDays[index]);
+    startOrResumeSpeakingDay(week, selectedDayKeys[0], selectedDayKeys);
   }
 
   function renderConversationDaySelectActionButtons(week, selectedDayKeys) {
@@ -1448,13 +1605,8 @@
   }
 
   function getDayProgressSummaryText(week, dayKey) {
-    const progress = state.speakingProgress;
-    if (!progress || progress.weekId !== week.weekId || !Array.isArray(progress.conversationOrder)) {
-      return formatSpeakingRoundProgressBySpokenCount(0);
-    }
-
-    const selectedDayKeys = getSpeakingSelectedDayKeysFromOrder(week, progress.conversationOrder);
-    if (!selectedDayKeys.includes(dayKey)) {
+    const progress = getStoredSpeakingDayProgress(week.weekId, dayKey);
+    if (!progress || !Array.isArray(progress.conversationOrder)) {
       return formatSpeakingRoundProgressBySpokenCount(0);
     }
 
@@ -1850,11 +2002,12 @@
     }
     const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
     const targetSets = 5;
+    const hasNextDay = Boolean(getNextSpeakingDayKeyFromQueue(progress));
     const daySetProgress = conversation ? getSpeakingDaySetProgress(week, conversation, progress.lineIndex) : null;
     const completedDaySets = daySetProgress?.totalSets || conversationSetCount;
     if (conversationSetCount >= targetSets) {
       elements.conversationCompleteMetaText.innerHTML = "5 / 5セット 完了<br>🌟 Excellent!";
-      elements.nextConversationBtn.textContent = "このConversationを続ける";
+      elements.nextConversationBtn.textContent = hasNextDay ? "次のDayへ" : "このConversationを続ける";
     } else if (progress.conversationIndex >= week.shortConversations.length - 1) {
       elements.conversationCompleteMetaText.textContent = `${completedDaySets} / ${completedDaySets}セット 完了`;
       elements.nextConversationBtn.textContent = "このConversationを続ける";
@@ -1954,8 +2107,18 @@
       return;
     }
 
+    const targetSets = getSpeakingTargetRounds(progress);
+    if (progress.phase === "conversationComplete" && getSpeakingCompletedRounds(progress) >= targetSets) {
+      const nextDayKey = getNextSpeakingDayKeyFromQueue(progress);
+      if (nextDayKey) {
+        startOrResumeSpeakingDay(week, nextDayKey, state.speakingUi.activeConversationDayKeys);
+        return;
+      }
+      renderConversationDaySelectScreen();
+      return;
+    }
+
     const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
-    const targetSets = 5;
     const practiceConversationCount = Array.isArray(progress.conversationOrder)
       ? progress.conversationOrder.length
       : 0;
@@ -2250,6 +2413,8 @@
           session: null,
           speakingUi: createDefaultSpeakingUiState(),
           speakingProgress: null,
+          speakingDayProgressMap: {},
+          speakingLegacyUnresolvedProgress: null,
           recentSpeakingProgress: [],
           speakingTranslationVisible: false,
           speakingAudioPlaying: false,
