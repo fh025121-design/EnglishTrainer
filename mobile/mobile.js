@@ -11,7 +11,6 @@
   const MOBILE_DAY_MAX = 40;
   const SPEAKING_WEEK_MIN = 1;
   const SPEAKING_WEEK_MAX = 20;
-  const DAILY_QUICK_RESPONSE_SETS = 3;
   const SESSION_QUESTION_COUNT = 10;
   const MOBILE_SPEECH_RATES = {
     slow: 0.82,
@@ -801,35 +800,71 @@
     return [...(dayBucket?.qr || [])];
   }
 
-  function selectQuickResponseIds(qrCandidates, maxSets) {
-    // For now, keep stable order. Selection strategy can be swapped later.
-    return qrCandidates.slice(0, Math.max(0, Number(maxSets) || 0));
+  function selectQuickResponseIds(qrCandidates, limit) {
+    const normalizedLimit = Math.max(0, Number(limit) || 0);
+    if (!normalizedLimit) return [];
+    // Keep stable order and limit count by explicit daily homework setting.
+    return [...qrCandidates].slice(0, normalizedLimit);
+  }
+
+  function getSpeakingDailyHomeworkSetting(week, dayKey) {
+    const weekId = String(week?.weekId || "").trim();
+    const homework = window.speakingData?.dailyHomework?.[weekId]?.[dayKey];
+    const sc = Math.max(0, Number(homework?.sc) || 0);
+    const qr = Math.max(0, Number(homework?.qr) || 0);
+    const configuredStarts = Array.isArray(homework?.scLineStarts)
+      ? homework.scLineStarts.filter((value) => Number.isInteger(value) && value >= 0)
+      : [];
+    const scLineStarts = configuredStarts.length ? configuredStarts : [0];
+    return { sc, qr, scLineStarts };
+  }
+
+  function getSpeakingConversationCurrentSetIndex(lineIndex, scLineStarts) {
+    const starts = Array.isArray(scLineStarts) && scLineStarts.length ? scLineStarts : [0];
+    const currentLine = Math.max(0, Number(lineIndex) || 0);
+    let currentSetIndex = 0;
+    for (let index = 0; index < starts.length; index += 1) {
+      if (currentLine >= starts[index]) {
+        currentSetIndex = index;
+      } else {
+        break;
+      }
+    }
+    return Math.min(currentSetIndex, Math.max(0, starts.length - 1));
+  }
+
+  function buildSpeakingDayBucket(week, dayKey) {
+    const dayBucket = { sc: [], qr: [] };
+    week.shortConversations.forEach((entry) => {
+      if (String(entry?.date || "").trim() !== dayKey) return;
+      if (getSpeakingConversationKind(entry) === "QR") {
+        dayBucket.qr.push(entry);
+      } else {
+        dayBucket.sc.push(entry);
+      }
+    });
+    return dayBucket;
   }
 
   function getSpeakingDaySetProgress(week, conversation, lineIndex) {
     const dayKey = String(conversation?.date || "").trim() || "no-date";
-    const dayBucket = { sc: [], qr: [] };
-
-    week.shortConversations.forEach((entry) => {
-      if (String(entry?.date || "").trim() !== dayKey) return;
-      if (getSpeakingConversationKind(entry) === "QR") {
-        dayBucket.qr.push(entry.id);
-      } else {
-        dayBucket.sc.push(entry.id);
-      }
-    });
-
-    const selectedQrIds = selectQuickResponseIds(getQuickResponseCandidates(dayBucket), DAILY_QUICK_RESPONSE_SETS);
-    const totalSets = 2 + selectedQrIds.length;
+    const dayBucket = buildSpeakingDayBucket(week, dayKey);
+    const homework = getSpeakingDailyHomeworkSetting(week, dayKey);
+    const selectedQrIds = selectQuickResponseIds(getQuickResponseCandidates({
+      qr: dayBucket.qr.map((entry) => entry.id)
+    }), homework.qr);
+    const totalScSets = homework.sc;
+    const totalSets = totalScSets + selectedQrIds.length;
 
     if (getSpeakingConversationKind(conversation) === "SC") {
-      const currentSet = Number(lineIndex) >= 2 ? 2 : 1;
-      return { currentSet, totalSets };
+      const currentScSetIndex = getSpeakingConversationCurrentSetIndex(lineIndex, homework.scLineStarts);
+      const currentSet = Math.min(totalScSets, currentScSetIndex + 1);
+      return { currentSet, totalSets: Math.max(1, totalSets) };
     }
 
     const qrIndex = selectedQrIds.indexOf(conversation.id);
-    const currentSet = qrIndex >= 0 ? 3 + qrIndex : 3;
-    return { currentSet, totalSets };
+    const currentSet = totalScSets + (qrIndex >= 0 ? qrIndex + 1 : 1);
+    return { currentSet, totalSets: Math.max(1, totalSets) };
   }
 
   function getSpeakingPracticeConversationIds(week) {
@@ -849,10 +884,11 @@
     });
 
     const orderedConversationIds = [];
-    perDay.forEach((bucket) => {
+    perDay.forEach((bucket, dayKey) => {
+      const homework = getSpeakingDailyHomeworkSetting(week, dayKey);
       orderedConversationIds.push(...bucket.sc);
       const qrCandidates = getQuickResponseCandidates(bucket);
-      const selectedQrIds = selectQuickResponseIds(qrCandidates, DAILY_QUICK_RESPONSE_SETS);
+      const selectedQrIds = selectQuickResponseIds(qrCandidates, homework.qr);
       orderedConversationIds.push(...selectedQrIds);
     });
 

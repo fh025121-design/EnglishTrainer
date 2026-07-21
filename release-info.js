@@ -1,6 +1,8 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/21 23:56", note: "スマホ版Speakingの出題構成を設定データ参照へ移行。DayごとのSC数・QR数（およびSC進捗行開始位置）を speaking-data.js の dailyHomework で管理し、A行数推測に依存しない方式へ変更" },
+    { version: "2026/07/21 23:38", note: "スマホ版Speakingの会話練習を日別データ連動へ変更し、SCの質問数とQR登録数から1日あたりの出題構成・進捗表示・完了判定を可変化（固定QR件数依存を解消）" },
     { version: "2026/07/21 15:14", note: "スマホ版SpeakingのWeek4（7/13～7/19）にQuick Response（各Day QR01〜QR04）を追加し、既存SCデータは維持したまま登録を拡張" },
     { version: "2026/07/21 14:17", note: "スマホ版Speaking会話練習で各セット1問目を画面表示直後に自動再生し、初回専用『音声を開始』分岐を廃止して『▶ もう一度聞く』へ統一" },
     { version: "2026/07/21 05:40", note: "スマホ版Speakingの『最近の進捗』リンク表示をさらに軽量化し、日時同列の青リンク表現とカード高さの圧縮を調整" },

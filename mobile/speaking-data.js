@@ -3311,5 +3311,52 @@ window.speakingData = {
         }
       ]
     }
-  ]
+  ],
+  "dailyHomework": {
+    "W1": {
+      "2026-06-22": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-06-23": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-06-24": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-06-25": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-06-26": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-06-27": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-06-28": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] }
+    },
+    "W2": {
+      "2026-06-29": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-06-30": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-07-01": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-07-02": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-07-03": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-07-04": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] },
+      "2026-07-05": { "sc": 3, "qr": 0, "scLineStarts": [0, 2, 4] }
+    },
+    "W3": {
+      "2026-07-06": { "sc": 3, "qr": 4, "scLineStarts": [0, 2, 4] },
+      "2026-07-07": { "sc": 3, "qr": 4, "scLineStarts": [0, 2, 4] },
+      "2026-07-08": { "sc": 3, "qr": 4, "scLineStarts": [0, 2, 4] },
+      "2026-07-09": { "sc": 3, "qr": 4, "scLineStarts": [0, 2, 4] },
+      "2026-07-10": { "sc": 3, "qr": 4, "scLineStarts": [0, 2, 4] },
+      "2026-07-11": { "sc": 3, "qr": 4, "scLineStarts": [0, 2, 4] },
+      "2026-07-12": { "sc": 3, "qr": 4, "scLineStarts": [0, 2, 4] }
+    },
+    "W4": {
+      "2026-07-13": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-14": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-15": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-16": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-17": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-18": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-19": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] }
+    },
+    "W5": {
+      "2026-07-20": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-21": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-22": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-23": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-24": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-25": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] },
+      "2026-07-26": { "sc": 2, "qr": 4, "scLineStarts": [0, 2] }
+    }
+  }
 };
