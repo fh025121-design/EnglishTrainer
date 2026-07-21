@@ -7,7 +7,7 @@
     <script>
       (function () {
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
-        const cacheToken = window.name || storedToken || "20260721-0121";
+        const cacheToken = window.name || storedToken || "20260722-0122";
         window.MOBILE_CACHE_TOKEN = cacheToken;
         window.name = cacheToken;
         const link = document.createElement("link");
@@ -93,6 +93,28 @@
 
           <section class="panel action-panel">
             <button id="startConversationBtn" class="primary-btn large-btn" type="button">スタート</button>
+          </section>
+        </main>
+      </section>
+
+      <section id="conversationDaySelectScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="conversationDaySelectBackBtn" class="back-btn" type="button">← Week選択へ戻る</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel action-panel">
+            <button id="resumeConversationFromDaySelectBtn" class="secondary-btn large-btn hidden" type="button">途中から再開</button>
+          </section>
+
+          <section class="panel">
+            <h2>学習するDayを選択</h2>
+            <p id="conversationDaySelectWeekText" class="status-text">Week1</p>
+            <div id="conversationDayChecklist" class="conversation-day-list"></div>
+          </section>
+
+          <section class="panel action-panel">
+            <button id="startSelectedConversationDaysBtn" class="primary-btn large-btn" type="button">開始</button>
           </section>
         </main>
       </section>
@@ -328,7 +350,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260721-2356";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260722-0122";
         const scriptSources = [
           "../data.js",
           "../release-info.js",

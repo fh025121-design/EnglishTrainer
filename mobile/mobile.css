@@ -129,10 +129,57 @@ select {
 .study-action-area,
 .response-block,
 .feedback-block,
-.speaking-week-list {
+.speaking-week-list,
+.conversation-day-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.conversation-day-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.conversation-day-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.conversation-day-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.conversation-day-progress {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.conversation-day-progress-not-started {
+  color: #8d98ab;
+}
+
+.conversation-day-progress-first-round {
+  color: #f3d46e;
+}
+
+.conversation-day-progress-complete {
+  color: #74d98f;
 }
 
 .day-range-fields {
