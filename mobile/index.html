@@ -7,7 +7,7 @@
     <script>
       (function () {
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
-        const cacheToken = window.name || storedToken || "20260722-0535";
+        const cacheToken = window.name || storedToken || "20260722-0620";
         window.MOBILE_CACHE_TOKEN = cacheToken;
         window.name = cacheToken;
         const link = document.createElement("link");
@@ -189,6 +189,7 @@
               <button id="speakingHintBtn" class="secondary-btn" type="button">💡 ヒント</button>
               <button id="toggleJapaneseBtn" class="secondary-btn" type="button">日本語</button>
               <button id="replayConversationAudioBtn" class="secondary-btn" type="button">▶ もう一度聞く</button>
+              <button id="conversationMicBtn" class="primary-btn mic-btn" type="button">🎤 話す</button>
               <button id="nextConversationLineBtn" class="primary-btn" type="button">次へ</button>
             </div>
 
@@ -213,6 +214,11 @@
             <p class="hero-icon">Good Job!</p>
             <h2>Conversation Complete!</h2>
             <p id="conversationCompleteMetaText" class="status-text">Week1</p>
+            <div id="conversationLevel1ResultBlock" class="result-breakdown hidden">
+              <p id="conversationLevel1CompletedText">完了会話数 0</p>
+              <p id="conversationLevel1CorrectText">正解数 0</p>
+              <p id="conversationLevel1TimeText">学習時間 0分00秒</p>
+            </div>
             <div class="action-panel compact-actions">
               <button id="nextConversationBtn" class="primary-btn large-btn" type="button">このConversationを続ける</button>
               <button id="returnConversationSelectBtn" class="secondary-btn large-btn" type="button">戻る</button>
@@ -356,7 +362,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260722-0535";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260722-0620";
         const scriptSources = [
           "../data.js",
           "../release-info.js",

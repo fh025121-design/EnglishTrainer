@@ -2445,12 +2445,14 @@ window.speakingData = {
               "hints": [
                 "よりはっきり話せるようになりたい"
               ],
+              "keywords": ["why", "you", "practice"],
               "lineId": "W5-D1-SC01-01"
             },
             {
               "speaker": "B",
               "english": "Because I want to speak more clearly.",
               "japanese": "よりはっきりと話せるようになりたいからです。",
+              "keywords": ["because", "I", "want"],
               "lineId": "W5-D1-SC01-02"
             },
             {
@@ -2483,12 +2485,14 @@ window.speakingData = {
               "hints": [
                 "文が難しかった"
               ],
+              "keywords": ["why", "Aya", "stop"],
               "lineId": "W5-D1-QR01-01"
             },
             {
               "speaker": "B",
               "english": "Because the sentences were difficult.",
               "japanese": "文が難しかったからです。",
+              "keywords": ["because", "sentences", "difficult"],
               "lineId": "W5-D1-QR01-02"
             }
           ]
@@ -2505,12 +2509,14 @@ window.speakingData = {
               "hints": [
                 "より短い文"
               ],
+              "keywords": ["what", "teacher", "use"],
               "lineId": "W5-D1-QR02-01"
             },
             {
               "speaker": "B",
               "english": "Shorter sentences.",
               "japanese": "より短い文です。",
+              "keywords": ["shorter", "sentences"],
               "lineId": "W5-D1-QR02-02"
             }
           ]
@@ -2527,12 +2533,14 @@ window.speakingData = {
               "hints": [
                 "2週間"
               ],
+              "keywords": ["how long", "Aya", "continue"],
               "lineId": "W5-D1-QR03-01"
             },
             {
               "speaker": "B",
               "english": "For two weeks.",
               "japanese": "2週間です。",
+              "keywords": ["two", "weeks"],
               "lineId": "W5-D1-QR03-02"
             }
           ]
@@ -2549,12 +2557,14 @@ window.speakingData = {
               "hints": [
                 "より速く質問に答える"
               ],
+              "keywords": ["what", "Aya", "do"],
               "lineId": "W5-D1-QR04-01"
             },
             {
               "speaker": "B",
               "english": "She can answer questions more quickly.",
               "japanese": "彼女はより速く質問に答えることができます。",
+              "keywords": ["she", "answer", "questions"],
               "lineId": "W5-D1-QR04-02"
             }
           ]
@@ -2571,12 +2581,14 @@ window.speakingData = {
               "hints": [
                 "サッカー"
               ],
+              "keywords": ["what", "brother", "do"],
               "lineId": "W5-D2-SC01-01"
             },
             {
               "speaker": "B",
               "english": "He plays soccer.",
               "japanese": "彼はサッカーをします。",
+              "keywords": ["he", "plays", "soccer"],
               "lineId": "W5-D2-SC01-02"
             },
             {
@@ -2607,12 +2619,14 @@ window.speakingData = {
               "hints": [
                 "バスケットボール"
               ],
+              "keywords": ["what sport", "Riku", "play"],
               "lineId": "W5-D2-QR01-01"
             },
             {
               "speaker": "B",
               "english": "He plays basketball.",
               "japanese": "彼はバスケットボールをします。",
+              "keywords": ["basketball"],
               "lineId": "W5-D2-QR01-02"
             }
           ]
@@ -2629,12 +2643,14 @@ window.speakingData = {
               "hints": [
                 "放課後"
               ],
+              "keywords": ["when", "he", "practice"],
               "lineId": "W5-D2-QR02-01"
             },
             {
               "speaker": "B",
               "english": "He practices after school.",
               "japanese": "彼は放課後に練習します。",
+              "keywords": ["he", "practices", "after school"],
               "lineId": "W5-D2-QR02-02"
             }
           ]
@@ -2649,12 +2665,14 @@ window.speakingData = {
               "japanese": "彼は宿題の前にテレビを見ますか。",
               "hintType": "none",
               "hints": [],
+              "keywords": ["does", "he", "watch TV"],
               "lineId": "W5-D2-QR03-01"
             },
             {
               "speaker": "B",
               "english": "No, he doesn't.",
               "japanese": "いいえ、見ません。",
+              "keywords": ["no", "doesn't"],
               "lineId": "W5-D2-QR03-02"
             }
           ]
@@ -2671,12 +2689,14 @@ window.speakingData = {
               "hints": [
                 "本を読んで家族を手伝う"
               ],
+              "keywords": ["what", "he", "do"],
               "lineId": "W5-D2-QR04-01"
             },
             {
               "speaker": "B",
               "english": "He reads books and helps his family.",
               "japanese": "彼は本を読んだり、家族の手伝いをしたりします。",
+              "keywords": ["he", "helps", "family"],
               "lineId": "W5-D2-QR04-02"
             }
           ]
@@ -2693,12 +2713,14 @@ window.speakingData = {
               "hints": [
                 "家"
               ],
+              "keywords": ["where", "you", "study"],
               "lineId": "W5-D3-SC01-01"
             },
             {
               "speaker": "B",
               "english": "I study at home.",
               "japanese": "家で勉強します。",
+              "keywords": ["I", "study", "home"],
               "lineId": "W5-D3-SC01-02"
             },
             {
@@ -2731,12 +2753,14 @@ window.speakingData = {
               "hints": [
                 "学校の図書館"
               ],
+              "keywords": ["where", "Mina", "study"],
               "lineId": "W5-D3-QR01-01"
             },
             {
               "speaker": "B",
               "english": "She studies in the school library.",
               "japanese": "彼女は学校の図書館で勉強します。",
+              "keywords": ["she", "studies", "library"],
               "lineId": "W5-D3-QR01-02"
             }
           ]
@@ -2753,12 +2777,14 @@ window.speakingData = {
               "hints": [
                 "水曜日の部活のあと"
               ],
+              "keywords": ["when", "she", "go"],
               "lineId": "W5-D3-QR02-01"
             },
             {
               "speaker": "B",
               "english": "She goes there after club practice on Wednesdays.",
               "japanese": "彼女は水曜日の部活のあとでそこに行きます。",
+              "keywords": ["she", "goes", "Wednesdays"],
               "lineId": "W5-D3-QR02-02"
             }
           ]
@@ -2775,12 +2801,14 @@ window.speakingData = {
               "hints": [
                 "静かだから"
               ],
+              "keywords": ["why", "she", "use"],
               "lineId": "W5-D3-QR03-01"
             },
             {
               "speaker": "B",
               "english": "Because it is quiet.",
               "japanese": "静かだからです。",
+              "keywords": ["because", "quiet"],
               "lineId": "W5-D3-QR03-02"
             }
           ]
@@ -2797,12 +2825,14 @@ window.speakingData = {
               "hints": [
                 "ユウナ"
               ],
+              "keywords": ["who", "study", "Mina"],
               "lineId": "W5-D3-QR04-01"
             },
             {
               "speaker": "B",
               "english": "Her friend Yuna does.",
               "japanese": "彼女の友達のユウナです。",
+              "keywords": ["Yuna", "does"],
               "lineId": "W5-D3-QR04-02"
             }
           ]
@@ -2819,12 +2849,14 @@ window.speakingData = {
               "hints": [
                 "サッカーを練習する"
               ],
+              "keywords": ["what", "you", "do"],
               "lineId": "W5-D4-SC01-01"
             },
             {
               "speaker": "B",
               "english": "I practiced soccer.",
               "japanese": "サッカーの練習をしました。",
+              "keywords": ["I", "practiced", "soccer"],
               "lineId": "W5-D4-SC01-02"
             },
             {
@@ -2857,12 +2889,14 @@ window.speakingData = {
               "hints": [
                 "スポーツセンター"
               ],
+              "keywords": ["where", "Kota", "go"],
               "lineId": "W5-D4-QR01-01"
             },
             {
               "speaker": "B",
               "english": "He went to the sports center.",
               "japanese": "彼はスポーツセンターへ行きました。",
+              "keywords": ["he", "went", "sports center"],
               "lineId": "W5-D4-QR01-02"
             }
           ]
@@ -2879,12 +2913,14 @@ window.speakingData = {
               "hints": [
                 "チームと練習した"
               ],
+              "keywords": ["what", "he", "do"],
               "lineId": "W5-D4-QR02-01"
             },
             {
               "speaker": "B",
               "english": "He practiced with his team.",
               "japanese": "彼はチームと一緒に練習しました。",
+              "keywords": ["he", "practiced", "team"],
               "lineId": "W5-D4-QR02-02"
             }
           ]
@@ -2901,12 +2937,14 @@ window.speakingData = {
               "hints": [
                 "10時"
               ],
+              "keywords": ["when", "game", "begin"],
               "lineId": "W5-D4-QR03-01"
             },
             {
               "speaker": "B",
               "english": "It began at ten.",
               "japanese": "10時に始まりました。",
+              "keywords": ["it", "began", "ten"],
               "lineId": "W5-D4-QR03-02"
             }
           ]
@@ -2923,12 +2961,14 @@ window.speakingData = {
               "hints": [
                 "英語の宿題を終わらせた"
               ],
+              "keywords": ["what", "Kota", "do"],
               "lineId": "W5-D4-QR04-01"
             },
             {
               "speaker": "B",
               "english": "He finished his English homework.",
               "japanese": "英語の宿題を終わらせました。",
+              "keywords": ["he", "finished", "homework"],
               "lineId": "W5-D4-QR04-02"
             }
           ]
@@ -2945,12 +2985,14 @@ window.speakingData = {
               "hints": [
                 "主語と動詞"
               ],
+              "keywords": ["how", "you", "check"],
               "lineId": "W5-D5-SC01-01"
             },
             {
               "speaker": "B",
               "english": "I check the subject and the verb.",
               "japanese": "主語と動詞を確認します。",
+              "keywords": ["I", "check", "subject"],
               "lineId": "W5-D5-SC01-02"
             },
             {
@@ -2983,12 +3025,14 @@ window.speakingData = {
               "hints": [
                 "5つの英文"
               ],
+              "keywords": ["what", "Yuto", "check"],
               "lineId": "W5-D5-QR01-01"
             },
             {
               "speaker": "B",
               "english": "He checked five English sentences.",
               "japanese": "彼は5つの英文を確認しました。",
+              "keywords": ["he", "checked", "sentences"],
               "lineId": "W5-D5-QR01-02"
             }
           ]
@@ -3005,12 +3049,14 @@ window.speakingData = {
               "hints": [
                 "1か所"
               ],
+              "keywords": ["how many", "sentence", "have"],
               "lineId": "W5-D5-QR02-01"
             },
             {
               "speaker": "B",
               "english": "Each sentence had one mistake.",
               "japanese": "それぞれの文に1箇所ずつ間違いがありました。",
+              "keywords": ["sentence", "had", "mistake"],
               "lineId": "W5-D5-QR02-02"
             }
           ]
@@ -3027,12 +3073,14 @@ window.speakingData = {
               "hints": [
                 "主語"
               ],
+              "keywords": ["what", "he", "check"],
               "lineId": "W5-D5-QR03-01"
             },
             {
               "speaker": "B",
               "english": "He checked the subject first.",
               "japanese": "彼は最初に主語を確認しました。",
+              "keywords": ["he", "checked", "subject"],
               "lineId": "W5-D5-QR03-02"
             }
           ]
@@ -3049,12 +3097,14 @@ window.speakingData = {
               "hints": [
                 "動詞の形を変えて音読した"
               ],
+              "keywords": ["what", "he", "do"],
               "lineId": "W5-D5-QR04-01"
             },
             {
               "speaker": "B",
               "english": "He changed the verb form and read the sentence aloud.",
               "japanese": "動詞の形を変えて、正しい文を声に出して読みました。",
+              "keywords": ["he", "changed", "verb"],
               "lineId": "W5-D5-QR04-02"
             }
           ]
@@ -3071,12 +3121,14 @@ window.speakingData = {
               "hints": [
                 "クラスメイトと活動する"
               ],
+              "keywords": ["what", "you", "do"],
               "lineId": "W5-D6-SC01-01"
             },
             {
               "speaker": "B",
               "english": "I worked with my classmates.",
               "japanese": "クラスメイトと一緒に活動しました。",
+              "keywords": ["I", "worked", "classmates"],
               "lineId": "W5-D6-SC01-02"
             },
             {
@@ -3107,12 +3159,14 @@ window.speakingData = {
               "hints": [
                 "この前の土曜日"
               ],
+              "keywords": ["when", "school", "have"],
               "lineId": "W5-D6-QR01-01"
             },
             {
               "speaker": "B",
               "english": "It had English Day last Saturday.",
               "japanese": "この前の土曜日に開催しました。",
+              "keywords": ["it", "had", "English Day"],
               "lineId": "W5-D6-QR01-02"
             }
           ]
@@ -3129,12 +3183,14 @@ window.speakingData = {
               "hints": [
                 "短いゲームとクイズ"
               ],
+              "keywords": ["what", "students", "prepare"],
               "lineId": "W5-D6-QR02-01"
             },
             {
               "speaker": "B",
               "english": "They prepared short games and quizzes.",
               "japanese": "彼らは短いゲームやクイズを準備しました。",
+              "keywords": ["they", "prepared", "games"],
               "lineId": "W5-D6-QR02-02"
             }
           ]
@@ -3151,12 +3207,14 @@ window.speakingData = {
               "hints": [
                 "英語でルールを説明する必要があった"
               ],
+              "keywords": ["why", "writer", "nervous"],
               "lineId": "W5-D6-QR03-01"
             },
             {
               "speaker": "B",
               "english": "Because the writer had to explain the rules in English.",
               "japanese": "英語でルールを説明しなければならなかったからです。",
+              "keywords": ["because", "explain", "rules"],
               "lineId": "W5-D6-QR03-02"
             }
           ]
@@ -3173,12 +3231,14 @@ window.speakingData = {
               "hints": [
                 "よりはっきり話せるようになった"
               ],
+              "keywords": ["how", "writer", "change"],
               "lineId": "W5-D6-QR04-01"
             },
             {
               "speaker": "B",
               "english": "The writer could speak more clearly.",
               "japanese": "よりはっきりと話せるようになりました。",
+              "keywords": ["writer", "speak", "clearly"],
               "lineId": "W5-D6-QR04-02"
             }
           ]
@@ -3195,12 +3255,14 @@ window.speakingData = {
               "hints": [
                 "Whyの質問"
               ],
+              "keywords": ["what", "difficult", "week"],
               "lineId": "W5-D7-SC01-01"
             },
             {
               "speaker": "B",
               "english": "Questions with why were difficult.",
               "japanese": "why「なぜ」を使った質問が難しかったです。",
+              "keywords": ["questions", "difficult"],
               "lineId": "W5-D7-SC01-02"
             },
             {
@@ -3233,12 +3295,14 @@ window.speakingData = {
               "hints": [
                 "英語を読むことと書くこと"
               ],
+              "keywords": ["what", "writer", "practice"],
               "lineId": "W5-D7-QR01-01"
             },
             {
               "speaker": "B",
               "english": "The writer practiced reading and writing English.",
               "japanese": "筆者は英語を読むことと書くことを練習しました。",
+              "keywords": ["writer", "practiced", "English"],
               "lineId": "W5-D7-QR01-02"
             }
           ]
@@ -3255,12 +3319,14 @@ window.speakingData = {
               "hints": [
                 "本文をもう一度確認した"
               ],
+              "keywords": ["what", "writer", "do"],
               "lineId": "W5-D7-QR02-01"
             },
             {
               "speaker": "B",
               "english": "The writer checked the passage again.",
               "japanese": "筆者は本文をもう一度確認しました。",
+              "keywords": ["writer", "checked", "passage"],
               "lineId": "W5-D7-QR02-02"
             }
           ]
@@ -3277,12 +3343,14 @@ window.speakingData = {
               "hints": [
                 "does・can・did"
               ],
+              "keywords": ["which", "writer", "check"],
               "lineId": "W5-D7-QR03-01"
             },
             {
               "speaker": "B",
               "english": "The writer checked does, can, and did.",
               "japanese": "筆者は does、can、did を確認しました。",
+              "keywords": ["writer", "checked", "does"],
               "lineId": "W5-D7-QR03-02"
             }
           ]
@@ -3299,12 +3367,14 @@ window.speakingData = {
               "hints": [
                 "動詞の形が変わる理由"
               ],
+              "keywords": ["what", "writer", "understand"],
               "lineId": "W5-D7-QR04-01"
             },
             {
               "speaker": "B",
               "english": "The writer understands why the verb form changes.",
               "japanese": "筆者はなぜ動詞の形が変わるのかを理解しています。",
+              "keywords": ["writer", "understands", "verb form"],
               "lineId": "W5-D7-QR04-02"
             }
           ]
