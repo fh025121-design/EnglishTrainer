@@ -695,6 +695,90 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W3-D1-QR01",
+          "date": "2026-07-06",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What was the topic of Riku's speech?",
+              "japanese": "リクのスピーチのテーマは何でしたか。",
+              "hintType": "noun",
+              "hints": [
+                "私について"
+              ],
+              "lineId": "W3-D1-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "The topic was About Me.",
+              "japanese": "テーマは「私について」でした。",
+              "lineId": "W3-D1-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D1-QR02",
+          "date": "2026-07-06",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Was Riku nervous?",
+              "japanese": "リクは緊張していましたか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D1-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, he was.",
+              "japanese": "はい、緊張していました。",
+              "lineId": "W3-D1-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D1-QR03",
+          "date": "2026-07-06",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Did Riku try again?",
+              "japanese": "リクはもう一度やってみましたか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D1-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, he did.",
+              "japanese": "はい、やってみました。",
+              "lineId": "W3-D1-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D1-QR04",
+          "date": "2026-07-06",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did his teacher do?",
+              "japanese": "先生はどうしましたか。",
+              "hintType": "noun",
+              "hints": [
+                "微笑みました"
+              ],
+              "lineId": "W3-D1-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "His teacher smiled.",
+              "japanese": "先生は微笑みました。",
+              "lineId": "W3-D1-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W3-0707-C01",
           "date": "2026-07-07",
           "lines": [
@@ -737,6 +821,90 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, he does.",
               "japanese": "はい、勉強します。"
+            }
+          ]
+        },
+        {
+          "id": "W3-D2-QR01",
+          "date": "2026-07-07",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What do you usually study?",
+              "japanese": "普段、何を勉強しますか。",
+              "hintType": "noun",
+              "hints": [
+                "英語"
+              ],
+              "lineId": "W3-D2-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I study English.",
+              "japanese": "英語を勉強します。",
+              "lineId": "W3-D2-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D2-QR02",
+          "date": "2026-07-07",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "When do you do your homework?",
+              "japanese": "いつ宿題をしますか。",
+              "hintType": "noun",
+              "hints": [
+                "夕食後"
+              ],
+              "lineId": "W3-D2-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I do my homework after dinner.",
+              "japanese": "夕食後に宿題をします。",
+              "lineId": "W3-D2-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D2-QR03",
+          "date": "2026-07-07",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Does your brother study English?",
+              "japanese": "あなたのお兄さん、または弟は英語を勉強しますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D2-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, he does. / No, he doesn't.",
+              "japanese": "はい、します。／いいえ、しません。",
+              "lineId": "W3-D2-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D2-QR04",
+          "date": "2026-07-07",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Do you read books at home?",
+              "japanese": "家で本を読みますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D2-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I do. / No, I don't.",
+              "japanese": "はい、読みます。／いいえ、読みません。",
+              "lineId": "W3-D2-QR04-02"
             }
           ]
         },
@@ -785,6 +953,91 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W3-D3-QR01",
+          "date": "2026-07-08",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Can you read English sentences?",
+              "japanese": "英語の文を読むことができますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D3-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I can.",
+              "japanese": "はい、できます。",
+              "lineId": "W3-D3-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D3-QR02",
+          "date": "2026-07-08",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Can you answer English questions?",
+              "japanese": "英語の質問に答えることができますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D3-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I can. / No, I can't.",
+              "japanese": "はい、できます。／いいえ、できません。",
+              "lineId": "W3-D3-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D3-QR03",
+          "date": "2026-07-08",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What can you do well?",
+              "japanese": "上手にできることは何ですか。",
+              "hintType": "noun",
+              "hints": [
+                "サッカー"
+              ],
+              "lineId": "W3-D3-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I can play soccer well.",
+              "japanese": "サッカーを上手にすることができます。",
+              "lineId": "W3-D3-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D3-QR04",
+          "date": "2026-07-08",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What is difficult for you?",
+              "japanese": "あなたにとって何が難しいですか。",
+              "hintType": "pattern",
+              "patternHint": "～ is difficult for me.",
+              "hints": [
+                "英語を速く話すこと"
+              ],
+              "lineId": "W3-D3-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Speaking English quickly is difficult for me.",
+              "japanese": "英語を速く話すことが私には難しいです。",
+              "lineId": "W3-D3-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W3-0709-C01",
           "date": "2026-07-09",
           "lines": [
@@ -829,6 +1082,90 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W3-D4-QR01",
+          "date": "2026-07-09",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Did you go to school yesterday?",
+              "japanese": "昨日、学校へ行きましたか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D4-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I did.",
+              "japanese": "はい、行きました。",
+              "lineId": "W3-D4-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D4-QR02",
+          "date": "2026-07-09",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did you study yesterday?",
+              "japanese": "昨日、何を勉強しましたか。",
+              "hintType": "noun",
+              "hints": [
+                "英語"
+              ],
+              "lineId": "W3-D4-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I studied English yesterday.",
+              "japanese": "昨日、英語を勉強しました。",
+              "lineId": "W3-D4-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D4-QR03",
+          "date": "2026-07-09",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Did you read a book yesterday?",
+              "japanese": "昨日、本を読みましたか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D4-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I did. / No, I didn't.",
+              "japanese": "はい、読みました。／いいえ、読みませんでした。",
+              "lineId": "W3-D4-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D4-QR04",
+          "date": "2026-07-09",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did you do after school?",
+              "japanese": "放課後、何をしましたか。",
+              "hintType": "noun",
+              "hints": [
+                "サッカー"
+              ],
+              "lineId": "W3-D4-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I played soccer after school.",
+              "japanese": "放課後、サッカーをしました。",
+              "lineId": "W3-D4-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W3-0710-C01",
           "date": "2026-07-10",
           "lines": [
@@ -869,6 +1206,92 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, it is.",
               "japanese": "はい、役に立ちます。"
+            }
+          ]
+        },
+        {
+          "id": "W3-D5-QR01",
+          "date": "2026-07-10",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What do you write first?",
+              "japanese": "最初に何を書きますか。",
+              "hintType": "noun",
+              "hints": [
+                "意味"
+              ],
+              "lineId": "W3-D5-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I write the meaning first.",
+              "japanese": "最初に意味を書きます。",
+              "lineId": "W3-D5-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D5-QR02",
+          "date": "2026-07-10",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What do you make after that?",
+              "japanese": "そのあとで何を作りますか。",
+              "hintType": "noun",
+              "hints": [
+                "短い文を1つ"
+              ],
+              "lineId": "W3-D5-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I make one short sentence.",
+              "japanese": "短い文を1つ作ります。",
+              "lineId": "W3-D5-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D5-QR03",
+          "date": "2026-07-10",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "How many times do you say the word?",
+              "japanese": "その単語を何回言いますか。",
+              "hintType": "noun",
+              "hints": [
+                "3回"
+              ],
+              "lineId": "W3-D5-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I say the word three times.",
+              "japanese": "その単語を3回言います。",
+              "lineId": "W3-D5-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D5-QR04",
+          "date": "2026-07-10",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Is this practice useful?",
+              "japanese": "この練習は役に立ちますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D5-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, it is.",
+              "japanese": "はい、役立ちます。",
+              "lineId": "W3-D5-QR04-02"
             }
           ]
         },
@@ -919,6 +1342,92 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W3-D6-QR01",
+          "date": "2026-07-11",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What subject do you like?",
+              "japanese": "どの科目が好きですか。",
+              "hintType": "noun",
+              "hints": [
+                "英語"
+              ],
+              "lineId": "W3-D6-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I like English.",
+              "japanese": "英語が好きです。",
+              "lineId": "W3-D6-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D6-QR02",
+          "date": "2026-07-11",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Who do you have lunch with?",
+              "japanese": "誰と一緒に昼食を食べますか。",
+              "hintType": "noun",
+              "hints": [
+                "友達"
+              ],
+              "lineId": "W3-D6-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I have lunch with my friends.",
+              "japanese": "友達と一緒に昼食を食べます。",
+              "lineId": "W3-D6-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D6-QR03",
+          "date": "2026-07-11",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What do you do after school?",
+              "japanese": "放課後、何をしますか。",
+              "hintType": "noun",
+              "hints": [
+                "サッカー"
+              ],
+              "lineId": "W3-D6-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I play soccer after school.",
+              "japanese": "放課後、サッカーをします。",
+              "lineId": "W3-D6-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D6-QR04",
+          "date": "2026-07-11",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Did you study English yesterday?",
+              "japanese": "昨日、英語を勉強しましたか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D6-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I did.",
+              "japanese": "はい、しました。",
+              "lineId": "W3-D6-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W3-0712-C01",
           "date": "2026-07-12",
           "lines": [
@@ -959,6 +1468,91 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, I did.",
               "japanese": "はい、しました。"
+            }
+          ]
+        },
+        {
+          "id": "W3-D7-QR01",
+          "date": "2026-07-12",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What is your goal?",
+              "japanese": "あなたの目標は何ですか。",
+              "hintType": "pattern",
+              "patternHint": "My goal is to ...",
+              "hints": [
+                "英語を話すこと"
+              ],
+              "lineId": "W3-D7-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "My goal is to speak English.",
+              "japanese": "私の目標は英語を話すことです。",
+              "lineId": "W3-D7-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D7-QR02",
+          "date": "2026-07-12",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Do you study English every day?",
+              "japanese": "毎日、英語を勉強しますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D7-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I do.",
+              "japanese": "はい、します。",
+              "lineId": "W3-D7-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D7-QR03",
+          "date": "2026-07-12",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Can you answer short questions?",
+              "japanese": "短い質問に答えることができますか。",
+              "hintType": "none",
+              "hints": [],
+              "lineId": "W3-D7-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I can.",
+              "japanese": "はい、できます。",
+              "lineId": "W3-D7-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W3-D7-QR04",
+          "date": "2026-07-12",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did you practice yesterday?",
+              "japanese": "昨日、何を練習しましたか。",
+              "hintType": "noun",
+              "hints": [
+                "英語"
+              ],
+              "lineId": "W3-D7-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I practiced English yesterday.",
+              "japanese": "昨日、英語を練習しました。",
+              "lineId": "W3-D7-QR04-02"
             }
           ]
         }
