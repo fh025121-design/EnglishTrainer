@@ -2,6 +2,9 @@
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
   const SPEAKING_PROGRESS_KEY = "englishTrainerSpeakingProgress";
   const SPEAKING_RECENT_PROGRESS_KEY = "englishTrainerSpeakingRecentProgress_v1";
+  const SPEAKING_REVIEW_STATS_KEY = "englishTrainerSpeakingReviewStats_v1";
+  const SPEAKING_REVIEW_SESSION_KEY = "englishTrainerSpeakingReviewSession_v1";
+  const SPEAKING_TODAY_REVIEW_TARGET_COUNT = 12;
   const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
     adminPassword: "12345",
     releaseHistory: []
@@ -36,9 +39,6 @@
     },
     session: null,
     speakingUi: {
-      conversationRangeMode: "auto",
-      startWeek: SPEAKING_WEEK_MIN,
-      endWeek: SPEAKING_WEEK_MAX,
       selectedConversationWeekId: "",
       selectedConversationDayKeys: [],
       activeConversationDayKeys: [],
@@ -49,6 +49,10 @@
     speakingProgress: null,
     speakingDayProgressMap: {},
     speakingLegacyUnresolvedProgress: null,
+    speakingReviewStatsMap: {},
+    speakingReviewSession: null,
+    speakingReviewPlannedQueue: [],
+    speakingMode: "week",
     recentSpeakingProgress: [],
     speakingTranslationVisible: false,
     speakingAudioPlaying: false,
@@ -255,9 +259,6 @@
 
   function createDefaultSpeakingUiState() {
     return {
-      conversationRangeMode: "auto",
-      startWeek: SPEAKING_WEEK_MIN,
-      endWeek: SPEAKING_WEEK_MAX,
       selectedConversationWeekId: "",
       selectedConversationDayKeys: [],
       activeConversationDayKeys: [],
@@ -344,6 +345,111 @@
       phase: raw.phase === "conversationComplete" ? "conversationComplete" : "line",
       updatedAt: Number(raw.updatedAt) || Date.now()
     };
+  }
+
+  function sanitizeSpeakingReviewStatEntry(raw, fallbackConversationId = "") {
+    if (!raw || typeof raw !== "object") return null;
+    const conversationId = String(raw.conversationId || fallbackConversationId || "").trim();
+    if (!conversationId) return null;
+    return {
+      conversationId,
+      lastSpokenAt: Math.max(0, Number(raw.lastSpokenAt) || 0),
+      spokenCountTotal: Math.max(0, Number(raw.spokenCountTotal) || 0)
+    };
+  }
+
+  function loadSpeakingReviewStats() {
+    const raw = window.localStorage.getItem(SPEAKING_REVIEW_STATS_KEY);
+    if (!raw) {
+      state.speakingReviewStatsMap = {};
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      const source = parsed && typeof parsed === "object" ? parsed : {};
+      const nextMap = {};
+      Object.keys(source).forEach((conversationId) => {
+        const entry = sanitizeSpeakingReviewStatEntry(source[conversationId], conversationId);
+        if (!entry) return;
+        nextMap[entry.conversationId] = entry;
+      });
+      state.speakingReviewStatsMap = nextMap;
+    } catch (_error) {
+      state.speakingReviewStatsMap = {};
+    }
+  }
+
+  function saveSpeakingReviewStats() {
+    const keys = Object.keys(state.speakingReviewStatsMap || {});
+    if (!keys.length) {
+      window.localStorage.removeItem(SPEAKING_REVIEW_STATS_KEY);
+      return;
+    }
+    window.localStorage.setItem(SPEAKING_REVIEW_STATS_KEY, JSON.stringify(state.speakingReviewStatsMap));
+  }
+
+  function sanitizeSpeakingReviewQueueItem(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const weekId = String(raw.weekId || "").trim();
+    const dayKey = String(raw.dayKey || raw.date || "").trim();
+    const conversationId = String(raw.conversationId || "").trim();
+    if (!weekId || !dayKey || !conversationId) return null;
+    const week = getSpeakingWeek(weekId);
+    const conversation = getSpeakingConversationById(week, conversationId);
+    if (!week || !conversation || String(conversation?.date || "").trim() !== dayKey) return null;
+    return { weekId, dayKey, conversationId };
+  }
+
+  function sanitizeSpeakingReviewSession(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const reviewQueue = Array.isArray(raw.reviewQueue)
+      ? raw.reviewQueue.map((entry) => sanitizeSpeakingReviewQueueItem(entry)).filter(Boolean)
+      : [];
+    if (!reviewQueue.length) return null;
+    const currentIndex = Math.min(
+      Math.max(0, Number(raw.currentIndex) || 0),
+      reviewQueue.length - 1
+    );
+    const currentItem = reviewQueue[currentIndex] || null;
+    const currentContext = getReviewConversationContextByItem(currentItem);
+    const maxLineIndex = Math.max(0, Number(currentContext?.conversation?.lines?.length || 1) - 1);
+    return {
+      reviewQueue,
+      currentIndex,
+      lineIndex: Math.min(Math.max(0, Number(raw.lineIndex) || 0), maxLineIndex),
+      updatedAt: Math.max(0, Number(raw.updatedAt) || Date.now())
+    };
+  }
+
+  function loadSpeakingReviewSession() {
+    const raw = window.localStorage.getItem(SPEAKING_REVIEW_SESSION_KEY);
+    if (!raw) {
+      state.speakingReviewSession = null;
+      return;
+    }
+    try {
+      state.speakingReviewSession = sanitizeSpeakingReviewSession(JSON.parse(raw));
+    } catch (_error) {
+      state.speakingReviewSession = null;
+    }
+  }
+
+  function saveSpeakingReviewSession() {
+    const session = sanitizeSpeakingReviewSession(state.speakingReviewSession);
+    if (!session) {
+      state.speakingReviewSession = null;
+      window.localStorage.removeItem(SPEAKING_REVIEW_SESSION_KEY);
+      return;
+    }
+    session.updatedAt = Date.now();
+    state.speakingReviewSession = session;
+    window.localStorage.setItem(SPEAKING_REVIEW_SESSION_KEY, JSON.stringify(session));
+  }
+
+  function clearSpeakingReviewSession() {
+    state.speakingReviewSession = null;
+    state.speakingReviewPlannedQueue = [];
+    window.localStorage.removeItem(SPEAKING_REVIEW_SESSION_KEY);
   }
 
   function getSpeakingConversationForProgress(progress, week = getSpeakingWeek(progress?.weekId)) {
@@ -728,6 +834,10 @@
   }
 
   function getCurrentSpeakingConversation() {
+    if (isReviewSpeakingModeActive()) {
+      const context = getCurrentReviewConversationContext();
+      return context?.conversation || null;
+    }
     const week = getSpeakingProgressWeek();
     const progress = state.speakingProgress;
     if (!week || !progress) return null;
@@ -737,8 +847,162 @@
 
   function getCurrentSpeakingLine() {
     const conversation = getCurrentSpeakingConversation();
-    const lineIndex = Math.max(0, Number(state.speakingProgress?.lineIndex) || 0);
+    const lineIndex = isReviewSpeakingModeActive()
+      ? Math.max(0, Number(state.speakingReviewSession?.lineIndex) || 0)
+      : Math.max(0, Number(state.speakingProgress?.lineIndex) || 0);
     return conversation?.lines?.[lineIndex] || null;
+  }
+
+  function isReviewSpeakingModeActive() {
+    return state.speakingMode === "review" && Boolean(state.speakingReviewSession?.reviewQueue?.length);
+  }
+
+  function getCurrentReviewQueueItem() {
+    const session = state.speakingReviewSession;
+    if (!session || !Array.isArray(session.reviewQueue) || !session.reviewQueue.length) return null;
+    return session.reviewQueue[Math.max(0, Number(session.currentIndex) || 0)] || null;
+  }
+
+  function getReviewConversationContextByItem(item) {
+    const week = getSpeakingWeek(item?.weekId);
+    const conversation = getSpeakingConversationById(week, item?.conversationId);
+    if (!week || !conversation) return null;
+    return { week, conversation };
+  }
+
+  function getCurrentReviewConversationContext() {
+    const item = getCurrentReviewQueueItem();
+    return getReviewConversationContextByItem(item);
+  }
+
+  function getAllSpeakingConversationRefs() {
+    const refs = [];
+    getSpeakingWeeks().forEach((week) => {
+      week.shortConversations.forEach((conversation) => {
+        const dayKey = String(conversation?.date || "").trim();
+        if (!dayKey || !conversation?.id) return;
+        refs.push({
+          weekId: week.weekId,
+          dayKey,
+          conversationId: conversation.id
+        });
+      });
+    });
+    return refs;
+  }
+
+  function countSpeakingConversationSpokenTotal(conversationRef) {
+    if (!conversationRef) return 0;
+    const dayProgress = getStoredSpeakingDayProgress(conversationRef.weekId, conversationRef.dayKey);
+    if (!dayProgress) return 0;
+    return getSpeakingConversationSpokenCount(dayProgress, conversationRef.conversationId);
+  }
+
+  function buildTodayReviewQueue() {
+    const allRefs = getAllSpeakingConversationRefs();
+    const queuedIds = new Set();
+    const queue = [];
+
+    const appendUnique = (conversationRef) => {
+      if (!conversationRef) return;
+      if (!conversationRef.weekId || !conversationRef.dayKey || !conversationRef.conversationId) return;
+      if (queuedIds.has(conversationRef.conversationId)) return;
+      queuedIds.add(conversationRef.conversationId);
+      queue.push(conversationRef);
+    };
+
+    const unfinished = [];
+    const others = [];
+    allRefs.forEach((conversationRef) => {
+      const spokenCount = countSpeakingConversationSpokenTotal(conversationRef);
+      if (spokenCount < 3) {
+        unfinished.push(conversationRef);
+      } else {
+        others.push(conversationRef);
+      }
+    });
+
+    unfinished.forEach((conversationRef) => appendUnique(conversationRef));
+    others.forEach((conversationRef) => appendUnique(conversationRef));
+
+    return queue.slice(0, SPEAKING_TODAY_REVIEW_TARGET_COUNT);
+  }
+
+  function getRemainingReviewQueueCount() {
+    const session = sanitizeSpeakingReviewSession(state.speakingReviewSession);
+    if (!session) return 0;
+    return Math.max(0, session.reviewQueue.length - session.currentIndex);
+  }
+
+  function getTodayReviewPlannedQueue() {
+    const resumable = sanitizeSpeakingReviewSession(state.speakingReviewSession);
+    if (resumable && resumable.currentIndex < resumable.reviewQueue.length) {
+      return resumable.reviewQueue.slice(resumable.currentIndex);
+    }
+    return buildTodayReviewQueue();
+  }
+
+  function getTodayReviewPlannedCount() {
+    return getTodayReviewPlannedQueue().length;
+  }
+
+  function renderSpeakingReviewTopScreen() {
+    const plannedQueue = getTodayReviewPlannedQueue();
+    state.speakingReviewPlannedQueue = plannedQueue;
+    elements.todayReviewPlannedCountText.textContent = `${plannedQueue.length}会話`;
+    elements.startTodayReviewBtn.textContent = "▶ 今日の復習を始める";
+    elements.startTodayReviewBtn.disabled = plannedQueue.length <= 0;
+    showScreen("speakingReviewTopScreen");
+  }
+
+  function startTodaySpeakingReview() {
+    state.speakingMode = "review";
+    const resumable = sanitizeSpeakingReviewSession(state.speakingReviewSession);
+    if (resumable && resumable.currentIndex < resumable.reviewQueue.length) {
+      state.speakingReviewSession = resumable;
+      resetSpeakingHintState();
+      state.speakingTranslationVisible = false;
+      state.speakingLineStatus = "awaitingStart";
+      saveSpeakingReviewSession();
+      renderConversationPracticeWithAutoPlay();
+      return;
+    }
+
+    const queue = buildTodayReviewQueue();
+    if (!queue.length) {
+      window.alert("今日の復習対象はありません。");
+      renderSpeakingReviewTopScreen();
+      return;
+    }
+
+    state.speakingReviewSession = {
+      reviewQueue: queue,
+      currentIndex: 0,
+      lineIndex: 0,
+      updatedAt: Date.now()
+    };
+    resetSpeakingHintState();
+    state.speakingTranslationVisible = false;
+    state.speakingLineStatus = "awaitingStart";
+    saveSpeakingReviewSession();
+    renderConversationPracticeWithAutoPlay();
+  }
+
+  function recordSpeakingReviewConversationSpoken(conversationId) {
+    const normalizedConversationId = String(conversationId || "").trim();
+    if (!normalizedConversationId) return;
+    const current = sanitizeSpeakingReviewStatEntry(
+      state.speakingReviewStatsMap[normalizedConversationId] || {},
+      normalizedConversationId
+    ) || {
+      conversationId: normalizedConversationId,
+      lastSpokenAt: 0,
+      spokenCountTotal: 0
+    };
+    current.lastSpokenAt = Date.now();
+    current.spokenCountTotal = Math.max(0, Number(current.spokenCountTotal) || 0) + 1;
+    state.speakingReviewStatsMap[normalizedConversationId] = current;
+    saveSpeakingReviewStats();
   }
 
   function resetSpeakingHintState() {
@@ -892,8 +1156,26 @@
     return String(week?.weekId || "Week");
   }
 
+  function formatSpeakingMonthDay(value) {
+    const source = String(value || "").trim();
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(source);
+    if (!match) return "";
+    const [, , month, day] = match;
+    return `${Number(month)}/${Number(day)}`;
+  }
+
+  function getSpeakingWeekDateRangeText(week) {
+    const startText = formatSpeakingMonthDay(week?.startDate);
+    const endText = formatSpeakingMonthDay(week?.endDate);
+    if (startText && endText) {
+      return `${startText}～${endText}`;
+    }
+    return String(week?.label || "").trim();
+  }
+
   function getSpeakingWeekDisplayLabel(week) {
-    return `${getSpeakingWeekDisplayName(week)}（${String(week?.label || "")}）`;
+    const rangeText = getSpeakingWeekDateRangeText(week);
+    return `${getSpeakingWeekDisplayName(week)}（${rangeText}）`;
   }
 
   function getSpeakingOrderedDayKeys(week) {
@@ -1145,24 +1427,16 @@
     });
   }
 
-  function pickConversationWeekBySelector() {
+  function getAvailableConversationWeeks() {
     const availableWeeks = getSpeakingWeeks().filter((week) => week.shortConversations.length > 0);
-    if (!availableWeeks.length) return null;
-
-    if (state.speakingUi.conversationRangeMode === "week") {
-      const start = clampWeek(state.speakingUi.startWeek);
-      const end = clampWeek(state.speakingUi.endWeek);
-      const minWeek = Math.min(start, end);
-      const maxWeek = Math.max(start, end);
-      const scoped = availableWeeks.filter((week) => {
-        const weekNumber = parseWeekNumber(week.weekId);
-        return Number.isFinite(weekNumber) && weekNumber >= minWeek && weekNumber <= maxWeek;
-      });
-      if (!scoped.length) return null;
-      return scoped[Math.floor(Math.random() * scoped.length)];
-    }
-
-    return availableWeeks[Math.floor(Math.random() * availableWeeks.length)];
+    return availableWeeks.sort((a, b) => {
+      const aWeek = parseWeekNumber(a.weekId);
+      const bWeek = parseWeekNumber(b.weekId);
+      if (Number.isFinite(aWeek) && Number.isFinite(bWeek)) {
+        return aWeek - bWeek;
+      }
+      return String(a.weekId || "").localeCompare(String(b.weekId || ""));
+    });
   }
 
   function startConversationPracticeFromSelector() {
@@ -1186,6 +1460,7 @@
     }
 
     stopSpeakingAudio();
+    state.speakingMode = "week";
     state.speakingProgress = progress;
     resetSpeakingHintState();
     state.speakingTranslationVisible = false;
@@ -1207,6 +1482,7 @@
     const storedProgress = getStoredSpeakingDayProgress(week.weekId, normalizedDayKey);
     if (storedProgress && hasMeaningfulSpeakingProgress(storedProgress)) {
       stopSpeakingAudio();
+      state.speakingMode = "week";
       state.speakingProgress = { ...storedProgress };
       resetSpeakingHintState();
       state.speakingTranslationVisible = false;
@@ -1374,7 +1650,7 @@
   }
 
   function showScreen(screenId) {
-    ["homeScreen", "speakingHomeScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "speakingHomeScreen", "speakingReviewTopScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -1567,9 +1843,15 @@
   }
 
   function getSpeakingWeekBySelector() {
-    const selectedWeek = pickConversationWeekBySelector();
+    const availableWeeks = getAvailableConversationWeeks();
+    if (!availableWeeks.length) {
+      window.alert("会話データがありません。");
+      return null;
+    }
+    const selectedWeekId = String(state.speakingUi.selectedConversationWeekId || "").trim();
+    const selectedWeek = availableWeeks.find((week) => week.weekId === selectedWeekId) || availableWeeks[0];
     if (!selectedWeek) {
-      window.alert("選択した範囲に会話データがありません。");
+      window.alert("選択したWeekに会話データがありません。");
       return null;
     }
     return selectedWeek;
@@ -1681,13 +1963,11 @@
   }
 
   function renderConversationSelectScreen() {
-    const weekMode = state.speakingUi.conversationRangeMode === "week";
-    elements.conversationWeekRangeFields.classList.toggle("hidden", !weekMode);
-    [...document.querySelectorAll('input[name="conversationRangeMode"]')].forEach((radio) => {
-      radio.checked = radio.value === state.speakingUi.conversationRangeMode;
-    });
-    elements.conversationStartWeekSelect.value = String(state.speakingUi.startWeek);
-    elements.conversationEndWeekSelect.value = String(state.speakingUi.endWeek);
+    const availableWeeks = getAvailableConversationWeeks();
+    if (availableWeeks.length && !availableWeeks.some((week) => week.weekId === state.speakingUi.selectedConversationWeekId)) {
+      state.speakingUi.selectedConversationWeekId = availableWeeks[0].weekId;
+    }
+    elements.conversationWeekSelect.value = String(state.speakingUi.selectedConversationWeekId || "");
     renderSpeakingRecentProgressList();
 
     showScreen("conversationSelectScreen");
@@ -1822,16 +2102,8 @@
     saveState();
   }
 
-  function updateConversationRangeMode(value) {
-    state.speakingUi.conversationRangeMode = value === "week" ? "week" : "auto";
-    renderConversationSelectScreen();
-  }
-
-  function updateConversationWeekRange(startWeek, endWeek) {
-    const start = clampWeek(startWeek);
-    const end = clampWeek(endWeek);
-    state.speakingUi.startWeek = Math.min(start, end);
-    state.speakingUi.endWeek = Math.max(start, end);
+  function updateConversationWeekSelection(weekId) {
+    state.speakingUi.selectedConversationWeekId = String(weekId || "").trim();
     renderConversationSelectScreen();
   }
 
@@ -1946,6 +2218,48 @@
   }
 
   function renderConversationPractice() {
+    if (isReviewSpeakingModeActive()) {
+      const session = state.speakingReviewSession;
+      const context = getCurrentReviewConversationContext();
+      const conversation = context?.conversation;
+      const week = context?.week;
+      const line = getCurrentSpeakingLine();
+      if (!session || !week || !conversation || !line) {
+        renderSpeakingReviewTopScreen();
+        return;
+      }
+
+      elements.conversationWeekText.textContent = `🔄 今日の復習 ${getSpeakingWeekDisplayLabel(week)}`;
+      elements.conversationProgressText.textContent = `${session.currentIndex + 1} / ${session.reviewQueue.length}会話`;
+      elements.conversationSpeakerText.textContent = line.speaker;
+      elements.conversationEnglishText.textContent = line.english;
+      elements.conversationJapaneseText.textContent = line.japanese;
+      elements.conversationJapaneseBlock.classList.toggle("hidden", !state.speakingTranslationVisible || !line.japanese);
+      const showSpeakingHintUi = line.speaker === "A";
+      elements.speakingHintBtn.classList.toggle("hidden", !showSpeakingHintUi);
+      elements.speakingHintBlock.classList.toggle("hidden", !showSpeakingHintUi || !state.speakingHintVisible);
+      elements.speakingHintTitleText.textContent = state.speakingHintTitle || "💡 ヒント";
+      elements.speakingHintText.textContent = state.speakingHintText || "";
+      const statusPromptText = line.speaker === "A"
+        ? "🎤 質問文をシャドーイングし、続きの文章を\n声に出してみよう。"
+        : "🎤 シャドーイングしてください";
+      const hasSpeechSynthesis = Boolean(getSpeechSynthesisEngine());
+      if (state.speakingLineStatus === "playing") {
+        elements.conversationStatusText.textContent = "再生中…";
+      } else if (state.speakingLineStatus === "error") {
+        elements.conversationStatusText.textContent = "音声を再生できませんでした。";
+      } else {
+        elements.conversationStatusText.textContent = statusPromptText;
+      }
+      elements.toggleJapaneseBtn.disabled = state.speakingLineStatus === "playing" || !line.japanese;
+      elements.speakingHintBtn.disabled = !showSpeakingHintUi || state.speakingLineStatus === "playing";
+      elements.replayConversationAudioBtn.textContent = "▶ もう一度聞く";
+      elements.replayConversationAudioBtn.disabled = !hasSpeechSynthesis || state.speakingLineStatus === "playing";
+      elements.nextConversationLineBtn.disabled = state.speakingLineStatus !== "completed";
+      showScreen("conversationPracticeScreen");
+      return;
+    }
+
     const progress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
     const conversation = getCurrentSpeakingConversation();
@@ -2029,6 +2343,7 @@
       renderConversationCompleteScreen();
       return;
     }
+    state.speakingMode = "week";
     resetSpeakingHintState();
     state.speakingLineStatus = "awaitingStart";
     renderConversationPracticeWithAutoPlay();
@@ -2043,6 +2358,45 @@
 
   function moveToNextSpeakingLine() {
     if (state.speakingLineStatus !== "completed") return;
+
+    if (isReviewSpeakingModeActive()) {
+      const session = state.speakingReviewSession;
+      const item = getCurrentReviewQueueItem();
+      const context = getCurrentReviewConversationContext();
+      const conversation = context?.conversation;
+      if (!session || !item || !conversation) return;
+
+      if (session.lineIndex < conversation.lines.length - 1) {
+        session.lineIndex += 1;
+        resetSpeakingHintState();
+        state.speakingTranslationVisible = false;
+        saveSpeakingReviewSession();
+        renderConversationPractice();
+        playCurrentSpeakingLine();
+        return;
+      }
+
+      recordSpeakingReviewConversationSpoken(item.conversationId);
+
+      if (session.currentIndex < session.reviewQueue.length - 1) {
+        session.currentIndex += 1;
+        session.lineIndex = 0;
+        resetSpeakingHintState();
+        state.speakingTranslationVisible = false;
+        saveSpeakingReviewSession();
+        renderConversationPractice();
+        playCurrentSpeakingLine();
+        return;
+      }
+
+      clearSpeakingReviewSession();
+      resetSpeakingHintState();
+      state.speakingTranslationVisible = false;
+      state.speakingLineStatus = "awaitingStart";
+      renderSpeakingReviewTopScreen();
+      return;
+    }
+
     const progress = state.speakingProgress;
     const conversation = getCurrentSpeakingConversation();
     const week = getSpeakingProgressWeek();
@@ -2087,6 +2441,13 @@
     stopSpeakingAudio();
     resetSpeakingHintState();
     state.speakingLineStatus = "awaitingStart";
+
+    if (isReviewSpeakingModeActive()) {
+      saveSpeakingReviewSession();
+      renderSpeakingReviewTopScreen();
+      return;
+    }
+
     saveSpeakingProgress();
     const progress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
@@ -2100,6 +2461,11 @@
   }
 
   function moveToNextSpeakingConversation() {
+    if (isReviewSpeakingModeActive()) {
+      renderSpeakingReviewTopScreen();
+      return;
+    }
+
     const progress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
     if (!progress || !week) {
@@ -2409,12 +2775,18 @@
         window.localStorage.removeItem(MOBILE_STORAGE_KEY);
         window.localStorage.removeItem(SPEAKING_PROGRESS_KEY);
         window.localStorage.removeItem(SPEAKING_RECENT_PROGRESS_KEY);
+        window.localStorage.removeItem(SPEAKING_REVIEW_STATS_KEY);
+        window.localStorage.removeItem(SPEAKING_REVIEW_SESSION_KEY);
         Object.assign(state, createDefaultMobileState(), {
           session: null,
           speakingUi: createDefaultSpeakingUiState(),
           speakingProgress: null,
           speakingDayProgressMap: {},
           speakingLegacyUnresolvedProgress: null,
+          speakingReviewStatsMap: {},
+          speakingReviewSession: null,
+          speakingReviewPlannedQueue: [],
+          speakingMode: "week",
           recentSpeakingProgress: [],
           speakingTranslationVisible: false,
           speakingAudioPlaying: false,
@@ -2446,8 +2818,7 @@
     }
     elements.speakingWordStartDaySelect.innerHTML = "";
     elements.speakingWordEndDaySelect.innerHTML = "";
-    elements.conversationStartWeekSelect.innerHTML = "";
-    elements.conversationEndWeekSelect.innerHTML = "";
+    elements.conversationWeekSelect.innerHTML = "";
     for (let day = MOBILE_DAY_MIN; day <= MOBILE_DAY_MAX; day += 1) {
       const startOption = document.createElement("option");
       startOption.value = String(day);
@@ -2465,37 +2836,13 @@
       elements.speakingWordEndDaySelect.appendChild(speakingEndOption);
     }
     const speakingWeeks = getSpeakingWeeks();
-    const speakingWeekLabelByNumber = new Map();
-    speakingWeeks.forEach((weekInfo) => {
-      const weekNumber = parseWeekNumber(weekInfo.weekId);
-      if (!Number.isFinite(weekNumber) || !weekInfo.label) return;
-      speakingWeekLabelByNumber.set(weekNumber, String(weekInfo.label));
+    const availableWeeks = getAvailableConversationWeeks();
+    availableWeeks.forEach((weekInfo) => {
+      const option = document.createElement("option");
+      option.value = weekInfo.weekId;
+      option.textContent = getSpeakingWeekDisplayLabel(weekInfo);
+      elements.conversationWeekSelect.appendChild(option);
     });
-    const baseWeekStart = (() => {
-      const weekOne = speakingWeeks.find((weekInfo) => parseWeekNumber(weekInfo.weekId) === 1);
-      const parsed = Date.parse(String(weekOne?.startDate || ""));
-      return Number.isFinite(parsed) ? new Date(parsed) : new Date("2026-06-22T00:00:00");
-    })();
-    const formatMonthDay = (date) => `${date.getMonth() + 1}/${date.getDate()}`;
-    const buildWeekLabelByNumber = (weekNumber) => {
-      const directLabel = speakingWeekLabelByNumber.get(weekNumber);
-      if (directLabel) return directLabel;
-      const offsetDays = (weekNumber - 1) * 7;
-      const startDate = new Date(baseWeekStart);
-      startDate.setDate(baseWeekStart.getDate() + offsetDays);
-      const endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 6);
-      return `${formatMonthDay(startDate)}～${formatMonthDay(endDate)}`;
-    };
-    for (let week = SPEAKING_WEEK_MIN; week <= SPEAKING_WEEK_MAX; week += 1) {
-      const startOption = document.createElement("option");
-      startOption.value = String(week);
-      const weekLabel = buildWeekLabelByNumber(week);
-      startOption.textContent = `Week${week}（${weekLabel}）`;
-      const endOption = startOption.cloneNode(true);
-      elements.conversationStartWeekSelect.appendChild(startOption);
-      elements.conversationEndWeekSelect.appendChild(endOption);
-    }
     if (elements.startDaySelect) {
       elements.startDaySelect.value = String(state.settings.startDay);
     }
@@ -2504,8 +2851,12 @@
     }
     elements.speakingWordStartDaySelect.value = String(state.speakingUi.startDay);
     elements.speakingWordEndDaySelect.value = String(state.speakingUi.endDay);
-    elements.conversationStartWeekSelect.value = String(state.speakingUi.startWeek);
-    elements.conversationEndWeekSelect.value = String(state.speakingUi.endWeek);
+    if (availableWeeks.length && !availableWeeks.some((week) => week.weekId === state.speakingUi.selectedConversationWeekId)) {
+      state.speakingUi.selectedConversationWeekId = availableWeeks[0].weekId;
+    }
+    if (elements.conversationWeekSelect.options.length) {
+      elements.conversationWeekSelect.value = String(state.speakingUi.selectedConversationWeekId || availableWeeks[0]?.weekId || "");
+    }
 
     [...document.querySelectorAll('input[name="speechRateMode"]')].forEach((radio) => {
       radio.checked = radio.value === state.settings.speechRateMode;
@@ -2516,9 +2867,9 @@
     elements.dayRangeFields = document.getElementById("dayRangeFields");
     elements.startDaySelect = document.getElementById("startDaySelect");
     elements.endDaySelect = document.getElementById("endDaySelect");
-    elements.conversationWeekRangeFields = document.getElementById("conversationWeekRangeFields");
-    elements.conversationStartWeekSelect = document.getElementById("conversationStartWeekSelect");
-    elements.conversationEndWeekSelect = document.getElementById("conversationEndWeekSelect");
+    elements.conversationWeekSelect = document.getElementById("conversationWeekSelect");
+    elements.todayReviewPlannedCountText = document.getElementById("todayReviewPlannedCountText");
+    elements.startTodayReviewBtn = document.getElementById("startTodayReviewBtn");
     elements.conversationContinuePanel = document.getElementById("conversationContinuePanel");
     elements.recentProgressList = document.getElementById("recentProgressList");
     elements.conversationDaySelectWeekText = document.getElementById("conversationDaySelectWeekText");
@@ -2586,6 +2937,9 @@
     document.getElementById("openSettingsBtn").addEventListener("click", () => showScreen("settingsScreen"));
     document.getElementById("speakingHomeBackBtn").addEventListener("click", renderHome);
     document.getElementById("openConversationSelectBtn").addEventListener("click", renderConversationSelectScreen);
+    document.getElementById("openSpeakingReviewTopBtn").addEventListener("click", renderSpeakingReviewTopScreen);
+    document.getElementById("speakingReviewTopBackBtn").addEventListener("click", renderSpeakingHome);
+    elements.startTodayReviewBtn.addEventListener("click", startTodaySpeakingReview);
     document.getElementById("openSpeakingVocabBtn").addEventListener("click", renderSpeakingVocabScreen);
     document.getElementById("conversationSelectBackBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("conversationDaySelectBackBtn").addEventListener("click", renderConversationSelectScreen);
@@ -2640,9 +2994,6 @@
     [...document.querySelectorAll('input[name="speechRateMode"]')].forEach((radio) => {
       radio.addEventListener("change", () => updateSpeechRateMode(radio.value));
     });
-    [...document.querySelectorAll('input[name="conversationRangeMode"]')].forEach((radio) => {
-      radio.addEventListener("change", () => updateConversationRangeMode(radio.value));
-    });
     [...document.querySelectorAll('input[name="speakingWordRangeMode"]')].forEach((radio) => {
       radio.addEventListener("change", () => updateSpeakingVocabularyRangeMode(radio.value));
     });
@@ -2650,8 +3001,7 @@
       elements.startDaySelect.addEventListener("change", () => updateDayRange(elements.startDaySelect.value, elements.endDaySelect.value));
       elements.endDaySelect.addEventListener("change", () => updateDayRange(elements.startDaySelect.value, elements.endDaySelect.value));
     }
-    elements.conversationStartWeekSelect.addEventListener("change", () => updateConversationWeekRange(elements.conversationStartWeekSelect.value, elements.conversationEndWeekSelect.value));
-    elements.conversationEndWeekSelect.addEventListener("change", () => updateConversationWeekRange(elements.conversationStartWeekSelect.value, elements.conversationEndWeekSelect.value));
+    elements.conversationWeekSelect.addEventListener("change", () => updateConversationWeekSelection(elements.conversationWeekSelect.value));
     elements.speakingWordStartDaySelect.addEventListener("change", () => updateSpeakingVocabularyDayRange(elements.speakingWordStartDaySelect.value, elements.speakingWordEndDaySelect.value));
     elements.speakingWordEndDaySelect.addEventListener("change", () => updateSpeakingVocabularyDayRange(elements.speakingWordStartDaySelect.value, elements.speakingWordEndDaySelect.value));
     document.addEventListener("visibilitychange", handlePageVisibilityChange);
@@ -2662,6 +3012,8 @@
   function initialize() {
     loadState();
     loadSpeakingProgress();
+    loadSpeakingReviewStats();
+    loadSpeakingReviewSession();
     loadRecentSpeakingProgress();
     bindElements();
     renderMobileVersionInfo();

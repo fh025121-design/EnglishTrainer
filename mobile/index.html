@@ -7,7 +7,7 @@
     <script>
       (function () {
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
-        const cacheToken = window.name || storedToken || "20260722-0410";
+        const cacheToken = window.name || storedToken || "20260722-0535";
         window.MOBILE_CACHE_TOKEN = cacheToken;
         window.name = cacheToken;
         const link = document.createElement("link");
@@ -49,8 +49,28 @@
           <section class="panel speaking-feature-panel">
             <button id="openConversationSelectBtn" class="primary-btn large-btn" type="button">💬 会話練習</button>
             <p class="status-text">Weekごとの会話練習</p>
+            <button id="openSpeakingReviewTopBtn" class="secondary-btn large-btn" type="button">🔄 復習</button>
+            <p class="status-text">忘れないための復習</p>
             <button id="openSpeakingVocabBtn" class="secondary-btn large-btn" type="button">📚 単語・熟語</button>
             <p class="status-text">単語・熟語を声に出して練習</p>
+          </section>
+        </main>
+      </section>
+
+      <section id="speakingReviewTopScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="speakingReviewTopBackBtn" class="back-btn" type="button">← Speaking</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel speaking-panel">
+            <p class="hero-icon">🔄 今日の復習</p>
+            <h2>今日やる予定</h2>
+            <p id="todayReviewPlannedCountText" class="status-text">0会話</p>
+          </section>
+
+          <section class="panel action-panel">
+            <button id="startTodayReviewBtn" class="primary-btn large-btn" type="button">▶ 今日の復習を始める</button>
           </section>
         </main>
       </section>
@@ -68,27 +88,10 @@
 
           <section class="panel">
             <h2>会話練習</h2>
-            <div class="range-options" role="radiogroup" aria-label="会話練習の範囲">
-              <label class="option-card">
-                <input type="radio" name="conversationRangeMode" value="auto" checked />
-                <span>お任せ</span>
-              </label>
-              <label class="option-card">
-                <input type="radio" name="conversationRangeMode" value="week" />
-                <span>Weekを選ぶ</span>
-              </label>
-            </div>
-
-            <div id="conversationWeekRangeFields" class="day-range-fields hidden">
-              <label class="field-block">
-                <span>開始 Week</span>
-                <select id="conversationStartWeekSelect"></select>
-              </label>
-              <label class="field-block">
-                <span>終了 Week</span>
-                <select id="conversationEndWeekSelect"></select>
-              </label>
-            </div>
+            <label class="field-block">
+              <span>Weekを選ぶ</span>
+              <select id="conversationWeekSelect"></select>
+            </label>
           </section>
 
           <section class="panel action-panel">
@@ -353,7 +356,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260722-0410";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260722-0535";
         const scriptSources = [
           "../data.js",
           "../release-info.js",
