@@ -1,6 +1,10 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/21 05:40", note: "スマホ版Speakingの『最近の進捗』リンク表示をさらに軽量化し、日時同列の青リンク表現とカード高さの圧縮を調整" },
+    { version: "2026/07/21 05:25", note: "スマホ版Speakingの『最近の進捗』UIを調整し、進捗説明文とDay完了文言、日時と続きからボタンの同一行レイアウトへ更新" },
+    { version: "2026/07/21 05:10", note: "スマホ版Speakingの『最近の進捗』表示位置をホームから会話練習のWeek選択画面上部へ移動" },
+    { version: "2026/07/21 04:55", note: "スマホ版ホームにSpeakingの『最近の進捗』を追加し、Week別に最大3件まで保存・再開・更新順表示できるよう対応" },
     { version: "2026/07/21 04:35", note: "スマホ版SpeakingでDay7完了後の『続ける』遷移を修正し、最終日でも次周回はDay1へ戻り、5周目のみWeek Completeへ進むよう調整" },
     { version: "2026/07/21 04:20", note: "スマホ版SpeakingのDay単位完了判定へ修正し、SC前半→SC後半→QR01→QR02→QR03の後だけ完了画面を表示するよう改善" },
     { version: "2026/07/21 04:05", note: "スマホ版SpeakingのDay内セット表示をID・lineIndex・種別から都度計算する方式へ修正し、SC/QRで1/5〜5/5を正しく表示" },

@@ -61,6 +61,11 @@
         </header>
 
         <main class="stack-layout">
+          <section id="conversationContinuePanel" class="panel hidden">
+            <h2>📚 最近の進捗</h2>
+            <div id="recentProgressList" class="recent-progress-list"></div>
+          </section>
+
           <section class="panel">
             <h2>会話練習</h2>
             <div class="range-options" role="radiogroup" aria-label="会話練習の範囲">
@@ -83,15 +88,6 @@
                 <span>終了 Week</span>
                 <select id="conversationEndWeekSelect"></select>
               </label>
-            </div>
-          </section>
-
-          <section id="conversationContinuePanel" class="panel hidden">
-            <h2>最近の進捗</h2>
-            <div id="recentProgressList" class="recent-progress-list"></div>
-            <div class="action-panel compact-actions">
-              <button id="continueConversationBtn" class="primary-btn large-btn" type="button">続きから</button>
-              <button id="restartConversationWeekBtn" class="secondary-btn large-btn" type="button">最初から</button>
             </div>
           </section>
 
