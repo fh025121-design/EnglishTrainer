@@ -1376,20 +1376,23 @@
   function renderConversationCompleteScreen() {
     const progress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
+    const conversation = getCurrentSpeakingConversation();
     if (!progress || !week) {
       renderConversationSelectScreen();
       return;
     }
     const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
     const targetSets = 5;
+    const daySetProgress = conversation ? getSpeakingDaySetProgress(week, conversation, progress.lineIndex) : null;
+    const completedDaySets = daySetProgress?.totalSets || conversationSetCount;
     if (conversationSetCount >= targetSets) {
       elements.conversationCompleteMetaText.innerHTML = "5 / 5セット 完了<br>🌟 Excellent!";
       elements.nextConversationBtn.textContent = "このConversationを続ける";
     } else if (progress.conversationIndex >= week.shortConversations.length - 1) {
-      elements.conversationCompleteMetaText.textContent = `${conversationSetCount} / ${targetSets}セット 完了`;
+      elements.conversationCompleteMetaText.textContent = `${completedDaySets} / ${completedDaySets}セット 完了`;
       elements.nextConversationBtn.textContent = "このConversationを続ける";
     } else {
-      elements.conversationCompleteMetaText.textContent = `${conversationSetCount} / ${targetSets}セット 完了`;
+      elements.conversationCompleteMetaText.textContent = `${completedDaySets} / ${completedDaySets}セット 完了`;
       elements.nextConversationBtn.textContent = "このConversationを続ける";
     }
     showScreen("conversationCompleteScreen");
@@ -1462,6 +1465,20 @@
       progress.completedConversationIds.push(conversationId);
     }
     progress.conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0) + 1;
+
+    const daySetProgress = getSpeakingDaySetProgress(week, conversation, progress.lineIndex);
+    if (daySetProgress.currentSet < daySetProgress.totalSets) {
+      progress.conversationIndex += 1;
+      progress.lineIndex = 0;
+      resetSpeakingHintState();
+      state.speakingTranslationVisible = false;
+      progress.phase = "line";
+      saveSpeakingProgress();
+      renderConversationPractice();
+      playCurrentSpeakingLine();
+      return;
+    }
+
     progress.phase = "conversationComplete";
     saveSpeakingProgress();
     renderConversationCompleteScreen();
@@ -1485,10 +1502,13 @@
 
     const conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0);
     const targetSets = 5;
+    const practiceConversationCount = Array.isArray(progress.conversationOrder)
+      ? progress.conversationOrder.length
+      : 0;
 
     void conversationSetCount;
 
-    if (progress.conversationIndex < week.shortConversations.length - 1) {
+    if (progress.conversationIndex < practiceConversationCount - 1) {
       progress.conversationIndex += 1;
       progress.lineIndex = 0;
       progress.conversationSetCount = 0;
