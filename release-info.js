@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/22 07:25", note: "スマホ版Speaking Level1（Week3〜Week5）でB（Answer）画面の遷移とヒント表示を修正。A/Bとも音声再生後に『話す』ボタンで音読判定、Level1中は『次へ』非表示、B不正解時は現在行keywordsを順序通り Key phrases 表示、2回目不正解または正解で次会話Aへ自動遷移" },
     { version: "2026/07/22 06:55", note: "スマホ版Speaking Level1（Week3〜Week5）の表示遷移バグを修正。開始時にA（Question）を表示しA音声を再生、Question完了時のみB（Answer）へ遷移、Answer完了時のみ次会話へ進むようにlineIndex参照を統一" },
     { version: "2026/07/22 06:20", note: "スマホ版SpeakingでWeek3〜Week5限定のLevel1を実装。英文表示＋自動音声再生＋日本語表示切替＋マイク入力のキーワード一致判定に対応。正解時はGOOD!表示で次会話へ進行、不正解時はヒント表示のうえ1回だけ再挑戦し、2回失敗で次会話へ自動進行。認識文字列表示と発音スコアは非表示。学習終了時に完了会話数・正解数・学習時間を表示" },
     { version: "2026/07/22 05:35", note: "スマホ版Speaking会話練習のWeek選択UIを簡素化。開始/終了Weekと範囲選択を廃止し、Week1（6/22～6/28）形式の単一セレクトへ変更（weekId内部処理は維持）" },

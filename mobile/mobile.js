@@ -65,6 +65,7 @@
     speakingHintText: "",
     speakingLevel1Session: null,
     speakingLevel1AttemptUsed: 0,
+    speakingLevel1AttemptKey: "",
     speakingRecognitionInProgress: false,
     speakingRecognition: null,
     speakingAutoAdvanceTimerId: null,
@@ -812,6 +813,9 @@
                     japanese: String(line?.japanese || "").trim(),
                     hintType: String(line?.hintType || "").trim().toLowerCase(),
                     patternHint: String(line?.patternHint || "").trim(),
+                    keywords: Array.isArray(line?.keywords)
+                      ? line.keywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
+                      : [],
                     hints: Array.isArray(line?.hints)
                       ? line.hints.map((hint) => String(hint || "").trim()).filter(Boolean)
                       : []
@@ -1223,10 +1227,12 @@
     if (needsReset) {
       state.speakingLevel1Session = createSpeakingLevel1Session(progress, week);
       state.speakingLevel1AttemptUsed = 0;
+      state.speakingLevel1AttemptKey = "";
     }
 
     if (state.speakingLevel1Session.lastConversationId !== normalizedConversationId) {
       state.speakingLevel1AttemptUsed = 0;
+      state.speakingLevel1AttemptKey = "";
       state.speakingLevel1Session.lastConversationId = normalizedConversationId;
       resetSpeakingHintState();
     }
@@ -1293,28 +1299,14 @@
   }
 
   function getSpeakingLevel1HintText(conversation, targetLine) {
-    const lineHints = Array.isArray(targetLine?.hints)
-      ? targetLine.hints.map((hint) => String(hint || "").trim()).filter(Boolean)
+    void conversation;
+    const lineKeywords = Array.isArray(targetLine?.keywords)
+      ? targetLine.keywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
       : [];
-    if (lineHints.length) {
-      return `キーワード: ${lineHints.join(" / ")}`;
+    if (!lineKeywords.length) {
+      return "Key phrases:";
     }
-    const targetIndex = Array.isArray(conversation?.lines)
-      ? conversation.lines.indexOf(targetLine)
-      : -1;
-    if (targetIndex > 0) {
-      const previousHints = Array.isArray(conversation.lines[targetIndex - 1]?.hints)
-        ? conversation.lines[targetIndex - 1].hints.map((hint) => String(hint || "").trim()).filter(Boolean)
-        : [];
-      if (previousHints.length) {
-        return `キーワード: ${previousHints.join(" / ")}`;
-      }
-    }
-    const keywordHints = extractSpeakingLevel1Keywords(targetLine?.english || "");
-    if (keywordHints.length) {
-      return `キーワード: ${keywordHints.slice(0, 2).join(" / ")}`;
-    }
-    return "キーワードを意識して、短く話してみよう。";
+    return `Key phrases: ${lineKeywords.join(" / ")}`;
   }
 
   function formatSecondsToJa(durationSeconds) {
@@ -2372,6 +2364,12 @@
     const week = getSpeakingProgressWeek();
     const conversation = getCurrentSpeakingConversation();
     if (!progress || !week || !conversation) return;
+    if (state.speakingLevel1Session) {
+      state.speakingLevel1Session.completedCount = Math.max(
+        Math.max(0, Number(state.speakingLevel1Session.completedCount) || 0),
+        Math.max(0, Number(progress.conversationIndex) || 0) + 1
+      );
+    }
 
     const conversationId = String(progress.conversationOrder[progress.conversationIndex] || "").trim();
     if (conversationId && !progress.completedConversationIds.includes(conversationId)) {
@@ -2420,11 +2418,18 @@
     const progress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
     const conversation = getCurrentSpeakingConversation();
-    const questionLine = getSpeakingLevel1QuestionLine(conversation);
-    if (!progress || !week || !conversation || !questionLine) return;
+    const currentLine = getCurrentSpeakingLine();
+    if (!progress || !week || !conversation || !currentLine) return;
     if (!isSpeakingLevel1Week(week)) return;
-    if (Math.max(0, Number(progress.lineIndex) || 0) !== 0) return;
     if (state.speakingAudioPlaying || state.speakingRecognitionInProgress || !SpeechRecognitionCtor) return;
+
+    const currentLineIndex = Math.max(0, Number(progress.lineIndex) || 0);
+    const stage = currentLineIndex === 0 ? "question" : "answer";
+    const attemptKey = `${conversation.id}:${currentLineIndex}`;
+    if (state.speakingLevel1AttemptKey !== attemptKey) {
+      state.speakingLevel1AttemptKey = attemptKey;
+      state.speakingLevel1AttemptUsed = 0;
+    }
 
     const recognition = new SpeechRecognitionCtor();
     state.speakingRecognition = recognition;
@@ -2452,17 +2457,24 @@
       settle();
 
       const level1Session = ensureSpeakingLevel1Session(progress, week, conversation.id);
-      const isCorrect = isSpeakingLevel1KeywordMatch(questionLine.english, transcripts);
+      const isCorrect = isSpeakingLevel1KeywordMatch(currentLine.english, transcripts);
       if (isCorrect) {
-        level1Session.completedCount += 1;
-        level1Session.correctCount += 1;
+        if (stage === "question") {
+          level1Session.completedCount += 1;
+        } else {
+          level1Session.correctCount += 1;
+        }
         state.speakingLineStatus = "good";
         resetSpeakingHintState();
         renderConversationPractice();
         clearSpeakingAutoAdvanceTimer();
         state.speakingAutoAdvanceTimerId = window.setTimeout(() => {
           state.speakingAutoAdvanceTimerId = null;
-          moveToSpeakingLevel1AnswerLine();
+          if (stage === "question") {
+            moveToSpeakingLevel1AnswerLine();
+          } else {
+            moveToNextSpeakingLevel1Conversation();
+          }
         }, 700);
         return;
       }
@@ -2473,18 +2485,24 @@
         state.speakingHintVisible = true;
         state.speakingHintStep = 1;
         state.speakingHintTitle = "💡 ヒント";
-        state.speakingHintText = getSpeakingLevel1HintText(conversation, questionLine);
+        state.speakingHintText = getSpeakingLevel1HintText(conversation, currentLine);
         renderConversationPractice();
         return;
       }
 
-      level1Session.completedCount += 1;
+      if (stage === "answer") {
+        level1Session.completedCount += 1;
+      }
       state.speakingLineStatus = "miss";
       renderConversationPractice();
       clearSpeakingAutoAdvanceTimer();
       state.speakingAutoAdvanceTimerId = window.setTimeout(() => {
         state.speakingAutoAdvanceTimerId = null;
-        moveToSpeakingLevel1AnswerLine();
+        if (stage === "question") {
+          moveToSpeakingLevel1AnswerLine();
+        } else {
+          moveToNextSpeakingLevel1Conversation();
+        }
       }, 700);
     };
 
@@ -2620,12 +2638,12 @@
       elements.toggleJapaneseBtn.disabled = state.speakingAudioPlaying || !line.japanese;
       elements.replayConversationAudioBtn.textContent = "▶ もう一度聞く";
       elements.replayConversationAudioBtn.disabled = !hasSpeechSynthesis || state.speakingAudioPlaying || state.speakingRecognitionInProgress;
-      elements.conversationMicBtn.classList.toggle("hidden", !isQuestionStage);
+      elements.conversationMicBtn.classList.remove("hidden");
       elements.conversationMicBtn.classList.toggle("listening", state.speakingRecognitionInProgress);
       elements.conversationMicBtn.textContent = state.speakingRecognitionInProgress ? "🎤 聞き取り中…" : "🎤 話す";
-      elements.conversationMicBtn.disabled = !isQuestionStage || state.speakingAudioPlaying || state.speakingRecognitionInProgress || !SpeechRecognitionCtor;
-      elements.nextConversationLineBtn.classList.toggle("hidden", isQuestionStage);
-      elements.nextConversationLineBtn.disabled = isQuestionStage || state.speakingLineStatus !== "completed";
+      elements.conversationMicBtn.disabled = state.speakingAudioPlaying || state.speakingRecognitionInProgress || !SpeechRecognitionCtor;
+      elements.nextConversationLineBtn.classList.add("hidden");
+      elements.nextConversationLineBtn.disabled = true;
       showScreen("conversationPracticeScreen");
       return;
     }
@@ -3186,6 +3204,7 @@
           speakingHintText: "",
           speakingLevel1Session: null,
           speakingLevel1AttemptUsed: 0,
+          speakingLevel1AttemptKey: "",
           speakingRecognitionInProgress: false,
           speakingRecognition: null,
           speakingAutoAdvanceTimerId: null,
