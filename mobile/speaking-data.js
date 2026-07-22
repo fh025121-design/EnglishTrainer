@@ -895,7 +895,6 @@ window.speakingData = {
               "speaker": "A",
               "english": "Was Riku nervous?",
               "keywords": [
-                "Riku",
                 "was",
                 "nervous"
               ],
@@ -924,7 +923,6 @@ window.speakingData = {
               "speaker": "A",
               "english": "Did Riku try again?",
               "keywords": [
-                "Riku",
                 "try again"
               ],
               "japanese": "リクはもう一度やってみましたか。",
@@ -2594,8 +2592,7 @@ window.speakingData = {
               "english": "Who cooks with Kenta?",
               "keywords": [
                 "who",
-                "cooks",
-                "Kenta"
+                "cooks"
               ],
               "japanese": "誰がケンタと一緒に料理をしますか。",
               "hintType": "noun",
@@ -3427,7 +3424,6 @@ window.speakingData = {
               ],
               "keywords": [
                 "why",
-                "Aya",
                 "stop"
               ],
               "lineId": "W5-D1-QR01-01"
@@ -3490,7 +3486,6 @@ window.speakingData = {
               ],
               "keywords": [
                 "how long",
-                "Aya",
                 "continue"
               ],
               "lineId": "W5-D1-QR03-01"
@@ -3521,7 +3516,6 @@ window.speakingData = {
               ],
               "keywords": [
                 "what",
-                "Aya",
                 "do"
               ],
               "lineId": "W5-D1-QR04-01"
@@ -3599,7 +3593,6 @@ window.speakingData = {
               ],
               "keywords": [
                 "what sport",
-                "Riku",
                 "play"
               ],
               "lineId": "W5-D2-QR01-01"
@@ -3770,7 +3763,6 @@ window.speakingData = {
               ],
               "keywords": [
                 "where",
-                "Mina",
                 "study"
               ],
               "lineId": "W5-D3-QR01-01"
@@ -3865,8 +3857,7 @@ window.speakingData = {
               ],
               "keywords": [
                 "who",
-                "study",
-                "Mina"
+                "study"
               ],
               "lineId": "W5-D3-QR04-01"
             },
@@ -3875,7 +3866,6 @@ window.speakingData = {
               "english": "Her friend Yuna does.",
               "japanese": "彼女の友達のユウナです。",
               "keywords": [
-                "Yuna",
                 "does"
               ],
               "lineId": "W5-D3-QR04-02"
@@ -3944,7 +3934,6 @@ window.speakingData = {
               ],
               "keywords": [
                 "where",
-                "Kota",
                 "go"
               ],
               "lineId": "W5-D4-QR01-01"
@@ -4040,7 +4029,6 @@ window.speakingData = {
               ],
               "keywords": [
                 "what",
-                "Kota",
                 "do"
               ],
               "lineId": "W5-D4-QR04-01"
@@ -4120,7 +4108,6 @@ window.speakingData = {
               ],
               "keywords": [
                 "what",
-                "Yuto",
                 "check"
               ],
               "lineId": "W5-D5-QR01-01"
