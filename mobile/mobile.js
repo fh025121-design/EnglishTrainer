@@ -14,6 +14,7 @@
   const MOBILE_DAY_MAX = 40;
   const SPEAKING_WEEK_MIN = 1;
   const SPEAKING_WEEK_MAX = 20;
+  const ENABLE_SPEAKING_KEYWORD_DEBUG = true;
   const SESSION_QUESTION_COUNT = 10;
   const MOBILE_SPEECH_RATES = {
     slow: 0.82,
@@ -64,7 +65,7 @@
     speakingHintTitle: "",
     speakingHintText: "",
     speakingLevel1MissingKeywords: [],
-    speakingRecognitionDebugText: "",
+    speakingRecognitionDebugHtml: "",
     speakingLevel1Session: null,
     speakingLevel1AttemptUsed: 0,
     speakingLevel1AttemptKey: "",
@@ -1022,19 +1023,98 @@
     state.speakingHintTitle = "";
     state.speakingHintText = "";
     state.speakingLevel1MissingKeywords = [];
+    state.speakingRecognitionDebugHtml = "";
   }
 
-  function setSpeakingRecognitionDebugText(transcriptList) {
+  function computeLevenshteinDistance(source, target) {
+    const a = String(source || "");
+    const b = String(target || "");
+    if (!a) return b.length;
+    if (!b) return a.length;
+    const matrix = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+    for (let row = 0; row <= a.length; row += 1) matrix[row][0] = row;
+    for (let col = 0; col <= b.length; col += 1) matrix[0][col] = col;
+    for (let row = 1; row <= a.length; row += 1) {
+      for (let col = 1; col <= b.length; col += 1) {
+        const cost = a[row - 1] === b[col - 1] ? 0 : 1;
+        matrix[row][col] = Math.min(
+          matrix[row - 1][col] + 1,
+          matrix[row][col - 1] + 1,
+          matrix[row - 1][col - 1] + cost
+        );
+      }
+    }
+    return matrix[a.length][b.length];
+  }
+
+  function getKeywordLikeTranscriptText(lineKeywords, transcriptList) {
+    const rawKeywords = Array.isArray(lineKeywords)
+      ? lineKeywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
+      : [];
     const transcripts = (Array.isArray(transcriptList) ? transcriptList : [])
       .map((entry) => String(entry || "").trim())
       .filter(Boolean);
-    const value = transcripts.join(" / ");
-    state.speakingRecognitionDebugText = value;
-    if (!value) {
-      console.log("認識結果: (empty)");
+    const firstTranscript = transcripts[0] || "";
+    const normalizedTranscript = normalizeSpeakingKeywordToken(firstTranscript);
+    if (!rawKeywords.length || !normalizedTranscript) return "";
+
+    if (rawKeywords.length > 1) {
+      const recognizedKeywords = rawKeywords.filter((keyword) => {
+        const normalizedKeyword = normalizeSpeakingKeywordToken(keyword);
+        return normalizedKeyword && normalizedTranscript.includes(normalizedKeyword);
+      });
+      return recognizedKeywords.join(" / ");
+    }
+
+    const normalizedKeyword = normalizeSpeakingKeywordToken(rawKeywords[0]);
+    if (!normalizedKeyword) return "";
+    if (normalizedTranscript.includes(normalizedKeyword)) {
+      return rawKeywords[0];
+    }
+
+    const transcriptTokens = normalizedTranscript.split(" ").filter(Boolean);
+    const keywordTokens = normalizedKeyword.split(" ").filter(Boolean);
+    if (!transcriptTokens.length) return "";
+
+    if (keywordTokens.length > 1) {
+      const keywordTokenSet = new Set(keywordTokens);
+      const overlapTokens = transcriptTokens.filter((token) => keywordTokenSet.has(token));
+      if (overlapTokens.length) {
+        return overlapTokens.join(" ");
+      }
+      return transcriptTokens.slice(0, keywordTokens.length).join(" ");
+    }
+
+    let bestToken = transcriptTokens[0];
+    let bestDistance = computeLevenshteinDistance(keywordTokens[0], bestToken);
+    for (let index = 1; index < transcriptTokens.length; index += 1) {
+      const token = transcriptTokens[index];
+      const distance = computeLevenshteinDistance(keywordTokens[0], token);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestToken = token;
+      }
+    }
+    return bestToken;
+  }
+
+  function setSpeakingKeywordDebugFeedback(lineKeywords, transcriptList, isCorrect) {
+    if (!ENABLE_SPEAKING_KEYWORD_DEBUG || isCorrect) {
+      state.speakingRecognitionDebugHtml = "";
       return;
     }
-    console.log(`認識結果: ${value}`);
+    const expectedKeywords = Array.isArray(lineKeywords)
+      ? lineKeywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
+      : [];
+    const recognizedText = getKeywordLikeTranscriptText(expectedKeywords, transcriptList) || "(none)";
+    const expectedText = expectedKeywords.join(" / ") || "(none)";
+
+    state.speakingRecognitionDebugHtml = [
+      `<span class="recognition-debug-line recognition-debug-wrong">認識: ❌ ${escapeHtml(recognizedText)}</span>`,
+      `<span class="recognition-debug-line recognition-debug-correct">正解: ✅ ${escapeHtml(expectedText)}</span>`
+    ].join("<br>");
+    console.log(`認識: ❌ ${recognizedText}`);
+    console.log(`正解: ✅ ${expectedText}`);
   }
 
   function getSpeakingHintSpec(line) {
@@ -2566,12 +2646,12 @@
       const transcripts = Array.from(event.results?.[0] || [])
         .map((item) => String(item.transcript || "").trim())
         .filter(Boolean);
-      setSpeakingRecognitionDebugText(transcripts);
       settle();
 
       const level1Session = ensureSpeakingLevel1Session(progress, week, conversation.id);
       const keywordAnalysis = analyzeSpeakingLevel1KeywordMatch(currentLine.keywords, transcripts);
       const isCorrect = keywordAnalysis.isCorrect;
+      setSpeakingKeywordDebugFeedback(currentLine.keywords, transcripts, isCorrect);
       if (isCorrect) {
         state.speakingLevel1MissingKeywords = [];
         if (stage === "question") {
@@ -2742,9 +2822,7 @@
       elements.speakingHintTitleText.textContent = state.speakingHintTitle || "💡 ヒント";
       elements.speakingHintText.textContent = state.speakingHintText || "";
       elements.speakingHintText.classList.toggle("speaking-missing-hint", state.speakingHintVisible && state.speakingHintTitle === "Missing:");
-      elements.speakingRecognitionDebugText.textContent = state.speakingRecognitionDebugText
-        ? `認識結果: ${state.speakingRecognitionDebugText}`
-        : "";
+      elements.speakingRecognitionDebugText.innerHTML = state.speakingRecognitionDebugHtml || "";
 
       const hasSpeechSynthesis = Boolean(getSpeechSynthesisEngine());
       if (state.speakingLineStatus === "playing") {
@@ -2794,9 +2872,7 @@
     elements.speakingHintBlock.classList.toggle("hidden", !showSpeakingHintUi || !state.speakingHintVisible);
     elements.speakingHintTitleText.textContent = state.speakingHintTitle || "💡 ヒント";
     elements.speakingHintText.textContent = state.speakingHintText || "";
-    elements.speakingRecognitionDebugText.textContent = state.speakingRecognitionDebugText
-      ? `認識結果: ${state.speakingRecognitionDebugText}`
-      : "";
+    elements.speakingRecognitionDebugText.innerHTML = state.speakingRecognitionDebugHtml || "";
     const statusPromptText = line.speaker === "A"
       ? "🎤 質問文をシャドーイングし、続きの文章を\n声に出してみよう。"
       : "🎤 シャドーイングしてください";
@@ -3340,7 +3416,7 @@
           speakingHintTitle: "",
           speakingHintText: "",
           speakingLevel1MissingKeywords: [],
-          speakingRecognitionDebugText: "",
+          speakingRecognitionDebugHtml: "",
           speakingLevel1Session: null,
           speakingLevel1AttemptUsed: 0,
           speakingLevel1AttemptKey: "",

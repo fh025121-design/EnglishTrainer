@@ -607,6 +607,18 @@ select,
   white-space: pre-line;
 }
 
+.recognition-debug-line {
+  display: block;
+}
+
+.recognition-debug-wrong {
+  color: #ff4d5a;
+}
+
+.recognition-debug-correct {
+  color: #ffd84d;
+}
+
 .conversation-action-area {
   margin-top: 6px;
 }
