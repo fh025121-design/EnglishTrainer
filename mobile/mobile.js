@@ -1,4 +1,8 @@
 (function () {
+  const MOBILE_LEARNING_HISTORY_STORAGE_KEY = "english-trainer-mobile-learning-history-v1";
+  const MOBILE_LEARNING_HISTORY_MAX_ENTRIES = 1000;
+  const MOBILE_LEARNING_HISTORY_ACTIVE_TIMEOUT_MS = 3 * 60 * 1000;
+  const MOBILE_ADMIN_LEARNING_HISTORY_PIN = "2521";
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
   const SPEAKING_PROGRESS_KEY = "englishTrainerSpeakingProgress";
   const SPEAKING_RECENT_PROGRESS_KEY = "englishTrainerSpeakingRecentProgress_v1";
@@ -72,6 +76,7 @@
     speakingRecognitionInProgress: false,
     speakingRecognition: null,
     speakingAutoAdvanceTimerId: null,
+    learningHistorySession: null,
     currentScreen: "homeScreen",
     confirmAction: null,
     micTestRecognition: null
@@ -94,6 +99,223 @@
     const parts = formatter.formatToParts(date);
     const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
     return `${byType.year}/${byType.month}/${byType.day} ${byType.hour}:${byType.minute}`;
+  }
+
+  function formatMobileLearningDuration(seconds) {
+    const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+    const minute = Math.floor(safeSeconds / 60);
+    const remain = safeSeconds % 60;
+    if (minute > 0) {
+      return remain > 0 ? `${minute}分${remain}秒` : `${minute}分`;
+    }
+    return `${remain}秒`;
+  }
+
+  function getMobileLearningTicketSnapshot() {
+    return { earnedCount: 0, usedCount: 0 };
+  }
+
+  function normalizeMobileLearningModeLabel(mode, session = null) {
+    const normalizedMode = String(mode || "").trim();
+    if (normalizedMode === "speaking") return "スピーキング";
+    if (normalizedMode === "typing") {
+      const questionTypes = Array.isArray(session?.questions)
+        ? [...new Set(session.questions.map((item) => String(item?.type || "").trim()).filter(Boolean))]
+        : [];
+      if (questionTypes.length === 1) {
+        if (questionTypes[0] === "word") return "単語学習";
+        if (questionTypes[0] === "phrase") return "熟語学習";
+      }
+      return "単語・熟語学習";
+    }
+    if (normalizedMode === "conversation") return "会話練習";
+    if (normalizedMode === "review") return "過去の間違い";
+    return "その他";
+  }
+
+  function getMobileLearningDayNumberFromSession(session) {
+    if (!session || !Array.isArray(session.questions) || !session.questions.length) return "";
+    const days = [...new Set(session.questions.map((item) => Number(item?.day)).filter((value) => Number.isFinite(value)))].sort((a, b) => a - b);
+    if (!days.length) return "";
+    if (days.length === 1) return `Day${days[0]}`;
+    return `Day${days[0]}-${days[days.length - 1]}`;
+  }
+
+  function getMobileLearningHistoryDayNumberFromSpeakingProgress(progress) {
+    const dayKey = String(progress?.dayKey || "").trim();
+    if (!dayKey) return "";
+    const weekId = String(progress?.weekId || "").trim();
+    return weekId ? `${weekId} ${dayKey}` : dayKey;
+  }
+
+  function sanitizeMobileLearningHistoryEntry(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const startedAt = Number(raw.startedAt);
+    const endedAt = Number(raw.endedAt);
+    if (!Number.isFinite(startedAt) || !Number.isFinite(endedAt)) return null;
+    return {
+      learnedAt: typeof raw.learnedAt === "string" && raw.learnedAt ? raw.learnedAt : formatTimestampToJstDisplay(endedAt),
+      startedAt,
+      endedAt,
+      startedAtDisplay: typeof raw.startedAtDisplay === "string" && raw.startedAtDisplay ? raw.startedAtDisplay : formatTimestampToJstDisplay(startedAt),
+      endedAtDisplay: typeof raw.endedAtDisplay === "string" && raw.endedAtDisplay ? raw.endedAtDisplay : formatTimestampToJstDisplay(endedAt),
+      activeStudySeconds: Math.max(0, Number(raw.activeStudySeconds) || 0),
+      mode: typeof raw.mode === "string" ? raw.mode : "その他",
+      dayNumber: typeof raw.dayNumber === "string" ? raw.dayNumber : "",
+      questionCount: Math.max(0, Number(raw.questionCount) || 0),
+      correctCount: Math.max(0, Number(raw.correctCount) || 0),
+      accuracy: Math.max(0, Math.min(100, Number(raw.accuracy) || 0)),
+      completedReason: raw.completedReason === "interrupted" ? "interrupted" : "completed",
+      deviceType: raw.deviceType === "mobile" ? "mobile" : "mobile",
+      ticket: {
+        earned: {
+          count: Math.max(0, Number(raw.ticket?.earned?.count) || 0)
+        },
+        used: {
+          count: Math.max(0, Number(raw.ticket?.used?.count) || 0)
+        }
+      }
+    };
+  }
+
+  function loadMobileLearningHistoryEntries() {
+    try {
+      const raw = window.localStorage.getItem(MOBILE_LEARNING_HISTORY_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map(sanitizeMobileLearningHistoryEntry).filter(Boolean);
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function saveMobileLearningHistoryEntries(entries) {
+    const sanitized = Array.isArray(entries) ? entries.map(sanitizeMobileLearningHistoryEntry).filter(Boolean) : [];
+    if (!sanitized.length) {
+      window.localStorage.removeItem(MOBILE_LEARNING_HISTORY_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(
+      MOBILE_LEARNING_HISTORY_STORAGE_KEY,
+      JSON.stringify(sanitized.slice(-MOBILE_LEARNING_HISTORY_MAX_ENTRIES))
+    );
+  }
+
+  function appendMobileLearningHistoryEntry(entry) {
+    const current = loadMobileLearningHistoryEntries();
+    current.push(entry);
+    saveMobileLearningHistoryEntries(current);
+  }
+
+  function startMobileLearningHistorySession(meta = {}) {
+    state.learningHistorySession = {
+      source: String(meta.source || "other"),
+      mode: String(meta.mode || "other"),
+      dayNumber: String(meta.dayNumber || ""),
+      startedAt: Number(meta.startedAt) || Date.now(),
+      lastActivityAt: Number(meta.startedAt) || Date.now(),
+      activeStudyMs: 0,
+      ticketSnapshot: getMobileLearningTicketSnapshot(),
+      meta: { ...meta }
+    };
+  }
+
+  function recordMobileLearningActivity() {
+    const session = state.learningHistorySession;
+    if (!session) return;
+    const now = Date.now();
+    const lastActivityAt = Number(session.lastActivityAt) || session.startedAt || now;
+    const delta = now - lastActivityAt;
+    if (delta > 0 && delta <= MOBILE_LEARNING_HISTORY_ACTIVE_TIMEOUT_MS) {
+      session.activeStudyMs += delta;
+    }
+    session.lastActivityAt = now;
+  }
+
+  function finalizeMobileLearningHistorySession(options = {}) {
+    const session = state.learningHistorySession;
+    if (!session) return;
+    const now = Number(options.endedAt) || Date.now();
+    const lastActivityAt = Number(session.lastActivityAt) || session.startedAt || now;
+    const delta = now - lastActivityAt;
+    if (delta > 0 && delta <= MOBILE_LEARNING_HISTORY_ACTIVE_TIMEOUT_MS) {
+      session.activeStudyMs += delta;
+    }
+
+    const summary = options.summary || {};
+    const entry = sanitizeMobileLearningHistoryEntry({
+      learnedAt: formatTimestampToJstDisplay(now),
+      startedAt: session.startedAt,
+      endedAt: now,
+      startedAtDisplay: formatTimestampToJstDisplay(session.startedAt),
+      endedAtDisplay: formatTimestampToJstDisplay(now),
+      activeStudySeconds: Math.round(session.activeStudyMs / 1000),
+      mode: normalizeMobileLearningModeLabel(options.mode || session.mode, options.session || session.meta?.session || null),
+      dayNumber: String(options.dayNumber || session.dayNumber || ""),
+      questionCount: Math.max(0, Number(summary.questionCount) || 0),
+      correctCount: Math.max(0, Number(summary.correctCount) || 0),
+      accuracy: Math.max(0, Math.min(100, Number(summary.accuracy) || 0)),
+      completedReason: options.completedReason === "interrupted" ? "interrupted" : "completed",
+      deviceType: "mobile",
+      ticket: {
+        earned: { count: 0 },
+        used: { count: 0 }
+      }
+    });
+    if (entry) {
+      appendMobileLearningHistoryEntry(entry);
+    }
+    state.learningHistorySession = null;
+  }
+
+  function getCurrentMobileLearningHistorySummary() {
+    const session = state.session;
+    if (session) {
+      return {
+        mode: normalizeMobileLearningModeLabel(session.mode, session),
+        dayNumber: getMobileLearningDayNumberFromSession(session),
+        questionCount: Math.max(0, Number(session.questions?.length) || 0),
+        correctCount: Math.max(0, Number(session.stats?.firstTryCorrect) || 0) + Math.max(0, Number(session.stats?.secondTryCorrect) || 0),
+        accuracy: (() => {
+          const total = Math.max(0, Number(session.questions?.length) || 0);
+          const correct = Math.max(0, Number(session.stats?.firstTryCorrect) || 0) + Math.max(0, Number(session.stats?.secondTryCorrect) || 0);
+          return total ? Math.round((correct / total) * 100) : 0;
+        })()
+      };
+    }
+
+    if (isReviewSpeakingModeActive()) {
+      const reviewSession = state.speakingReviewSession;
+      const reviewQueue = Array.isArray(reviewSession?.reviewQueue) ? reviewSession.reviewQueue : [];
+      const currentIndex = Math.max(0, Number(reviewSession?.currentIndex) || 0);
+      const completed = Math.min(reviewQueue.length, currentIndex + (reviewSession?.lineIndex > 0 ? 1 : 0));
+      return {
+        mode: "過去の間違い",
+        dayNumber: getMobileLearningHistoryDayNumberFromSpeakingProgress(reviewQueue[0] || {}),
+        questionCount: reviewQueue.length,
+        correctCount: completed,
+        accuracy: reviewQueue.length ? Math.round((completed / reviewQueue.length) * 100) : 0
+      };
+    }
+
+    if (state.speakingProgress) {
+      const progress = state.speakingProgress;
+      const week = getSpeakingProgressWeek();
+      const currentConversation = getCurrentSpeakingConversation();
+      const totalQuestions = Math.max(1, Number(progress.conversationOrder?.length) || 0);
+      const completedQuestions = Math.max(0, Number(progress.completedConversationIds?.length) || 0) + Math.max(0, Number(progress.conversationIndex) || 0);
+      const mode = isSpeakingLevel1Week(week) ? "スピーキング" : "会話練習";
+      return {
+        mode,
+        dayNumber: getMobileLearningHistoryDayNumberFromSpeakingProgress(progress),
+        questionCount: totalQuestions,
+        correctCount: completedQuestions,
+        accuracy: totalQuestions ? Math.round((completedQuestions / totalQuestions) * 100) : 0
+      };
+    }
+
+    return null;
   }
 
   function parseVersionValueToTimestamp(value) {
@@ -245,6 +467,78 @@
     if (elements.mobileUpdateHistoryStatusText) {
       elements.mobileUpdateHistoryStatusText.textContent = "";
       elements.mobileUpdateHistoryStatusText.classList.add("hidden");
+    }
+  }
+
+  function hideMobileAdminLearningHistory() {
+    if (elements.mobileAdminLearningHistoryPanel) {
+      elements.mobileAdminLearningHistoryPanel.classList.add("hidden");
+      elements.mobileAdminLearningHistoryPanel.innerHTML = "";
+    }
+    if (elements.mobileAdminLearningHistoryStatusText) {
+      elements.mobileAdminLearningHistoryStatusText.textContent = "";
+      elements.mobileAdminLearningHistoryStatusText.classList.add("hidden");
+    }
+  }
+
+  function renderMobileAdminLearningHistoryList() {
+    if (!elements.mobileAdminLearningHistoryPanel) return;
+    const entries = loadMobileLearningHistoryEntries().slice().sort((left, right) => Number(right.endedAt) - Number(left.endedAt));
+    if (!entries.length) {
+      elements.mobileAdminLearningHistoryPanel.innerHTML = '<p class="status-text">履歴はありません</p>';
+      elements.mobileAdminLearningHistoryPanel.classList.remove("hidden");
+      return;
+    }
+
+    const markup = entries.map((entry) => {
+      const completionLabel = entry.completedReason === "interrupted" ? "中断" : "完了";
+      return [
+        '<article class="admin-learning-history-card">',
+        `<h3>${entry.mode || "その他"}・${entry.dayNumber || "-"}</h3>`,
+        '<div class="admin-learning-history-meta">',
+        `<p>開始: ${entry.startedAtDisplay || "-"}</p>`,
+        `<p>終了: ${entry.endedAtDisplay || "-"}</p>`,
+        `<p>学習時間: ${formatMobileLearningDuration(entry.activeStudySeconds)}</p>`,
+        `<p>状態: ${completionLabel}</p>`,
+        `<p>問題数: ${entry.questionCount}</p>`,
+        `<p>正解数: ${entry.correctCount}</p>`,
+        `<p>正答率: ${entry.accuracy}%</p>`,
+        `<p>チケット: ${entry.ticket?.earned?.count || 0} / ${entry.ticket?.used?.count || 0}</p>`,
+        '</div>',
+        '</article>'
+      ].join("");
+    }).join("");
+
+    elements.mobileAdminLearningHistoryPanel.innerHTML = `<div class="admin-learning-history-list">${markup}</div>`;
+    elements.mobileAdminLearningHistoryPanel.classList.remove("hidden");
+  }
+
+  function unlockMobileAdminLearningHistory() {
+    if (!elements.mobileAdminLearningHistoryPinInput || !elements.mobileAdminLearningHistoryPanel) return;
+    if (elements.mobileAdminLearningHistoryPinInput.value !== MOBILE_ADMIN_LEARNING_HISTORY_PIN) {
+      hideMobileAdminLearningHistory();
+      if (elements.mobileAdminLearningHistoryStatusText) {
+        elements.mobileAdminLearningHistoryStatusText.textContent = "PIN が違います。";
+        elements.mobileAdminLearningHistoryStatusText.classList.remove("hidden");
+      }
+      return;
+    }
+
+    renderMobileAdminLearningHistoryList();
+    if (elements.mobileAdminLearningHistoryStatusText) {
+      elements.mobileAdminLearningHistoryStatusText.textContent = "";
+      elements.mobileAdminLearningHistoryStatusText.classList.add("hidden");
+    }
+  }
+
+  function renderMobileAdminLearningHistoryScreen() {
+    hideMobileAdminLearningHistory();
+    if (elements.mobileAdminLearningHistoryPinInput) {
+      elements.mobileAdminLearningHistoryPinInput.value = "";
+    }
+    showScreen("mobileAdminLearningHistoryScreen");
+    if (elements.mobileAdminLearningHistoryPinInput) {
+      elements.mobileAdminLearningHistoryPinInput.focus();
     }
   }
 
@@ -456,6 +750,13 @@
   }
 
   function clearSpeakingReviewSession() {
+    if (state.learningHistorySession) {
+      finalizeMobileLearningHistorySession({
+        completedReason: "completed",
+        mode: "review",
+        summary: getCurrentMobileLearningHistorySummary() || {}
+      });
+    }
     state.speakingReviewSession = null;
     state.speakingReviewPlannedQueue = [];
     window.localStorage.removeItem(SPEAKING_REVIEW_SESSION_KEY);
@@ -968,6 +1269,15 @@
   }
 
   function startTodaySpeakingReview() {
+    if (!state.learningHistorySession) {
+      startMobileLearningHistorySession({
+        source: "review",
+        mode: "review",
+        dayNumber: "",
+        startedAt: Date.now()
+      });
+    }
+    recordMobileLearningActivity();
     state.speakingMode = "review";
     const resumable = sanitizeSpeakingReviewSession(state.speakingReviewSession);
     if (resumable && resumable.currentIndex < resumable.reviewQueue.length) {
@@ -1158,11 +1468,13 @@
   }
 
   function closeSpeakingHint() {
+    recordMobileLearningActivity();
     state.speakingHintVisible = false;
     renderConversationPractice();
   }
 
   function showNextSpeakingHint() {
+    recordMobileLearningActivity();
     const line = getCurrentSpeakingLine();
     if (!line) return;
     const spec = getSpeakingHintSpec(line);
@@ -1773,6 +2085,7 @@
   }
 
   function startConversationPracticeFromSelector() {
+    recordMobileLearningActivity();
     const selectedWeek = getSpeakingWeekBySelector();
     if (!selectedWeek) {
       return;
@@ -1791,6 +2104,17 @@
       window.alert("このWeekの会話データはまだありません。");
       return;
     }
+
+    if (!state.learningHistorySession) {
+      startMobileLearningHistorySession({
+        source: "conversation",
+        mode: isSpeakingLevel1Week(week) ? "speaking" : "conversation",
+        dayNumber: getMobileLearningHistoryDayNumberFromSpeakingProgress(progress),
+        startedAt: Date.now(),
+        session: progress
+      });
+    }
+    recordMobileLearningActivity();
 
     stopSpeakingAudio();
     state.speakingMode = "week";
@@ -1813,6 +2137,17 @@
 
     const queue = sanitizeSelectedDayKeys(week, dayQueue, { fallbackToAll: false });
     setActiveSpeakingDayQueue(queue, normalizedDayKey);
+
+    if (!state.learningHistorySession) {
+      startMobileLearningHistorySession({
+        source: "conversation",
+        mode: isSpeakingLevel1Week(week) ? "speaking" : "conversation",
+        dayNumber: normalizedDayKey,
+        startedAt: Date.now(),
+        session: null
+      });
+    }
+    recordMobileLearningActivity();
 
     const storedProgress = getStoredSpeakingDayProgress(week.weekId, normalizedDayKey);
     if (storedProgress && hasMeaningfulSpeakingProgress(storedProgress)) {
@@ -1987,7 +2322,7 @@
   }
 
   function showScreen(screenId) {
-    ["homeScreen", "speakingHomeScreen", "speakingReviewTopScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "speakingHomeScreen", "speakingReviewTopScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -1997,6 +2332,7 @@
   }
 
   function renderHome() {
+    hideMobileAdminLearningHistory();
     showScreen("homeScreen");
   }
 
@@ -2472,6 +2808,7 @@
   }
 
   function speakCorrectAnswer() {
+    recordMobileLearningActivity();
     const question = getCurrentQuestion();
     if (!question || typeof window.speechSynthesis === "undefined") return;
     const utterance = new SpeechSynthesisUtterance(question.speechText);
@@ -2482,6 +2819,7 @@
   }
 
   function playCurrentSpeakingLine() {
+    recordMobileLearningActivity();
     const line = getCurrentSpeakingLine();
     if (!line) return;
     stopSpeakingAudio();
@@ -2964,6 +3302,7 @@
 
   function toggleSpeakingJapanese() {
     if (state.speakingAudioPlaying) return;
+    recordMobileLearningActivity();
     state.speakingTranslationVisible = !state.speakingTranslationVisible;
     renderConversationPractice();
 
@@ -2971,6 +3310,7 @@
 
   function moveToNextSpeakingLine() {
     if (state.speakingLineStatus !== "completed") return;
+    recordMobileLearningActivity();
 
     if (isReviewSpeakingModeActive()) {
       const session = state.speakingReviewSession;
@@ -3057,11 +3397,25 @@
   }
 
   function leaveSpeakingPractice() {
+    recordMobileLearningActivity();
     clearSpeakingAutoAdvanceTimer();
     clearSpeakingRecognition();
     stopSpeakingAudio();
     resetSpeakingHintState();
     state.speakingLineStatus = "awaitingStart";
+
+    const progress = state.speakingProgress;
+    const reviewActive = isReviewSpeakingModeActive();
+    const completed = reviewActive
+      ? false
+      : Boolean(progress) && getSpeakingCompletedRounds(progress) >= getSpeakingTargetRounds(progress);
+    if (state.learningHistorySession) {
+      finalizeMobileLearningHistorySession({
+        completedReason: completed ? "completed" : "interrupted",
+        mode: reviewActive ? "review" : (isSpeakingLevel1Week(getSpeakingProgressWeek()) ? "speaking" : "conversation"),
+        summary: getCurrentMobileLearningHistorySummary() || {}
+      });
+    }
 
     if (isReviewSpeakingModeActive()) {
       saveSpeakingReviewSession();
@@ -3070,14 +3424,14 @@
     }
 
     saveSpeakingProgress();
-    const progress = state.speakingProgress;
+    const sessionProgress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
-    if (!progress || !week) {
+    if (!sessionProgress || !week) {
       renderConversationSelectScreen();
       return;
     }
     state.speakingUi.selectedConversationWeekId = week.weekId;
-    state.speakingUi.selectedConversationDayKeys = getSpeakingSelectedDayKeysFromOrder(week, progress.conversationOrder);
+    state.speakingUi.selectedConversationDayKeys = getSpeakingSelectedDayKeysFromOrder(week, sessionProgress.conversationOrder);
     renderConversationDaySelectScreen();
   }
 
@@ -3096,6 +3450,13 @@
 
     const targetSets = getSpeakingTargetRounds(progress);
     if (progress.phase === "conversationComplete" && getSpeakingCompletedRounds(progress) >= targetSets) {
+      if (state.learningHistorySession) {
+        finalizeMobileLearningHistorySession({
+          completedReason: "completed",
+          mode: isSpeakingLevel1Week(week) ? "speaking" : "conversation",
+          summary: getCurrentMobileLearningHistorySummary() || {}
+        });
+      }
       const nextDayKey = getNextSpeakingDayKeyFromQueue(progress);
       if (nextDayKey) {
         startOrResumeSpeakingDay(week, nextDayKey, state.speakingUi.activeConversationDayKeys);
@@ -3225,6 +3586,7 @@
   }
 
   function beginSpeechRecognition() {
+    recordMobileLearningActivity();
     const session = state.session;
     if (!session || session.recognitionInProgress || !SpeechRecognitionCtor) return;
 
@@ -3284,6 +3646,7 @@
   }
 
   function submitTypingAnswer() {
+    recordMobileLearningActivity();
     const session = state.session;
     if (!session) return;
     const typed = String(elements.typingAnswerInput.value || "").trim();
@@ -3292,6 +3655,7 @@
   }
 
   function goToNextQuestion() {
+    recordMobileLearningActivity();
     const session = state.session;
     if (!session) return;
     session.currentIndex += 1;
@@ -3314,6 +3678,14 @@
   function finishSession() {
     const session = state.session;
     if (!session) return;
+    if (state.learningHistorySession) {
+      finalizeMobileLearningHistorySession({
+        completedReason: "completed",
+        mode: session.mode,
+        session,
+        summary: getCurrentMobileLearningHistorySummary() || {}
+      });
+    }
     state.stats.studySessions += 1;
     state.stats.questionCount += session.questions.length;
     state.stats.firstTryCorrect += session.stats.firstTryCorrect;
@@ -3336,12 +3708,28 @@
       window.alert("出題できる問題がありません。");
       return;
     }
+    startMobileLearningHistorySession({
+      source: "study",
+      mode,
+      dayNumber: getMobileLearningDayNumberFromSession(session),
+      startedAt: Date.now(),
+      session
+    });
     state.session = session;
     renderStudyScreen();
   }
 
   function confirmLeaveStudy() {
+    recordMobileLearningActivity();
     showConfirm("学習を中断してホームへ戻りますか？", "ホームへ戻る", () => {
+      if (state.learningHistorySession && state.session) {
+        finalizeMobileLearningHistorySession({
+          completedReason: "interrupted",
+          mode: state.session.mode,
+          session: state.session,
+          summary: getCurrentMobileLearningHistorySummary() || {}
+        });
+      }
       if (state.session?.activeRecognition) {
         try {
           state.session.activeRecognition.abort();
@@ -3560,6 +3948,13 @@
     elements.mobileUpdateHistoryUnlockBtn = document.getElementById("mobileUpdateHistoryUnlockBtn");
     elements.mobileUpdateHistoryStatusText = document.getElementById("mobileUpdateHistoryStatusText");
     elements.mobileUpdateHistoryPanel = document.getElementById("mobileUpdateHistoryPanel");
+    elements.openMobileAdminHistoryBtn = document.getElementById("openMobileAdminHistoryBtn");
+    elements.mobileAdminLearningHistoryScreen = document.getElementById("mobileAdminLearningHistoryScreen");
+    elements.mobileAdminLearningHistoryBackBtn = document.getElementById("mobileAdminLearningHistoryBackBtn");
+    elements.mobileAdminLearningHistoryPinInput = document.getElementById("mobileAdminLearningHistoryPinInput");
+    elements.mobileAdminLearningHistoryUnlockBtn = document.getElementById("mobileAdminLearningHistoryUnlockBtn");
+    elements.mobileAdminLearningHistoryStatusText = document.getElementById("mobileAdminLearningHistoryStatusText");
+    elements.mobileAdminLearningHistoryPanel = document.getElementById("mobileAdminLearningHistoryPanel");
     elements.confirmModal = document.getElementById("confirmModal");
     elements.confirmMessage = document.getElementById("confirmMessage");
     elements.confirmOkBtn = document.getElementById("confirmOkBtn");
@@ -3570,6 +3965,7 @@
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
     document.getElementById("openSettingsBtn").addEventListener("click", () => showScreen("settingsScreen"));
+    elements.openMobileAdminHistoryBtn.addEventListener("click", renderMobileAdminLearningHistoryScreen);
     document.getElementById("speakingHomeBackBtn").addEventListener("click", renderHome);
     document.getElementById("openConversationSelectBtn").addEventListener("click", renderConversationSelectScreen);
     document.getElementById("openSpeakingReviewTopBtn").addEventListener("click", renderSpeakingReviewTopScreen);
@@ -3593,6 +3989,7 @@
     elements.nextConversationLineBtn.addEventListener("click", moveToNextSpeakingLine);
     elements.nextConversationBtn.addEventListener("click", moveToNextSpeakingConversation);
     document.getElementById("settingsBackBtn").addEventListener("click", renderHome);
+    elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", renderHome);
     document.getElementById("comingSoonBackBtn").addEventListener("click", renderHome);
     document.getElementById("studyBackBtn").addEventListener("click", confirmLeaveStudy);
     document.getElementById("retrySessionBtn").addEventListener("click", () => startStudy(state.lastSessionMode || "speaking"));
@@ -3610,6 +4007,12 @@
       if (event.key !== "Enter") return;
       event.preventDefault();
       unlockMobileUpdateHistory();
+    });
+    elements.mobileAdminLearningHistoryUnlockBtn.addEventListener("click", unlockMobileAdminLearningHistory);
+    elements.mobileAdminLearningHistoryPinInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      unlockMobileAdminLearningHistory();
     });
     document.getElementById("confirmCancelBtn").addEventListener("click", hideConfirm);
     elements.confirmOkBtn.addEventListener("click", () => {

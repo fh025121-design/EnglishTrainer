@@ -31,6 +31,7 @@
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
             <button id="refreshCacheBtn" class="secondary-btn large-btn" type="button">♻ キャッシュ更新</button>
             <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
+            <button id="openMobileAdminHistoryBtn" class="ghost-btn large-btn" type="button">管理者用</button>
           </section>
         </main>
       </section>
@@ -334,6 +335,26 @@
             <p id="micTestStatusText" class="status-text"></p>
             <button id="resetMobileDataBtn" class="danger-btn large-btn" type="button">スマホ版データ初期化</button>
           </section>
+        </main>
+      </section>
+
+      <section id="mobileAdminLearningHistoryScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="mobileAdminLearningHistoryBackBtn" class="back-btn" type="button">← ホーム</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel">
+            <h2>管理者用 学習履歴</h2>
+            <p class="status-text">PIN を入力すると記録した履歴を表示します。</p>
+            <div class="field-block">
+              <input id="mobileAdminLearningHistoryPinInput" class="typing-input" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" />
+              <button id="mobileAdminLearningHistoryUnlockBtn" class="primary-btn large-btn" type="button">表示する</button>
+              <p id="mobileAdminLearningHistoryStatusText" class="status-text hidden"></p>
+            </div>
+          </section>
+
+          <section id="mobileAdminLearningHistoryPanel" class="panel admin-learning-history-panel hidden"></section>
         </main>
       </section>
 
