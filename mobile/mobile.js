@@ -8,7 +8,8 @@
   const SPEAKING_RECENT_PROGRESS_KEY = "englishTrainerSpeakingRecentProgress_v1";
   const SPEAKING_REVIEW_STATS_KEY = "englishTrainerSpeakingReviewStats_v1";
   const SPEAKING_REVIEW_SESSION_KEY = "englishTrainerSpeakingReviewSession_v1";
-  const SPEAKING_TODAY_REVIEW_TARGET_COUNT = 12;
+  const SPEAKING_REVIEW_MAX_GROUPS = 20;
+  const SPEAKING_REVIEW_SET_SIZE = 4;
   const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
     adminPassword: "12345",
     releaseHistory: []
@@ -1056,6 +1057,19 @@
     window.localStorage.removeItem(SPEAKING_REVIEW_SESSION_KEY);
   }
 
+  function finishSpeakingReviewSession(completedCount) {
+    const safeCompletedCount = Math.max(0, Number(completedCount) || 0);
+    clearSpeakingReviewSession();
+    resetSpeakingHintState();
+    state.speakingTranslationVisible = false;
+    state.speakingLineStatus = "awaitingStart";
+    if (safeCompletedCount >= SPEAKING_REVIEW_MAX_GROUPS) {
+      renderSpeakingReviewCompleteScreen();
+      return;
+    }
+    renderSpeakingReviewTopScreen();
+  }
+
   function getSpeakingConversationForProgress(progress, week = getSpeakingWeek(progress?.weekId)) {
     if (!progress || !week) return null;
     const conversationId = Array.isArray(progress.conversationOrder)
@@ -1505,8 +1519,67 @@
     return getSpeakingConversationSpokenCount(dayProgress, conversationRef.conversationId);
   }
 
+  function getCurrentHomeworkWeekIdForReview() {
+    const activeWeekId = String(state.speakingProgress?.weekId || "").trim();
+    if (activeWeekId) return activeWeekId;
+
+    if (Array.isArray(state.recentSpeakingProgress) && state.recentSpeakingProgress.length) {
+      const recentWeekId = String(state.recentSpeakingProgress[0]?.weekId || "").trim();
+      if (recentWeekId) return recentWeekId;
+    }
+
+    const dayProgressEntries = Object.values(state.speakingDayProgressMap || {});
+    let latestWeekId = "";
+    let latestUpdatedAt = -1;
+    dayProgressEntries.forEach((entry) => {
+      const weekId = String(entry?.weekId || "").trim();
+      const updatedAt = Math.max(0, Number(entry?.updatedAt) || 0);
+      if (!weekId || updatedAt <= latestUpdatedAt) return;
+      latestUpdatedAt = updatedAt;
+      latestWeekId = weekId;
+    });
+    if (latestWeekId) return latestWeekId;
+
+    const weeks = getSpeakingWeeks();
+    return String(weeks[0]?.weekId || "").trim();
+  }
+
+  function getReviewPriorityScore(conversationRef, currentWeekId) {
+    const weekId = String(conversationRef?.weekId || "").trim();
+    const conversationId = String(conversationRef?.conversationId || "").trim();
+    const isCurrentWeek = Boolean(currentWeekId) && weekId === currentWeekId;
+    const homeworkSpokenCount = Math.max(0, countSpeakingConversationSpokenTotal(conversationRef));
+    const isHomeworkUnfinished = homeworkSpokenCount < 3;
+
+    const reviewStat = sanitizeSpeakingReviewStatEntry(
+      state.speakingReviewStatsMap?.[conversationId] || {},
+      conversationId
+    ) || {
+      conversationId,
+      lastSpokenAt: 0,
+      spokenCountTotal: 0
+    };
+
+    const spokenCountTotal = Math.max(0, Number(reviewStat.spokenCountTotal) || 0);
+    const lastSpokenAt = Math.max(0, Number(reviewStat.lastSpokenAt) || 0);
+    const hasReviewHistory = lastSpokenAt > 0 || spokenCountTotal > 0;
+    const staleRank = lastSpokenAt > 0 ? lastSpokenAt : -1;
+
+    return {
+      isCurrentWeek,
+      isHomeworkUnfinished,
+      hasReviewHistory,
+      homeworkSpokenCount,
+      spokenCountTotal,
+      staleRank,
+      weekNumber: Number(parseWeekNumber(weekId) || 999),
+      conversationId
+    };
+  }
+
   function buildTodayReviewQueue() {
     const allRefs = getAllSpeakingConversationRefs();
+    const currentWeekId = getCurrentHomeworkWeekIdForReview();
     const queuedIds = new Set();
     const queue = [];
 
@@ -1518,21 +1591,105 @@
       queue.push(conversationRef);
     };
 
-    const unfinished = [];
-    const others = [];
-    allRefs.forEach((conversationRef) => {
-      const spokenCount = countSpeakingConversationSpokenTotal(conversationRef);
-      if (spokenCount < 3) {
-        unfinished.push(conversationRef);
-      } else {
-        others.push(conversationRef);
+    const scoredRefs = allRefs
+      .map((conversationRef) => ({
+        conversationRef,
+        score: getReviewPriorityScore(conversationRef, currentWeekId)
+      }));
+
+    const currentWeekUnfinished = scoredRefs
+      .filter((entry) => entry.score.isCurrentWeek && entry.score.isHomeworkUnfinished)
+      .sort((a, b) => {
+        if (a.score.homeworkSpokenCount !== b.score.homeworkSpokenCount) {
+          return a.score.homeworkSpokenCount - b.score.homeworkSpokenCount;
+        }
+        if (a.score.staleRank !== b.score.staleRank) return a.score.staleRank - b.score.staleRank;
+        return a.score.conversationId.localeCompare(b.score.conversationId);
+      });
+
+    const pastWeekNoHistory = scoredRefs
+      .filter((entry) => !entry.score.isCurrentWeek && !entry.score.hasReviewHistory)
+      .sort((a, b) => {
+        if (a.score.weekNumber !== b.score.weekNumber) return a.score.weekNumber - b.score.weekNumber;
+        return a.score.conversationId.localeCompare(b.score.conversationId);
+      });
+
+    const pastWeekWithHistory = scoredRefs
+      .filter((entry) => !entry.score.isCurrentWeek && entry.score.hasReviewHistory)
+      .sort((a, b) => {
+        if (a.score.staleRank !== b.score.staleRank) return a.score.staleRank - b.score.staleRank;
+        if (a.score.spokenCountTotal !== b.score.spokenCountTotal) {
+          return a.score.spokenCountTotal - b.score.spokenCountTotal;
+        }
+        if (a.score.weekNumber !== b.score.weekNumber) return a.score.weekNumber - b.score.weekNumber;
+        return a.score.conversationId.localeCompare(b.score.conversationId);
+      });
+
+    const pastWeekCandidates = [...pastWeekNoHistory.slice(0, 5), ...pastWeekWithHistory];
+
+    const fallbackOthers = scoredRefs
+      .filter((entry) => entry.score.isCurrentWeek && !entry.score.isHomeworkUnfinished)
+      .sort((a, b) => {
+        if (a.score.staleRank !== b.score.staleRank) return a.score.staleRank - b.score.staleRank;
+        if (a.score.spokenCountTotal !== b.score.spokenCountTotal) {
+          return a.score.spokenCountTotal - b.score.spokenCountTotal;
+        }
+        return a.score.conversationId.localeCompare(b.score.conversationId);
+      });
+
+    const desiredTotal = Math.min(SPEAKING_REVIEW_MAX_GROUPS, scoredRefs.length);
+    const unfinishedCount = currentWeekUnfinished.length;
+
+    let baseCurrentTarget = 0;
+    let basePastTarget = desiredTotal;
+    if (unfinishedCount >= 21) {
+      baseCurrentTarget = 15;
+      basePastTarget = 5;
+    } else if (unfinishedCount >= 14) {
+      baseCurrentTarget = 12;
+      basePastTarget = 8;
+    } else if (unfinishedCount >= 7) {
+      baseCurrentTarget = 8;
+      basePastTarget = 12;
+    } else if (unfinishedCount >= 1) {
+      baseCurrentTarget = unfinishedCount;
+      basePastTarget = Math.max(0, desiredTotal - baseCurrentTarget);
+    }
+
+    let unfinishedTarget = Math.min(baseCurrentTarget, unfinishedCount, desiredTotal);
+    let pastTarget = Math.min(basePastTarget, Math.max(0, desiredTotal - unfinishedTarget), pastWeekCandidates.length);
+
+    // If one side lacks candidates, only then fill from the other side.
+    while (unfinishedTarget + pastTarget < desiredTotal) {
+      if (unfinishedTarget < unfinishedCount) {
+        unfinishedTarget += 1;
+        continue;
       }
-    });
+      if (pastTarget < pastWeekCandidates.length) {
+        pastTarget += 1;
+        continue;
+      }
+      break;
+    }
 
-    unfinished.forEach((conversationRef) => appendUnique(conversationRef));
-    others.forEach((conversationRef) => appendUnique(conversationRef));
+    for (let index = 0; index < unfinishedTarget; index += 1) {
+      appendUnique(currentWeekUnfinished[index]?.conversationRef);
+    }
+    for (let index = 0; index < pastTarget; index += 1) {
+      appendUnique(pastWeekCandidates[index]?.conversationRef);
+    }
 
-    return queue.slice(0, SPEAKING_TODAY_REVIEW_TARGET_COUNT);
+    if (queue.length < desiredTotal) {
+      currentWeekUnfinished.forEach((entry) => appendUnique(entry.conversationRef));
+    }
+    if (queue.length < desiredTotal) {
+      pastWeekCandidates.forEach((entry) => appendUnique(entry.conversationRef));
+    }
+    if (queue.length < desiredTotal) {
+      fallbackOthers.forEach((entry) => appendUnique(entry.conversationRef));
+    }
+
+    return queue.slice(0, SPEAKING_REVIEW_MAX_GROUPS);
   }
 
   function getRemainingReviewQueueCount() {
@@ -1554,12 +1711,21 @@
   }
 
   function renderSpeakingReviewTopScreen() {
-    const plannedQueue = getTodayReviewPlannedQueue();
+    const resumable = sanitizeSpeakingReviewSession(state.speakingReviewSession);
+    const hasResumable = Boolean(resumable && resumable.currentIndex < resumable.reviewQueue.length);
+    const plannedQueue = hasResumable
+      ? resumable.reviewQueue.slice(resumable.currentIndex)
+      : buildTodayReviewQueue();
     state.speakingReviewPlannedQueue = plannedQueue;
-    elements.todayReviewPlannedCountText.textContent = `${plannedQueue.length}会話`;
-    elements.startTodayReviewBtn.textContent = "▶ 今日の復習を始める";
+    const setCount = Math.ceil(plannedQueue.length / SPEAKING_REVIEW_SET_SIZE);
+    elements.todayReviewPlannedCountText.textContent = `おすすめ ${plannedQueue.length} / ${SPEAKING_REVIEW_MAX_GROUPS}組（${setCount}セット）`;
+    elements.startTodayReviewBtn.textContent = hasResumable ? "▶ 復習（続きから）" : "▶ 今日の復習を始める";
     elements.startTodayReviewBtn.disabled = plannedQueue.length <= 0;
     showScreen("speakingReviewTopScreen");
+  }
+
+  function renderSpeakingReviewCompleteScreen() {
+    showScreen("speakingReviewCompleteScreen");
   }
 
   function startTodaySpeakingReview() {
@@ -2622,7 +2788,7 @@
   }
 
   function showScreen(screenId) {
-    ["homeScreen", "speakingHomeScreen", "speakingReviewTopScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -3211,11 +3377,7 @@
         return;
       }
 
-      clearSpeakingReviewSession();
-      resetSpeakingHintState();
-      state.speakingTranslationVisible = false;
-      state.speakingLineStatus = "awaitingStart";
-      renderSpeakingReviewTopScreen();
+      finishSpeakingReviewSession(session.reviewQueue.length);
       return;
     }
 
@@ -3776,11 +3938,7 @@
         return;
       }
 
-      clearSpeakingReviewSession();
-      resetSpeakingHintState();
-      state.speakingTranslationVisible = false;
-      state.speakingLineStatus = "awaitingStart";
-      renderSpeakingReviewTopScreen();
+      finishSpeakingReviewSession(session.reviewQueue.length);
       return;
     }
 
@@ -4321,6 +4479,7 @@
     elements.conversationWeekSelect = document.getElementById("conversationWeekSelect");
     elements.todayReviewPlannedCountText = document.getElementById("todayReviewPlannedCountText");
     elements.startTodayReviewBtn = document.getElementById("startTodayReviewBtn");
+    elements.returnSpeakingReviewCompleteBtn = document.getElementById("returnSpeakingReviewCompleteBtn");
     elements.conversationContinuePanel = document.getElementById("conversationContinuePanel");
     elements.recentProgressList = document.getElementById("recentProgressList");
     elements.conversationDaySelectWeekText = document.getElementById("conversationDaySelectWeekText");
@@ -4405,6 +4564,7 @@
     document.getElementById("openSpeakingReviewTopBtn").addEventListener("click", renderSpeakingReviewTopScreen);
     document.getElementById("speakingReviewTopBackBtn").addEventListener("click", renderSpeakingHome);
     elements.startTodayReviewBtn.addEventListener("click", startTodaySpeakingReview);
+    elements.returnSpeakingReviewCompleteBtn.addEventListener("click", renderSpeakingReviewTopScreen);
     document.getElementById("openSpeakingVocabBtn").addEventListener("click", renderSpeakingVocabScreen);
     document.getElementById("conversationSelectBackBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("conversationDaySelectBackBtn").addEventListener("click", renderConversationSelectScreen);
