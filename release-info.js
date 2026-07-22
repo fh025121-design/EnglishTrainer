@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/22 11:05", note: "学習履歴の保存を追加。学習終了ごとに学習日時・開始/終了時刻・実学習時間（3分以内の操作間のみ）・学習モード（Day/単語特訓/熟語特訓/過去の間違い）・Day番号・問題数・正解数・正答率・チケット獲得/使用を localStorage の専用キーへ追記保存（既存の進捗/レベル/チケット保存方式は不変更）" },
     { version: "2026/07/22 10:40", note: "Week3のLevel1キーワードを反映（Day1〜Day7、A/B全行）。ユーザー指定キーワードをそのまま適用し、mobile/speaking-data.js の keywords 配列のみ更新" },
     { version: "2026/07/22 10:15", note: "Week4のLevel1キーワードを反映（Day1〜Day4、A/B全行）。ユーザー指定キーワードをそのまま適用し、keywords配列のみ追加。Day5〜Day7は未確定のため変更なし" },
     { version: "2026/07/22 09:55", note: "スマホ版Speakingのデバッグ表示を修正。不正解時は不正解キーワードのみを比較対象にし、『認識: ❌（実際の認識語／候補なしは（認識なし））』『正解: ✅（不正解キーワード）』を表示。正解キーワードは非表示、正解時はデバッグ表示なし" },

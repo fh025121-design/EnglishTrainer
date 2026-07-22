@@ -1,4 +1,7 @@
 const STORAGE_KEY = "english-trainer-state-v1";
+const LEARNING_HISTORY_STORAGE_KEY = "english-trainer-learning-history-v1";
+const LEARNING_HISTORY_MAX_ENTRIES = 1000;
+const LEARNING_ACTIVE_TIMEOUT_MS = 3 * 60 * 1000;
 const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
   adminPassword: "12345",
   releaseHistory: []
@@ -229,6 +232,171 @@ function sanitizeGameTicketRewardEntry(value) {
     minutes: Math.round(minutes),
     streakDays: Number.isFinite(Number(value.streakDays)) ? Math.max(0, Math.round(Number(value.streakDays))) : null,
     queuedAt: Number.isFinite(queuedAt) ? queuedAt : Date.now()
+  };
+}
+
+function sanitizeLearningHistoryTicketSnapshot(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    legacyTickets: Math.max(0, Number(source.legacyTickets) || 0),
+    gameEarnedCount: Math.max(0, Number(source.gameEarnedCount) || 0),
+    gameEarnedMinutes: Math.max(0, Number(source.gameEarnedMinutes) || 0),
+    gameUsedCount: Math.max(0, Number(source.gameUsedCount) || 0),
+    gameUsedMinutes: Math.max(0, Number(source.gameUsedMinutes) || 0)
+  };
+}
+
+function sumTicketMinutes(list) {
+  if (!Array.isArray(list)) return 0;
+  return list.reduce((sum, entry) => sum + Math.max(0, Number(entry?.minutes) || 0), 0);
+}
+
+function captureLearningHistoryTicketSnapshot() {
+  const gameTicketStore = sanitizeGameTicketStats(state?.stats?.gameTickets);
+  return {
+    legacyTickets: Math.max(0, Number(state?.stats?.tickets) || 0),
+    gameEarnedCount: Array.isArray(gameTicketStore.earnedHistory) ? gameTicketStore.earnedHistory.length : 0,
+    gameEarnedMinutes: sumTicketMinutes(gameTicketStore.earnedHistory),
+    gameUsedCount: Array.isArray(gameTicketStore.usageHistory) ? gameTicketStore.usageHistory.length : 0,
+    gameUsedMinutes: sumTicketMinutes(gameTicketStore.usageHistory)
+  };
+}
+
+function computeLearningHistoryTicketDelta(before, after) {
+  const safeBefore = sanitizeLearningHistoryTicketSnapshot(before);
+  const safeAfter = sanitizeLearningHistoryTicketSnapshot(after);
+  return {
+    earned: {
+      legacyTickets: Math.max(0, safeAfter.legacyTickets - safeBefore.legacyTickets),
+      gameTicketsCount: Math.max(0, safeAfter.gameEarnedCount - safeBefore.gameEarnedCount),
+      gameTicketsMinutes: Math.max(0, safeAfter.gameEarnedMinutes - safeBefore.gameEarnedMinutes)
+    },
+    used: {
+      gameTicketsCount: Math.max(0, safeAfter.gameUsedCount - safeBefore.gameUsedCount),
+      gameTicketsMinutes: Math.max(0, safeAfter.gameUsedMinutes - safeBefore.gameUsedMinutes)
+    }
+  };
+}
+
+function getLearningModeLabel(mode) {
+  if (mode === "normal") return "Day";
+  if (mode === "level-focus") return "単語特訓";
+  if (mode === "phrase-spiral") return "熟語特訓";
+  if (mode === "challenge" || mode === "review") return "過去の間違い";
+  return String(mode || "");
+}
+
+function resolveSessionDayNumber(sessionLike) {
+  const mode = String(sessionLike?.mode || "");
+  if (mode === "normal") {
+    const start = Number(sessionLike?.studyRangeStart);
+    const end = Number(sessionLike?.studyRangeEnd);
+    if (Number.isFinite(start) && Number.isFinite(end)) {
+      if (start === end) return String(start);
+      return `${start}-${end}`;
+    }
+  }
+  const days = [...new Set((sessionLike?.questions || []).map((question) => Number(question?.day)).filter((value) => Number.isFinite(value)))].sort((a, b) => a - b);
+  if (!days.length) return "";
+  if (days.length === 1) return String(days[0]);
+  return `${days[0]}-${days[days.length - 1]}`;
+}
+
+function computeSessionActiveStudySeconds(sessionLike, endedAt) {
+  const start = Number(sessionLike?.startedAt);
+  const end = Number(endedAt);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  const interactionTimestamps = Array.isArray(sessionLike?.answerHistory)
+    ? sessionLike.answerHistory.map((entry) => Number(entry?.at)).filter((value) => Number.isFinite(value) && value >= start && value <= end)
+    : [];
+  const points = [start, ...interactionTimestamps.sort((a, b) => a - b), end];
+  let activeMs = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    const delta = current - previous;
+    if (delta > 0 && delta <= LEARNING_ACTIVE_TIMEOUT_MS) {
+      activeMs += delta;
+    }
+  }
+  return Math.max(0, Math.round(activeMs / 1000));
+}
+
+function sanitizeLearningHistoryEntry(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  const endedAt = Number(entry.endedAt);
+  const startedAt = Number(entry.startedAt);
+  if (!Number.isFinite(endedAt) || !Number.isFinite(startedAt)) return null;
+  return {
+    learnedAt: typeof entry.learnedAt === "string" && entry.learnedAt ? entry.learnedAt : formatTimestampToJstDisplay(endedAt),
+    startedAt,
+    endedAt,
+    startedAtDisplay: typeof entry.startedAtDisplay === "string" && entry.startedAtDisplay ? entry.startedAtDisplay : formatTimestampToJstDisplay(startedAt),
+    endedAtDisplay: typeof entry.endedAtDisplay === "string" && entry.endedAtDisplay ? entry.endedAtDisplay : formatTimestampToJstDisplay(endedAt),
+    activeStudySeconds: Math.max(0, Number(entry.activeStudySeconds) || 0),
+    mode: typeof entry.mode === "string" ? entry.mode : "",
+    dayNumber: typeof entry.dayNumber === "string" ? entry.dayNumber : "",
+    questionCount: Math.max(0, Number(entry.questionCount) || 0),
+    correctCount: Math.max(0, Number(entry.correctCount) || 0),
+    accuracy: Math.max(0, Math.min(100, Number(entry.accuracy) || 0)),
+    completedReason: typeof entry.completedReason === "string" ? entry.completedReason : "completed",
+    ticket: {
+      earned: {
+        legacyTickets: Math.max(0, Number(entry.ticket?.earned?.legacyTickets) || 0),
+        gameTicketsCount: Math.max(0, Number(entry.ticket?.earned?.gameTicketsCount) || 0),
+        gameTicketsMinutes: Math.max(0, Number(entry.ticket?.earned?.gameTicketsMinutes) || 0)
+      },
+      used: {
+        gameTicketsCount: Math.max(0, Number(entry.ticket?.used?.gameTicketsCount) || 0),
+        gameTicketsMinutes: Math.max(0, Number(entry.ticket?.used?.gameTicketsMinutes) || 0)
+      }
+    }
+  };
+}
+
+function loadLearningHistoryEntries() {
+  try {
+    const raw = localStorage.getItem(LEARNING_HISTORY_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(sanitizeLearningHistoryEntry).filter(Boolean);
+  } catch (error) {
+    console.error("Could not read learning history", error);
+    return [];
+  }
+}
+
+function appendLearningHistoryEntry(entry) {
+  const sanitized = sanitizeLearningHistoryEntry(entry);
+  if (!sanitized) return;
+  const history = loadLearningHistoryEntries();
+  history.push(sanitized);
+  localStorage.setItem(
+    LEARNING_HISTORY_STORAGE_KEY,
+    JSON.stringify(history.slice(-LEARNING_HISTORY_MAX_ENTRIES))
+  );
+}
+
+function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
+  const endedAt = Date.now();
+  const startedAt = Number(sessionLike?.startedAt) || endedAt;
+  const ticketBefore = sanitizeLearningHistoryTicketSnapshot(sessionLike?.ticketSnapshot);
+  const ticketAfter = captureLearningHistoryTicketSnapshot();
+  return {
+    learnedAt: formatTimestampToJstDisplay(endedAt),
+    startedAt,
+    endedAt,
+    startedAtDisplay: formatTimestampToJstDisplay(startedAt),
+    endedAtDisplay: formatTimestampToJstDisplay(endedAt),
+    activeStudySeconds: computeSessionActiveStudySeconds(sessionLike, endedAt),
+    mode: getLearningModeLabel(sessionLike?.mode),
+    dayNumber: resolveSessionDayNumber(sessionLike),
+    questionCount: Math.max(0, Number(summary?.answerCount) || 0),
+    correctCount: Math.max(0, Number(summary?.correctCount) || 0),
+    accuracy: Math.max(0, Math.min(100, Number(summary?.accuracy) || 0)),
+    completedReason: String(reason || "completed"),
+    ticket: computeLearningHistoryTicketDelta(ticketBefore, ticketAfter)
   };
 }
 
@@ -3680,7 +3848,8 @@ function sanitizeStoredSession(sessionLike) {
     weakFocusLastQuestionId: typeof sessionLike.weakFocusLastQuestionId === "string" ? sessionLike.weakFocusLastQuestionId : "",
     awaitingWeakFocusDecision: Boolean(sessionLike.awaitingWeakFocusDecision),
     isFinishingSession: false,
-    isSessionCompleted: false
+    isSessionCompleted: false,
+    ticketSnapshot: sanitizeLearningHistoryTicketSnapshot(sessionLike.ticketSnapshot)
   };
 }
 
@@ -5010,6 +5179,7 @@ function completeCurrentSession(reason = "completed", options = {}) {
     state.stats.previousSessionWeakQuestionIds = weakIds;
     state.stats.savedNormalSession = null;
   }
+  appendLearningHistoryEntry(buildLearningHistoryEntryFromSession(session, summary, reason));
   appendCompletedSession(summary);
   session.isSessionCompleted = true;
   state.session = null;
@@ -5427,6 +5597,7 @@ function prepareSession(mode, options = {}) {
     awaitingWeakFocusDecision: false,
     isFinishingSession: false,
     isSessionCompleted: false,
+    ticketSnapshot: captureLearningHistoryTicketSnapshot(),
     isDayStudySession: Boolean(options.dayStudy),
     studyRangeStart: Number(state.settings.studyRange?.start) || 1,
     studyRangeEnd: Number(state.settings.studyRange?.end) || 1
