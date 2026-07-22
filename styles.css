@@ -878,176 +878,248 @@ p {
   opacity: 0.9;
 }
 
-.admin-learning-history-panel {
+#adminLearningHistoryScreen .admin-learning-history-panel {
   display: flex;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-.admin-learning-history-gate {
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#adminLearningHistoryScreen .admin-learning-history-gate {
   display: flex;
   flex-direction: column;
   gap: 10px;
-    padding: 14px 0 6px;
+  padding: 14px 0 6px;
 }
 
-.admin-learning-history-pin-row {
+#adminLearningHistoryScreen .admin-learning-history-pin-row {
   display: flex;
-    gap: 16px;
   gap: 8px;
 }
 
-.admin-learning-history-pin-row .settings-update-password-input {
+#adminLearningHistoryScreen .admin-learning-history-pin-row .settings-update-password-input {
   max-width: 240px;
 }
 
-    padding: 0;
-.admin-learning-history-error {
+#adminLearningHistoryScreen .admin-learning-history-error {
   color: var(--danger);
   font-size: 0.9rem;
   font-weight: 700;
-    color: var(--accent);
-    font-weight: 800;
 }
 
-.admin-learning-history-list {
+#adminLearningHistoryScreen .admin-learning-history-list {
   display: grid;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 10px;
   gap: 10px;
 }
 
-.admin-history-card {
-    padding: 12px 14px;
-    border-radius: 16px;
-    border: 1px solid var(--border);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
+#adminLearningHistoryScreen .admin-learning-history-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#adminLearningHistoryScreen .admin-history-overview,
+#adminLearningHistoryScreen .admin-history-today-section,
+#adminLearningHistoryScreen .admin-history-detail-section {
+  padding: 0;
+}
+
+#adminLearningHistoryScreen .admin-history-streak-row {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+#adminLearningHistoryScreen .admin-history-period-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+#adminLearningHistoryScreen .admin-history-period-block {
   padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+#adminLearningHistoryScreen .admin-history-period-label,
+#adminLearningHistoryScreen .admin-history-period-value,
+#adminLearningHistoryScreen .admin-history-period-meta,
+#adminLearningHistoryScreen .admin-history-detail-date {
+  margin: 0;
+}
+
+#adminLearningHistoryScreen .admin-history-period-label {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+#adminLearningHistoryScreen .admin-history-period-value {
+  margin-top: 8px;
+  font-size: 1.18rem;
+  font-weight: 800;
+}
+
+#adminLearningHistoryScreen .admin-history-period-meta,
+#adminLearningHistoryScreen .admin-history-detail-date {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+#adminLearningHistoryScreen .admin-history-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+#adminLearningHistoryScreen .admin-history-total-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+#adminLearningHistoryScreen .admin-history-date-switch {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+#adminLearningHistoryScreen .admin-history-date-title-wrap h3 {
+  margin: 0;
+}
+
+#adminLearningHistoryScreen .admin-history-date-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#adminLearningHistoryScreen .admin-history-date-nav-btn {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-weight: 700;
+}
+
+#adminLearningHistoryScreen .admin-history-date-nav-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#adminLearningHistoryScreen .admin-history-selected-summary {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.admin-history-card-head {
+#adminLearningHistoryScreen .admin-history-mode-summary-list,
+#adminLearningHistoryScreen .admin-history-detail-list {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-    color: var(--accent);
-    font-weight: 800;
 }
 
-.admin-history-card-head h3 {
-  font-size: 1rem;
+#adminLearningHistoryScreen .admin-history-mode-summary-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) auto auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
 }
-    font-size: 1.25rem;
-    font-weight: 800;
 
-.admin-history-meta-grid {
-  margin: 0;
+#adminLearningHistoryScreen .admin-history-card {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#adminLearningHistoryScreen .admin-history-detail-item {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 4px;
-    color: var(--muted);
-  gap: 8px 12px;
+  gap: 8px 10px;
+  padding: 12px 0;
 }
 
-.admin-history-meta-grid div {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 10px;
+#adminLearningHistoryScreen .admin-history-detail-item:first-child {
+  padding-top: 0;
+}
+
+#adminLearningHistoryScreen .admin-history-detail-item:last-child {
+  padding-bottom: 0;
+}
+
+#adminLearningHistoryScreen .admin-history-detail-time,
+#adminLearningHistoryScreen .admin-history-detail-mode,
+#adminLearningHistoryScreen .admin-history-detail-meta,
+#adminLearningHistoryScreen .admin-history-detail-ticket {
   margin: 0;
 }
 
-.admin-history-meta-grid dt {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    color: var(--muted);
-    font-weight: 700;
-  color: var(--muted);
-  font-size: 0.8rem;
-  margin-bottom: 2px;
-}
-
-.admin-history-meta-grid dd {
-  margin: 0;
+#adminLearningHistoryScreen .admin-history-detail-time,
+#adminLearningHistoryScreen .admin-history-detail-mode {
   color: var(--text);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  font-size: 0.95rem;
-  line-height: 1.35;
-  word-break: break-word;
+  font-weight: 800;
+}
+
+#adminLearningHistoryScreen .admin-history-detail-meta,
+#adminLearningHistoryScreen .admin-history-detail-ticket {
+  color: var(--muted);
+}
+
+#adminLearningHistoryScreen .admin-history-detail-separator {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .recent-three-title {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) auto auto auto;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.03);
-    color: var(--text);
   color: rgba(214, 233, 252, 0.95);
   font-size: 1.52rem;
   white-space: nowrap;
   line-height: 1.1;
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
 }
 
 .recent-three-legend {
   color: var(--muted);
-    border-color: rgba(94, 214, 214, 0.55);
-    background: rgba(94, 214, 214, 0.08);
   font-size: 0.95rem;
   letter-spacing: 0.02em;
 }
 
 .recent-three-table {
   width: 100%;
-    color: var(--muted);
-    font-size: 0.92rem;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
-    padding: 14px;
-    border-radius: 18px;
-    border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: var(--shadow);
 .recent-three-table th,
 .recent-three-table td {
   padding: 4px 6px;
   font-size: 1.44rem;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px 12px;
-    padding: 12px 0;
   color: var(--muted);
   text-align: center;
   border-top: 1px solid rgba(255, 255, 255, 0.09);
   white-space: nowrap;
-    padding-top: 0;
 }
 
 .recent-three-table thead th {
   color: rgba(214, 233, 252, 0.92);
-    padding-bottom: 0;
   font-weight: 700;
   border-top: none;
 }
@@ -1056,21 +1128,16 @@ p {
 .recent-three-table tbody td {
   width: 33.333%;
 }
-    color: var(--text);
-    font-weight: 800;
 
 .recent-three-table th:first-child,
 .recent-three-table tbody th {
   display: none;
 }
 
-    color: var(--muted);
 .home-ticket-icon-btn {
   width: 3.2cm;
   min-width: 3.2cm;
   height: 4.2cm;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.08);
   min-height: 4.2cm;
   align-self: center;
   justify-self: end;
@@ -1381,45 +1448,6 @@ p {
   cursor: pointer;
   text-align: left;
   color: var(--text);
-}
-
-.admin-history-date-switch {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.admin-history-date-title-wrap h3 {
-  margin: 0;
-}
-
-.admin-history-date-nav {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.admin-history-date-nav-btn {
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  font-weight: 700;
-}
-
-.admin-history-date-nav-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.admin-history-selected-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .day-card:hover {
@@ -2520,7 +2548,8 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .admin-history-meta-grid {
+  #adminLearningHistoryScreen .admin-history-mode-summary-row,
+  #adminLearningHistoryScreen .admin-history-detail-item {
     grid-template-columns: 1fr;
   }
 
