@@ -7,7 +7,7 @@
     <script>
       (function () {
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
-        const cacheToken = window.name || storedToken || "20260722-0910";
+        const cacheToken = window.name || storedToken || "20260722-0930";
         window.MOBILE_CACHE_TOKEN = cacheToken;
         window.name = cacheToken;
         const link = document.createElement("link");
@@ -184,6 +184,7 @@
             </div>
 
             <p id="conversationStatusText" class="conversation-status">再生中…</p>
+            <p id="speakingRecognitionDebugText" class="recognition-debug-text"></p>
 
             <div class="study-action-area conversation-action-area">
               <button id="speakingHintBtn" class="secondary-btn" type="button">💡 ヒント</button>
@@ -362,7 +363,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260722-0910";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260722-0930";
         const scriptSources = [
           "../data.js",
           "../release-info.js",

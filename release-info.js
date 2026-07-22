@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/22 09:30", note: "スマホ版Speakingで音声認識デバッグ表示を一時追加。SpeechRecognitionの transcript を画面下部に表示し、同内容を console.log（認識結果: ...）へ出力" },
     { version: "2026/07/22 09:10", note: "スマホ版Speaking Level1の不正解フィードバックを強化。1回目/2回目とも最新認識結果で不足keywordsのみを赤表示し、英文中の該当keywordsも赤ハイライト。2回目不正解は不足表示を約1秒見せた後に自動で次の問題へ遷移" },
     { version: "2026/07/22 08:45", note: "スマホ版Speaking Level1の不正解ヒントを改善。1回目不正解時は現在行keywordsのうち未認識語のみをMissing表示（赤色）し、2回目不正解時は自動で次の問題へ進む仕様に統一" },
     { version: "2026/07/22 07:35", note: "スマホ版Speaking Level1の音声判定を改善。A/B共通で現在行keywordsのみを使用し、認識結果が全keywordsを含む場合のみ正解とする方式へ変更（大文字小文字・句読点は無視、順不同、余分語許容）" },

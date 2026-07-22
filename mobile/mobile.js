@@ -64,6 +64,7 @@
     speakingHintTitle: "",
     speakingHintText: "",
     speakingLevel1MissingKeywords: [],
+    speakingRecognitionDebugText: "",
     speakingLevel1Session: null,
     speakingLevel1AttemptUsed: 0,
     speakingLevel1AttemptKey: "",
@@ -1021,6 +1022,19 @@
     state.speakingHintTitle = "";
     state.speakingHintText = "";
     state.speakingLevel1MissingKeywords = [];
+  }
+
+  function setSpeakingRecognitionDebugText(transcriptList) {
+    const transcripts = (Array.isArray(transcriptList) ? transcriptList : [])
+      .map((entry) => String(entry || "").trim())
+      .filter(Boolean);
+    const value = transcripts.join(" / ");
+    state.speakingRecognitionDebugText = value;
+    if (!value) {
+      console.log("認識結果: (empty)");
+      return;
+    }
+    console.log(`認識結果: ${value}`);
   }
 
   function getSpeakingHintSpec(line) {
@@ -2552,6 +2566,7 @@
       const transcripts = Array.from(event.results?.[0] || [])
         .map((item) => String(item.transcript || "").trim())
         .filter(Boolean);
+      setSpeakingRecognitionDebugText(transcripts);
       settle();
 
       const level1Session = ensureSpeakingLevel1Session(progress, week, conversation.id);
@@ -2727,6 +2742,9 @@
       elements.speakingHintTitleText.textContent = state.speakingHintTitle || "💡 ヒント";
       elements.speakingHintText.textContent = state.speakingHintText || "";
       elements.speakingHintText.classList.toggle("speaking-missing-hint", state.speakingHintVisible && state.speakingHintTitle === "Missing:");
+      elements.speakingRecognitionDebugText.textContent = state.speakingRecognitionDebugText
+        ? `認識結果: ${state.speakingRecognitionDebugText}`
+        : "";
 
       const hasSpeechSynthesis = Boolean(getSpeechSynthesisEngine());
       if (state.speakingLineStatus === "playing") {
@@ -2776,6 +2794,9 @@
     elements.speakingHintBlock.classList.toggle("hidden", !showSpeakingHintUi || !state.speakingHintVisible);
     elements.speakingHintTitleText.textContent = state.speakingHintTitle || "💡 ヒント";
     elements.speakingHintText.textContent = state.speakingHintText || "";
+    elements.speakingRecognitionDebugText.textContent = state.speakingRecognitionDebugText
+      ? `認識結果: ${state.speakingRecognitionDebugText}`
+      : "";
     const statusPromptText = line.speaker === "A"
       ? "🎤 質問文をシャドーイングし、続きの文章を\n声に出してみよう。"
       : "🎤 シャドーイングしてください";
@@ -3319,6 +3340,7 @@
           speakingHintTitle: "",
           speakingHintText: "",
           speakingLevel1MissingKeywords: [],
+          speakingRecognitionDebugText: "",
           speakingLevel1Session: null,
           speakingLevel1AttemptUsed: 0,
           speakingLevel1AttemptKey: "",
@@ -3417,6 +3439,7 @@
     elements.speakingHintBlock = document.getElementById("speakingHintBlock");
     elements.speakingHintTitleText = document.getElementById("speakingHintTitleText");
     elements.speakingHintText = document.getElementById("speakingHintText");
+    elements.speakingRecognitionDebugText = document.getElementById("speakingRecognitionDebugText");
     elements.closeSpeakingHintBtn = document.getElementById("closeSpeakingHintBtn");
     elements.toggleJapaneseBtn = document.getElementById("toggleJapaneseBtn");
     elements.replayConversationAudioBtn = document.getElementById("replayConversationAudioBtn");
