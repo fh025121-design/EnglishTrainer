@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/22 10:40", note: "Week3のLevel1キーワードを反映（Day1〜Day7、A/B全行）。ユーザー指定キーワードをそのまま適用し、mobile/speaking-data.js の keywords 配列のみ更新" },
     { version: "2026/07/22 10:15", note: "Week4のLevel1キーワードを反映（Day1〜Day4、A/B全行）。ユーザー指定キーワードをそのまま適用し、keywords配列のみ追加。Day5〜Day7は未確定のため変更なし" },
     { version: "2026/07/22 09:55", note: "スマホ版Speakingのデバッグ表示を修正。不正解時は不正解キーワードのみを比較対象にし、『認識: ❌（実際の認識語／候補なしは（認識なし））』『正解: ✅（不正解キーワード）』を表示。正解キーワードは非表示、正解時はデバッグ表示なし" },
     { version: "2026/07/22 09:45", note: "スマホ版Speakingの音声認識デバッグ表示を改善。全文 transcript 表示を廃止し、不正解時のみ『認識: ❌ ... / 正解: ✅ ...』をキーワード比較で表示（認識=赤、正解=黄）。同内容を console.log に出力。定数でON/OFFしやすい構造に整理" },
