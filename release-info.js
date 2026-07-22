@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/22 21:24", note: "スマホ版SpeakingのWeek1・Week2をWeek3以降と同じ共通UI/共通進行へ統一。週判定をLevel1扱いに広げ、既存の宿題データ（dailyHomework）のSC/QR件数をそのまま使うようにして、画面・操作・採点ロジックをWeek3以降と揃えた" },
     { version: "2026/07/22 18:14", note: "PC版の管理者用 学習履歴PIN入力を5桁仕様（12345）へ再調整。入力欄の案内文を5桁へ修正し、minlength/maxlength/pattern/title/placeholderを5桁数字に統一" },
     { version: "2026/07/22 17:29", note: "PC版のみ: 管理者用 学習履歴まわりの styles.css 構文崩れを修正。閉じ括弧不足・重複宣言・セレクタ外宣言を整理し、管理者画面専用スタイルを #adminLearningHistoryScreen 配下へ限定。ホーム/学習/結果画面への波及を防止" },
     { version: "2026/07/22 16:19", note: "PC版・スマホ版の管理者用 学習履歴を日付切替方式へ変更。『今日』ボックスを前日/次の日ボタン付きの選択日表示に統一し、今週・今月のトップ集計は維持。直近7日一覧は廃止し、選択日の学習時間・問題数・正答率・学習モード別集計と日別詳細を表示（保存データ構造は不変更）" },
