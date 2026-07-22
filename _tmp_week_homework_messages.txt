@@ -1,0 +1,277 @@
+===== line:7686 ts:2026-07-22T08:53:02.613Z id:7e9b18e4-6b6b-47a6-8996-1d0cfa564444 =====
+mobile/speaking-data.js に Week1 のLevel1キーワードを反映してください。
+
+対象
+・Week1 Day1～Day7
+・Quick Responseのみ
+・A/Bすべて
+
+ルール
+・以下のキーワードをそのまま使用してください。
+・keywords配列のみ追加・更新してください。
+・英文、speaker、lineId、id、date、会話順などは変更しないでください。
+・キーワードの追加・削除・変更・最適化はしないでください。
+
+変更してよいファイル
+・mobile/speaking-data.js のみ
+
+変更禁止
+・その他すべてのファイル
+・判定ロジック
+・更新履歴
+・リファクタリング
+
+# Week1 Day1（6/22）
+
+**Q:** What subject do you like?
+
+→ `what / subject / like`
+
+**A:** I like English.
+
+→ `like / English`
+
+**Q:** Where do you study English?
+
+→ `where / study / English`
+
+**A:** I study English at home.
+
+→ `study / English / home`
+
+**Q:** When do you study at home?
+
+→ `when / study / home`
+
+**A:** I study in the evening.
+
+→ `study / evening`
+
+**Q:** What sport do you play?
+
+→ `what sport / play`
+
+**A:** I play soccer.
+
+→ `play / soccer`
+
+---
+
+# Week1 Day2（6/23）
+
+**Q:** Do you study English every day?
+
+→ `study / English / every day`
+
+**A:** Yes, I do.
+
+→ `yes / do`
+
+**Q:** Where do you have lunch?
+
+→ `where / have lunch`
+
+**A:** I have lunch at school.
+
+→ `have lunch / school`
+
+**Q:** What do you do at night?
+
+→ `what / do / night`
+
+**A:** I read books at night.
+
+→ `read / books / night`
+
+**Q:** Do you play tennis after school?
+
+→ `play / tennis / after school`
+
+**A:** No, I don't.
+
+→ `no / don't`
+
+---
+
+# Week1 Day3（6/24）
+
+**Q:** Does your friend like English?
+
+→ `friend / like / English`
+
+**A:** Yes, he does.
+
+→ `yes / does`
+
+**Q:** What sport does your friend play?
+
+→ `what sport / friend / play`
+
+**A:** He plays soccer.
+
+→ `plays / soccer`
+
+**Q:** Does he study English?
+
+→ `study / English`
+
+**A:** Yes, he does.
+
+→ `yes / does`
+
+**Q:** Can your friend swim?
+
+→ `friend / swim`
+
+**A:** Yes, he can.
+
+→ `yes / can`
+
+---
+
+# Week1 Day4（6/25）
+
+**Q:** Can you swim?
+
+→ `swim`
+
+**A:** Yes, I can.
+
+→ `yes / can`
+
+**Q:** Can you run fast?
+
+→ `run / fast`
+
+**A:** Yes, I can.
+
+→ `yes / can`
+
+**Q:** Can you speak English?
+
+→ `speak / English`
+
+**A:** I can speak English a little.
+
+→ `speak / English / a little`
+
+**Q:** What can you do?
+
+→ `what / do`
+
+**A:** I can run fast.
+
+→ `run / fast`
+
+---
+
+# Week1 Day5（6/26）
+
+**Q:** Is this your notebook?
+
+→ `your / notebook`
+
+**A:** Yes, it is.
+
+→ `yes / is`
+
+**Q:** Are these your pens?
+
+→ `your / pens`
+
+**A:** Yes, they are.
+
+→ `yes / are`
+
+**Q:** What is this?
+
+→ `what`
+
+**A:** This is my notebook.
+
+→ `my notebook`
+
+**Q:** What are these?
+
+→ `what`
+
+**A:** These are my pens.
+
+→ `my pens`
+
+---
+
+# Week1 Day6（6/27）
+
+**Q:** Did you study English yesterday?
+
+→ `study / English / yesterday`
+
+**A:** Yes, I did.
+
+→ `yes / did`
+
+**Q:** What did you do yesterday?
+
+→ `what / do / yesterday`
+
+**A:** I studied English.
+
+→ `studied / English`
+
+**Q:** Did you play soccer yesterday?
+
+→ `play / soccer / yesterday`
+
+**A:** Yes, I did.
+
+→ `yes / did`
+
+**Q:** Where did you go yesterday?
+
+→ `where / go / yesterday`
+
+**A:** I went to school.
+
+→ `went / school`
+
+---
+
+# Week1 Day7（6/28）
+
+**Q:** What subject do you like?
+
+→ `what / subject / like`
+
+**A:** I like English.
+
+→ `like / English`
+
+**Q:** What can you do in English?
+
+→ `what / do / English`
+
+**A:** I can write short sentences.
+
+→ `write / short sentences`
+
+**Q:** Did you study English yesterday?
+
+→ `study / English / yesterday`
+
+**A:** Yes, I did.
+
+→ `yes / did`
+
+**Q:** What do you want to practice?
+
+→ `what / want / practice`
+
+**A:** I want to practice speaking.
+
+→ `want / practice speaking`
+
+作業後
+・Week1 Day1～Day7の各英文と登録したkeywords一覧を表示してください。
+・構文エラーのみ確認してください。
+

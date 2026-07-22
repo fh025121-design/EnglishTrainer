@@ -458,6 +458,748 @@ window.speakingData = {
               ]
             }
           ]
+        },
+        {
+          "id": "W1-D1-QR01",
+          "date": "2026-06-22",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What subject do you like?",
+              "keywords": [
+                "what",
+                "subject",
+                "like"
+              ],
+              "japanese": "どの科目が好きですか。",
+              "lineId": "W1-D1-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I like English.",
+              "keywords": [
+                "like",
+                "English"
+              ],
+              "japanese": "英語が好きです。",
+              "lineId": "W1-D1-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D1-QR02",
+          "date": "2026-06-22",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Where do you study English?",
+              "keywords": [
+                "where",
+                "study",
+                "English"
+              ],
+              "japanese": "どこで英語を勉強しますか。",
+              "lineId": "W1-D1-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I study English at home.",
+              "keywords": [
+                "study",
+                "English",
+                "home"
+              ],
+              "japanese": "家で英語を勉強します。",
+              "lineId": "W1-D1-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D1-QR03",
+          "date": "2026-06-22",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "When do you study at home?",
+              "keywords": [
+                "when",
+                "study",
+                "home"
+              ],
+              "japanese": "いつ家で勉強しますか。",
+              "lineId": "W1-D1-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I study in the evening.",
+              "keywords": [
+                "study",
+                "evening"
+              ],
+              "japanese": "夕方［夜］に勉強します。",
+              "lineId": "W1-D1-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D1-QR04",
+          "date": "2026-06-22",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What sport do you play?",
+              "keywords": [
+                "what sport",
+                "play"
+              ],
+              "japanese": "何のスポーツをしますか。",
+              "lineId": "W1-D1-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I play soccer.",
+              "keywords": [
+                "play",
+                "soccer"
+              ],
+              "japanese": "サッカーをします。",
+              "lineId": "W1-D1-QR04-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D2-QR01",
+          "date": "2026-06-23",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Do you study English every day?",
+              "keywords": [
+                "study",
+                "English",
+                "every day"
+              ],
+              "japanese": "毎日英語を勉強しますか。",
+              "lineId": "W1-D2-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I do.",
+              "keywords": [
+                "yes",
+                "do"
+              ],
+              "japanese": "はい、します。",
+              "lineId": "W1-D2-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D2-QR02",
+          "date": "2026-06-23",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Where do you have lunch?",
+              "keywords": [
+                "where",
+                "have lunch"
+              ],
+              "japanese": "どこで昼食を食べますか。",
+              "lineId": "W1-D2-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I have lunch at school.",
+              "keywords": [
+                "have lunch",
+                "school"
+              ],
+              "japanese": "学校で昼食を食べます。",
+              "lineId": "W1-D2-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D2-QR03",
+          "date": "2026-06-23",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What do you do at night?",
+              "keywords": [
+                "what",
+                "do",
+                "night"
+              ],
+              "japanese": "夜、何をしますか。",
+              "lineId": "W1-D2-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I read books at night.",
+              "keywords": [
+                "read",
+                "books",
+                "night"
+              ],
+              "japanese": "夜、本を読みます。",
+              "lineId": "W1-D2-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D2-QR04",
+          "date": "2026-06-23",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Do you play tennis after school?",
+              "keywords": [
+                "play",
+                "tennis",
+                "after school"
+              ],
+              "japanese": "放課後、テニスをしますか。",
+              "lineId": "W1-D2-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "No, I don't.",
+              "keywords": [
+                "no",
+                "don't"
+              ],
+              "japanese": "いいえ、しません。",
+              "lineId": "W1-D2-QR04-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D3-QR01",
+          "date": "2026-06-24",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Does your friend like English?",
+              "keywords": [
+                "friend",
+                "like",
+                "English"
+              ],
+              "japanese": "あなたの友達は英語が好きですか。",
+              "lineId": "W1-D3-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, he does.",
+              "keywords": [
+                "yes",
+                "does"
+              ],
+              "japanese": "はい、好きです。",
+              "lineId": "W1-D3-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D3-QR02",
+          "date": "2026-06-24",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What sport does your friend play?",
+              "keywords": [
+                "what sport",
+                "friend",
+                "play"
+              ],
+              "japanese": "あなたの友達は何のスポーツをしますか。",
+              "lineId": "W1-D3-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He plays soccer.",
+              "keywords": [
+                "plays",
+                "soccer"
+              ],
+              "japanese": "彼はサッカーをします。",
+              "lineId": "W1-D3-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D3-QR03",
+          "date": "2026-06-24",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Does he study English?",
+              "keywords": [
+                "study",
+                "English"
+              ],
+              "japanese": "彼は英語を勉強しますか。",
+              "lineId": "W1-D3-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, he does.",
+              "keywords": [
+                "yes",
+                "does"
+              ],
+              "japanese": "はい、勉強します。",
+              "lineId": "W1-D3-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D3-QR04",
+          "date": "2026-06-24",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Can your friend swim?",
+              "keywords": [
+                "friend",
+                "swim"
+              ],
+              "japanese": "あなたの友達は泳ぐことができますか。",
+              "lineId": "W1-D3-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, he can.",
+              "keywords": [
+                "yes",
+                "can"
+              ],
+              "japanese": "はい、できます。",
+              "lineId": "W1-D3-QR04-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D4-QR01",
+          "date": "2026-06-25",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Can you swim?",
+              "keywords": [
+                "swim"
+              ],
+              "japanese": "泳ぐことができますか。",
+              "lineId": "W1-D4-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I can.",
+              "keywords": [
+                "yes",
+                "can"
+              ],
+              "japanese": "はい、できます。",
+              "lineId": "W1-D4-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D4-QR02",
+          "date": "2026-06-25",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Can you run fast?",
+              "keywords": [
+                "run",
+                "fast"
+              ],
+              "japanese": "速く走ることができますか。",
+              "lineId": "W1-D4-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I can.",
+              "keywords": [
+                "yes",
+                "can"
+              ],
+              "japanese": "はい、できます。",
+              "lineId": "W1-D4-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D4-QR03",
+          "date": "2026-06-25",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Can you speak English?",
+              "keywords": [
+                "speak",
+                "English"
+              ],
+              "japanese": "英語を話すことができますか。",
+              "lineId": "W1-D4-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I can speak English a little.",
+              "keywords": [
+                "speak",
+                "English",
+                "a little"
+              ],
+              "japanese": "少し英語を話すことができます。",
+              "lineId": "W1-D4-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D4-QR04",
+          "date": "2026-06-25",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What can you do?",
+              "keywords": [
+                "what",
+                "do"
+              ],
+              "japanese": "何ができますか。",
+              "lineId": "W1-D4-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I can run fast.",
+              "keywords": [
+                "run",
+                "fast"
+              ],
+              "japanese": "速く走ることができます。",
+              "lineId": "W1-D4-QR04-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D5-QR01",
+          "date": "2026-06-26",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Is this your notebook?",
+              "keywords": [
+                "your",
+                "notebook"
+              ],
+              "japanese": "これはあなたのノートですか。",
+              "lineId": "W1-D5-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, it is.",
+              "keywords": [
+                "yes",
+                "is"
+              ],
+              "japanese": "はい、そうです。",
+              "lineId": "W1-D5-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D5-QR02",
+          "date": "2026-06-26",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Are these your pens?",
+              "keywords": [
+                "your",
+                "pens"
+              ],
+              "japanese": "これらはあなたのペンですか。",
+              "lineId": "W1-D5-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, they are.",
+              "keywords": [
+                "yes",
+                "are"
+              ],
+              "japanese": "はい、そうです。",
+              "lineId": "W1-D5-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D5-QR03",
+          "date": "2026-06-26",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What is this?",
+              "keywords": [
+                "what"
+              ],
+              "japanese": "これは何ですか。",
+              "lineId": "W1-D5-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "This is my notebook.",
+              "keywords": [
+                "my notebook"
+              ],
+              "japanese": "私のノートです。",
+              "lineId": "W1-D5-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D5-QR04",
+          "date": "2026-06-26",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What are these?",
+              "keywords": [
+                "what"
+              ],
+              "japanese": "これらは何ですか。",
+              "lineId": "W1-D5-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "These are my pens.",
+              "keywords": [
+                "my pens"
+              ],
+              "japanese": "私のペンです。",
+              "lineId": "W1-D5-QR04-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D6-QR01",
+          "date": "2026-06-27",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Did you study English yesterday?",
+              "keywords": [
+                "study",
+                "English",
+                "yesterday"
+              ],
+              "japanese": "昨日、英語を勉強しましたか。",
+              "lineId": "W1-D6-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I did.",
+              "keywords": [
+                "yes",
+                "did"
+              ],
+              "japanese": "はい、しました。",
+              "lineId": "W1-D6-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D6-QR02",
+          "date": "2026-06-27",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did you do yesterday?",
+              "keywords": [
+                "what",
+                "do",
+                "yesterday"
+              ],
+              "japanese": "昨日、何をしましたか。",
+              "lineId": "W1-D6-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I studied English.",
+              "keywords": [
+                "studied",
+                "English"
+              ],
+              "japanese": "英語を勉強しました。",
+              "lineId": "W1-D6-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D6-QR03",
+          "date": "2026-06-27",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Did you play soccer yesterday?",
+              "keywords": [
+                "play",
+                "soccer",
+                "yesterday"
+              ],
+              "japanese": "昨日、サッカーをしましたか。",
+              "lineId": "W1-D6-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I did.",
+              "keywords": [
+                "yes",
+                "did"
+              ],
+              "japanese": "はい、しました。",
+              "lineId": "W1-D6-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D6-QR04",
+          "date": "2026-06-27",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Where did you go yesterday?",
+              "keywords": [
+                "where",
+                "go",
+                "yesterday"
+              ],
+              "japanese": "昨日、どこへ行きましたか。",
+              "lineId": "W1-D6-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I went to school.",
+              "keywords": [
+                "went",
+                "school"
+              ],
+              "japanese": "学校へ行きました。",
+              "lineId": "W1-D6-QR04-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D7-QR01",
+          "date": "2026-06-28",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What subject do you like?",
+              "keywords": [
+                "what",
+                "subject",
+                "like"
+              ],
+              "japanese": "どの科目が好きですか。",
+              "lineId": "W1-D7-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I like English.",
+              "keywords": [
+                "like",
+                "English"
+              ],
+              "japanese": "英語が好きです。",
+              "lineId": "W1-D7-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D7-QR02",
+          "date": "2026-06-28",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What can you do in English?",
+              "keywords": [
+                "what",
+                "do",
+                "English"
+              ],
+              "japanese": "英語で何ができますか。",
+              "lineId": "W1-D7-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I can write short sentences.",
+              "keywords": [
+                "write",
+                "short sentences"
+              ],
+              "japanese": "短い文を書くことができます。",
+              "lineId": "W1-D7-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D7-QR03",
+          "date": "2026-06-28",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Did you study English yesterday?",
+              "keywords": [
+                "study",
+                "English",
+                "yesterday"
+              ],
+              "japanese": "昨日、英語を勉強しましたか。",
+              "lineId": "W1-D7-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, I did.",
+              "keywords": [
+                "yes",
+                "did"
+              ],
+              "japanese": "はい、しました。",
+              "lineId": "W1-D7-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W1-D7-QR04",
+          "date": "2026-06-28",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What do you want to practice?",
+              "keywords": [
+                "what",
+                "want",
+                "practice"
+              ],
+              "japanese": "何を練習したいですか。",
+              "lineId": "W1-D7-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "I want to practice speaking.",
+              "keywords": [
+                "want",
+                "practice speaking"
+              ],
+              "japanese": "話す練習をしたいです。",
+              "lineId": "W1-D7-QR04-02"
+            }
+          ]
         }
       ]
     },
@@ -4577,7 +5319,7 @@ window.speakingData = {
     "W1": {
       "2026-06-22": {
         "sc": 3,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2,
@@ -4586,7 +5328,7 @@ window.speakingData = {
       },
       "2026-06-23": {
         "sc": 3,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2,
@@ -4595,7 +5337,7 @@ window.speakingData = {
       },
       "2026-06-24": {
         "sc": 3,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2,
@@ -4604,7 +5346,7 @@ window.speakingData = {
       },
       "2026-06-25": {
         "sc": 3,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2,
@@ -4613,7 +5355,7 @@ window.speakingData = {
       },
       "2026-06-26": {
         "sc": 3,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2,
@@ -4622,7 +5364,7 @@ window.speakingData = {
       },
       "2026-06-27": {
         "sc": 3,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2,
@@ -4631,7 +5373,7 @@ window.speakingData = {
       },
       "2026-06-28": {
         "sc": 3,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2,
