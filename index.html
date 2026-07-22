@@ -182,7 +182,7 @@
           </div>
           <div class="admin-learning-history-panel">
             <div id="adminLearningHistoryGate" class="admin-learning-history-gate">
-              <p class="subtext">4桁の管理者暗証番号を入力してください。</p>
+              <p class="subtext">5桁の管理者暗証番号を入力してください。</p>
               <div class="admin-learning-history-pin-row">
                 <input
                   id="adminLearningHistoryPinInput"
@@ -190,8 +190,11 @@
                   type="password"
                   inputmode="numeric"
                   autocomplete="off"
-                  maxlength="4"
-                  placeholder="4桁の暗証番号"
+                  minlength="5"
+                  maxlength="5"
+                  pattern="[0-9]{5}"
+                  title="5桁の数字を入力してください"
+                  placeholder="5桁の暗証番号"
                 />
                 <button id="adminLearningHistoryUnlockBtn" class="primary-btn" type="button">表示</button>
               </div>
