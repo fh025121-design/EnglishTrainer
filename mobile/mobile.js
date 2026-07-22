@@ -2,7 +2,7 @@
   const MOBILE_LEARNING_HISTORY_STORAGE_KEY = "english-trainer-mobile-learning-history-v1";
   const MOBILE_LEARNING_HISTORY_MAX_ENTRIES = 1000;
   const MOBILE_LEARNING_HISTORY_ACTIVE_TIMEOUT_MS = 3 * 60 * 1000;
-  const MOBILE_ADMIN_LEARNING_HISTORY_PIN = "2521";
+  const MOBILE_ADMIN_LEARNING_HISTORY_PIN = "12345";
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
   const SPEAKING_PROGRESS_KEY = "englishTrainerSpeakingProgress";
   const SPEAKING_RECENT_PROGRESS_KEY = "englishTrainerSpeakingRecentProgress_v1";

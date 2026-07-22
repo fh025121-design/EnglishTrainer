@@ -2,7 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const LEARNING_HISTORY_STORAGE_KEY = "english-trainer-learning-history-v1";
 const LEARNING_HISTORY_MAX_ENTRIES = 1000;
 const LEARNING_ACTIVE_TIMEOUT_MS = 3 * 60 * 1000;
-const ADMIN_LEARNING_HISTORY_PIN = "2521";
+const ADMIN_LEARNING_HISTORY_PIN = "12345";
 const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
   adminPassword: "12345",
   releaseHistory: []
