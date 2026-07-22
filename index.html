@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260720-0845" />
+    <link rel="stylesheet" href="styles.css?v=20260722-1135" />
   </head>
   <body>
     <div class="app-shell">
@@ -97,6 +97,9 @@
                 <span class="home-ticket-icon-label">ゲーム<br>チケット</span>
               </button>
             </div>
+            <div class="home-admin-entry">
+              <button id="openAdminLearningHistoryBtn" class="ghost-btn home-admin-entry-btn" type="button" aria-label="管理者用 学習履歴">管理者用</button>
+            </div>
           </div>
         </section>
 
@@ -164,6 +167,42 @@
             </div>
             <div class="settings-danger-wrap">
               <button id="openResetLearningDataModalBtn" class="secondary-btn settings-reset-btn" type="button">学習記録をすべて初期化</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="adminLearningHistoryScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">管理者用</p>
+              <h2>学習履歴</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel admin-learning-history-panel">
+            <div id="adminLearningHistoryGate" class="admin-learning-history-gate">
+              <p class="subtext">4桁の管理者暗証番号を入力してください。</p>
+              <div class="admin-learning-history-pin-row">
+                <input
+                  id="adminLearningHistoryPinInput"
+                  class="settings-update-password-input"
+                  type="password"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  maxlength="4"
+                  placeholder="4桁の暗証番号"
+                />
+                <button id="adminLearningHistoryUnlockBtn" class="primary-btn" type="button">表示</button>
+              </div>
+              <p id="adminLearningHistoryError" class="admin-learning-history-error hidden">暗証番号が違います</p>
+            </div>
+            <div id="adminLearningHistoryContent" class="hidden">
+              <div class="panel-title-row">
+                <h3>履歴一覧</h3>
+                <span id="adminLearningHistoryCountText" class="panel-pill">0件</span>
+              </div>
+              <div id="adminLearningHistoryList" class="admin-learning-history-list"></div>
             </div>
           </div>
         </section>
@@ -811,10 +850,10 @@
       </div>
     </div>
 
-    <script src="data.js?v=20260722-1015"></script>
-    <script src="preposition-data.js?v=20260722-1015"></script>
-    <script src="response-data.js?v=20260722-1015"></script>
-    <script src="release-info.js?v=20260722-1015"></script>
-    <script src="app.js?v=20260722-1015"></script>
+    <script src="data.js?v=20260722-1135"></script>
+    <script src="preposition-data.js?v=20260722-1135"></script>
+    <script src="response-data.js?v=20260722-1135"></script>
+    <script src="release-info.js?v=20260722-1135"></script>
+    <script src="app.js?v=20260722-1135"></script>
   </body>
 </html>

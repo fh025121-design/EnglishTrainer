@@ -390,6 +390,11 @@ p {
   padding-right: 6px;
 }
 
+#adminLearningHistoryScreen.active {
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -855,6 +860,101 @@ p {
   grid-template-columns: minmax(0, 1fr);
   row-gap: 10px;
   min-width: 0;
+}
+
+.home-admin-entry {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.home-admin-entry-btn {
+  font-size: 0.72rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  opacity: 0.58;
+}
+
+.home-admin-entry-btn:hover {
+  opacity: 0.9;
+}
+
+.admin-learning-history-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-learning-history-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-learning-history-pin-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-learning-history-pin-row .settings-update-password-input {
+  max-width: 240px;
+}
+
+.admin-learning-history-error {
+  color: var(--danger);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.admin-learning-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-history-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-history-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-history-card-head h3 {
+  font-size: 1rem;
+}
+
+.admin-history-meta-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.admin-history-meta-grid div {
+  margin: 0;
+}
+
+.admin-history-meta-grid dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+}
+
+.admin-history-meta-grid dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .recent-three-title {
@@ -2313,6 +2413,10 @@ select {
   .progress-grid,
   .result-sections,
   .item-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-history-meta-grid {
     grid-template-columns: 1fr;
   }
 

@@ -2,6 +2,7 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const LEARNING_HISTORY_STORAGE_KEY = "english-trainer-learning-history-v1";
 const LEARNING_HISTORY_MAX_ENTRIES = 1000;
 const LEARNING_ACTIVE_TIMEOUT_MS = 3 * 60 * 1000;
+const ADMIN_LEARNING_HISTORY_PIN = "2521";
 const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
   adminPassword: "12345",
   releaseHistory: []
@@ -133,6 +134,7 @@ let activeItemDetailId = null;
 let prepositionTrainingSession = null;
 let responseTrainingSession = null;
 let currentScreenId = "homeScreen";
+let isAdminLearningHistoryUnlocked = false;
 const DESKTOP_FIT_REFERENCE = Object.freeze({
   width: 1366,
   height: 920,
@@ -365,6 +367,122 @@ function loadLearningHistoryEntries() {
     console.error("Could not read learning history", error);
     return [];
   }
+}
+
+function formatLearningHistoryDuration(seconds) {
+  const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+  const minutes = Math.floor(safeSeconds / 60);
+  const remainSeconds = safeSeconds % 60;
+  if (minutes > 0 && remainSeconds > 0) return `${minutes}分${remainSeconds}秒`;
+  if (minutes > 0) return `${minutes}分`;
+  return `${remainSeconds}秒`;
+}
+
+function buildLearningHistoryTicketText(ticket) {
+  const earnedLegacy = Math.max(0, Number(ticket?.earned?.legacyTickets) || 0);
+  const earnedGameCount = Math.max(0, Number(ticket?.earned?.gameTicketsCount) || 0);
+  const earnedGameMinutes = Math.max(0, Number(ticket?.earned?.gameTicketsMinutes) || 0);
+  const usedGameCount = Math.max(0, Number(ticket?.used?.gameTicketsCount) || 0);
+  const usedGameMinutes = Math.max(0, Number(ticket?.used?.gameTicketsMinutes) || 0);
+  return {
+    earned: `通常${earnedLegacy} / ゲーム${earnedGameCount}枚（${earnedGameMinutes}分）`,
+    used: `ゲーム${usedGameCount}枚（${usedGameMinutes}分）`
+  };
+}
+
+function renderAdminLearningHistoryList() {
+  const list = document.getElementById("adminLearningHistoryList");
+  const countText = document.getElementById("adminLearningHistoryCountText");
+  if (!list || !countText) return;
+
+  const entries = loadLearningHistoryEntries()
+    .slice()
+    .sort((a, b) => Number(b.endedAt || 0) - Number(a.endedAt || 0));
+
+  countText.textContent = `${entries.length}件`;
+  if (!entries.length) {
+    list.innerHTML = '<p class="empty-state">履歴はありません</p>';
+    return;
+  }
+
+  list.innerHTML = entries.map((entry) => {
+    const statusText = entry.completedReason === "completed" ? "完了" : "中断";
+    const ticketText = buildLearningHistoryTicketText(entry.ticket);
+    return `
+      <article class="admin-history-card">
+        <div class="admin-history-card-head">
+          <h3>${escapeHtml(entry.learnedAt || "-")}</h3>
+          <span class="panel-pill">${escapeHtml(statusText)}</span>
+        </div>
+        <dl class="admin-history-meta-grid">
+          <div><dt>学習日時</dt><dd>${escapeHtml(entry.learnedAt || "-")}</dd></div>
+          <div><dt>開始時刻</dt><dd>${escapeHtml(entry.startedAtDisplay || "-")}</dd></div>
+          <div><dt>終了時刻</dt><dd>${escapeHtml(entry.endedAtDisplay || "-")}</dd></div>
+          <div><dt>実学習時間</dt><dd>${escapeHtml(formatLearningHistoryDuration(entry.activeStudySeconds))}</dd></div>
+          <div><dt>学習モード</dt><dd>${escapeHtml(entry.mode || "-")}</dd></div>
+          <div><dt>Day番号</dt><dd>${escapeHtml(entry.dayNumber || "-")}</dd></div>
+          <div><dt>問題数</dt><dd>${Math.max(0, Number(entry.questionCount) || 0)}問</dd></div>
+          <div><dt>正解数</dt><dd>${Math.max(0, Number(entry.correctCount) || 0)}問</dd></div>
+          <div><dt>正答率</dt><dd>${Math.max(0, Math.min(100, Number(entry.accuracy) || 0))}%</dd></div>
+          <div><dt>チケット獲得</dt><dd>${escapeHtml(ticketText.earned)}</dd></div>
+          <div><dt>チケット使用</dt><dd>${escapeHtml(ticketText.used)}</dd></div>
+        </dl>
+      </article>
+    `;
+  }).join("");
+}
+
+function resetAdminLearningHistoryGate() {
+  const gate = document.getElementById("adminLearningHistoryGate");
+  const content = document.getElementById("adminLearningHistoryContent");
+  const input = document.getElementById("adminLearningHistoryPinInput");
+  const error = document.getElementById("adminLearningHistoryError");
+  if (gate) gate.classList.remove("hidden");
+  if (content) content.classList.add("hidden");
+  if (error) {
+    error.classList.add("hidden");
+    error.textContent = "暗証番号が違います";
+  }
+  if (input) {
+    input.value = "";
+    input.focus();
+  }
+}
+
+function openAdminLearningHistoryScreen() {
+  showScreen("adminLearningHistoryScreen");
+  if (isAdminLearningHistoryUnlocked) {
+    const gate = document.getElementById("adminLearningHistoryGate");
+    const content = document.getElementById("adminLearningHistoryContent");
+    if (gate) gate.classList.add("hidden");
+    if (content) content.classList.remove("hidden");
+    renderAdminLearningHistoryList();
+    return;
+  }
+  resetAdminLearningHistoryGate();
+}
+
+function unlockAdminLearningHistory() {
+  const input = document.getElementById("adminLearningHistoryPinInput");
+  const error = document.getElementById("adminLearningHistoryError");
+  const gate = document.getElementById("adminLearningHistoryGate");
+  const content = document.getElementById("adminLearningHistoryContent");
+  if (!input || !error || !gate || !content) return;
+
+  const pin = String(input.value || "").trim();
+  if (pin !== ADMIN_LEARNING_HISTORY_PIN) {
+    error.textContent = "暗証番号が違います";
+    error.classList.remove("hidden");
+    input.focus();
+    input.select();
+    return;
+  }
+
+  isAdminLearningHistoryUnlocked = true;
+  error.classList.add("hidden");
+  gate.classList.add("hidden");
+  content.classList.remove("hidden");
+  renderAdminLearningHistoryList();
 }
 
 function appendLearningHistoryEntry(entry) {
@@ -6932,6 +7050,29 @@ function bindEvents() {
   if (daySelectPhraseBtn) {
     daySelectPhraseBtn.addEventListener("click", () => {
       showScreen("trainingMenuScreen");
+    });
+  }
+
+  const openAdminLearningHistoryBtn = document.getElementById("openAdminLearningHistoryBtn");
+  if (openAdminLearningHistoryBtn) {
+    openAdminLearningHistoryBtn.addEventListener("click", () => {
+      openAdminLearningHistoryScreen();
+    });
+  }
+
+  const adminLearningHistoryUnlockBtn = document.getElementById("adminLearningHistoryUnlockBtn");
+  if (adminLearningHistoryUnlockBtn) {
+    adminLearningHistoryUnlockBtn.addEventListener("click", () => {
+      unlockAdminLearningHistory();
+    });
+  }
+
+  const adminLearningHistoryPinInput = document.getElementById("adminLearningHistoryPinInput");
+  if (adminLearningHistoryPinInput) {
+    adminLearningHistoryPinInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      unlockAdminLearningHistory();
     });
   }
 

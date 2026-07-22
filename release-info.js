@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/22 11:35", note: "PC版に『管理者用 学習履歴』画面を追加。ホームの目立たない『管理者用』ボタンから4桁暗証番号（2521）で閲覧を解放し、localStorage の english-trainer-learning-history-v1 を新しい順のカード形式で表示（学習日時・開始/終了時刻・実学習時間・モード・Day番号・問題数・正解数・正答率・完了/中断・チケット獲得/使用）。履歴なし時は『履歴はありません』を表示。閲覧専用で編集/削除機能は未追加" },
     { version: "2026/07/22 11:05", note: "学習履歴の保存を追加。学習終了ごとに学習日時・開始/終了時刻・実学習時間（3分以内の操作間のみ）・学習モード（Day/単語特訓/熟語特訓/過去の間違い）・Day番号・問題数・正解数・正答率・チケット獲得/使用を localStorage の専用キーへ追記保存（既存の進捗/レベル/チケット保存方式は不変更）" },
     { version: "2026/07/22 10:40", note: "Week3のLevel1キーワードを反映（Day1〜Day7、A/B全行）。ユーザー指定キーワードをそのまま適用し、mobile/speaking-data.js の keywords 配列のみ更新" },
     { version: "2026/07/22 10:15", note: "Week4のLevel1キーワードを反映（Day1〜Day4、A/B全行）。ユーザー指定キーワードをそのまま適用し、keywords配列のみ追加。Day5〜Day7は未確定のため変更なし" },
