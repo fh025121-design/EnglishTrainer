@@ -2453,6 +2453,12 @@
       resetSpeakingHintState();
       state.speakingTranslationVisible = false;
       state.speakingLineStatus = "awaitingStart";
+
+      if (state.speakingProgress.phase === "conversationComplete") {
+        moveToNextSpeakingConversation();
+        return;
+      }
+
       saveSpeakingProgress();
       renderConversationPracticeWithAutoPlay();
       return;
@@ -3423,8 +3429,23 @@
 
     const progress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
+    if (!progress || !week) {
+      renderConversationSelectScreen();
+      return;
+    }
+
+    if (progress.phase === "conversationComplete") {
+      const targetSets = getSpeakingTargetRounds(progress);
+      if (getSpeakingCompletedRounds(progress) >= targetSets) {
+        renderConversationCompleteScreen();
+      } else {
+        moveToNextSpeakingConversation();
+      }
+      return;
+    }
+
     const conversation = getCurrentSpeakingConversation();
-    if (!progress || !week || !conversation) {
+    if (!conversation) {
       renderConversationSelectScreen();
       return;
     }
