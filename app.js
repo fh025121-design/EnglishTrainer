@@ -8,6 +8,7 @@ const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
   releaseHistory: []
 });
 const APP_VERSION = SETTINGS_INFO.releaseHistory[0]?.version || "0/0000/0000";
+const interruptedLearningHistorySessions = new WeakSet();
 const TYPING_CONFIG_DEFAULTS = Object.freeze({
   audioRepeatCount: 2,
   audioPlaybackRate: 1.0,
@@ -494,6 +495,13 @@ function appendLearningHistoryEntry(entry) {
     LEARNING_HISTORY_STORAGE_KEY,
     JSON.stringify(history.slice(-LEARNING_HISTORY_MAX_ENTRIES))
   );
+}
+
+function recordInterruptedLearningHistory(sessionLike, summary) {
+  if (!sessionLike || sessionLike.mode !== "normal") return;
+  if (interruptedLearningHistorySessions.has(sessionLike)) return;
+  interruptedLearningHistorySessions.add(sessionLike);
+  appendLearningHistoryEntry(buildLearningHistoryEntryFromSession(sessionLike, summary || buildSuspendedSummary(sessionLike), "interrupted"));
 }
 
 function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
@@ -5364,6 +5372,7 @@ function suspendCurrentSession() {
   pauseSessionClock(state.session);
   stashNormalSessionIfNeeded(state.session);
   const summary = buildSuspendedSummary(state.session);
+  recordInterruptedLearningHistory(state.session, summary);
   state.stats.lastResultSummary = summary;
   state.session = null;
   saveState();
@@ -7313,6 +7322,9 @@ function bindEvents() {
       return;
     }
     if (state.session?.mode === "normal") {
+      pauseSessionClock(state.session);
+      const summary = buildSuspendedSummary(state.session);
+      recordInterruptedLearningHistory(state.session, summary);
       stashNormalSessionIfNeeded(state.session);
       return;
     }
