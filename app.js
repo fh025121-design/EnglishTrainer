@@ -136,6 +136,7 @@ let prepositionTrainingSession = null;
 let responseTrainingSession = null;
 let currentScreenId = "homeScreen";
 let isAdminLearningHistoryUnlocked = false;
+let adminLearningHistorySelectedDayKey = "";
 const DESKTOP_FIT_REFERENCE = Object.freeze({
   width: 1366,
   height: 920,
@@ -391,46 +392,349 @@ function buildLearningHistoryTicketText(ticket) {
   };
 }
 
+function getLearningHistoryJstParts(timestamp) {
+  const date = new Date(Number(timestamp) || Date.now());
+  const formatter = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    weekday: "short",
+    hour12: false
+  });
+  return Object.fromEntries(formatter.formatToParts(date).map((part) => [part.type, part.value]));
+}
+
+function getLearningHistoryDayKey(timestamp) {
+  const parts = getLearningHistoryJstParts(timestamp);
+  return `${parts.year || "0000"}-${parts.month || "00"}-${parts.day || "00"}`;
+}
+
+function formatLearningHistoryDateLabel(dayKey) {
+  const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(dayKey || ""));
+  if (!match) return String(dayKey || "");
+  return `${Number(match[2])}/${Number(match[3])}`;
+}
+
+function formatLearningHistoryDateTimeRange(startedAt, endedAt) {
+  const startParts = getLearningHistoryJstParts(startedAt);
+  const endParts = getLearningHistoryJstParts(endedAt);
+  return `${startParts.hour || "00"}:${startParts.minute || "00"}〜${endParts.hour || "00"}:${endParts.minute || "00"}`;
+}
+
+function formatLearningHistoryFullDateLabel(dayKey) {
+  const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(dayKey || ""));
+  if (!match) return String(dayKey || "");
+  return `${match[1]}/${match[2]}/${match[3]}`;
+}
+
+function shiftLearningHistoryDayKey(dayKey, deltaDays) {
+  const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(dayKey || ""));
+  if (!match) return String(dayKey || "");
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  date.setUTCDate(date.getUTCDate() + Number(deltaDays || 0));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function createEmptyLearningHistoryDaySummary(dayKey) {
+  return finalizeLearningHistoryDaySummary({
+    dayKey,
+    label: formatLearningHistoryDateLabel(dayKey),
+    activeStudySeconds: 0,
+    questionCount: 0,
+    correctCount: 0,
+    modeTotals: createLearningHistoryModeTotals(),
+    entries: []
+  });
+}
+
+function finalizeLearningHistoryDaySummary(summary) {
+  const nextSummary = finalizeLearningHistoryTotals(summary);
+  nextSummary.label = formatLearningHistoryDateLabel(nextSummary.dayKey || nextSummary.label || "");
+  Object.values(nextSummary.modeTotals || {}).forEach((modeEntry) => {
+    modeEntry.accuracy = modeEntry.questionCount ? Math.round((modeEntry.correctCount / modeEntry.questionCount) * 100) : 0;
+    modeEntry.activeStudyMinutes = Math.max(0, Math.round(modeEntry.activeStudySeconds / 60));
+  });
+  return nextSummary;
+}
+
+function getLearningHistoryDaySummary(model, dayKey) {
+  if (model?.dayMap?.has(dayKey)) {
+    return finalizeLearningHistoryDaySummary({ ...model.dayMap.get(dayKey), dayKey });
+  }
+  return createEmptyLearningHistoryDaySummary(dayKey);
+}
+
+function getLearningHistorySelectedDayTitle(dayKey, todayDayKey) {
+  const label = formatLearningHistoryFullDateLabel(dayKey);
+  return dayKey === todayDayKey ? `今日（${label}）` : label;
+}
+
+function getLearningHistoryModeGroup(mode) {
+  const normalized = String(mode || "").trim();
+  if (normalized === "Day" || normalized === "Day学習" || normalized === "normal") return "day";
+  if (normalized === "単語特訓" || normalized === "単語学習" || normalized === "単語・熟語学習") return "word";
+  if (normalized === "熟語特訓" || normalized === "熟語学習") return "phrase";
+  if (normalized === "過去の間違い" || normalized === "review") return "review";
+  return "other";
+}
+
+function createLearningHistoryModeTotals() {
+  return {
+    day: { label: "Day学習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+    word: { label: "単語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+    phrase: { label: "熟語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+    review: { label: "過去の間違い", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+    other: { label: "その他", activeStudySeconds: 0, questionCount: 0, correctCount: 0 }
+  };
+}
+
+function accumulateLearningHistoryTotals(target, entry) {
+  if (!target || !entry) return;
+  target.activeStudySeconds += Math.max(0, Number(entry.activeStudySeconds) || 0);
+  target.questionCount += Math.max(0, Number(entry.questionCount) || 0);
+  target.correctCount += Math.max(0, Number(entry.correctCount) || 0);
+}
+
+function finalizeLearningHistoryTotals(entry) {
+  const questionCount = Math.max(0, Number(entry.questionCount) || 0);
+  const correctCount = Math.max(0, Number(entry.correctCount) || 0);
+  return {
+    ...entry,
+    accuracy: questionCount ? Math.round((correctCount / questionCount) * 100) : 0,
+    activeStudyMinutes: Math.max(0, Math.round(Math.max(0, Number(entry.activeStudySeconds) || 0) / 60))
+  };
+}
+
+function buildLearningHistoryInsights(entries) {
+  const source = Array.isArray(entries) ? entries.slice().sort((a, b) => Number(b.endedAt || 0) - Number(a.endedAt || 0)) : [];
+  const todayDayKey = getLearningHistoryDayKey(Date.now());
+  const monthParts = getLearningHistoryJstParts(Date.now());
+  const currentMonthKey = `${monthParts.year || "0000"}-${monthParts.month || "00"}`;
+  const nowDate = new Date(Date.now());
+  const todayUtcKey = Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate());
+
+  const dayMap = new Map();
+  source.forEach((entry) => {
+    const dayKey = getLearningHistoryDayKey(entry.endedAt);
+    if (!dayMap.has(dayKey)) {
+      dayMap.set(dayKey, {
+        dayKey,
+        entries: [],
+        activeStudySeconds: 0,
+        questionCount: 0,
+        correctCount: 0,
+        modeTotals: createLearningHistoryModeTotals()
+      });
+    }
+    const bucket = dayMap.get(dayKey);
+    bucket.entries.push(entry);
+    accumulateLearningHistoryTotals(bucket, entry);
+    const modeGroup = getLearningHistoryModeGroup(entry.mode);
+    accumulateLearningHistoryTotals(bucket.modeTotals[modeGroup] || bucket.modeTotals.other, entry);
+  });
+
+  const daySummaries = [...dayMap.values()].map((bucket) => finalizeLearningHistoryTotals(bucket));
+  daySummaries.forEach((summary) => {
+    Object.values(summary.modeTotals).forEach((modeEntry) => {
+      modeEntry.accuracy = modeEntry.questionCount ? Math.round((modeEntry.correctCount / modeEntry.questionCount) * 100) : 0;
+      modeEntry.activeStudyMinutes = Math.max(0, Math.round(modeEntry.activeStudySeconds / 60));
+    });
+  });
+
+  const recentDaySummaries = daySummaries
+    .filter((summary) => {
+      const summaryDate = Date.UTC(Number(summary.dayKey.slice(0, 4)), Number(summary.dayKey.slice(5, 7)) - 1, Number(summary.dayKey.slice(8, 10)));
+      const diffDays = Math.floor((todayUtcKey - summaryDate) / 86400000);
+      return diffDays >= 0 && diffDays < 30;
+    })
+    .sort((left, right) => right.dayKey.localeCompare(left.dayKey))
+    .slice(0, 7);
+
+  const todayEntries = source.filter((entry) => getLearningHistoryDayKey(entry.endedAt) === todayDayKey);
+  const todaySummary = finalizeLearningHistoryTotals({
+    activeStudySeconds: 0,
+    questionCount: 0,
+    correctCount: 0,
+    modeTotals: createLearningHistoryModeTotals()
+  });
+  todayEntries.forEach((entry) => {
+    accumulateLearningHistoryTotals(todaySummary, entry);
+    const modeGroup = getLearningHistoryModeGroup(entry.mode);
+    accumulateLearningHistoryTotals(todaySummary.modeTotals[modeGroup] || todaySummary.modeTotals.other, entry);
+  });
+  Object.values(todaySummary.modeTotals).forEach((modeEntry) => {
+    modeEntry.accuracy = modeEntry.questionCount ? Math.round((modeEntry.correctCount / modeEntry.questionCount) * 100) : 0;
+    modeEntry.activeStudyMinutes = Math.max(0, Math.round(modeEntry.activeStudySeconds / 60));
+  });
+  todaySummary.dayKey = todayDayKey;
+  todaySummary.label = formatLearningHistoryDateLabel(todayDayKey);
+  todaySummary.accuracy = todaySummary.questionCount ? Math.round((todaySummary.correctCount / todaySummary.questionCount) * 100) : 0;
+  todaySummary.activeStudyMinutes = Math.max(0, Math.round(todaySummary.activeStudySeconds / 60));
+
+  const withinWeekEntries = source.filter((entry) => {
+    const dayKey = getLearningHistoryDayKey(entry.endedAt);
+    const summaryDate = Date.UTC(Number(dayKey.slice(0, 4)), Number(dayKey.slice(5, 7)) - 1, Number(dayKey.slice(8, 10)));
+    const diffDays = Math.floor((todayUtcKey - summaryDate) / 86400000);
+    return diffDays >= 0 && diffDays < 7;
+  });
+  const withinMonthEntries = source.filter((entry) => {
+    const dayKey = getLearningHistoryDayKey(entry.endedAt);
+    return dayKey.slice(0, 7) === currentMonthKey;
+  });
+
+  const buildPeriodTotals = (periodEntries) => {
+    const periodSummary = finalizeLearningHistoryTotals({ activeStudySeconds: 0, questionCount: 0, correctCount: 0 });
+    periodEntries.forEach((entry) => accumulateLearningHistoryTotals(periodSummary, entry));
+    periodSummary.accuracy = periodSummary.questionCount ? Math.round((periodSummary.correctCount / periodSummary.questionCount) * 100) : 0;
+    periodSummary.activeStudyMinutes = Math.max(0, Math.round(periodSummary.activeStudySeconds / 60));
+    return periodSummary;
+  };
+
+  const weekSummary = buildPeriodTotals(withinWeekEntries);
+  const monthSummary = buildPeriodTotals(withinMonthEntries);
+
+  return {
+    todaySummary,
+    recentDaySummaries,
+    weekSummary,
+    monthSummary,
+    dayMap,
+    source
+  };
+}
+
+function buildLearningHistoryDetailEntries(dayEntries) {
+  return (Array.isArray(dayEntries) ? dayEntries : [])
+    .slice()
+    .sort((left, right) => Number(left.startedAt || left.endedAt || 0) - Number(right.startedAt || right.endedAt || 0));
+}
+
 function renderAdminLearningHistoryList() {
-  const list = document.getElementById("adminLearningHistoryList");
+  const content = document.getElementById("adminLearningHistoryContent");
+  if (!content) return;
   const countText = document.getElementById("adminLearningHistoryCountText");
-  if (!list || !countText) return;
+  const todayDayKey = getLearningHistoryDayKey(Date.now());
 
   const entries = loadLearningHistoryEntries()
     .slice()
     .sort((a, b) => Number(b.endedAt || 0) - Number(a.endedAt || 0));
 
-  countText.textContent = `${entries.length}件`;
+  if (countText) {
+    countText.textContent = `${entries.length}件`;
+  }
   if (!entries.length) {
-    list.innerHTML = '<p class="empty-state">履歴はありません</p>';
+    content.innerHTML = '<p class="empty-state">履歴はありません</p>';
     return;
   }
 
-  list.innerHTML = entries.map((entry) => {
-    const statusText = entry.completedReason === "completed" ? "完了" : "中断";
-    const ticketText = buildLearningHistoryTicketText(entry.ticket);
-    return `
-      <article class="admin-history-card">
-        <div class="admin-history-card-head">
-          <h3>${escapeHtml(entry.learnedAt || "-")}</h3>
-          <span class="panel-pill">${escapeHtml(statusText)}</span>
+  const model = buildLearningHistoryInsights(entries);
+  if (!adminLearningHistorySelectedDayKey || !/^\d{4}-\d{2}-\d{2}$/.test(adminLearningHistorySelectedDayKey) || adminLearningHistorySelectedDayKey > todayDayKey) {
+    adminLearningHistorySelectedDayKey = todayDayKey;
+  }
+
+  const selectedDayKey = adminLearningHistorySelectedDayKey <= todayDayKey ? adminLearningHistorySelectedDayKey : todayDayKey;
+  adminLearningHistorySelectedDayKey = selectedDayKey;
+  const selectedDaySummary = getLearningHistoryDaySummary(model, selectedDayKey);
+  const selectedDayEntries = buildLearningHistoryDetailEntries(selectedDaySummary?.entries || []);
+  const nextDayKey = shiftLearningHistoryDayKey(selectedDayKey, 1);
+  const canMoveNext = nextDayKey <= todayDayKey;
+  const selectedDayHasEntries = selectedDayEntries.length > 0;
+
+  content.innerHTML = `
+    <div class="admin-learning-history-view">
+      <section class="admin-history-overview">
+        <div class="admin-history-streak-row">🔥連続${state.stats.streak || 0}日</div>
+        <div class="admin-history-period-grid">
+          <div class="admin-history-period-block">
+            <p class="admin-history-period-label">今週</p>
+            <p class="admin-history-period-value">${formatLearningHistoryDuration(model.weekSummary.activeStudySeconds)}</p>
+            <p class="admin-history-period-meta">${model.weekSummary.questionCount}問 ${model.weekSummary.accuracy}%</p>
+          </div>
+          <div class="admin-history-period-block">
+            <p class="admin-history-period-label">今月</p>
+            <p class="admin-history-period-value">${formatLearningHistoryDuration(model.monthSummary.activeStudySeconds)}</p>
+            <p class="admin-history-period-meta">${model.monthSummary.questionCount}問 ${model.monthSummary.accuracy}%</p>
+          </div>
         </div>
-        <dl class="admin-history-meta-grid">
-          <div><dt>学習日時</dt><dd>${escapeHtml(entry.learnedAt || "-")}</dd></div>
-          <div><dt>開始時刻</dt><dd>${escapeHtml(entry.startedAtDisplay || "-")}</dd></div>
-          <div><dt>終了時刻</dt><dd>${escapeHtml(entry.endedAtDisplay || "-")}</dd></div>
-          <div><dt>実学習時間</dt><dd>${escapeHtml(formatLearningHistoryDuration(entry.activeStudySeconds))}</dd></div>
-          <div><dt>学習モード</dt><dd>${escapeHtml(entry.mode || "-")}</dd></div>
-          <div><dt>Day番号</dt><dd>${escapeHtml(entry.dayNumber || "-")}</dd></div>
-          <div><dt>問題数</dt><dd>${Math.max(0, Number(entry.questionCount) || 0)}問</dd></div>
-          <div><dt>正解数</dt><dd>${Math.max(0, Number(entry.correctCount) || 0)}問</dd></div>
-          <div><dt>正答率</dt><dd>${Math.max(0, Math.min(100, Number(entry.accuracy) || 0))}%</dd></div>
-          <div><dt>チケット獲得</dt><dd>${escapeHtml(ticketText.earned)}</dd></div>
-          <div><dt>チケット使用</dt><dd>${escapeHtml(ticketText.used)}</dd></div>
-        </dl>
-      </article>
-    `;
-  }).join("");
+      </section>
+
+      <section class="admin-history-today-section">
+        <div class="admin-history-date-switch">
+          <div class="admin-history-date-title-wrap">
+            <h3>📅 ${getLearningHistorySelectedDayTitle(selectedDayKey, todayDayKey)}</h3>
+          </div>
+          <div class="admin-history-date-nav">
+            <button class="admin-history-date-nav-btn" type="button" data-day-shift="prev">◀ 前日</button>
+            <button class="admin-history-date-nav-btn" type="button" data-day-shift="next"${canMoveNext ? "" : " disabled"}>▶ 次の日</button>
+          </div>
+        </div>
+        <div class="admin-history-selected-summary">
+          ${selectedDayHasEntries ? `
+            <div class="admin-history-total-stats">
+              <span>${formatLearningHistoryDuration(selectedDaySummary.activeStudySeconds)}</span>
+              <span>${selectedDaySummary.questionCount}問</span>
+              <span>${selectedDaySummary.accuracy}%</span>
+            </div>
+            <div class="admin-history-mode-summary-list">
+              ${Object.values(selectedDaySummary.modeTotals).filter((entry) => entry.questionCount > 0 || entry.activeStudySeconds > 0).map((entry) => `
+                <div class="admin-history-mode-summary-row">
+                  <span>${escapeHtml(entry.label)}</span>
+                  <span>${escapeHtml(formatLearningHistoryDuration(entry.activeStudySeconds))}</span>
+                  <span>${entry.questionCount}問</span>
+                  <span>${entry.accuracy}%</span>
+                </div>
+              `).join("")}
+            </div>
+          ` : '<p class="empty-state">この日は学習記録がありません</p>'}
+        </div>
+      </section>
+
+      <section class="admin-history-detail-section">
+        <div class="admin-history-section-header">
+          <h3>日別詳細</h3>
+          <p class="admin-history-detail-date">${formatLearningHistoryDateLabel(selectedDaySummary?.dayKey || selectedDayKey)}</p>
+        </div>
+        <article class="admin-history-card">
+          <div class="admin-history-detail-list">
+            ${selectedDayHasEntries ? selectedDayEntries.map((entry) => {
+              const completedLabel = entry.completedReason === "interrupted" ? "中断" : "完了";
+              const ticketText = buildLearningHistoryTicketText(entry.ticket);
+              return `
+                <div class="admin-history-detail-item">
+                  <p class="admin-history-detail-time">${formatLearningHistoryDateTimeRange(entry.startedAt, entry.endedAt)}</p>
+                  <p class="admin-history-detail-mode">${escapeHtml(entry.mode || "-")}</p>
+                  <p class="admin-history-detail-meta">${escapeHtml(entry.dayNumber || "-")}</p>
+                  <p class="admin-history-detail-meta">${formatLearningHistoryDuration(entry.activeStudySeconds)}</p>
+                  <p class="admin-history-detail-meta">${Math.max(0, Number(entry.questionCount) || 0)}問</p>
+                  <p class="admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</p>
+                  <p class="admin-history-detail-meta">${completedLabel}</p>
+                  <p class="admin-history-detail-ticket">${escapeHtml(ticketText.earned)} / ${escapeHtml(ticketText.used)}</p>
+                </div>
+              `;
+            }).join("<div class=\"admin-history-detail-separator\"></div>") : '<p class="empty-state">この日は学習記録がありません</p>'}
+          </div>
+        </article>
+      </section>
+    </div>
+  `;
+
+  content.querySelectorAll("[data-day-shift]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const shift = button.getAttribute("data-day-shift");
+      if (shift === "prev") {
+        adminLearningHistorySelectedDayKey = shiftLearningHistoryDayKey(selectedDayKey, -1);
+      } else if (shift === "next" && canMoveNext) {
+        adminLearningHistorySelectedDayKey = shiftLearningHistoryDayKey(selectedDayKey, 1);
+      }
+      if (adminLearningHistorySelectedDayKey > todayDayKey) {
+        adminLearningHistorySelectedDayKey = todayDayKey;
+      }
+      renderAdminLearningHistoryList();
+    });
+  });
 }
 
 function resetAdminLearningHistoryGate() {

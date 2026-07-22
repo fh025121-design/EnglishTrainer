@@ -27,6 +27,7 @@
   const WEEKDAY_LABELS_JA = ["日", "月", "火", "水", "木", "金", "土"];
 
   const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  let mobileAdminLearningHistorySelectedDayKey = "";
 
   const state = {
     settings: {
@@ -188,6 +189,214 @@
     } catch (_error) {
       return [];
     }
+  }
+
+  function getMobileLearningHistoryJstParts(timestamp) {
+    const date = new Date(Number(timestamp) || Date.now());
+    const formatter = new Intl.DateTimeFormat("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      weekday: "short",
+      hour12: false
+    });
+    return Object.fromEntries(formatter.formatToParts(date).map((part) => [part.type, part.value]));
+  }
+
+  function getMobileLearningHistoryDayKey(timestamp) {
+    const parts = getMobileLearningHistoryJstParts(timestamp);
+    return `${parts.year || "0000"}-${parts.month || "00"}-${parts.day || "00"}`;
+  }
+
+  function formatMobileLearningHistoryDateLabel(dayKey) {
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(dayKey || ""));
+    if (!match) return String(dayKey || "");
+    return `${Number(match[2])}/${Number(match[3])}`;
+  }
+
+  function formatMobileLearningHistoryClockRange(startedAt, endedAt) {
+    const startParts = getMobileLearningHistoryJstParts(startedAt);
+    const endParts = getMobileLearningHistoryJstParts(endedAt);
+    return `${startParts.hour || "00"}:${startParts.minute || "00"}〜${endParts.hour || "00"}:${endParts.minute || "00"}`;
+  }
+
+  function formatMobileLearningHistoryFullDateLabel(dayKey) {
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(dayKey || ""));
+    if (!match) return String(dayKey || "");
+    return `${match[1]}/${match[2]}/${match[3]}`;
+  }
+
+  function shiftMobileLearningHistoryDayKey(dayKey, deltaDays) {
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(dayKey || ""));
+    if (!match) return String(dayKey || "");
+    const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    date.setUTCDate(date.getUTCDate() + Number(deltaDays || 0));
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+  }
+
+  function createEmptyMobileLearningHistoryDaySummary(dayKey) {
+    return finalizeMobileLearningHistoryDaySummary({
+      dayKey,
+      label: formatMobileLearningHistoryDateLabel(dayKey),
+      activeStudySeconds: 0,
+      questionCount: 0,
+      correctCount: 0,
+      modeTotals: createMobileLearningHistoryModeTotals(),
+      entries: []
+    });
+  }
+
+  function finalizeMobileLearningHistoryDaySummary(summary) {
+    const nextSummary = finalizeMobileLearningHistoryTotals(summary);
+    nextSummary.label = formatMobileLearningHistoryDateLabel(nextSummary.dayKey || nextSummary.label || "");
+    Object.values(nextSummary.modeTotals || {}).forEach((modeEntry) => {
+      modeEntry.accuracy = modeEntry.questionCount ? Math.round((modeEntry.correctCount / modeEntry.questionCount) * 100) : 0;
+      modeEntry.activeStudyMinutes = Math.max(0, Math.round(modeEntry.activeStudySeconds / 60));
+    });
+    return nextSummary;
+  }
+
+  function getMobileLearningHistoryDaySummary(model, dayKey) {
+    if (model?.dayMap?.has(dayKey)) {
+      return finalizeMobileLearningHistoryDaySummary({ ...model.dayMap.get(dayKey), dayKey });
+    }
+    return createEmptyMobileLearningHistoryDaySummary(dayKey);
+  }
+
+  function getMobileLearningHistorySelectedDayTitle(dayKey, todayDayKey) {
+    const label = formatMobileLearningHistoryFullDateLabel(dayKey);
+    return dayKey === todayDayKey ? `今日（${label}）` : label;
+  }
+
+  function classifyMobileLearningHistoryMode(mode) {
+    const normalized = String(mode || "").trim();
+    if (!normalized) return "other";
+    if (normalized.includes("Day") || normalized === "Day学習" || normalized === "day") return "day";
+    if (normalized.includes("熟語")) return "phrase";
+    if (normalized.includes("単語")) return "word";
+    if (normalized.includes("過去") || normalized === "review") return "review";
+    return "other";
+  }
+
+  function createMobileLearningHistoryModeTotals() {
+    return {
+      day: { label: "Day学習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      word: { label: "単語", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      phrase: { label: "熟語", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      review: { label: "過去の間違い", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      other: { label: "その他", activeStudySeconds: 0, questionCount: 0, correctCount: 0 }
+    };
+  }
+
+  function addMobileLearningHistoryTotals(target, entry) {
+    if (!target || !entry) return;
+    target.activeStudySeconds += Math.max(0, Number(entry.activeStudySeconds) || 0);
+    target.questionCount += Math.max(0, Number(entry.questionCount) || 0);
+    target.correctCount += Math.max(0, Number(entry.correctCount) || 0);
+  }
+
+  function finalizeMobileLearningHistoryTotals(entry) {
+    const questionCount = Math.max(0, Number(entry.questionCount) || 0);
+    const correctCount = Math.max(0, Number(entry.correctCount) || 0);
+    return {
+      ...entry,
+      accuracy: questionCount ? Math.round((correctCount / questionCount) * 100) : 0,
+      activeStudyMinutes: Math.max(0, Math.round(Math.max(0, Number(entry.activeStudySeconds) || 0) / 60))
+    };
+  }
+
+  function buildMobileLearningHistoryInsights(entries) {
+    const source = Array.isArray(entries) ? entries.slice().sort((left, right) => Number(right.endedAt) - Number(left.endedAt)) : [];
+    const todayDayKey = getMobileLearningHistoryDayKey(Date.now());
+    const monthParts = getMobileLearningHistoryJstParts(Date.now());
+    const currentMonthKey = `${monthParts.year || "0000"}-${monthParts.month || "00"}`;
+    const todayUtc = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
+
+    const dayMap = new Map();
+    source.forEach((entry) => {
+      const dayKey = getMobileLearningHistoryDayKey(entry.endedAt);
+      if (!dayMap.has(dayKey)) {
+        dayMap.set(dayKey, {
+          dayKey,
+          entries: [],
+          activeStudySeconds: 0,
+          questionCount: 0,
+          correctCount: 0,
+          modeTotals: createMobileLearningHistoryModeTotals()
+        });
+      }
+      const bucket = dayMap.get(dayKey);
+      bucket.entries.push(entry);
+      addMobileLearningHistoryTotals(bucket, entry);
+      const modeGroup = classifyMobileLearningHistoryMode(entry.mode);
+      addMobileLearningHistoryTotals(bucket.modeTotals[modeGroup] || bucket.modeTotals.other, entry);
+    });
+
+    const daySummaries = [...dayMap.values()].map((summary) => finalizeMobileLearningHistoryTotals(summary));
+    daySummaries.forEach((summary) => {
+      Object.values(summary.modeTotals).forEach((modeEntry) => {
+        modeEntry.accuracy = modeEntry.questionCount ? Math.round((modeEntry.correctCount / modeEntry.questionCount) * 100) : 0;
+        modeEntry.activeStudyMinutes = Math.max(0, Math.round(modeEntry.activeStudySeconds / 60));
+      });
+    });
+
+    const recentDaySummaries = daySummaries
+      .filter((summary) => {
+        const utc = Date.UTC(Number(summary.dayKey.slice(0, 4)), Number(summary.dayKey.slice(5, 7)) - 1, Number(summary.dayKey.slice(8, 10)));
+        const diffDays = Math.floor((todayUtc - utc) / 86400000);
+        return diffDays >= 0 && diffDays < 30;
+      })
+      .sort((left, right) => right.dayKey.localeCompare(left.dayKey))
+      .slice(0, 7);
+
+    const todaySummary = finalizeMobileLearningHistoryTotals({ activeStudySeconds: 0, questionCount: 0, correctCount: 0, modeTotals: createMobileLearningHistoryModeTotals() });
+    source.filter((entry) => getMobileLearningHistoryDayKey(entry.endedAt) === todayDayKey).forEach((entry) => {
+      addMobileLearningHistoryTotals(todaySummary, entry);
+      const modeGroup = classifyMobileLearningHistoryMode(entry.mode);
+      addMobileLearningHistoryTotals(todaySummary.modeTotals[modeGroup] || todaySummary.modeTotals.other, entry);
+    });
+    Object.values(todaySummary.modeTotals).forEach((modeEntry) => {
+      modeEntry.accuracy = modeEntry.questionCount ? Math.round((modeEntry.correctCount / modeEntry.questionCount) * 100) : 0;
+      modeEntry.activeStudyMinutes = Math.max(0, Math.round(modeEntry.activeStudySeconds / 60));
+    });
+    todaySummary.dayKey = todayDayKey;
+    todaySummary.label = formatMobileLearningHistoryDateLabel(todayDayKey);
+    todaySummary.accuracy = todaySummary.questionCount ? Math.round((todaySummary.correctCount / todaySummary.questionCount) * 100) : 0;
+    todaySummary.activeStudyMinutes = Math.max(0, Math.round(todaySummary.activeStudySeconds / 60));
+
+    const withinWeekEntries = source.filter((entry) => {
+      const dayKey = getMobileLearningHistoryDayKey(entry.endedAt);
+      const utc = Date.UTC(Number(dayKey.slice(0, 4)), Number(dayKey.slice(5, 7)) - 1, Number(dayKey.slice(8, 10)));
+      const diffDays = Math.floor((todayUtc - utc) / 86400000);
+      return diffDays >= 0 && diffDays < 7;
+    });
+    const withinMonthEntries = source.filter((entry) => getMobileLearningHistoryDayKey(entry.endedAt).slice(0, 7) === currentMonthKey);
+
+    const buildTotals = (periodEntries) => {
+      const summary = finalizeMobileLearningHistoryTotals({ activeStudySeconds: 0, questionCount: 0, correctCount: 0 });
+      periodEntries.forEach((entry) => addMobileLearningHistoryTotals(summary, entry));
+      summary.accuracy = summary.questionCount ? Math.round((summary.correctCount / summary.questionCount) * 100) : 0;
+      summary.activeStudyMinutes = Math.max(0, Math.round(summary.activeStudySeconds / 60));
+      return summary;
+    };
+
+    return {
+      todaySummary,
+      recentDaySummaries,
+      weekSummary: buildTotals(withinWeekEntries),
+      monthSummary: buildTotals(withinMonthEntries),
+      dayMap,
+      source
+    };
+  }
+
+  function buildMobileLearningHistoryDetailEntries(dayEntries) {
+    return (Array.isArray(dayEntries) ? dayEntries : [])
+      .slice()
+      .sort((left, right) => Number(left.startedAt || left.endedAt || 0) - Number(right.startedAt || right.endedAt || 0));
   }
 
   function saveMobileLearningHistoryEntries(entries) {
@@ -483,6 +692,7 @@
 
   function renderMobileAdminLearningHistoryList() {
     if (!elements.mobileAdminLearningHistoryPanel) return;
+    const todayDayKey = getMobileLearningHistoryDayKey(Date.now());
     const entries = loadMobileLearningHistoryEntries().slice().sort((left, right) => Number(right.endedAt) - Number(left.endedAt));
     if (!entries.length) {
       elements.mobileAdminLearningHistoryPanel.innerHTML = '<p class="status-text">履歴はありません</p>';
@@ -490,26 +700,110 @@
       return;
     }
 
-    const markup = entries.map((entry) => {
-      const completionLabel = entry.completedReason === "interrupted" ? "中断" : "完了";
-      return [
-        '<article class="admin-learning-history-card">',
-        `<h3>${entry.mode || "その他"}・${entry.dayNumber || "-"}</h3>`,
-        '<div class="admin-learning-history-meta">',
-        `<p>開始: ${entry.startedAtDisplay || "-"}</p>`,
-        `<p>終了: ${entry.endedAtDisplay || "-"}</p>`,
-        `<p>学習時間: ${formatMobileLearningDuration(entry.activeStudySeconds)}</p>`,
-        `<p>状態: ${completionLabel}</p>`,
-        `<p>問題数: ${entry.questionCount}</p>`,
-        `<p>正解数: ${entry.correctCount}</p>`,
-        `<p>正答率: ${entry.accuracy}%</p>`,
-        `<p>チケット: ${entry.ticket?.earned?.count || 0} / ${entry.ticket?.used?.count || 0}</p>`,
-        '</div>',
-        '</article>'
-      ].join("");
-    }).join("");
+    const model = buildMobileLearningHistoryInsights(entries);
+    if (!mobileAdminLearningHistorySelectedDayKey || !/^\d{4}-\d{2}-\d{2}$/.test(mobileAdminLearningHistorySelectedDayKey) || mobileAdminLearningHistorySelectedDayKey > todayDayKey) {
+      mobileAdminLearningHistorySelectedDayKey = todayDayKey;
+    }
 
-    elements.mobileAdminLearningHistoryPanel.innerHTML = `<div class="admin-learning-history-list">${markup}</div>`;
+    const selectedDayKey = mobileAdminLearningHistorySelectedDayKey <= todayDayKey ? mobileAdminLearningHistorySelectedDayKey : todayDayKey;
+    mobileAdminLearningHistorySelectedDayKey = selectedDayKey;
+    const selectedDaySummary = getMobileLearningHistoryDaySummary(model, selectedDayKey);
+    const selectedDayEntries = buildMobileLearningHistoryDetailEntries(selectedDaySummary?.entries || []);
+    const canMoveNext = shiftMobileLearningHistoryDayKey(selectedDayKey, 1) <= todayDayKey;
+    const selectedDayHasEntries = selectedDayEntries.length > 0;
+
+    elements.mobileAdminLearningHistoryPanel.innerHTML = `
+      <div class="mobile-admin-history-view">
+        <section class="mobile-admin-history-overview">
+          <div class="mobile-admin-history-streak-row">🔥連続${state.stats.streak || 0}日</div>
+          <div class="mobile-admin-history-period-blocks">
+            <div class="mobile-admin-history-period-block">
+              <p class="mobile-admin-history-period-label">今週</p>
+              <p class="mobile-admin-history-period-value">${formatMobileLearningDuration(model.weekSummary.activeStudySeconds)}</p>
+              <p class="mobile-admin-history-period-meta">${model.weekSummary.questionCount}問 ${model.weekSummary.accuracy}%</p>
+            </div>
+            <div class="mobile-admin-history-period-block">
+              <p class="mobile-admin-history-period-label">今月</p>
+              <p class="mobile-admin-history-period-value">${formatMobileLearningDuration(model.monthSummary.activeStudySeconds)}</p>
+              <p class="mobile-admin-history-period-meta">${model.monthSummary.questionCount}問 ${model.monthSummary.accuracy}%</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="mobile-admin-history-today-section">
+          <div class="mobile-admin-history-date-switch">
+            <div class="mobile-admin-history-date-title-wrap">
+              <h3>📅 ${getMobileLearningHistorySelectedDayTitle(selectedDayKey, todayDayKey)}</h3>
+            </div>
+            <div class="mobile-admin-history-date-nav">
+              <button class="mobile-admin-history-date-nav-btn" type="button" data-day-shift="prev">◀ 前日</button>
+              <button class="mobile-admin-history-date-nav-btn" type="button" data-day-shift="next"${canMoveNext ? "" : " disabled"}>▶ 次の日</button>
+            </div>
+          </div>
+          <div class="mobile-admin-history-selected-summary">
+            ${selectedDayHasEntries ? `
+              <div class="mobile-admin-history-total-stats">
+                <span>${formatMobileLearningDuration(selectedDaySummary.activeStudySeconds)}</span>
+                <span>${selectedDaySummary.questionCount}問</span>
+                <span>${selectedDaySummary.accuracy}%</span>
+              </div>
+              <div class="mobile-admin-history-mode-summary-list">
+                ${Object.values(selectedDaySummary.modeTotals).filter((entry) => entry.questionCount > 0 || entry.activeStudySeconds > 0).map((entry) => `
+                  <div class="mobile-admin-history-mode-summary-row">
+                    <span>${escapeHtml(entry.label)}</span>
+                    <span>${escapeHtml(formatMobileLearningDuration(entry.activeStudySeconds))}</span>
+                    <span>${entry.questionCount}問</span>
+                    <span>${entry.accuracy}%</span>
+                  </div>
+                `).join("")}
+              </div>
+            ` : '<p class="status-text">この日は学習記録がありません</p>'}
+          </div>
+        </section>
+
+        <section class="mobile-admin-history-detail-section">
+          <div class="mobile-admin-history-section-header">
+            <h3>日別詳細</h3>
+            <p class="mobile-admin-history-detail-date">${formatMobileLearningHistoryDateLabel(selectedDaySummary?.dayKey || selectedDayKey)}</p>
+          </div>
+          <article class="admin-learning-history-card">
+            <div class="mobile-admin-history-detail-list">
+              ${selectedDayHasEntries ? selectedDayEntries.map((entry) => {
+                const completionLabel = entry.completedReason === "interrupted" ? "中断" : "完了";
+                const ticketText = `${Math.max(0, Number(entry.ticket?.earned?.count) || 0)} / ${Math.max(0, Number(entry.ticket?.used?.count) || 0)}`;
+                return `
+                  <div class="mobile-admin-history-detail-item">
+                    <p class="mobile-admin-history-detail-time">${formatMobileLearningHistoryClockRange(entry.startedAt, entry.endedAt)}</p>
+                    <p class="mobile-admin-history-detail-mode">${escapeHtml(entry.mode || "-")}</p>
+                    <p class="mobile-admin-history-detail-meta">${escapeHtml(entry.dayNumber || "-")}</p>
+                    <p class="mobile-admin-history-detail-meta">${formatMobileLearningDuration(entry.activeStudySeconds)}</p>
+                    <p class="mobile-admin-history-detail-meta">${Math.max(0, Number(entry.questionCount) || 0)}問</p>
+                    <p class="mobile-admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</p>
+                    <p class="mobile-admin-history-detail-meta">${completionLabel}</p>
+                    <p class="mobile-admin-history-detail-ticket">チケット ${ticketText}</p>
+                  </div>
+                `;
+              }).join('<div class="mobile-admin-history-detail-separator"></div>') : '<p class="status-text">この日は学習記録がありません</p>'}
+            </div>
+          </article>
+        </section>
+      </div>
+    `;
+
+    elements.mobileAdminLearningHistoryPanel.querySelectorAll("[data-day-shift]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const shift = button.getAttribute("data-day-shift");
+        if (shift === "prev") {
+          mobileAdminLearningHistorySelectedDayKey = shiftMobileLearningHistoryDayKey(selectedDayKey, -1);
+        } else if (shift === "next" && canMoveNext) {
+          mobileAdminLearningHistorySelectedDayKey = shiftMobileLearningHistoryDayKey(selectedDayKey, 1);
+        }
+        if (mobileAdminLearningHistorySelectedDayKey > todayDayKey) {
+          mobileAdminLearningHistorySelectedDayKey = todayDayKey;
+        }
+        renderMobileAdminLearningHistoryList();
+      });
+    });
     elements.mobileAdminLearningHistoryPanel.classList.remove("hidden");
   }
 

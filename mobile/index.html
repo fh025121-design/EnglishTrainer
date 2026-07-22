@@ -7,7 +7,7 @@
     <script>
       (function () {
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
-        const cacheToken = window.name || storedToken || "20260722-1015";
+        const cacheToken = window.name || storedToken || "20260722-1619";
         window.MOBILE_CACHE_TOKEN = cacheToken;
         window.name = cacheToken;
         const link = document.createElement("link");
@@ -344,7 +344,7 @@
         </header>
 
         <main class="stack-layout">
-          <section class="panel">
+          <section class="admin-learning-history-shell">
             <h2>管理者用 学習履歴</h2>
             <p class="status-text">PIN を入力すると記録した履歴を表示します。</p>
             <div class="field-block">
@@ -354,7 +354,7 @@
             </div>
           </section>
 
-          <section id="mobileAdminLearningHistoryPanel" class="panel admin-learning-history-panel hidden"></section>
+          <section id="mobileAdminLearningHistoryPanel" class="admin-learning-history-panel hidden"></section>
         </main>
       </section>
 
