@@ -1047,67 +1047,70 @@
     return matrix[a.length][b.length];
   }
 
-  function getKeywordLikeTranscriptText(lineKeywords, transcriptList) {
-    const rawKeywords = Array.isArray(lineKeywords)
-      ? lineKeywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
-      : [];
-    const transcripts = (Array.isArray(transcriptList) ? transcriptList : [])
+  function findClosestRecognizedFragment(targetKeyword, transcriptList) {
+    const normalizedTarget = normalizeSpeakingKeywordToken(targetKeyword);
+    const targetTokenCount = normalizedTarget.split(" ").filter(Boolean).length;
+    if (!normalizedTarget || !targetTokenCount) return "";
+
+    const rawTranscripts = (Array.isArray(transcriptList) ? transcriptList : [])
       .map((entry) => String(entry || "").trim())
       .filter(Boolean);
-    const firstTranscript = transcripts[0] || "";
-    const normalizedTranscript = normalizeSpeakingKeywordToken(firstTranscript);
-    if (!rawKeywords.length || !normalizedTranscript) return "";
+    if (!rawTranscripts.length) return "";
 
-    if (rawKeywords.length > 1) {
-      const recognizedKeywords = rawKeywords.filter((keyword) => {
-        const normalizedKeyword = normalizeSpeakingKeywordToken(keyword);
-        return normalizedKeyword && normalizedTranscript.includes(normalizedKeyword);
-      });
-      return recognizedKeywords.join(" / ");
-    }
+    const candidates = [];
+    rawTranscripts.forEach((raw) => {
+      const normalized = normalizeSpeakingKeywordToken(raw);
+      if (!normalized) return;
+      candidates.push({ raw, normalized });
 
-    const normalizedKeyword = normalizeSpeakingKeywordToken(rawKeywords[0]);
-    if (!normalizedKeyword) return "";
-    if (normalizedTranscript.includes(normalizedKeyword)) {
-      return rawKeywords[0];
-    }
-
-    const transcriptTokens = normalizedTranscript.split(" ").filter(Boolean);
-    const keywordTokens = normalizedKeyword.split(" ").filter(Boolean);
-    if (!transcriptTokens.length) return "";
-
-    if (keywordTokens.length > 1) {
-      const keywordTokenSet = new Set(keywordTokens);
-      const overlapTokens = transcriptTokens.filter((token) => keywordTokenSet.has(token));
-      if (overlapTokens.length) {
-        return overlapTokens.join(" ");
+      const rawTokens = raw.split(/\s+/).filter(Boolean);
+      for (let start = 0; start < rawTokens.length; start += 1) {
+        for (let length = 1; length <= targetTokenCount; length += 1) {
+          const slice = rawTokens.slice(start, start + length);
+          if (!slice.length) continue;
+          const rawSlice = slice.join(" ");
+          const normalizedSlice = normalizeSpeakingKeywordToken(rawSlice);
+          if (!normalizedSlice) continue;
+          candidates.push({ raw: rawSlice, normalized: normalizedSlice });
+        }
       }
-      return transcriptTokens.slice(0, keywordTokens.length).join(" ");
-    }
+    });
 
-    let bestToken = transcriptTokens[0];
-    let bestDistance = computeLevenshteinDistance(keywordTokens[0], bestToken);
-    for (let index = 1; index < transcriptTokens.length; index += 1) {
-      const token = transcriptTokens[index];
-      const distance = computeLevenshteinDistance(keywordTokens[0], token);
+    if (!candidates.length) return "";
+    let best = candidates[0];
+    let bestDistance = computeLevenshteinDistance(normalizedTarget, best.normalized);
+    for (let index = 1; index < candidates.length; index += 1) {
+      const candidate = candidates[index];
+      const distance = computeLevenshteinDistance(normalizedTarget, candidate.normalized);
       if (distance < bestDistance) {
+        best = candidate;
         bestDistance = distance;
-        bestToken = token;
       }
     }
-    return bestToken;
+
+    const maxLength = Math.max(normalizedTarget.length, best.normalized.length, 1);
+    const similarity = 1 - (bestDistance / maxLength);
+    return similarity >= 0.45 ? best.raw : "";
   }
 
-  function setSpeakingKeywordDebugFeedback(lineKeywords, transcriptList, isCorrect) {
+  function setSpeakingKeywordDebugFeedback(lineKeywords, transcriptList, isCorrect, missingKeywords = []) {
     if (!ENABLE_SPEAKING_KEYWORD_DEBUG || isCorrect) {
       state.speakingRecognitionDebugHtml = "";
       return;
     }
-    const expectedKeywords = Array.isArray(lineKeywords)
-      ? lineKeywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
+    void lineKeywords;
+    const incorrectKeywords = Array.isArray(missingKeywords)
+      ? missingKeywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)
       : [];
-    const recognizedText = getKeywordLikeTranscriptText(expectedKeywords, transcriptList) || "(none)";
-    const expectedText = expectedKeywords.join(" / ") || "(none)";
+    if (!incorrectKeywords.length) {
+      state.speakingRecognitionDebugHtml = "";
+      return;
+    }
+
+    const recognizedText = incorrectKeywords
+      .map((keyword) => findClosestRecognizedFragment(keyword, transcriptList) || "（認識なし）")
+      .join(" / ");
+    const expectedText = incorrectKeywords.join(" / ");
 
     state.speakingRecognitionDebugHtml = [
       `<span class="recognition-debug-line recognition-debug-wrong">認識: ❌ ${escapeHtml(recognizedText)}</span>`,
@@ -2651,7 +2654,7 @@
       const level1Session = ensureSpeakingLevel1Session(progress, week, conversation.id);
       const keywordAnalysis = analyzeSpeakingLevel1KeywordMatch(currentLine.keywords, transcripts);
       const isCorrect = keywordAnalysis.isCorrect;
-      setSpeakingKeywordDebugFeedback(currentLine.keywords, transcripts, isCorrect);
+      setSpeakingKeywordDebugFeedback(currentLine.keywords, transcripts, isCorrect, keywordAnalysis.missingKeywords);
       if (isCorrect) {
         state.speakingLevel1MissingKeywords = [];
         if (stage === "question") {
