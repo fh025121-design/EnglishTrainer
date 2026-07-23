@@ -597,6 +597,16 @@ select,
   width: 100%;
 }
 
+.speaking-review-button-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.speaking-review-button {
+  width: calc((100% - 10px) / 2);
+}
+
 .conversation-speaker,
 .conversation-english,
 .conversation-japanese,
