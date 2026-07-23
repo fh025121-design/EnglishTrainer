@@ -2509,6 +2509,10 @@ function awardPointsForTrainingMode(mode) {
     : {};
   pointState.dailyEarnedByModeByDate[todayKey] = todayModeRow;
   savePointState(pointState);
+  const exchangeScreen = document.getElementById("exchangeTicketScreen");
+  if (exchangeScreen && exchangeScreen.classList.contains("active")) {
+    renderPointExchangeScreen();
+  }
   return earned;
 }
 
@@ -2638,12 +2642,18 @@ function renderPointExchangeGoal(pointState) {
 
 function renderPointExchangeScreen() {
   const balanceText = document.getElementById("pointExchangeBalanceText");
+  const todayEarnedText = document.getElementById("pointExchangeTodayEarnedText");
+  const previousEarnedText = document.getElementById("pointExchangePreviousEarnedText");
+  const totalEarnedText = document.getElementById("pointExchangeTotalEarnedText");
   const itemList = document.getElementById("pointExchangeItemList");
-  if (!balanceText || !itemList) return;
+  if (!balanceText || !todayEarnedText || !previousEarnedText || !totalEarnedText || !itemList) return;
 
   const pointState = getPointState();
   hydratePointDaySnapshots(pointState);
   balanceText.textContent = formatPointValue(pointState.balance);
+  todayEarnedText.textContent = `本日の獲得 ${formatPointValue(pointState.todayEarned)}`;
+  previousEarnedText.textContent = `前日の獲得 ${formatPointValue(pointState.previousDayEarned)}`;
+  totalEarnedText.textContent = `累計 ${formatPointValue(pointState.totalEarned)}`;
   renderPointExchangeGoal(pointState);
 
   const rows = getAvailablePointItems(pointState)
