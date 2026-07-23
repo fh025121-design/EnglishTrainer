@@ -544,6 +544,274 @@
         }
       ])
     }),
+    W2: Object.freeze({
+      "2026-06-29": Object.freeze([
+        {
+          word: "who",
+          meaning: "だれ",
+          example: "Who is your friend?",
+          exampleJapanese: "あなたの友達は誰ですか？"
+        },
+        {
+          word: "what",
+          meaning: "何",
+          example: "What subject do you like?",
+          exampleJapanese: "あなたは何の教科が好きですか？"
+        },
+        {
+          word: "where",
+          meaning: "どこ",
+          example: "Where do you study?",
+          exampleJapanese: "あなたはどこで勉強しますか？"
+        },
+        {
+          word: "when",
+          meaning: "いつ",
+          example: "When do you practice?",
+          exampleJapanese: "あなたはいつ練習しますか？"
+        },
+        {
+          word: "usually",
+          meaning: "ふつう",
+          example: "I usually study at home.",
+          exampleJapanese: "私はたいてい家で勉強します。"
+        },
+        {
+          word: "library",
+          meaning: "図書館",
+          example: "I read books in the library.",
+          exampleJapanese: "私は図書館で本を読みます。"
+        }
+      ]),
+      "2026-06-30": Object.freeze([
+        {
+          word: "class",
+          meaning: "授業",
+          example: "I have English class today.",
+          exampleJapanese: "今日は英語の授業があります。"
+        },
+        {
+          word: "lunch",
+          meaning: "昼食",
+          example: "I have lunch at school.",
+          exampleJapanese: "私は学校で昼食を食べます。"
+        },
+        {
+          word: "usually",
+          meaning: "ふつう",
+          example: "I usually go to school by train.",
+          exampleJapanese: "私はたいてい電車で学校に行きます。"
+        },
+        {
+          word: "practice",
+          meaning: "練習する",
+          example: "I practice soccer after school.",
+          exampleJapanese: "私は放課後にサッカーを練習します。"
+        },
+        {
+          word: "break",
+          meaning: "休み時間",
+          example: "I talk with my friends during break.",
+          exampleJapanese: "私は休み時間中に友達とおしゃべりをします。"
+        },
+        {
+          word: "daily",
+          meaning: "毎日の",
+          example: "This is my daily routine.",
+          exampleJapanese: "これが私の日課（毎日の習慣）です。"
+        }
+      ]),
+      "2026-07-01": Object.freeze([
+        {
+          word: "friend",
+          meaning: "友達",
+          example: "My friend is Yuta.",
+          exampleJapanese: "私の友達はユウタです。"
+        },
+        {
+          word: "likes",
+          meaning: "好きです",
+          example: "He likes soccer.",
+          exampleJapanese: "彼はサッカーが好きです。"
+        },
+        {
+          word: "plays",
+          meaning: "します",
+          example: "She plays tennis.",
+          exampleJapanese: "彼女はテニスをします。"
+        },
+        {
+          word: "studies",
+          meaning: "勉強します",
+          example: "He studies English.",
+          exampleJapanese: "彼は英語を勉強します。"
+        },
+        {
+          word: "helps",
+          meaning: "助けます",
+          example: "She helps her friends.",
+          exampleJapanese: "彼女は友達を助けます（手伝います）。"
+        },
+        {
+          word: "kind",
+          meaning: "親切な",
+          example: "My friend is kind.",
+          exampleJapanese: "私の友達は親切です。"
+        }
+      ]),
+      "2026-07-02": Object.freeze([
+        {
+          word: "swim",
+          meaning: "泳ぐ",
+          example: "I can swim.",
+          exampleJapanese: "私は泳ぐことができます。"
+        },
+        {
+          word: "run",
+          meaning: "走る",
+          example: "I can run fast.",
+          exampleJapanese: "私は速く走ることができます。"
+        },
+        {
+          word: "speak",
+          meaning: "話す",
+          example: "I can speak English.",
+          exampleJapanese: "私は英語を話すことができます。"
+        },
+        {
+          word: "cook",
+          meaning: "料理する",
+          example: "I can cook dinner.",
+          exampleJapanese: "私は夕食を作ることができます。"
+        },
+        {
+          word: "draw",
+          meaning: "描く",
+          example: "I can draw pictures.",
+          exampleJapanese: "私は絵を描くことができます。"
+        },
+        {
+          word: "well",
+          meaning: "上手に",
+          example: "I can play tennis well.",
+          exampleJapanese: "私は上手にテニスをすることができます。"
+        }
+      ]),
+      "2026-07-03": Object.freeze([
+        {
+          word: "notebook",
+          meaning: "ノート",
+          example: "This is my notebook.",
+          exampleJapanese: "これは私のノートです。"
+        },
+        {
+          word: "pencil",
+          meaning: "鉛筆",
+          example: "This is my pencil.",
+          exampleJapanese: "これは私の鉛筆です。"
+        },
+        {
+          word: "pens",
+          meaning: "ペン",
+          example: "These are my pens.",
+          exampleJapanese: "これらは私のペンです。"
+        },
+        {
+          word: "books",
+          meaning: "本",
+          example: "These are my books.",
+          exampleJapanese: "これらは私の本です。"
+        },
+        {
+          word: "use",
+          meaning: "使う",
+          example: "I use them at school.",
+          exampleJapanese: "私はそれらを学校で使います。"
+        },
+        {
+          word: "important",
+          meaning: "大切な",
+          example: "These books are important.",
+          exampleJapanese: "これらの本は大切です。"
+        }
+      ]),
+      "2026-07-04": Object.freeze([
+        {
+          word: "went",
+          meaning: "行った",
+          example: "I went to school yesterday.",
+          exampleJapanese: "私は昨日、学校に行きました。"
+        },
+        {
+          word: "played",
+          meaning: "した",
+          example: "I played soccer yesterday.",
+          exampleJapanese: "私は昨日、サッカーをしました。"
+        },
+        {
+          word: "studied",
+          meaning: "勉強した",
+          example: "I studied English yesterday.",
+          exampleJapanese: "私は昨日、英語を勉強しました。"
+        },
+        {
+          word: "had",
+          meaning: "食べた・持った",
+          example: "I had dinner with my family.",
+          exampleJapanese: "私は家族と一緒に夕食を食べました。"
+        },
+        {
+          word: "read",
+          meaning: "読んだ",
+          example: "I read a book yesterday.",
+          exampleJapanese: "私は昨日、本を読みました。"
+        },
+        {
+          word: "weekend",
+          meaning: "週末",
+          example: "I like weekends.",
+          exampleJapanese: "私は週末が好きです。"
+        }
+      ]),
+      "2026-07-05": Object.freeze([
+        {
+          word: "goal",
+          meaning: "目標",
+          example: "My goal is to speak English.",
+          exampleJapanese: "私の目標は英語を話すことです。"
+        },
+        {
+          word: "practice",
+          meaning: "練習する",
+          example: "I practice English every day.",
+          exampleJapanese: "私は毎日英語を練習します。"
+        },
+        {
+          word: "mistake",
+          meaning: "間違い",
+          example: "I make mistakes sometimes.",
+          exampleJapanese: "私はときどき間違いをします。"
+        },
+        {
+          word: "again",
+          meaning: "もう一度",
+          example: "I try again.",
+          exampleJapanese: "私はもう一度挑戦（やって）みます。"
+        },
+        {
+          word: "clear",
+          meaning: "はっきりした",
+          example: "My answer is clear.",
+          exampleJapanese: "私の答えは明確（はっきり）しています。"
+        },
+        {
+          word: "useful",
+          meaning: "役に立つ",
+          example: "This practice is useful.",
+          exampleJapanese: "この練習は役に立ちます。"
+        }
+      ])
+    }),
     W5: Object.freeze({
       "2026-07-20": Object.freeze([
         {
