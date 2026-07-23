@@ -7,7 +7,7 @@
     <script>
       (function () {
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
-        const cacheToken = window.name || storedToken || "20260723-0932";
+        const cacheToken = window.name || storedToken || "20260723-1005";
         window.MOBILE_CACHE_TOKEN = cacheToken;
         window.name = cacheToken;
         const link = document.createElement("link");
@@ -30,8 +30,22 @@
             <button id="openSpeakingFeatureBtn" class="primary-btn large-btn" type="button">🎤 Speaking</button>
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
             <button id="refreshCacheBtn" class="secondary-btn large-btn" type="button">♻ キャッシュ更新</button>
+            <button id="openAcquiredPointsScreenBtn" class="secondary-btn large-btn" type="button">獲得ポイント</button>
             <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
             <button id="openMobileAdminHistoryBtn" class="ghost-btn large-btn" type="button">管理者用</button>
+          </section>
+        </main>
+      </section>
+
+      <section id="acquiredPointsScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="acquiredPointsBackBtn" class="back-btn" type="button">← ホーム</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel result-panel">
+            <h2>獲得ポイント</h2>
+            <p class="status-text">（準備中）</p>
           </section>
         </main>
       </section>
@@ -399,7 +413,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-0932";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-1005";
         const scriptSources = [
           "../data.js",
           "../release-info.js",

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260722-1729" />
+    <link rel="stylesheet" href="styles.css?v=20260723-1005" />
   </head>
   <body>
     <div class="app-shell">
@@ -95,11 +95,32 @@
                   </tbody>
                 </table>
               </div>
-              <button id="openGameTicketHubBtn" class="secondary-btn home-ticket-icon-btn hidden" type="button">
-                <span class="home-ticket-icon-shape" aria-hidden="true">🎫</span>
-                <span class="home-ticket-icon-label">ゲーム<br>チケット</span>
-              </button>
+              <div class="home-ticket-icon-row">
+                <button id="openGameTicketHubBtn" class="secondary-btn home-ticket-icon-btn hidden" type="button">
+                  <span class="home-ticket-icon-shape" aria-hidden="true">🎫</span>
+                  <span class="home-ticket-icon-label">ゲーム<br>チケット</span>
+                </button>
+                <button id="openExchangeTicketScreenBtn" class="secondary-btn home-ticket-icon-btn home-ticket-icon-btn-exchange hidden" type="button">
+                  <span class="home-ticket-icon-shape" aria-hidden="true">🎁</span>
+                  <span class="home-ticket-icon-label">引き換え<br>チケット</span>
+                </button>
+              </div>
             </div>
+          </div>
+        </section>
+
+        <section id="exchangeTicketScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">引き換えチケット</p>
+              <h2>引き換えチケット</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel result-panel">
+            <h2>引き換えチケット</h2>
+            <p class="status-text">（準備中）</p>
           </div>
         </section>
 
@@ -856,7 +877,7 @@
     <script src="data.js?v=20260722-1135"></script>
     <script src="preposition-data.js?v=20260722-1135"></script>
     <script src="response-data.js?v=20260722-1135"></script>
-    <script src="release-info.js?v=20260723-0932"></script>
-    <script src="app.js?v=20260722-1515"></script>
+    <script src="release-info.js?v=20260723-1005"></script>
+    <script src="app.js?v=20260723-1005"></script>
   </body>
 </html>

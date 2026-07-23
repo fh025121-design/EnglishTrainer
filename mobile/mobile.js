@@ -2804,7 +2804,7 @@
   }
 
   function showScreen(screenId) {
-    ["homeScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -4629,6 +4629,8 @@
     document.getElementById("openSpeakingFeatureBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
+    document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", () => showScreen("acquiredPointsScreen"));
+    document.getElementById("acquiredPointsBackBtn").addEventListener("click", renderHome);
     document.getElementById("openSettingsBtn").addEventListener("click", () => showScreen("settingsScreen"));
     elements.openMobileAdminHistoryBtn.addEventListener("click", renderMobileAdminLearningHistoryScreen);
     document.getElementById("speakingHomeBackBtn").addEventListener("click", renderHome);

@@ -2345,15 +2345,19 @@ function getRemainingTicketDays(expiresAt) {
 
 function renderGameTicketHomePanel() {
   const button = document.getElementById("openGameTicketHubBtn");
+  const exchangeButton = document.getElementById("openExchangeTicketScreenBtn");
   const inventoryList = document.getElementById("gameTicketInventoryList");
   const totalText = document.getElementById("gameTicketTotalText");
   const usageList = document.getElementById("gameTicketUsageHistoryList");
-  if (!button || !inventoryList || !totalText || !usageList) return;
+  if (!button || !exchangeButton || !inventoryList || !totalText || !usageList) return;
 
   if (!isDesktopGameTicketEnabled()) {
     button.classList.add("hidden");
+    exchangeButton.classList.add("hidden");
     return;
   }
+
+  exchangeButton.classList.remove("hidden");
 
   const store = syncGameTicketState();
   const activeTickets = getActiveGameTickets(store);
@@ -7192,6 +7196,13 @@ function bindEvents() {
   if (openGameTicketHubBtn) {
     openGameTicketHubBtn.addEventListener("click", () => {
       openGameTicketHubModal();
+    });
+  }
+
+  const openExchangeTicketScreenBtn = document.getElementById("openExchangeTicketScreenBtn");
+  if (openExchangeTicketScreenBtn) {
+    openExchangeTicketScreenBtn.addEventListener("click", () => {
+      showScreen("exchangeTicketScreen");
     });
   }
 

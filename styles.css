@@ -861,6 +861,13 @@ p {
   column-gap: 36px;
 }
 
+.home-ticket-icon-row {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  align-items: end;
+  gap: 10px;
+}
+
 .recent-three-days-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1127,8 +1134,8 @@ p {
 .home-ticket-icon-btn {
   width: 3.2cm;
   min-width: 3.2cm;
-  height: 4.2cm;
-  min-height: 4.2cm;
+  height: 2.1cm;
+  min-height: 2.1cm;
   align-self: center;
   justify-self: end;
   display: inline-flex;
@@ -1144,6 +1151,11 @@ p {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
   overflow: hidden;
+}
+
+.home-ticket-icon-btn-exchange {
+  border-color: rgba(255, 212, 132, 0.28);
+  background: rgba(255, 186, 97, 0.08);
 }
 
 .home-ticket-icon-shape {
@@ -2571,6 +2583,10 @@ select {
   }
 
   .home-ticket-icon-btn {
+    display: none !important;
+  }
+
+  .home-ticket-icon-row {
     display: none !important;
   }
 
