@@ -21,6 +21,50 @@
   const SPEAKING_WEEK_MAX = 20;
   const ENABLE_SPEAKING_KEYWORD_DEBUG = true;
   const SESSION_QUESTION_COUNT = 10;
+  const SPEAKING_WORD_PRACTICE_DATA = Object.freeze({
+    W5: Object.freeze({
+      "2026-07-20": Object.freeze([
+        {
+          word: "improve",
+          meaning: "上達する",
+          example: "I want to improve my English.",
+          exampleJapanese: "私は英語を上達させたいです。"
+        },
+        {
+          word: "at first",
+          meaning: "最初は",
+          example: "At first, I spoke slowly.",
+          exampleJapanese: "最初は、私はゆっくり話しました。"
+        },
+        {
+          word: "instead",
+          meaning: "その代わりに",
+          example: "I read aloud instead.",
+          exampleJapanese: "私はその代わりに音読しました。"
+        },
+        {
+          word: "notice",
+          meaning: "気づく",
+          example: "I noticed my mistake.",
+          exampleJapanese: "私は自分の間違いに気づきました。"
+        },
+        {
+          word: "continue",
+          meaning: "続ける",
+          example: "I continued the practice.",
+          exampleJapanese: "私はその練習を続けました。"
+        },
+        {
+          word: "more quickly",
+          meaning: "より速く",
+          example: "I can answer more quickly.",
+          exampleJapanese: "私はもっと速く答えることができます。"
+        }
+      ])
+    })
+  });
+  const SPEAKING_WORD_DEFAULT_WEEK_ID = Object.keys(SPEAKING_WORD_PRACTICE_DATA)[0] || "";
+  const SPEAKING_WORD_DEFAULT_DAY_KEY = Object.keys(SPEAKING_WORD_PRACTICE_DATA[SPEAKING_WORD_DEFAULT_WEEK_ID] || {})[0] || "";
   const MOBILE_SPEECH_RATES = {
     slow: 0.82,
     normal: 0.92
@@ -51,7 +95,10 @@
       activeConversationDayKeys: [],
       vocabularyRangeMode: "auto",
       startDay: MOBILE_DAY_MIN,
-      endDay: MOBILE_DAY_MAX
+      endDay: MOBILE_DAY_MAX,
+      speakingWordSelectedWeekId: SPEAKING_WORD_DEFAULT_WEEK_ID,
+      speakingWordSelectedDayKey: SPEAKING_WORD_DEFAULT_DAY_KEY,
+      speakingWordPractice: null
     },
     speakingProgress: null,
     speakingDayProgressMap: {},
@@ -862,7 +909,10 @@
       activeConversationDayKeys: [],
       vocabularyRangeMode: "auto",
       startDay: MOBILE_DAY_MIN,
-      endDay: MOBILE_DAY_MAX
+      endDay: MOBILE_DAY_MAX,
+      speakingWordSelectedWeekId: SPEAKING_WORD_DEFAULT_WEEK_ID,
+      speakingWordSelectedDayKey: SPEAKING_WORD_DEFAULT_DAY_KEY,
+      speakingWordPractice: null
     };
   }
 
@@ -2688,6 +2738,11 @@
   }
 
   function startSpeakingVocabularyPractice() {
+    if (state.speakingUi.vocabularyRangeMode === "week") {
+      renderSpeakingWordWeekSelectScreen();
+      return;
+    }
+
     if (state.speakingUi.vocabularyRangeMode === "day") {
       const start = clampDay(state.speakingUi.startDay);
       const end = clampDay(state.speakingUi.endDay);
@@ -2804,7 +2859,7 @@
   }
 
   function showScreen(screenId) {
-    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -3130,12 +3185,14 @@
 
   function renderSpeakingVocabScreen() {
     const dayMode = state.speakingUi.vocabularyRangeMode === "day";
+    const weekMode = state.speakingUi.vocabularyRangeMode === "week";
     elements.speakingWordDayRangeFields.classList.toggle("hidden", !dayMode);
     [...document.querySelectorAll('input[name="speakingWordRangeMode"]')].forEach((radio) => {
       radio.checked = radio.value === state.speakingUi.vocabularyRangeMode;
     });
     elements.speakingWordStartDaySelect.value = String(state.speakingUi.startDay);
     elements.speakingWordEndDaySelect.value = String(state.speakingUi.endDay);
+    elements.startSpeakingWordPracticeBtn.textContent = weekMode ? "Weekを選ぶ" : "スタート";
 
     showScreen("speakingVocabScreen");
   }
@@ -3263,8 +3320,368 @@
   }
 
   function updateSpeakingVocabularyRangeMode(value) {
-    state.speakingUi.vocabularyRangeMode = value === "day" ? "day" : "auto";
+    state.speakingUi.vocabularyRangeMode = value === "day"
+      ? "day"
+      : (value === "week" ? "week" : "auto");
     renderSpeakingVocabScreen();
+  }
+
+  function getSpeakingWordWeekShortLabel(weekId) {
+    const normalizedWeekId = String(weekId || "").trim();
+    if (!normalizedWeekId) return "Week";
+    const week = getSpeakingWeek(normalizedWeekId);
+    if (week) return getSpeakingWeekDisplayName(week);
+    const match = /^W(\d+)$/i.exec(normalizedWeekId);
+    return match ? `Week${match[1]}` : normalizedWeekId;
+  }
+
+  function getSpeakingWordItemsByWeekDay(weekId, dayKey) {
+    const normalizedWeekId = String(weekId || "").trim();
+    const normalizedDayKey = String(dayKey || "").trim();
+    const rawItems = SPEAKING_WORD_PRACTICE_DATA[normalizedWeekId]?.[normalizedDayKey];
+    if (!Array.isArray(rawItems)) return [];
+    return rawItems
+      .map((item) => ({
+        word: String(item?.word || "").trim(),
+        meaning: String(item?.meaning || "").trim(),
+        example: String(item?.example || "").trim(),
+        exampleJapanese: String(item?.exampleJapanese || "").trim()
+      }))
+      .filter((item) => item.word && item.meaning && item.example);
+  }
+
+  function getSpeakingWordAvailableDayKeys(weekId) {
+    const normalizedWeekId = String(weekId || "").trim();
+    const weekData = SPEAKING_WORD_PRACTICE_DATA[normalizedWeekId];
+    if (!weekData || typeof weekData !== "object") return [];
+    return Object.keys(weekData)
+      .filter((dayKey) => getSpeakingWordItemsByWeekDay(normalizedWeekId, dayKey).length > 0)
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  function getSpeakingWordWeekOptions() {
+    const speakingWeeks = getSpeakingWeeks();
+    const orderedWeekIds = speakingWeeks.map((week) => week.weekId);
+    const dataWeekIds = Object.keys(SPEAKING_WORD_PRACTICE_DATA);
+    const uniqueWeekIds = [...new Set([...orderedWeekIds, ...dataWeekIds])];
+
+    return uniqueWeekIds.map((weekId) => {
+      const week = speakingWeeks.find((entry) => entry.weekId === weekId) || null;
+      const label = week ? getSpeakingWeekDisplayLabel(week) : getSpeakingWordWeekShortLabel(weekId);
+      return {
+        weekId,
+        label,
+        enabled: getSpeakingWordAvailableDayKeys(weekId).length > 0
+      };
+    });
+  }
+
+  function buildWeekDayKeysFromWeek(week) {
+    const directDayKeys = getSpeakingOrderedDayKeys(week);
+    if (directDayKeys.length >= 7) {
+      return directDayKeys.slice(0, 7);
+    }
+
+    const startMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(week?.startDate || "").trim());
+    if (startMatch) {
+      const base = new Date(Date.UTC(Number(startMatch[1]), Number(startMatch[2]) - 1, Number(startMatch[3]), 12, 0, 0));
+      const generated = [];
+      for (let offset = 0; offset < 7; offset += 1) {
+        const next = new Date(base);
+        next.setUTCDate(base.getUTCDate() + offset);
+        generated.push(`${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-${String(next.getUTCDate()).padStart(2, "0")}`);
+      }
+      return generated;
+    }
+
+    return [];
+  }
+
+  function renderSpeakingWordWeekSelectScreen() {
+    const options = getSpeakingWordWeekOptions();
+    const firstEnabled = options.find((option) => option.enabled);
+    if (!options.some((option) => option.weekId === state.speakingUi.speakingWordSelectedWeekId) && firstEnabled) {
+      state.speakingUi.speakingWordSelectedWeekId = firstEnabled.weekId;
+    }
+
+    elements.speakingWordWeekList.innerHTML = "";
+    const fragment = document.createDocumentFragment();
+    options.forEach((option) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = option.enabled ? "primary-btn large-btn" : "secondary-btn large-btn";
+      button.textContent = option.label;
+      button.disabled = !option.enabled;
+      button.addEventListener("click", () => {
+        if (!option.enabled) return;
+        state.speakingUi.speakingWordSelectedWeekId = option.weekId;
+        renderSpeakingWordDaySelectScreen();
+      });
+      fragment.append(button);
+    });
+    elements.speakingWordWeekList.append(fragment);
+    showScreen("speakingWordWeekSelectScreen");
+  }
+
+  function renderSpeakingWordDaySelectScreen() {
+    const weekId = String(state.speakingUi.speakingWordSelectedWeekId || SPEAKING_WORD_DEFAULT_WEEK_ID).trim();
+    const week = getSpeakingWeek(weekId);
+    elements.speakingWordDaySelectWeekText.textContent = week ? getSpeakingWeekDisplayLabel(week) : getSpeakingWordWeekShortLabel(weekId);
+    elements.speakingWordDayChecklist.innerHTML = "";
+
+    const dataDayKeys = getSpeakingWordAvailableDayKeys(weekId);
+    const dayKeys = buildWeekDayKeysFromWeek(week);
+    const renderDayKeys = dayKeys.length ? dayKeys : dataDayKeys;
+
+    const fragment = document.createDocumentFragment();
+    renderDayKeys.forEach((dayKey) => {
+      const row = document.createElement("div");
+      row.className = "conversation-day-item";
+
+      const dayButton = document.createElement("button");
+      dayButton.type = "button";
+      dayButton.className = "secondary-btn";
+      const weekday = getJstWeekdayLabel(dayKey);
+      dayButton.textContent = `${weekday}曜日`;
+
+      const canStart = getSpeakingWordItemsByWeekDay(weekId, dayKey).length > 0;
+      dayButton.disabled = !canStart;
+      dayButton.addEventListener("click", () => {
+        if (!canStart) return;
+        startSpeakingWordWeekPractice(weekId, dayKey);
+      });
+
+      const status = document.createElement("p");
+      status.className = `conversation-day-progress ${canStart ? "conversation-day-progress-complete" : "conversation-day-progress-not-started"}`;
+      status.textContent = canStart ? "利用可能" : "準備中";
+
+      row.append(dayButton, status);
+      fragment.append(row);
+    });
+
+    elements.speakingWordDayChecklist.append(fragment);
+    showScreen("speakingWordDaySelectScreen");
+  }
+
+  function stopSpeakingWordPracticeRecognition() {
+    const practice = state.speakingUi.speakingWordPractice;
+    if (!practice) return;
+    practice.recognitionInProgress = false;
+    const recognition = practice.activeRecognition;
+    practice.activeRecognition = null;
+    if (!recognition || typeof recognition.abort !== "function") return;
+    try {
+      recognition.abort();
+    } catch (_error) {
+      // noop
+    }
+  }
+
+  function getSpeakingWordPracticeItem() {
+    const practice = state.speakingUi.speakingWordPractice;
+    if (!practice || !Array.isArray(practice.items)) return null;
+    return practice.items[Math.max(0, Number(practice.index) || 0)] || null;
+  }
+
+  function speakMobileEnglishText(text) {
+    const speechSynthesis = getSpeechSynthesisEngine();
+    if (!speechSynthesis || !text) return;
+    const utterance = new SpeechSynthesisUtterance(String(text));
+    utterance.lang = "en-US";
+    utterance.rate = MOBILE_SPEECH_RATES[state.settings.speechRateMode] || MOBILE_SPEECH_RATES.slow;
+    const voice = pickEnglishVoice();
+    if (voice) {
+      utterance.voice = voice;
+    }
+    try {
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+    } catch (_error) {
+      // noop
+    }
+  }
+
+  function renderSpeakingWordPracticeScreen(options = {}) {
+    const practice = state.speakingUi.speakingWordPractice;
+    const item = getSpeakingWordPracticeItem();
+    if (!practice || !item) {
+      renderSpeakingWordDaySelectScreen();
+      return;
+    }
+
+    const weekday = getJstWeekdayLabel(practice.dayKey);
+    elements.speakingWordPracticeWeekText.textContent = `${getSpeakingWordWeekShortLabel(practice.weekId)} ${weekday}曜日`;
+    elements.speakingWordPracticeProgressText.textContent = `${practice.index + 1} / ${practice.items.length}`;
+    elements.speakingWordPracticeWordText.textContent = item.word;
+
+    elements.speakingWordMeaningText.textContent = item.meaning;
+    elements.speakingWordMeaningText.classList.toggle("hidden", !practice.showMeaning);
+
+    elements.speakingWordExampleText.textContent = item.example;
+    elements.speakingWordExampleJapaneseText.textContent = item.exampleJapanese;
+    elements.speakingWordExampleJapaneseText.classList.toggle("hidden", !practice.showExampleJapanese);
+
+    const firstDone = practice.readCount >= 1 ? "✅" : "□";
+    const secondDone = practice.readCount >= 2 ? "✅" : "□";
+    elements.speakingWordReadCountText.innerHTML = `1回目 ${firstDone}<br>2回目 ${secondDone}`;
+
+    elements.speakingWordMicBtn.textContent = practice.recognitionInProgress ? "🎤 聞き取り中…" : "🎤 マイクを押して読む";
+    elements.speakingWordMicBtn.disabled = practice.recognitionInProgress || !SpeechRecognitionCtor;
+    elements.speakingWordRecognitionStatusText.textContent = practice.recognitionStatus || "";
+
+    elements.speakingWordNextBtn.disabled = practice.readCount < 2;
+    elements.speakingWordNextBtn.textContent = practice.index >= practice.items.length - 1 ? "完了画面へ" : "次の単語へ";
+
+    showScreen("speakingWordPracticeScreen");
+
+    if (options.autoSpeakWord) {
+      speakMobileEnglishText(item.word);
+    }
+  }
+
+  function renderSpeakingWordCompleteScreen() {
+    const practice = state.speakingUi.speakingWordPractice;
+    if (!practice) {
+      renderSpeakingWordDaySelectScreen();
+      return;
+    }
+    const weekday = getJstWeekdayLabel(practice.dayKey);
+    const total = Array.isArray(practice.items) ? practice.items.length : 0;
+    elements.speakingWordCompleteTitleText.textContent = `${getSpeakingWordWeekShortLabel(practice.weekId)} ${weekday}曜日`;
+    elements.speakingWordCompleteMetaText.textContent = `${total} / ${total} 完了 ✅`;
+    showScreen("speakingWordCompleteScreen");
+  }
+
+  function startSpeakingWordWeekPractice(weekId, dayKey) {
+    const items = getSpeakingWordItemsByWeekDay(weekId, dayKey);
+    if (!items.length) return;
+
+    stopSpeakingWordPracticeRecognition();
+    state.speakingUi.speakingWordSelectedWeekId = weekId;
+    state.speakingUi.speakingWordSelectedDayKey = dayKey;
+    state.speakingUi.speakingWordPractice = {
+      weekId,
+      dayKey,
+      items: items.map((item) => ({ ...item })),
+      index: 0,
+      showMeaning: false,
+      showExampleJapanese: false,
+      readCount: 0,
+      recognitionInProgress: false,
+      recognitionStatus: "",
+      activeRecognition: null
+    };
+    renderSpeakingWordPracticeScreen({ autoSpeakWord: true });
+  }
+
+  function leaveSpeakingWordPracticeToDaySelect() {
+    stopSpeakingWordPracticeRecognition();
+    state.speakingUi.speakingWordPractice = null;
+    renderSpeakingWordDaySelectScreen();
+  }
+
+  function toggleSpeakingWordMeaning() {
+    const practice = state.speakingUi.speakingWordPractice;
+    if (!practice) return;
+    practice.showMeaning = true;
+    renderSpeakingWordPracticeScreen();
+  }
+
+  function playSpeakingWordExampleAudio() {
+    const item = getSpeakingWordPracticeItem();
+    if (!item) return;
+    speakMobileEnglishText(item.example);
+  }
+
+  function toggleSpeakingWordExampleJapanese() {
+    const practice = state.speakingUi.speakingWordPractice;
+    if (!practice) return;
+    practice.showExampleJapanese = true;
+    renderSpeakingWordPracticeScreen();
+  }
+
+  function beginSpeakingWordExampleRecognition() {
+    const practice = state.speakingUi.speakingWordPractice;
+    const item = getSpeakingWordPracticeItem();
+    if (!practice || !item || practice.recognitionInProgress || !SpeechRecognitionCtor) return;
+
+    const recognition = new SpeechRecognitionCtor();
+    practice.recognitionInProgress = true;
+    practice.recognitionStatus = "聞き取り中…";
+    practice.activeRecognition = recognition;
+    renderSpeakingWordPracticeScreen();
+
+    recognition.lang = "en-US";
+    recognition.maxAlternatives = 5;
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    let handled = false;
+    recognition.onresult = (event) => {
+      if (handled) return;
+      handled = true;
+      const transcripts = Array.from(event.results?.[0] || [])
+        .map((entry) => String(entry.transcript || "").trim())
+        .filter(Boolean);
+      const hasSpeech = transcripts.length > 0;
+      if (hasSpeech) {
+        practice.readCount = Math.min(2, Math.max(0, Number(practice.readCount) || 0) + 1);
+      }
+      const isGood = hasSpeech ? isCorrectRecognition(item.example, transcripts) : false;
+      const head = hasSpeech ? (isGood ? "GOOD" : "Missing") : "聞き取り失敗";
+      const heard = transcripts[0] || "（認識なし）";
+      practice.recognitionStatus = `${head}: ${heard}`;
+      practice.recognitionInProgress = false;
+      practice.activeRecognition = null;
+      renderSpeakingWordPracticeScreen();
+    };
+
+    recognition.onerror = (event) => {
+      if (handled) return;
+      handled = true;
+      practice.recognitionInProgress = false;
+      practice.activeRecognition = null;
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        practice.recognitionStatus = "マイクの使用が許可されていません。";
+      } else {
+        practice.recognitionStatus = "うまく聞き取れませんでした。";
+      }
+      renderSpeakingWordPracticeScreen();
+    };
+
+    recognition.onend = () => {
+      if (handled) return;
+      practice.recognitionInProgress = false;
+      practice.activeRecognition = null;
+      renderSpeakingWordPracticeScreen();
+    };
+
+    try {
+      recognition.start();
+    } catch (_error) {
+      practice.recognitionInProgress = false;
+      practice.activeRecognition = null;
+      practice.recognitionStatus = "音声認識を開始できませんでした。";
+      renderSpeakingWordPracticeScreen();
+    }
+  }
+
+  function moveToNextSpeakingWordItem() {
+    const practice = state.speakingUi.speakingWordPractice;
+    if (!practice || practice.readCount < 2) return;
+    if (practice.index >= practice.items.length - 1) {
+      renderSpeakingWordCompleteScreen();
+      return;
+    }
+
+    practice.index += 1;
+    practice.showMeaning = false;
+    practice.showExampleJapanese = false;
+    practice.readCount = 0;
+    practice.recognitionStatus = "";
+    practice.recognitionInProgress = false;
+    practice.activeRecognition = null;
+    renderSpeakingWordPracticeScreen({ autoSpeakWord: true });
   }
 
   function updateSpeakingVocabularyDayRange(startDay, endDay) {
@@ -4559,6 +4976,25 @@
     elements.speakingWordDayRangeFields = document.getElementById("speakingWordDayRangeFields");
     elements.speakingWordStartDaySelect = document.getElementById("speakingWordStartDaySelect");
     elements.speakingWordEndDaySelect = document.getElementById("speakingWordEndDaySelect");
+    elements.startSpeakingWordPracticeBtn = document.getElementById("startSpeakingWordPracticeBtn");
+    elements.speakingWordWeekList = document.getElementById("speakingWordWeekList");
+    elements.speakingWordDaySelectWeekText = document.getElementById("speakingWordDaySelectWeekText");
+    elements.speakingWordDayChecklist = document.getElementById("speakingWordDayChecklist");
+    elements.speakingWordPracticeWeekText = document.getElementById("speakingWordPracticeWeekText");
+    elements.speakingWordPracticeProgressText = document.getElementById("speakingWordPracticeProgressText");
+    elements.speakingWordPracticeWordText = document.getElementById("speakingWordPracticeWordText");
+    elements.speakingWordMeaningToggleBtn = document.getElementById("speakingWordMeaningToggleBtn");
+    elements.speakingWordMeaningText = document.getElementById("speakingWordMeaningText");
+    elements.speakingWordExampleText = document.getElementById("speakingWordExampleText");
+    elements.speakingWordExamplePlayBtn = document.getElementById("speakingWordExamplePlayBtn");
+    elements.speakingWordExampleJapaneseToggleBtn = document.getElementById("speakingWordExampleJapaneseToggleBtn");
+    elements.speakingWordExampleJapaneseText = document.getElementById("speakingWordExampleJapaneseText");
+    elements.speakingWordReadCountText = document.getElementById("speakingWordReadCountText");
+    elements.speakingWordMicBtn = document.getElementById("speakingWordMicBtn");
+    elements.speakingWordRecognitionStatusText = document.getElementById("speakingWordRecognitionStatusText");
+    elements.speakingWordNextBtn = document.getElementById("speakingWordNextBtn");
+    elements.speakingWordCompleteTitleText = document.getElementById("speakingWordCompleteTitleText");
+    elements.speakingWordCompleteMetaText = document.getElementById("speakingWordCompleteMetaText");
     elements.conversationWeekText = document.getElementById("conversationWeekText");
     elements.conversationProgressText = document.getElementById("conversationProgressText");
     elements.conversationSpeakerText = document.getElementById("conversationSpeakerText");
@@ -4643,9 +5079,18 @@
     document.getElementById("conversationSelectBackBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("conversationDaySelectBackBtn").addEventListener("click", renderConversationSelectScreen);
     document.getElementById("speakingVocabBackBtn").addEventListener("click", renderSpeakingHome);
+    document.getElementById("speakingWordWeekSelectBackBtn").addEventListener("click", renderSpeakingVocabScreen);
+    document.getElementById("speakingWordDaySelectBackBtn").addEventListener("click", renderSpeakingWordWeekSelectScreen);
+    document.getElementById("speakingWordPracticeBackBtn").addEventListener("click", leaveSpeakingWordPracticeToDaySelect);
+    document.getElementById("speakingWordCompleteBackBtn").addEventListener("click", leaveSpeakingWordPracticeToDaySelect);
     document.getElementById("startConversationBtn").addEventListener("click", startConversationPracticeFromSelector);
     elements.startSelectedConversationDaysBtn.addEventListener("click", startConversationPracticeFromSelectedDays);
     document.getElementById("startSpeakingWordPracticeBtn").addEventListener("click", startSpeakingVocabularyPractice);
+    elements.speakingWordMeaningToggleBtn.addEventListener("click", toggleSpeakingWordMeaning);
+    elements.speakingWordExamplePlayBtn.addEventListener("click", playSpeakingWordExampleAudio);
+    elements.speakingWordExampleJapaneseToggleBtn.addEventListener("click", toggleSpeakingWordExampleJapanese);
+    elements.speakingWordMicBtn.addEventListener("click", beginSpeakingWordExampleRecognition);
+    elements.speakingWordNextBtn.addEventListener("click", moveToNextSpeakingWordItem);
     document.getElementById("conversationBackBtn").addEventListener("click", leaveSpeakingPractice);
     elements.conversationBackToABtn.addEventListener("click", returnToSpeakingLevel1QuestionLine);
     document.getElementById("conversationCompleteBackBtn").addEventListener("click", leaveSpeakingPractice);

@@ -6,10 +6,12 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
+        const defaultToken = "20260723-1145";
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
-        const cacheToken = window.name || storedToken || "20260723-1005";
+        const cacheToken = [window.name, storedToken, defaultToken].filter(Boolean).sort().at(-1) || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
         window.name = cacheToken;
+        window.localStorage.setItem("englishTrainerMobileCacheToken", cacheToken);
         const link = document.createElement("link");
         link.rel = "stylesheet";
         link.href = `mobile.css?v=${encodeURIComponent(cacheToken)}`;
@@ -166,6 +168,10 @@
                 <span>お任せ</span>
               </label>
               <label class="option-card">
+                <input type="radio" name="speakingWordRangeMode" value="week" />
+                <span>Week</span>
+              </label>
+              <label class="option-card">
                 <input type="radio" name="speakingWordRangeMode" value="day" />
                 <span>Day指定</span>
               </label>
@@ -185,6 +191,87 @@
 
           <section class="panel action-panel">
             <button id="startSpeakingWordPracticeBtn" class="primary-btn large-btn" type="button">スタート</button>
+          </section>
+        </main>
+      </section>
+
+      <section id="speakingWordWeekSelectScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="speakingWordWeekSelectBackBtn" class="back-btn" type="button">← 単語・熟語へ戻る</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel">
+            <h2>Weekを選ぶ</h2>
+            <div id="speakingWordWeekList" class="speaking-week-list"></div>
+          </section>
+        </main>
+      </section>
+
+      <section id="speakingWordDaySelectScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="speakingWordDaySelectBackBtn" class="back-btn" type="button">← Week選択へ戻る</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel">
+            <h2>曜日を選ぶ</h2>
+            <p id="speakingWordDaySelectWeekText" class="status-text">Week5</p>
+            <div id="speakingWordDayChecklist" class="conversation-day-list"></div>
+          </section>
+        </main>
+      </section>
+
+      <section id="speakingWordPracticeScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="speakingWordPracticeBackBtn" class="back-btn" type="button">← 曜日選択へ戻る</button>
+        </header>
+
+        <main class="study-layout">
+          <div class="study-meta">
+            <p id="speakingWordPracticeWeekText" class="progress-text">Week5 月曜日</p>
+            <p id="speakingWordPracticeProgressText" class="progress-text">1 / 6</p>
+          </div>
+
+          <section class="study-card conversation-card">
+            <p id="speakingWordPracticeWordText" class="conversation-speaker">improve</p>
+
+            <div class="action-panel compact-actions">
+              <button id="speakingWordMeaningToggleBtn" class="secondary-btn" type="button">日本語</button>
+              <p id="speakingWordMeaningText" class="conversation-japanese hidden"></p>
+            </div>
+
+            <div class="recognized-block">
+              <p class="recognized-label">Example</p>
+              <p id="speakingWordExampleText" class="conversation-japanese"></p>
+              <button id="speakingWordExamplePlayBtn" class="secondary-btn" type="button">🔊 例文を聞く</button>
+              <button id="speakingWordExampleJapaneseToggleBtn" class="secondary-btn" type="button">日本語</button>
+              <p id="speakingWordExampleJapaneseText" class="conversation-japanese hidden"></p>
+            </div>
+
+            <div class="recognized-block">
+              <p class="recognized-label">例文を2回読もう</p>
+              <p id="speakingWordReadCountText" class="conversation-japanese">1回目 □<br>2回目 □</p>
+              <button id="speakingWordMicBtn" class="primary-btn mic-btn" type="button">🎤 マイクを押して読む</button>
+              <p id="speakingWordRecognitionStatusText" class="conversation-status"></p>
+            </div>
+
+            <div class="action-panel compact-actions">
+              <button id="speakingWordNextBtn" class="primary-btn" type="button">次の単語へ</button>
+            </div>
+          </section>
+        </main>
+      </section>
+
+      <section id="speakingWordCompleteScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="speakingWordCompleteBackBtn" class="back-btn" type="button">← 曜日選択へ戻る</button>
+        </header>
+
+        <main class="stack-layout result-layout">
+          <section class="panel result-panel speaking-complete-panel">
+            <h2 id="speakingWordCompleteTitleText">Week 月曜日</h2>
+            <p id="speakingWordCompleteMetaText" class="status-text">0 / 0 完了 ✅</p>
           </section>
         </main>
       </section>
@@ -413,7 +500,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-1005";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-1145";
         const scriptSources = [
           "../data.js",
           "../release-info.js",
