@@ -3692,26 +3692,43 @@
     const fragment = document.createDocumentFragment();
     renderDayKeys.forEach((dayKey) => {
       const row = document.createElement("div");
-      row.className = "conversation-day-item";
+      row.className = "conversation-day-item speaking-word-day-item";
+      row.setAttribute("role", "button");
+      row.tabIndex = 0;
 
-      const dayButton = document.createElement("button");
-      dayButton.type = "button";
-      dayButton.className = "secondary-btn";
       const weekday = getJstWeekdayLabel(dayKey);
-      dayButton.textContent = `${weekday}曜日`;
-
       const canStart = getSpeakingWordItemsByWeekDay(weekId, dayKey).length > 0;
-      dayButton.disabled = !canStart;
-      dayButton.addEventListener("click", () => {
+
+      const checkWrap = document.createElement("label");
+      checkWrap.className = "conversation-day-check speaking-word-day-check";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.disabled = true;
+      checkbox.checked = false;
+
+      const weekdayText = document.createElement("span");
+      weekdayText.textContent = weekday;
+
+      checkWrap.append(checkbox, weekdayText);
+
+      const startDayPractice = () => {
         if (!canStart) return;
         startSpeakingWordWeekPractice(weekId, dayKey);
+      };
+
+      row.addEventListener("click", startDayPractice);
+      row.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        startDayPractice();
       });
 
       const status = document.createElement("p");
       status.className = `conversation-day-progress ${canStart ? "conversation-day-progress-complete" : "conversation-day-progress-not-started"}`;
       status.textContent = canStart ? "利用可能" : "準備中";
 
-      row.append(dayButton, status);
+      row.append(checkWrap, status);
       fragment.append(row);
     });
 

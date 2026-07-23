@@ -147,6 +147,10 @@ select {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.speaking-word-day-item {
+  cursor: pointer;
+}
+
 .conversation-day-check {
   display: flex;
   align-items: center;
