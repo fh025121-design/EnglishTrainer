@@ -477,6 +477,13 @@ select,
   margin-bottom: 10px;
 }
 
+.topbar-back-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .study-layout {
   gap: 14px;
 }

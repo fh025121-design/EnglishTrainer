@@ -177,7 +177,10 @@
 
       <section id="conversationPracticeScreen" class="screen">
         <header class="screen-topbar">
-          <button id="conversationBackBtn" class="back-btn" type="button">← 戻る</button>
+          <div class="topbar-back-stack">
+            <button id="conversationBackBtn" class="back-btn" type="button">← Day選択に戻る</button>
+            <button id="conversationBackToABtn" class="back-btn hidden" type="button">← Aに戻る</button>
+          </div>
         </header>
 
         <main class="study-layout">
@@ -220,7 +223,7 @@
 
       <section id="conversationCompleteScreen" class="screen">
         <header class="screen-topbar">
-          <button id="conversationCompleteBackBtn" class="back-btn" type="button">← 戻る</button>
+          <button id="conversationCompleteBackBtn" class="back-btn" type="button">← Day選択に戻る</button>
         </header>
 
         <main class="stack-layout result-layout">

@@ -2634,6 +2634,22 @@
     setActiveSpeakingDayQueue(queue, normalizedDayKey);
   }
 
+  function restartCurrentSpeakingDayFromBeginning() {
+    const progress = state.speakingProgress;
+    const week = getSpeakingProgressWeek();
+    if (!progress || !week) {
+      renderConversationDaySelectScreen();
+      return;
+    }
+    const currentDayKey = resolveSpeakingProgressDayKey(week, progress);
+    if (!currentDayKey) {
+      renderConversationDaySelectScreen();
+      return;
+    }
+    executeStartConversationPractice(week, [currentDayKey]);
+    setActiveSpeakingDayQueue(state.speakingUi.activeConversationDayKeys, currentDayKey);
+  }
+
   function hasMeaningfulSpeakingProgress(progress) {
     if (!progress) return false;
     const completedRounds = Math.max(0, Number(progress.completedRounds) || 0);
@@ -3393,10 +3409,13 @@
     }
 
     const conversationId = String(progress.conversationOrder[progress.conversationIndex] || "").trim();
-    if (conversationId && !progress.completedConversationIds.includes(conversationId)) {
+    const hasAlreadyCounted = conversationId && progress.completedConversationIds.includes(conversationId);
+    if (conversationId && !hasAlreadyCounted) {
       progress.completedConversationIds.push(conversationId);
     }
-    progress.conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0) + 1;
+    if (!hasAlreadyCounted) {
+      progress.conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0) + 1;
+    }
 
     progress.conversationIndex += 1;
     progress.lineIndex = 0;
@@ -3564,7 +3583,7 @@
         } else {
           moveToNextSpeakingLevel1Conversation();
         }
-      }, 1000);
+      }, 2000);
     };
 
     recognition.onerror = (event) => {
@@ -3596,6 +3615,11 @@
   }
 
   function renderConversationPractice() {
+    if (elements.conversationBackToABtn) {
+      elements.conversationBackToABtn.classList.add("hidden");
+      elements.conversationBackToABtn.disabled = true;
+    }
+
     if (isReviewSpeakingModeActive()) {
       const session = state.speakingReviewSession;
       const context = getCurrentReviewConversationContext();
@@ -3661,6 +3685,11 @@
         elements.conversationMicBtn.disabled = state.speakingAudioPlaying || state.speakingRecognitionInProgress || !SpeechRecognitionCtor;
         elements.nextConversationLineBtn.classList.add("hidden");
         elements.nextConversationLineBtn.disabled = true;
+        if (elements.conversationBackToABtn) {
+          const showBackToA = !isQuestionStage;
+          elements.conversationBackToABtn.classList.toggle("hidden", !showBackToA);
+          elements.conversationBackToABtn.disabled = !showBackToA || state.speakingAudioPlaying || state.speakingRecognitionInProgress;
+        }
         showScreen("conversationPracticeScreen");
         return;
       }
@@ -3785,6 +3814,11 @@
       elements.conversationMicBtn.disabled = state.speakingAudioPlaying || state.speakingRecognitionInProgress || !SpeechRecognitionCtor;
       elements.nextConversationLineBtn.classList.add("hidden");
       elements.nextConversationLineBtn.disabled = true;
+      if (elements.conversationBackToABtn) {
+        const showBackToA = !isQuestionStage;
+        elements.conversationBackToABtn.classList.toggle("hidden", !showBackToA);
+        elements.conversationBackToABtn.disabled = !showBackToA || state.speakingAudioPlaying || state.speakingRecognitionInProgress;
+      }
       showScreen("conversationPracticeScreen");
       return;
     }
@@ -3965,10 +3999,13 @@
     }
 
     const conversationId = progress.conversationOrder[progress.conversationIndex];
-    if (conversationId && !progress.completedConversationIds.includes(conversationId)) {
+    const hasAlreadyCounted = conversationId && progress.completedConversationIds.includes(conversationId);
+    if (conversationId && !hasAlreadyCounted) {
       progress.completedConversationIds.push(conversationId);
     }
-    progress.conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0) + 1;
+    if (!hasAlreadyCounted) {
+      progress.conversationSetCount = Math.max(0, Number(progress.conversationSetCount) || 0) + 1;
+    }
 
     const daySetProgress = getSpeakingDaySetProgress(week, conversation, progress.lineIndex);
     if (daySetProgress.currentSet < daySetProgress.totalSets) {
@@ -4054,7 +4091,7 @@
         startOrResumeSpeakingDay(week, nextDayKey, state.speakingUi.activeConversationDayKeys);
         return;
       }
-      renderConversationDaySelectScreen();
+      restartCurrentSpeakingDayFromBeginning();
       return;
     }
 
@@ -4102,6 +4139,40 @@
     state.speakingLineStatus = "awaitingStart";
     saveSpeakingProgress();
     renderConversationCompleteScreen();
+  }
+
+  function returnToSpeakingLevel1QuestionLine() {
+    recordMobileLearningActivity();
+    clearSpeakingAutoAdvanceTimer();
+    clearSpeakingRecognition();
+    stopSpeakingAudio();
+
+    if (isReviewSpeakingModeActive()) {
+      const session = state.speakingReviewSession;
+      const context = getCurrentReviewConversationContext();
+      const week = context?.week;
+      if (!session || !week || !isSpeakingLevel1Week(week)) return;
+      if (Math.max(0, Number(session.lineIndex) || 0) <= 0) return;
+      session.lineIndex = 0;
+      state.speakingTranslationVisible = false;
+      resetSpeakingHintState();
+      state.speakingLineStatus = "awaitingStart";
+      saveSpeakingReviewSession();
+      renderConversationPracticeWithAutoPlay();
+      return;
+    }
+
+    const progress = state.speakingProgress;
+    const week = getSpeakingProgressWeek();
+    if (!progress || !week || !isSpeakingLevel1Week(week)) return;
+    if (Math.max(0, Number(progress.lineIndex) || 0) <= 0) return;
+    progress.lineIndex = 0;
+    progress.phase = "line";
+    state.speakingTranslationVisible = false;
+    resetSpeakingHintState();
+    state.speakingLineStatus = "awaitingStart";
+    saveSpeakingProgress();
+    renderConversationPracticeWithAutoPlay();
   }
 
   function handlePageVisibilityChange() {
@@ -4505,6 +4576,7 @@
     elements.replayConversationAudioBtn = document.getElementById("replayConversationAudioBtn");
     elements.conversationMicBtn = document.getElementById("conversationMicBtn");
     elements.nextConversationLineBtn = document.getElementById("nextConversationLineBtn");
+    elements.conversationBackToABtn = document.getElementById("conversationBackToABtn");
     elements.conversationCompleteMetaText = document.getElementById("conversationCompleteMetaText");
     elements.conversationLevel1ResultBlock = document.getElementById("conversationLevel1ResultBlock");
     elements.conversationLevel1CompletedText = document.getElementById("conversationLevel1CompletedText");
@@ -4573,6 +4645,7 @@
     elements.startSelectedConversationDaysBtn.addEventListener("click", startConversationPracticeFromSelectedDays);
     document.getElementById("startSpeakingWordPracticeBtn").addEventListener("click", startSpeakingVocabularyPractice);
     document.getElementById("conversationBackBtn").addEventListener("click", leaveSpeakingPractice);
+    elements.conversationBackToABtn.addEventListener("click", returnToSpeakingLevel1QuestionLine);
     document.getElementById("conversationCompleteBackBtn").addEventListener("click", leaveSpeakingPractice);
     document.getElementById("returnConversationSelectBtn").addEventListener("click", renderConversationSelectScreen);
     elements.speakingHintBtn.addEventListener("click", showNextSpeakingHint);
