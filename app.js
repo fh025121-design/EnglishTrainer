@@ -110,21 +110,19 @@ const POINT_SYSTEM_CONFIG = Object.freeze({
   }),
   defaultDailyLimitMode: "normal",
   rewardByTrainingMode: Object.freeze({
-    "level-focus": 8,
-    "phrase-spiral": 8,
-    challenge: 10,
+    challenge: 12,
     preposition: 8,
-    response: 8
+    response: 8,
+    speaking: 8
   }),
   rewardCardAutoCloseMs: 1400,
   exchangeItems: Object.freeze([
-    Object.freeze({ id: "snack", name: "お菓子1個", cost: 100 }),
-    Object.freeze({ id: "cola", name: "コーラ", cost: 200 }),
-    Object.freeze({ id: "ufo", name: "UFOキャッチャー1回", cost: 500 }),
-    Object.freeze({ id: "mac", name: "マック", cost: 1000 }),
-    Object.freeze({ id: "movie", name: "映画", cost: 3000 }),
-    Object.freeze({ id: "glove", name: "グローブ", cost: 10000 }),
-    Object.freeze({ id: "bat", name: "バット", cost: 20000 })
+    Object.freeze({ id: "bat", name: "野球バット", cost: 20000 }),
+    Object.freeze({ id: "glove", name: "グローブ", cost: 12000 }),
+    Object.freeze({ id: "spike", name: "スパイク", cost: 18000 }),
+    Object.freeze({ id: "game", name: "欲しいゲーム", cost: 25000 }),
+    Object.freeze({ id: "amusement", name: "遊園地", cost: 30000 }),
+    Object.freeze({ id: "baseball-watch", name: "野球観戦", cost: 35000 })
   ])
 });
 let resultActionFocusMode = null;
@@ -2376,10 +2374,30 @@ function createDefaultPointState() {
   return {
     balance: 0,
     dailyEarnedByDate: {},
+    todayEarned: 0,
+    previousDayEarned: 0,
+    totalEarned: 0,
     dailyLimitMode: POINT_SYSTEM_CONFIG.defaultDailyLimitMode,
     targetItemId: "",
     redeemedItemIds: []
   };
+}
+
+function getPointDateKeyWithOffset(offsetDays) {
+  const base = new Date();
+  base.setDate(base.getDate() + Number(offsetDays || 0));
+  return formatDateKey(base);
+}
+
+function hydratePointDaySnapshots(pointState) {
+  const todayKey = getPointDateKeyWithOffset(0);
+  const previousKey = getPointDateKeyWithOffset(-1);
+  pointState.todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
+  pointState.previousDayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[previousKey]) || 0);
+  if (!Number.isFinite(Number(pointState.totalEarned)) || Number(pointState.totalEarned) < pointState.balance) {
+    pointState.totalEarned = Math.max(pointState.balance, 0);
+  }
+  return pointState;
 }
 
 function sanitizePointState(value) {
@@ -2398,6 +2416,9 @@ function sanitizePointState(value) {
   return {
     balance: Math.max(0, Math.floor(Number(source.balance) || 0)),
     dailyEarnedByDate,
+    todayEarned: Math.max(0, Math.floor(Number(source.todayEarned) || 0)),
+    previousDayEarned: Math.max(0, Math.floor(Number(source.previousDayEarned) || 0)),
+    totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0)),
     dailyLimitMode,
     targetItemId: typeof source.targetItemId === "string" ? source.targetItemId : "",
     redeemedItemIds
@@ -2415,14 +2436,14 @@ function loadPointState() {
 }
 
 function savePointState(nextState) {
-  pointStateCache = sanitizePointState(nextState);
+  pointStateCache = hydratePointDaySnapshots(sanitizePointState(nextState));
   localStorage.setItem(POINT_SYSTEM_STORAGE_KEY, JSON.stringify(pointStateCache));
   return pointStateCache;
 }
 
 function getPointState() {
   if (!pointStateCache) {
-    pointStateCache = loadPointState();
+    pointStateCache = hydratePointDaySnapshots(loadPointState());
   }
   return pointStateCache;
 }
@@ -2457,6 +2478,7 @@ function awardPointsForTrainingMode(mode) {
   if (!earned) return 0;
 
   pointState.balance += earned;
+  pointState.totalEarned = Math.max(0, Number(pointState.totalEarned) || 0) + earned;
   pointState.dailyEarnedByDate[todayKey] = todayEarned + earned;
   savePointState(pointState);
   return earned;
@@ -2592,6 +2614,7 @@ function renderPointExchangeScreen() {
   if (!balanceText || !itemList) return;
 
   const pointState = getPointState();
+  hydratePointDaySnapshots(pointState);
   balanceText.textContent = formatPointValue(pointState.balance);
   renderPointExchangeGoal(pointState);
 
@@ -5899,13 +5922,7 @@ function completeCurrentSession(reason = "completed", options = {}) {
     processCompletedTicketTraining({ trainingType: "challenge" });
   }
   if (reason === "completed") {
-    const modeForPoints = session.mode === "level-focus"
-      ? "level-focus"
-      : session.mode === "phrase-spiral"
-        ? "phrase-spiral"
-        : session.mode === "challenge"
-          ? "challenge"
-          : "";
+    const modeForPoints = session.mode === "challenge" ? "challenge" : "";
     if (modeForPoints) {
       const earned = awardPointsForTrainingMode(modeForPoints);
       if (earned > 0) {

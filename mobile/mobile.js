@@ -15,12 +15,132 @@
     releaseHistory: []
   });
   const APP_VERSION = SETTINGS_INFO.releaseHistory[0]?.version || "0/0000/0000";
+  const MOBILE_POINT_STORAGE_KEY = "english-trainer-mobile-points-v1";
+  const MOBILE_POINT_CONFIG = Object.freeze({
+    dailyLimitModes: Object.freeze({
+      normal: 200,
+      event: 500
+    }),
+    defaultDailyLimitMode: "normal",
+    rewardByMode: Object.freeze({
+      speaking: 8
+    })
+  });
   const MOBILE_DAY_MIN = 1;
   const MOBILE_DAY_MAX = 40;
   const SPEAKING_WEEK_MIN = 1;
   const SPEAKING_WEEK_MAX = 20;
   const ENABLE_SPEAKING_KEYWORD_DEBUG = true;
   const SESSION_QUESTION_COUNT = 10;
+  let mobilePointStateCache = null;
+
+  function formatPointValue(value) {
+    return `${new Intl.NumberFormat("ja-JP").format(Math.max(0, Math.floor(Number(value) || 0)))}P`;
+  }
+
+  function getMobilePointJstDateKey(offsetDays = 0) {
+    const base = Date.now() + (Number(offsetDays || 0) * 24 * 60 * 60 * 1000);
+    return formatTimestampToJstDisplay(base).slice(0, 10).replace(/\//g, "-");
+  }
+
+  function createDefaultMobilePointState() {
+    return {
+      balance: 0,
+      dailyEarnedByDate: {},
+      todayEarned: 0,
+      previousDayEarned: 0,
+      totalEarned: 0,
+      dailyLimitMode: MOBILE_POINT_CONFIG.defaultDailyLimitMode
+    };
+  }
+
+  function sanitizeMobilePointState(value) {
+    const source = value && typeof value === "object" ? value : {};
+    const dailyEarnedByDate = source.dailyEarnedByDate && typeof source.dailyEarnedByDate === "object"
+      ? Object.fromEntries(
+        Object.entries(source.dailyEarnedByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
+      )
+      : {};
+    const dailyLimitMode = Object.prototype.hasOwnProperty.call(MOBILE_POINT_CONFIG.dailyLimitModes, source.dailyLimitMode)
+      ? source.dailyLimitMode
+      : MOBILE_POINT_CONFIG.defaultDailyLimitMode;
+    return {
+      balance: Math.max(0, Math.floor(Number(source.balance) || 0)),
+      dailyEarnedByDate,
+      todayEarned: Math.max(0, Math.floor(Number(source.todayEarned) || 0)),
+      previousDayEarned: Math.max(0, Math.floor(Number(source.previousDayEarned) || 0)),
+      totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0)),
+      dailyLimitMode
+    };
+  }
+
+  function hydrateMobilePointDaySnapshots(pointState) {
+    const todayKey = getMobilePointJstDateKey(0);
+    const previousKey = getMobilePointJstDateKey(-1);
+    pointState.todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
+    pointState.previousDayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[previousKey]) || 0);
+    if (!Number.isFinite(Number(pointState.totalEarned)) || Number(pointState.totalEarned) < pointState.balance) {
+      pointState.totalEarned = Math.max(pointState.balance, 0);
+    }
+    return pointState;
+  }
+
+  function loadMobilePointState() {
+    try {
+      const raw = window.localStorage.getItem(MOBILE_POINT_STORAGE_KEY);
+      if (!raw) return createDefaultMobilePointState();
+      return sanitizeMobilePointState(JSON.parse(raw));
+    } catch (_error) {
+      return createDefaultMobilePointState();
+    }
+  }
+
+  function saveMobilePointState(pointState) {
+    mobilePointStateCache = hydrateMobilePointDaySnapshots(sanitizeMobilePointState(pointState));
+    window.localStorage.setItem(MOBILE_POINT_STORAGE_KEY, JSON.stringify(mobilePointStateCache));
+    return mobilePointStateCache;
+  }
+
+  function getMobilePointState() {
+    if (!mobilePointStateCache) {
+      mobilePointStateCache = hydrateMobilePointDaySnapshots(loadMobilePointState());
+    }
+    return mobilePointStateCache;
+  }
+
+  function getMobilePointDailyLimit(mode = getMobilePointState().dailyLimitMode) {
+    return Math.max(0, Number(MOBILE_POINT_CONFIG.dailyLimitModes[mode] || MOBILE_POINT_CONFIG.dailyLimitModes.normal || 0) || 0);
+  }
+
+  function awardMobilePointsForMode(mode) {
+    const rewardBase = Math.max(0, Number(MOBILE_POINT_CONFIG.rewardByMode[mode]) || 0);
+    if (!rewardBase) return 0;
+    const pointState = getMobilePointState();
+    const todayKey = getMobilePointJstDateKey(0);
+    const todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate[todayKey]) || 0);
+    const dailyLimit = getMobilePointDailyLimit(pointState.dailyLimitMode);
+    const remaining = Math.max(0, dailyLimit - todayEarned);
+    const earned = Math.max(0, Math.min(rewardBase, remaining));
+    if (!earned) return 0;
+    pointState.balance += earned;
+    pointState.totalEarned = Math.max(0, Number(pointState.totalEarned) || 0) + earned;
+    pointState.dailyEarnedByDate[todayKey] = todayEarned + earned;
+    saveMobilePointState(pointState);
+    return earned;
+  }
+
+  function renderMobilePointSummaryScreen() {
+    const todayText = document.getElementById("mobilePointsTodayText");
+    const previousText = document.getElementById("mobilePointsPreviousText");
+    const totalText = document.getElementById("mobilePointsTotalText");
+    if (!todayText || !previousText || !totalText) return;
+    const pointState = getMobilePointState();
+    hydrateMobilePointDaySnapshots(pointState);
+    todayText.textContent = `本日の獲得 ${formatPointValue(pointState.todayEarned)}`;
+    previousText.textContent = `前日 ${formatPointValue(pointState.previousDayEarned)}`;
+    totalText.textContent = `累計 ${formatPointValue(pointState.totalEarned)}`;
+  }
+
   const SPEAKING_WORD_PRACTICE_DATA = Object.freeze({
     W5: Object.freeze({
       "2026-07-20": Object.freeze([
@@ -1339,6 +1459,9 @@
 
   function finishSpeakingReviewSession(completedCount) {
     const safeCompletedCount = Math.max(0, Number(completedCount) || 0);
+    if (safeCompletedCount >= SPEAKING_REVIEW_MAX_GROUPS) {
+      awardMobilePointsForMode("speaking");
+    }
     clearSpeakingReviewSession();
     resetSpeakingHintState();
     state.speakingTranslationVisible = false;
@@ -3842,7 +3965,8 @@
       readCount: 0,
       recognitionInProgress: false,
       recognitionStatus: "",
-      activeRecognition: null
+      activeRecognition: null,
+      pointAwarded: false
     };
     renderSpeakingWordPracticeScreen({ autoSpeakWord: true });
   }
@@ -3949,6 +4073,10 @@
     const practice = state.speakingUi.speakingWordPractice;
     if (!practice || practice.readCount < 2) return;
     if (practice.index >= practice.items.length - 1) {
+      if (!practice.pointAwarded) {
+        practice.pointAwarded = true;
+        awardMobilePointsForMode("speaking");
+      }
       renderSpeakingWordCompleteScreen();
       return;
     }
@@ -4775,6 +4903,11 @@
 
     const targetSets = getSpeakingTargetRounds(progress);
     if (progress.phase === "conversationComplete" && getSpeakingCompletedRounds(progress) >= targetSets) {
+      if (!progress.pointAwarded) {
+        progress.pointAwarded = true;
+        saveSpeakingProgress();
+        awardMobilePointsForMode("speaking");
+      }
       if (state.learningHistorySession) {
         finalizeMobileLearningHistorySession({
           completedReason: "completed",
@@ -5345,7 +5478,10 @@
     document.getElementById("openSpeakingFeatureBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
-    document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", () => showScreen("acquiredPointsScreen"));
+    document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", () => {
+      renderMobilePointSummaryScreen();
+      showScreen("acquiredPointsScreen");
+    });
     document.getElementById("acquiredPointsBackBtn").addEventListener("click", renderHome);
     document.getElementById("openSettingsBtn").addEventListener("click", () => showScreen("settingsScreen"));
     elements.openMobileAdminHistoryBtn.addEventListener("click", renderMobileAdminLearningHistoryScreen);
