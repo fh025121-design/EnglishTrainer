@@ -234,7 +234,10 @@
           </div>
 
           <section class="study-card conversation-card">
-            <p id="speakingWordPracticeWordText" class="conversation-speaker">improve</p>
+            <div class="speaking-word-header">
+              <p id="speakingWordPracticeWordText" class="conversation-speaker">improve</p>
+              <button id="speakingWordPlayBtn" class="secondary-btn speaking-word-play-btn" type="button" aria-label="単語を再生">🔊</button>
+            </div>
 
             <div class="action-panel compact-actions">
               <button id="speakingWordMeaningToggleBtn" class="secondary-btn" type="button">日本語</button>
@@ -249,9 +252,8 @@
             </div>
 
             <div class="recognized-block">
-              <p class="recognized-label">例文を2回読もう</p>
-              <p id="speakingWordReadCountText" class="conversation-japanese">1回目 □<br>2回目 □</p>
-              <button id="speakingWordMicBtn" class="primary-btn mic-btn" type="button">🎤 マイクを押して読む</button>
+              <p id="speakingWordReadCountText" class="conversation-japanese">□ 1回目<br>□ 2回目</p>
+              <button id="speakingWordMicBtn" class="primary-btn mic-btn" type="button">🎤 押して例文を2回読む</button>
               <p id="speakingWordRecognitionStatusText" class="conversation-status"></p>
             </div>
 

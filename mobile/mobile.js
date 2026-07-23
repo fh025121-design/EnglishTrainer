@@ -3749,11 +3749,11 @@
     elements.speakingWordExampleJapaneseText.textContent = item.exampleJapanese;
     elements.speakingWordExampleJapaneseText.classList.toggle("hidden", !practice.showExampleJapanese);
 
-    const firstDone = practice.readCount >= 1 ? "✅" : "□";
-    const secondDone = practice.readCount >= 2 ? "✅" : "□";
-    elements.speakingWordReadCountText.innerHTML = `1回目 ${firstDone}<br>2回目 ${secondDone}`;
+    const firstDone = practice.readCount >= 1 ? "☑" : "□";
+    const secondDone = practice.readCount >= 2 ? "☑" : "□";
+    elements.speakingWordReadCountText.innerHTML = `${firstDone} 1回目<br>${secondDone} 2回目`;
 
-    elements.speakingWordMicBtn.textContent = practice.recognitionInProgress ? "🎤 聞き取り中…" : "🎤 マイクを押して読む";
+    elements.speakingWordMicBtn.textContent = practice.recognitionInProgress ? "🎤 聞き取り中…" : "🎤 押して例文を2回読む";
     elements.speakingWordMicBtn.disabled = practice.recognitionInProgress || !SpeechRecognitionCtor;
     elements.speakingWordRecognitionStatusText.textContent = practice.recognitionStatus || "";
 
@@ -3819,6 +3819,12 @@
     const item = getSpeakingWordPracticeItem();
     if (!item) return;
     speakMobileEnglishText(item.example);
+  }
+
+  function playSpeakingWordAudio() {
+    const item = getSpeakingWordPracticeItem();
+    if (!item) return;
+    speakMobileEnglishText(item.word);
   }
 
   function toggleSpeakingWordExampleJapanese() {
@@ -5211,6 +5217,7 @@
     elements.speakingWordPracticeWeekText = document.getElementById("speakingWordPracticeWeekText");
     elements.speakingWordPracticeProgressText = document.getElementById("speakingWordPracticeProgressText");
     elements.speakingWordPracticeWordText = document.getElementById("speakingWordPracticeWordText");
+    elements.speakingWordPlayBtn = document.getElementById("speakingWordPlayBtn");
     elements.speakingWordMeaningToggleBtn = document.getElementById("speakingWordMeaningToggleBtn");
     elements.speakingWordMeaningText = document.getElementById("speakingWordMeaningText");
     elements.speakingWordExampleText = document.getElementById("speakingWordExampleText");
@@ -5314,6 +5321,7 @@
     document.getElementById("startConversationBtn").addEventListener("click", startConversationPracticeFromSelector);
     elements.startSelectedConversationDaysBtn.addEventListener("click", startConversationPracticeFromSelectedDays);
     document.getElementById("startSpeakingWordPracticeBtn").addEventListener("click", startSpeakingVocabularyPractice);
+    elements.speakingWordPlayBtn.addEventListener("click", playSpeakingWordAudio);
     elements.speakingWordMeaningToggleBtn.addEventListener("click", toggleSpeakingWordMeaning);
     elements.speakingWordExamplePlayBtn.addEventListener("click", playSpeakingWordExampleAudio);
     elements.speakingWordExampleJapaneseToggleBtn.addEventListener("click", toggleSpeakingWordExampleJapanese);

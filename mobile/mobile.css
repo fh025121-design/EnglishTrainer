@@ -556,6 +556,19 @@ select,
   text-align: left;
 }
 
+.speaking-word-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.speaking-word-play-btn {
+  min-height: 44px;
+  padding: 0 12px;
+  flex: 0 0 auto;
+}
+
 .conversation-speaker,
 .conversation-english,
 .conversation-japanese,
