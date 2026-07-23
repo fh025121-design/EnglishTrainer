@@ -251,6 +251,107 @@ p {
   padding: 16px 18px;
 }
 
+.point-exchange-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.point-exchange-label {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.point-exchange-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.point-exchange-balance {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--accent);
+}
+
+.point-exchange-goal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.point-exchange-goal-title {
+  font-size: 1.04rem;
+  font-weight: 800;
+}
+
+.point-exchange-progress-text {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.point-exchange-progress-bar {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.point-exchange-progress-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.point-exchange-item-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.point-exchange-item {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.point-exchange-item-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.point-exchange-item-name,
+.point-exchange-item-cost {
+  margin: 0;
+  font-weight: 800;
+}
+
+.point-exchange-item-cost {
+  color: var(--accent);
+}
+
+.point-exchange-actions {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .game-ticket-description {
   color: var(--muted);
   font-size: 0.94rem;

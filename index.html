@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260723-1005" />
+    <link rel="stylesheet" href="styles.css?v=20260723-1645" />
   </head>
   <body>
     <div class="app-shell">
@@ -113,14 +113,28 @@
           <div class="screen-header">
             <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
             <div>
-              <p class="eyebrow">引き換えチケット</p>
+              <p class="eyebrow">ポイント交換</p>
               <h2>引き換えチケット</h2>
             </div>
             <div class="header-spacer" aria-hidden="true"></div>
           </div>
-          <div class="panel result-panel">
-            <h2>引き換えチケット</h2>
-            <p class="status-text">（準備中）</p>
+          <div class="panel point-exchange-panel">
+            <div class="point-exchange-top">
+              <p class="point-exchange-label">所持ポイント</p>
+              <p id="pointExchangeBalanceText" class="point-exchange-balance">0P</p>
+            </div>
+            <div class="point-exchange-goal">
+              <p id="pointExchangeGoalNameText" class="point-exchange-goal-title">🎯 目標：未設定</p>
+              <p id="pointExchangeGoalRemainText" class="status-text">景品一覧から目標を選んでください</p>
+              <p id="pointExchangeGoalProgressText" class="point-exchange-progress-text hidden">0 / 0P</p>
+              <div id="pointExchangeGoalProgressBar" class="point-exchange-progress-bar hidden" aria-hidden="true">
+                <div id="pointExchangeGoalProgressFill" class="point-exchange-progress-fill"></div>
+              </div>
+            </div>
+            <div>
+              <p class="point-exchange-label">景品一覧</p>
+              <ul id="pointExchangeItemList" class="point-exchange-item-list"></ul>
+            </div>
           </div>
         </section>
 
@@ -812,6 +826,28 @@
         </div>
       </div>
 
+      <div id="pointExchangeConfirmModal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop modal-backdrop-soft"></div>
+        <div class="modal-card game-ticket-use-card" role="dialog" aria-modal="true" aria-labelledby="pointExchangeConfirmTitle">
+          <p id="pointExchangeConfirmTitle" class="level-up-eyebrow">ポイント交換確認</p>
+          <h2 id="pointExchangeConfirmMessageText">交換しますか？</h2>
+          <div class="game-ticket-use-actions">
+            <button id="confirmPointExchangeBtn" class="primary-btn" type="button">交換する</button>
+            <button id="cancelPointExchangeBtn" class="secondary-btn" type="button">キャンセル</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="pointRewardModal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop modal-backdrop-soft"></div>
+        <div class="modal-card game-ticket-card ticket-reward-card" role="dialog" aria-modal="true" aria-labelledby="pointRewardTitle">
+          <span class="ticket-reward-sparkle ticket-reward-sparkle-left" aria-hidden="true">✦</span>
+          <span class="ticket-reward-sparkle ticket-reward-sparkle-right" aria-hidden="true">✧</span>
+          <p id="pointRewardTitle" class="level-up-eyebrow">✨ ポイント獲得</p>
+          <h2 id="pointRewardAmountText">＋0P GET！</h2>
+        </div>
+      </div>
+
       <div id="gameTicketHubModal" class="modal-shell hidden" aria-hidden="true">
         <div class="modal-backdrop modal-backdrop-soft"></div>
         <div class="modal-card game-ticket-hub-card" role="dialog" aria-modal="true" aria-labelledby="gameTicketHubTitle">
@@ -877,7 +913,7 @@
     <script src="data.js?v=20260722-1135"></script>
     <script src="preposition-data.js?v=20260722-1135"></script>
     <script src="response-data.js?v=20260722-1135"></script>
-    <script src="release-info.js?v=20260723-1145"></script>
-    <script src="app.js?v=20260723-1005"></script>
+    <script src="release-info.js?v=20260723-1645"></script>
+    <script src="app.js?v=20260723-1645"></script>
   </body>
 </html>

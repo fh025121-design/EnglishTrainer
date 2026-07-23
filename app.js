@@ -102,6 +102,31 @@ const GAME_TICKET_CONFIG = {
   streakBonusRepeatMinutes: 30
 };
 const GAME_TICKET_DAY_MS = 24 * 60 * 60 * 1000;
+const POINT_SYSTEM_STORAGE_KEY = "english-trainer-pc-points-v1";
+const POINT_SYSTEM_CONFIG = Object.freeze({
+  dailyLimitModes: Object.freeze({
+    normal: 200,
+    event: 500
+  }),
+  defaultDailyLimitMode: "normal",
+  rewardByTrainingMode: Object.freeze({
+    "level-focus": 8,
+    "phrase-spiral": 8,
+    challenge: 10,
+    preposition: 8,
+    response: 8
+  }),
+  rewardCardAutoCloseMs: 1400,
+  exchangeItems: Object.freeze([
+    Object.freeze({ id: "snack", name: "お菓子1個", cost: 100 }),
+    Object.freeze({ id: "cola", name: "コーラ", cost: 200 }),
+    Object.freeze({ id: "ufo", name: "UFOキャッチャー1回", cost: 500 }),
+    Object.freeze({ id: "mac", name: "マック", cost: 1000 }),
+    Object.freeze({ id: "movie", name: "映画", cost: 3000 }),
+    Object.freeze({ id: "glove", name: "グローブ", cost: 10000 }),
+    Object.freeze({ id: "bat", name: "バット", cost: 20000 })
+  ])
+});
 let resultActionFocusMode = null;
 const PHASE_METADATA = {
   phase0: {
@@ -1766,6 +1791,14 @@ function showResponseTrainingResult() {
     .map(([category, count]) => `<li><span>${getResponseTrainingCategoryLabel(category)}</span><span>${count}問</span></li>`)
     .join("");
 
+  if (!session.pointRewardGranted) {
+    session.pointRewardGranted = true;
+    const earned = awardPointsForTrainingMode("response");
+    if (earned > 0) {
+      enqueuePointReward(earned);
+    }
+  }
+
   showScreen("responseResultScreen");
 }
 
@@ -2328,6 +2361,260 @@ function dismissCurrentGameTicketReward() {
   }
   saveState();
   showPendingGameTicketModalIfAny();
+}
+
+let pointStateCache = null;
+let pointRewardQueue = [];
+let pointRewardTimerId = null;
+let pendingPointExchangeItemId = "";
+
+function formatPointValue(value) {
+  return `${new Intl.NumberFormat("ja-JP").format(Math.max(0, Math.floor(Number(value) || 0)))}P`;
+}
+
+function createDefaultPointState() {
+  return {
+    balance: 0,
+    dailyEarnedByDate: {},
+    dailyLimitMode: POINT_SYSTEM_CONFIG.defaultDailyLimitMode,
+    targetItemId: "",
+    redeemedItemIds: []
+  };
+}
+
+function sanitizePointState(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const dailyEarnedByDate = source.dailyEarnedByDate && typeof source.dailyEarnedByDate === "object"
+    ? Object.fromEntries(
+      Object.entries(source.dailyEarnedByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
+    )
+    : {};
+  const redeemedItemIds = Array.isArray(source.redeemedItemIds)
+    ? [...new Set(source.redeemedItemIds.map((id) => String(id)).filter(Boolean))]
+    : [];
+  const dailyLimitMode = Object.prototype.hasOwnProperty.call(POINT_SYSTEM_CONFIG.dailyLimitModes, source.dailyLimitMode)
+    ? source.dailyLimitMode
+    : POINT_SYSTEM_CONFIG.defaultDailyLimitMode;
+  return {
+    balance: Math.max(0, Math.floor(Number(source.balance) || 0)),
+    dailyEarnedByDate,
+    dailyLimitMode,
+    targetItemId: typeof source.targetItemId === "string" ? source.targetItemId : "",
+    redeemedItemIds
+  };
+}
+
+function loadPointState() {
+  try {
+    const raw = localStorage.getItem(POINT_SYSTEM_STORAGE_KEY);
+    if (!raw) return createDefaultPointState();
+    return sanitizePointState(JSON.parse(raw));
+  } catch (_error) {
+    return createDefaultPointState();
+  }
+}
+
+function savePointState(nextState) {
+  pointStateCache = sanitizePointState(nextState);
+  localStorage.setItem(POINT_SYSTEM_STORAGE_KEY, JSON.stringify(pointStateCache));
+  return pointStateCache;
+}
+
+function getPointState() {
+  if (!pointStateCache) {
+    pointStateCache = loadPointState();
+  }
+  return pointStateCache;
+}
+
+function getPointDailyLimit(mode = getPointState().dailyLimitMode) {
+  return Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyLimitModes[mode] || POINT_SYSTEM_CONFIG.dailyLimitModes.normal || 0) || 0);
+}
+
+function getPointTodayKey() {
+  return formatDateKey(new Date());
+}
+
+function getPointItemById(itemId) {
+  return POINT_SYSTEM_CONFIG.exchangeItems.find((item) => item.id === itemId) || null;
+}
+
+function getAvailablePointItems(pointState = getPointState()) {
+  const redeemed = new Set(pointState.redeemedItemIds || []);
+  return POINT_SYSTEM_CONFIG.exchangeItems.filter((item) => !redeemed.has(item.id));
+}
+
+function awardPointsForTrainingMode(mode) {
+  const rewardBase = Math.max(0, Number(POINT_SYSTEM_CONFIG.rewardByTrainingMode[mode]) || 0);
+  if (!rewardBase) return 0;
+
+  const pointState = getPointState();
+  const todayKey = getPointTodayKey();
+  const todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate[todayKey]) || 0);
+  const dailyLimit = getPointDailyLimit(pointState.dailyLimitMode);
+  const remaining = Math.max(0, dailyLimit - todayEarned);
+  const earned = Math.max(0, Math.min(rewardBase, remaining));
+  if (!earned) return 0;
+
+  pointState.balance += earned;
+  pointState.dailyEarnedByDate[todayKey] = todayEarned + earned;
+  savePointState(pointState);
+  return earned;
+}
+
+function openPointRewardModal(points) {
+  const modal = document.getElementById("pointRewardModal");
+  const amountText = document.getElementById("pointRewardAmountText");
+  if (!modal || !amountText) return;
+  amountText.textContent = `＋${Math.max(0, Math.floor(Number(points) || 0))}P GET！`;
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  if (pointRewardTimerId) {
+    clearTimeout(pointRewardTimerId);
+  }
+  pointRewardTimerId = setTimeout(() => {
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+    pointRewardTimerId = null;
+    if (pointRewardQueue.length) {
+      const next = pointRewardQueue.shift();
+      openPointRewardModal(next);
+    }
+  }, POINT_SYSTEM_CONFIG.rewardCardAutoCloseMs);
+}
+
+function enqueuePointReward(points) {
+  const safePoints = Math.max(0, Math.floor(Number(points) || 0));
+  if (!safePoints) return;
+  const modal = document.getElementById("pointRewardModal");
+  if (modal && !modal.classList.contains("hidden")) {
+    pointRewardQueue.push(safePoints);
+    return;
+  }
+  openPointRewardModal(safePoints);
+}
+
+function closePointExchangeConfirmModal() {
+  const modal = document.getElementById("pointExchangeConfirmModal");
+  if (!modal) return;
+  pendingPointExchangeItemId = "";
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function openPointExchangeConfirmModal(item) {
+  const modal = document.getElementById("pointExchangeConfirmModal");
+  const message = document.getElementById("pointExchangeConfirmMessageText");
+  if (!modal || !message || !item) return;
+  pendingPointExchangeItemId = item.id;
+  message.textContent = `${item.name}を${formatPointValue(item.cost)}で交換しますか？`;
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function setPointExchangeTarget(itemId) {
+  const pointState = getPointState();
+  const item = getPointItemById(itemId);
+  if (!item) return;
+  if ((pointState.redeemedItemIds || []).includes(item.id)) return;
+  pointState.targetItemId = item.id;
+  savePointState(pointState);
+  renderPointExchangeScreen();
+}
+
+function confirmPointExchange() {
+  const pointState = getPointState();
+  const item = getPointItemById(pendingPointExchangeItemId);
+  if (!item) {
+    closePointExchangeConfirmModal();
+    return;
+  }
+  if ((pointState.redeemedItemIds || []).includes(item.id)) {
+    closePointExchangeConfirmModal();
+    renderPointExchangeScreen();
+    return;
+  }
+  if (pointState.balance < item.cost) {
+    closePointExchangeConfirmModal();
+    renderPointExchangeScreen();
+    return;
+  }
+
+  pointState.balance = Math.max(0, pointState.balance - item.cost);
+  pointState.redeemedItemIds = [...new Set([...(pointState.redeemedItemIds || []), item.id])];
+  if (pointState.targetItemId === item.id) {
+    pointState.targetItemId = "";
+  }
+  savePointState(pointState);
+  closePointExchangeConfirmModal();
+  renderPointExchangeScreen();
+}
+
+function renderPointExchangeGoal(pointState) {
+  const goalNameText = document.getElementById("pointExchangeGoalNameText");
+  const goalRemainText = document.getElementById("pointExchangeGoalRemainText");
+  const goalProgressText = document.getElementById("pointExchangeGoalProgressText");
+  const goalProgressBar = document.getElementById("pointExchangeGoalProgressBar");
+  const goalProgressFill = document.getElementById("pointExchangeGoalProgressFill");
+  if (!goalNameText || !goalRemainText || !goalProgressText || !goalProgressBar || !goalProgressFill) return;
+
+  const targetItem = getPointItemById(pointState.targetItemId);
+  const targetAlreadyRedeemed = targetItem && (pointState.redeemedItemIds || []).includes(targetItem.id);
+  if (!targetItem || targetAlreadyRedeemed) {
+    if (targetAlreadyRedeemed) {
+      pointState.targetItemId = "";
+      savePointState(pointState);
+    }
+    goalNameText.textContent = "🎯 目標：未設定";
+    goalRemainText.textContent = "景品一覧から目標を選んでください";
+    goalProgressText.classList.add("hidden");
+    goalProgressBar.classList.add("hidden");
+    goalProgressFill.style.width = "0%";
+    return;
+  }
+
+  const remain = Math.max(0, targetItem.cost - pointState.balance);
+  const progressRate = targetItem.cost > 0
+    ? Math.max(0, Math.min(100, Math.round((pointState.balance / targetItem.cost) * 100)))
+    : 0;
+
+  goalNameText.textContent = `🎯 目標：${targetItem.name}`;
+  goalRemainText.textContent = remain > 0 ? `あと${formatPointValue(remain)}` : "目標達成！";
+  goalProgressText.textContent = `${new Intl.NumberFormat("ja-JP").format(pointState.balance)} / ${new Intl.NumberFormat("ja-JP").format(targetItem.cost)}P`;
+  goalProgressText.classList.remove("hidden");
+  goalProgressBar.classList.remove("hidden");
+  goalProgressFill.style.width = `${progressRate}%`;
+}
+
+function renderPointExchangeScreen() {
+  const balanceText = document.getElementById("pointExchangeBalanceText");
+  const itemList = document.getElementById("pointExchangeItemList");
+  if (!balanceText || !itemList) return;
+
+  const pointState = getPointState();
+  balanceText.textContent = formatPointValue(pointState.balance);
+  renderPointExchangeGoal(pointState);
+
+  const rows = getAvailablePointItems(pointState)
+    .map((item) => {
+      const canExchange = pointState.balance >= item.cost;
+      const disabledAttr = canExchange ? "" : " disabled";
+      return `
+        <li class="point-exchange-item">
+          <div class="point-exchange-item-main">
+            <p class="point-exchange-item-name">${escapeHtml(item.name)}</p>
+            <p class="point-exchange-item-cost">${formatPointValue(item.cost)}</p>
+          </div>
+          <div class="point-exchange-actions">
+            <button class="ghost-btn" type="button" data-point-goal-id="${escapeHtml(item.id)}">目標に設定</button>
+            <button class="primary-btn" type="button" data-point-exchange-id="${escapeHtml(item.id)}"${disabledAttr}>交換する</button>
+          </div>
+        </li>
+      `;
+    })
+    .join("");
+
+  itemList.innerHTML = rows || '<li class="empty-state">交換できる景品はありません</li>';
 }
 
 function formatMonthDayFromTimestamp(timestamp) {
@@ -3719,6 +4006,14 @@ function showPrepositionTrainingResult() {
   wrongWrap.classList.toggle("hidden", wrongRows.length === 0);
   wrongList.innerHTML = wrongRows.map(([preposition, count]) => `<li><span>${preposition}</span><span>${count}問</span></li>`).join("");
   reviewWrongBtn.classList.toggle("hidden", session.wrongQuestionIds.length === 0);
+
+  if (!session.pointRewardGranted) {
+    session.pointRewardGranted = true;
+    const earned = awardPointsForTrainingMode("preposition");
+    if (earned > 0) {
+      enqueuePointReward(earned);
+    }
+  }
 
   showScreen("prepositionResultScreen");
 }
@@ -5603,6 +5898,21 @@ function completeCurrentSession(reason = "completed", options = {}) {
   if (reason === "completed" && session.mode === "challenge") {
     processCompletedTicketTraining({ trainingType: "challenge" });
   }
+  if (reason === "completed") {
+    const modeForPoints = session.mode === "level-focus"
+      ? "level-focus"
+      : session.mode === "phrase-spiral"
+        ? "phrase-spiral"
+        : session.mode === "challenge"
+          ? "challenge"
+          : "";
+    if (modeForPoints) {
+      const earned = awardPointsForTrainingMode(modeForPoints);
+      if (earned > 0) {
+        enqueuePointReward(earned);
+      }
+    }
+  }
   processStreakBonusTicket(reason);
   updateBestAccuracyFromSession(session);
   updateUnlockedDayByNormalCompletion(session, reason);
@@ -7202,8 +7512,40 @@ function bindEvents() {
   const openExchangeTicketScreenBtn = document.getElementById("openExchangeTicketScreenBtn");
   if (openExchangeTicketScreenBtn) {
     openExchangeTicketScreenBtn.addEventListener("click", () => {
+      renderPointExchangeScreen();
       showScreen("exchangeTicketScreen");
     });
+  }
+
+  const pointExchangeItemList = document.getElementById("pointExchangeItemList");
+  if (pointExchangeItemList) {
+    pointExchangeItemList.addEventListener("click", (event) => {
+      const goalButton = event.target.closest("[data-point-goal-id]");
+      if (goalButton) {
+        const itemId = String(goalButton.getAttribute("data-point-goal-id") || "");
+        if (itemId) {
+          setPointExchangeTarget(itemId);
+        }
+        return;
+      }
+      const exchangeButton = event.target.closest("[data-point-exchange-id]");
+      if (!exchangeButton) return;
+      if (exchangeButton.hasAttribute("disabled")) return;
+      const itemId = String(exchangeButton.getAttribute("data-point-exchange-id") || "");
+      const item = getPointItemById(itemId);
+      if (!item) return;
+      openPointExchangeConfirmModal(item);
+    });
+  }
+
+  const confirmPointExchangeBtn = document.getElementById("confirmPointExchangeBtn");
+  if (confirmPointExchangeBtn) {
+    confirmPointExchangeBtn.addEventListener("click", confirmPointExchange);
+  }
+
+  const cancelPointExchangeBtn = document.getElementById("cancelPointExchangeBtn");
+  if (cancelPointExchangeBtn) {
+    cancelPointExchangeBtn.addEventListener("click", closePointExchangeConfirmModal);
   }
 
   const openResetLearningDataModalBtn = document.getElementById("openResetLearningDataModalBtn");
