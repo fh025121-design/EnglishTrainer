@@ -130,6 +130,31 @@
     return 0;
   }
 
+  function calculateReviewSpeakingBatchReward(pointState, pendingCount) {
+    const todayKey = getMobilePointJstDateKey(0);
+    const currentReviewCount = Math.max(0, Number(pointState.reviewSpeakingCountByDate?.[todayKey]) || 0);
+    const currentPoints = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
+    const safePendingCount = Math.max(0, Math.floor(Number(pendingCount) || 0));
+    const dailyCap = Math.max(0, Number(MOBILE_POINT_CONFIG.reviewSpeakingDailyMax) || 0);
+    let remaining = Math.max(0, dailyCap - currentPoints);
+    let earned = 0;
+
+    for (let index = 1; index <= safePendingCount; index += 1) {
+      const reward = getReviewSpeakingRewardForCount(currentReviewCount + index);
+      if (reward <= 0 || remaining <= 0) continue;
+      const gained = Math.min(reward, remaining);
+      earned += gained;
+      remaining -= gained;
+    }
+
+    return {
+      todayKey,
+      earned: Math.max(0, earned),
+      nextReviewCount: currentReviewCount + safePendingCount,
+      nextPoints: currentPoints + Math.max(0, earned)
+    };
+  }
+
   function awardHomeworkSpeakingPoints() {
     const pointState = getMobilePointState();
     const todayKey = getMobilePointJstDateKey(0);
@@ -150,17 +175,36 @@
     return earned;
   }
 
-  function awardReviewSpeakingPoints() {
+  function awardReviewSpeakingPoints(pendingCount = 1) {
     const pointState = getMobilePointState();
-    const todayKey = getMobilePointJstDateKey(0);
-    const currentReviewCount = Math.max(0, Number(pointState.reviewSpeakingCountByDate?.[todayKey]) || 0);
-    const currentPoints = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
-    const nextReviewCount = currentReviewCount + 1;
-    const reward = getReviewSpeakingRewardForCount(nextReviewCount);
-    const earned = Math.max(0, Math.min(reward, MOBILE_POINT_CONFIG.reviewSpeakingDailyMax - currentPoints));
-    pointState.reviewSpeakingCountByDate[todayKey] = nextReviewCount;
-    pointState.reviewSpeakingPointsByDate[todayKey] = currentPoints + earned;
+    const batch = calculateReviewSpeakingBatchReward(pointState, pendingCount);
+    pointState.reviewSpeakingCountByDate[batch.todayKey] = batch.nextReviewCount;
+    pointState.reviewSpeakingPointsByDate[batch.todayKey] = batch.nextPoints;
     saveMobilePointState(pointState);
+    return batch.earned;
+  }
+
+  function getReviewSessionPendingPointConversationCount(session = state.speakingReviewSession) {
+    return Math.max(0, Math.floor(Number(session?.pendingPointConversationCount) || 0));
+  }
+
+  function incrementReviewSessionPendingPointCount(session = state.speakingReviewSession) {
+    if (!session || typeof session !== "object") return 0;
+    const nextCount = getReviewSessionPendingPointConversationCount(session) + 1;
+    session.pendingPointConversationCount = nextCount;
+    return nextCount;
+  }
+
+  function applyPendingReviewSpeakingPoints(session = state.speakingReviewSession, options = {}) {
+    const pendingCount = getReviewSessionPendingPointConversationCount(session);
+    if (pendingCount <= 0) return 0;
+    const earned = awardReviewSpeakingPoints(pendingCount);
+    if (session && typeof session === "object") {
+      session.pendingPointConversationCount = 0;
+      if (options.persistSession !== false) {
+        saveSpeakingReviewSession();
+      }
+    }
     return earned;
   }
 
@@ -169,6 +213,10 @@
     const todayKey = getMobilePointJstDateKey(0);
     const reviewCount = Math.max(0, Number(pointState.reviewSpeakingCountByDate?.[todayKey]) || 0);
     const reviewPoints = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
+    const pendingCount = getReviewSessionPendingPointConversationCount();
+    const pendingEarnedPreview = pendingCount > 0
+      ? calculateReviewSpeakingBatchReward(pointState, pendingCount).earned
+      : 0;
     let nextLine = "本日の復習ポイントは最大200Pです。";
 
     if (reviewCount < 10) {
@@ -186,9 +234,10 @@
       "復習を終了しますか？",
       "",
       `現在、復習で${formatPointValue(reviewPoints)}獲得中です。`,
+      pendingCount > 0 ? `今回まとめて ${formatPointValue(pendingEarnedPreview)} を加算します。` : "",
       "",
       nextLine
-    ].join("\n");
+    ].filter(Boolean).join("\n");
   }
 
   function loadMobilePointState() {
@@ -2698,6 +2747,7 @@
       reviewQueue,
       currentIndex,
       lineIndex: Math.min(Math.max(0, Number(raw.lineIndex) || 0), maxLineIndex),
+      pendingPointConversationCount: Math.max(0, Math.floor(Number(raw.pendingPointConversationCount) || 0)),
       updatedAt: Math.max(0, Number(raw.updatedAt) || Date.now())
     };
   }
@@ -2742,15 +2792,23 @@
 
   function finishSpeakingReviewSession(completedCount) {
     const safeCompletedCount = Math.max(0, Number(completedCount) || 0);
+    const earnedPoints = applyPendingReviewSpeakingPoints(state.speakingReviewSession, { persistSession: false });
     clearSpeakingReviewSession();
     resetSpeakingHintState();
     state.speakingTranslationVisible = false;
     state.speakingLineStatus = "awaitingStart";
-    if (safeCompletedCount >= SPEAKING_REVIEW_MAX_GROUPS) {
-      renderSpeakingReviewCompleteScreen();
+    const onClose = () => {
+      if (safeCompletedCount >= SPEAKING_REVIEW_MAX_GROUPS) {
+        renderSpeakingReviewCompleteScreen();
+        return;
+      }
+      renderSpeakingReviewTopScreen();
+    };
+    if (earnedPoints > 0) {
+      openPointRewardScreen("review", earnedPoints, { onClose });
       return;
     }
-    renderSpeakingReviewTopScreen();
+    onClose();
   }
 
   function continueAfterReviewConversationAdvance(session, onContinue, onFinish) {
@@ -3458,6 +3516,7 @@
       reviewQueue: queue,
       currentIndex: 0,
       lineIndex: 0,
+      pendingPointConversationCount: 0,
       updatedAt: Date.now()
     };
     resetSpeakingHintState();
@@ -5503,26 +5562,14 @@
       if (!session || !item) return;
 
       recordSpeakingReviewConversationSpoken(item.conversationId);
-      const earnedPoints = awardReviewSpeakingPoints();
+      incrementReviewSessionPendingPointCount(session);
       continueAfterReviewConversationAdvance(
         session,
         () => {
           state.speakingLineStatus = "awaitingStart";
-          if (earnedPoints > 0) {
-            openPointRewardScreen("review", earnedPoints, {
-              onClose: renderConversationPracticeWithAutoPlay
-            });
-            return;
-          }
           renderConversationPracticeWithAutoPlay();
         },
         () => {
-          if (earnedPoints > 0) {
-            openPointRewardScreen("review", earnedPoints, {
-              onClose: () => finishSpeakingReviewSession(session.reviewQueue.length)
-            });
-            return;
-          }
           finishSpeakingReviewSession(session.reviewQueue.length);
         }
       );
@@ -6092,29 +6139,14 @@
       }
 
       recordSpeakingReviewConversationSpoken(item.conversationId);
-      const earnedPoints = awardReviewSpeakingPoints();
+      incrementReviewSessionPendingPointCount(session);
       continueAfterReviewConversationAdvance(
         session,
         () => {
-          if (earnedPoints > 0) {
-            openPointRewardScreen("review", earnedPoints, {
-              onClose: () => {
-                renderConversationPractice();
-                playCurrentSpeakingLine();
-              }
-            });
-            return;
-          }
           renderConversationPractice();
           playCurrentSpeakingLine();
         },
         () => {
-          if (earnedPoints > 0) {
-            openPointRewardScreen("review", earnedPoints, {
-              onClose: () => finishSpeakingReviewSession(session.reviewQueue.length)
-            });
-            return;
-          }
           finishSpeakingReviewSession(session.reviewQueue.length);
         }
       );
@@ -6193,6 +6225,13 @@
             });
           }
           saveSpeakingReviewSession();
+          const earnedPoints = applyPendingReviewSpeakingPoints(state.speakingReviewSession, { persistSession: true });
+          if (earnedPoints > 0) {
+            openPointRewardScreen("review", earnedPoints, {
+              onClose: renderSpeakingReviewTopScreen
+            });
+            return;
+          }
           renderSpeakingReviewTopScreen();
         },
         { cancelLabel: "復習を続ける" }
