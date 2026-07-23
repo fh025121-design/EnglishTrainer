@@ -326,6 +326,7 @@
       endDay: MOBILE_DAY_MAX,
       speakingWordSelectedWeekId: SPEAKING_WORD_DEFAULT_WEEK_ID,
       speakingWordSelectedDayKey: SPEAKING_WORD_DEFAULT_DAY_KEY,
+      speakingWordDaySelectBackTarget: "week-select",
       speakingWordPractice: null
     },
     speakingProgress: null,
@@ -1140,6 +1141,7 @@
       endDay: MOBILE_DAY_MAX,
       speakingWordSelectedWeekId: SPEAKING_WORD_DEFAULT_WEEK_ID,
       speakingWordSelectedDayKey: SPEAKING_WORD_DEFAULT_DAY_KEY,
+      speakingWordDaySelectBackTarget: "week-select",
       speakingWordPractice: null
     };
   }
@@ -2843,7 +2845,16 @@
     }
     state.speakingUi.selectedConversationWeekId = selectedWeek.weekId;
     state.speakingUi.speakingWordSelectedWeekId = selectedWeek.weekId;
+    state.speakingUi.speakingWordDaySelectBackTarget = "conversation-select";
     renderSpeakingWordDaySelectScreen();
+  }
+
+  function handleSpeakingWordDaySelectBack() {
+    if (state.speakingUi.speakingWordDaySelectBackTarget === "conversation-select") {
+      renderConversationSelectScreen();
+      return;
+    }
+    renderSpeakingWordWeekSelectScreen();
   }
 
   function executeStartConversationPractice(week, selectedDayKeys) {
@@ -3642,6 +3653,7 @@
   }
 
   function renderSpeakingWordWeekSelectScreen() {
+    state.speakingUi.speakingWordDaySelectBackTarget = "week-select";
     const options = getSpeakingWordWeekOptions();
     const firstEnabled = options.find((option) => option.enabled);
     if (!options.some((option) => option.weekId === state.speakingUi.speakingWordSelectedWeekId) && firstEnabled) {
@@ -5331,7 +5343,7 @@
     document.getElementById("conversationDaySelectBackBtn").addEventListener("click", renderConversationSelectScreen);
     document.getElementById("speakingVocabBackBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("speakingWordWeekSelectBackBtn").addEventListener("click", renderSpeakingVocabScreen);
-    document.getElementById("speakingWordDaySelectBackBtn").addEventListener("click", renderSpeakingWordWeekSelectScreen);
+    document.getElementById("speakingWordDaySelectBackBtn").addEventListener("click", handleSpeakingWordDaySelectBack);
     document.getElementById("speakingWordPracticeBackBtn").addEventListener("click", leaveSpeakingWordPracticeToDaySelect);
     document.getElementById("speakingWordCompleteBackBtn").addEventListener("click", leaveSpeakingWordPracticeToDaySelect);
     document.getElementById("startVocabularyBtn").addEventListener("click", startVocabularyPracticeFromConversationSelector);
