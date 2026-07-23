@@ -626,7 +626,19 @@ select,
 }
 
 #speakingWordMeaningText {
+  display: block;
+  width: 100%;
+  text-align: center !important;
+  align-self: stretch;
+  font-size: 1.25rem;
+  font-weight: 900;
+  margin-bottom: 5mm;
+}
+
+#speakingWordExampleText {
   text-align: center;
+  position: relative;
+  top: -3mm;
 }
 
 .conversation-status {

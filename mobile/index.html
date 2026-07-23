@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260723-1325";
+        const defaultToken = "20260723-1410";
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
         const cacheToken = [window.name, storedToken, defaultToken].filter(Boolean).sort().at(-1) || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -506,7 +506,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-1325";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-1410";
         const scriptSources = [
           "../data.js",
           "../release-info.js",
