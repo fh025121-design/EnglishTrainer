@@ -8,6 +8,7 @@
   const SPEAKING_RECENT_PROGRESS_KEY = "englishTrainerSpeakingRecentProgress_v1";
   const SPEAKING_REVIEW_STATS_KEY = "englishTrainerSpeakingReviewStats_v1";
   const SPEAKING_REVIEW_SESSION_KEY = "englishTrainerSpeakingReviewSession_v1";
+  const SPEAKING_WORD_DAY_COMPLETION_KEY = "englishTrainerSpeakingWordDayCompletion_v1";
   const SPEAKING_REVIEW_MAX_GROUPS = 20;
   const SPEAKING_REVIEW_SET_SIZE = 4;
   const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
@@ -1659,6 +1660,7 @@
     speakingDayProgressMap: {},
     speakingLegacyUnresolvedProgress: null,
     speakingReviewStatsMap: {},
+    speakingWordDayCompletionMap: {},
     speakingReviewSession: null,
     speakingReviewPlannedQueue: [],
     speakingMode: "week",
@@ -2591,6 +2593,80 @@
       return;
     }
     window.localStorage.setItem(SPEAKING_REVIEW_STATS_KEY, JSON.stringify(state.speakingReviewStatsMap));
+  }
+
+  function buildSpeakingWordDayCompletionId(weekId, dayKey) {
+    const normalizedWeekId = String(weekId || "").trim();
+    const normalizedDayKey = String(dayKey || "").trim();
+    if (!normalizedWeekId || !normalizedDayKey) return "";
+    return `${normalizedWeekId}__${normalizedDayKey}`;
+  }
+
+  function sanitizeSpeakingWordDayCompletionMap(raw) {
+    const source = raw && typeof raw === "object" ? raw : {};
+    const nextMap = {};
+    Object.entries(source).forEach(([storageId, value]) => {
+      const id = String(storageId || "").trim();
+      if (!id) return;
+      nextMap[id] = Math.max(0, Math.floor(Number(value) || 0));
+    });
+    return nextMap;
+  }
+
+  function loadSpeakingWordDayCompletionMap() {
+    const raw = window.localStorage.getItem(SPEAKING_WORD_DAY_COMPLETION_KEY);
+    if (!raw) {
+      state.speakingWordDayCompletionMap = {};
+      return;
+    }
+    try {
+      state.speakingWordDayCompletionMap = sanitizeSpeakingWordDayCompletionMap(JSON.parse(raw));
+    } catch (_error) {
+      state.speakingWordDayCompletionMap = {};
+    }
+  }
+
+  function saveSpeakingWordDayCompletionMap() {
+    const sanitized = sanitizeSpeakingWordDayCompletionMap(state.speakingWordDayCompletionMap);
+    state.speakingWordDayCompletionMap = sanitized;
+    if (!Object.keys(sanitized).length) {
+      window.localStorage.removeItem(SPEAKING_WORD_DAY_COMPLETION_KEY);
+      return;
+    }
+    window.localStorage.setItem(SPEAKING_WORD_DAY_COMPLETION_KEY, JSON.stringify(sanitized));
+  }
+
+  function getSpeakingWordDayCompletionCount(weekId, dayKey) {
+    const storageId = buildSpeakingWordDayCompletionId(weekId, dayKey);
+    if (!storageId) return 0;
+    return Math.max(0, Number(state.speakingWordDayCompletionMap?.[storageId]) || 0);
+  }
+
+  function recordSpeakingWordDayCompletion(weekId, dayKey) {
+    const storageId = buildSpeakingWordDayCompletionId(weekId, dayKey);
+    if (!storageId) return 0;
+    const current = getSpeakingWordDayCompletionCount(weekId, dayKey);
+    const nextCount = current + 1;
+    state.speakingWordDayCompletionMap[storageId] = nextCount;
+    saveSpeakingWordDayCompletionMap();
+    return nextCount;
+  }
+
+  function getSpeakingWordDayStatusSummary(weekId, dayKey, canStart) {
+    if (!canStart) {
+      return { text: "準備中", tone: "not-started" };
+    }
+    const completionCount = getSpeakingWordDayCompletionCount(weekId, dayKey);
+    if (completionCount <= 0) {
+      return { text: "未開始", tone: "not-started" };
+    }
+    if (completionCount === 1) {
+      return { text: "1回完了", tone: "first-round" };
+    }
+    if (completionCount === 2) {
+      return { text: "2回完了", tone: "first-round" };
+    }
+    return { text: "完了", tone: "complete" };
   }
 
   function sanitizeSpeakingReviewQueueItem(raw) {
@@ -5039,6 +5115,7 @@
 
       const weekday = getJstWeekdayLabel(dayKey);
       const canStart = getSpeakingWordItemsByWeekDay(weekId, dayKey).length > 0;
+      const progressSummary = getSpeakingWordDayStatusSummary(weekId, dayKey, canStart);
 
       const checkWrap = document.createElement("label");
       checkWrap.className = "conversation-day-check speaking-word-day-check";
@@ -5066,8 +5143,8 @@
       });
 
       const status = document.createElement("p");
-      status.className = `conversation-day-progress ${canStart ? "conversation-day-progress-complete" : "conversation-day-progress-not-started"}`;
-      status.textContent = canStart ? "利用可能" : "準備中";
+      status.className = `conversation-day-progress conversation-day-progress-${progressSummary.tone}`;
+      status.textContent = progressSummary.text;
 
       row.append(checkWrap, status);
       fragment.append(row);
@@ -5158,6 +5235,10 @@
     if (!practice) {
       renderSpeakingWordDaySelectScreen();
       return;
+    }
+    if (!practice.pointAwarded) {
+      practice.pointAwarded = true;
+      recordSpeakingWordDayCompletion(practice.weekId, practice.dayKey);
     }
     const weekday = getJstWeekdayLabel(practice.dayKey);
     const total = Array.isArray(practice.items) ? practice.items.length : 0;
@@ -6853,6 +6934,7 @@
     loadState();
     loadSpeakingProgress();
     loadSpeakingReviewStats();
+    loadSpeakingWordDayCompletionMap();
     loadSpeakingReviewSession();
     loadRecentSpeakingProgress();
     bindElements();
