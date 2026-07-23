@@ -560,13 +560,30 @@ select,
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.speaking-word-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.speaking-word-example-action-row {
+  grid-template-columns: 1fr 1fr;
 }
 
 .speaking-word-play-btn {
   min-height: 44px;
   padding: 0 12px;
   flex: 0 0 auto;
+}
+
+.speaking-word-example-action-row .secondary-btn {
+  width: 100%;
+}
+
+.speaking-word-action-row .secondary-btn {
+  width: 100%;
 }
 
 .conversation-speaker,

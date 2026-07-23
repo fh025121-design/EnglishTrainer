@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260723-1145";
+        const defaultToken = "20260723-1325";
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
         const cacheToken = [window.name, storedToken, defaultToken].filter(Boolean).sort().at(-1) || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -236,18 +236,23 @@
           <section class="study-card conversation-card">
             <div class="speaking-word-header">
               <p id="speakingWordPracticeWordText" class="conversation-speaker">improve</p>
+            </div>
+
+            <div class="speaking-word-action-row">
               <button id="speakingWordPlayBtn" class="secondary-btn speaking-word-play-btn" type="button" aria-label="単語を再生">🔊</button>
+              <button id="speakingWordMeaningToggleBtn" class="secondary-btn" type="button">意味を見る</button>
             </div>
 
             <div class="action-panel compact-actions">
-              <button id="speakingWordMeaningToggleBtn" class="secondary-btn" type="button">日本語</button>
               <p id="speakingWordMeaningText" class="conversation-japanese hidden"></p>
             </div>
 
             <div class="recognized-block">
               <p id="speakingWordExampleText" class="conversation-japanese"></p>
-              <button id="speakingWordExamplePlayBtn" class="secondary-btn" type="button">🔊 例文を聞く</button>
-              <button id="speakingWordExampleJapaneseToggleBtn" class="secondary-btn" type="button">日本語</button>
+              <div class="speaking-word-action-row speaking-word-example-action-row">
+                <button id="speakingWordExamplePlayBtn" class="secondary-btn" type="button">🔊 例文を聞く</button>
+                <button id="speakingWordExampleJapaneseToggleBtn" class="secondary-btn" type="button">訳を見る</button>
+              </div>
               <p id="speakingWordExampleJapaneseText" class="conversation-japanese hidden"></p>
             </div>
 
@@ -501,7 +506,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-1145";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-1325";
         const scriptSources = [
           "../data.js",
           "../release-info.js",
