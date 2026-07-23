@@ -104,16 +104,25 @@ const GAME_TICKET_CONFIG = {
 const GAME_TICKET_DAY_MS = 24 * 60 * 60 * 1000;
 const POINT_SYSTEM_STORAGE_KEY = "english-trainer-pc-points-v1";
 const POINT_SYSTEM_CONFIG = Object.freeze({
+  typingDailyTotalCap: 200,
   dailyLimitModes: Object.freeze({
     normal: 200,
-    event: 500
+    event: 200
   }),
   defaultDailyLimitMode: "normal",
   rewardByTrainingMode: Object.freeze({
-    challenge: 12,
-    preposition: 8,
-    response: 8,
-    speaking: 8
+    challenge: 1,
+    preposition: 1,
+    response: 1
+  }),
+  dailyCapByTrainingMode: Object.freeze({
+    preposition: 40,
+    response: 60,
+    challenge: 100
+  }),
+  reservedBonuses: Object.freeze({
+    weaknessClear: 0,
+    levelUp: 0
   }),
   rewardCardAutoCloseMs: 1400,
   exchangeItems: Object.freeze([
@@ -1715,6 +1724,7 @@ function submitResponseTrainingAnswer() {
   session.answered = true;
   if (isCorrect) {
     session.correctCount += 1;
+    awardPointsForTrainingMode("response");
   } else {
     const categoryKey = String(currentQuestion.category || "other");
     session.wrongCategoryCounts[categoryKey] = (session.wrongCategoryCounts[categoryKey] || 0) + 1;
@@ -1788,14 +1798,6 @@ function showResponseTrainingResult() {
   wrongList.innerHTML = wrongRows
     .map(([category, count]) => `<li><span>${getResponseTrainingCategoryLabel(category)}</span><span>${count}問</span></li>`)
     .join("");
-
-  if (!session.pointRewardGranted) {
-    session.pointRewardGranted = true;
-    const earned = awardPointsForTrainingMode("response");
-    if (earned > 0) {
-      enqueuePointReward(earned);
-    }
-  }
 
   showScreen("responseResultScreen");
 }
@@ -2374,6 +2376,7 @@ function createDefaultPointState() {
   return {
     balance: 0,
     dailyEarnedByDate: {},
+    dailyEarnedByModeByDate: {},
     todayEarned: 0,
     previousDayEarned: 0,
     totalEarned: 0,
@@ -2407,6 +2410,18 @@ function sanitizePointState(value) {
       Object.entries(source.dailyEarnedByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
     )
     : {};
+  const dailyEarnedByModeByDate = source.dailyEarnedByModeByDate && typeof source.dailyEarnedByModeByDate === "object"
+    ? Object.fromEntries(
+      Object.entries(source.dailyEarnedByModeByDate).map(([dayKey, modeRow]) => {
+        const safeRow = modeRow && typeof modeRow === "object" ? modeRow : {};
+        return [String(dayKey), {
+          preposition: Math.max(0, Math.floor(Number(safeRow.preposition) || 0)),
+          response: Math.max(0, Math.floor(Number(safeRow.response) || 0)),
+          challenge: Math.max(0, Math.floor(Number(safeRow.challenge) || 0))
+        }];
+      })
+    )
+    : {};
   const redeemedItemIds = Array.isArray(source.redeemedItemIds)
     ? [...new Set(source.redeemedItemIds.map((id) => String(id)).filter(Boolean))]
     : [];
@@ -2416,6 +2431,7 @@ function sanitizePointState(value) {
   return {
     balance: Math.max(0, Math.floor(Number(source.balance) || 0)),
     dailyEarnedByDate,
+    dailyEarnedByModeByDate,
     todayEarned: Math.max(0, Math.floor(Number(source.todayEarned) || 0)),
     previousDayEarned: Math.max(0, Math.floor(Number(source.previousDayEarned) || 0)),
     totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0)),
@@ -2466,20 +2482,32 @@ function getAvailablePointItems(pointState = getPointState()) {
 }
 
 function awardPointsForTrainingMode(mode) {
-  const rewardBase = Math.max(0, Number(POINT_SYSTEM_CONFIG.rewardByTrainingMode[mode]) || 0);
+  const modeKey = String(mode || "").trim();
+  const rewardBase = Math.max(0, Number(POINT_SYSTEM_CONFIG.rewardByTrainingMode[modeKey]) || 0);
   if (!rewardBase) return 0;
 
   const pointState = getPointState();
   const todayKey = getPointTodayKey();
   const todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate[todayKey]) || 0);
-  const dailyLimit = getPointDailyLimit(pointState.dailyLimitMode);
-  const remaining = Math.max(0, dailyLimit - todayEarned);
-  const earned = Math.max(0, Math.min(rewardBase, remaining));
+  const modeDailyCap = Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode[modeKey]) || 0);
+  const modeDailyEarned = Math.max(0, Number(pointState.dailyEarnedByModeByDate?.[todayKey]?.[modeKey]) || 0);
+  const totalDailyCap = Math.max(0, Number(POINT_SYSTEM_CONFIG.typingDailyTotalCap) || 0);
+  const remainingMode = Math.max(0, modeDailyCap - modeDailyEarned);
+  const remainingTotal = Math.max(0, totalDailyCap - todayEarned);
+  const earned = Math.max(0, Math.min(rewardBase, remainingMode, remainingTotal));
   if (!earned) return 0;
 
   pointState.balance += earned;
   pointState.totalEarned = Math.max(0, Number(pointState.totalEarned) || 0) + earned;
   pointState.dailyEarnedByDate[todayKey] = todayEarned + earned;
+  const todayModeRow = pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
+    ? pointState.dailyEarnedByModeByDate[todayKey]
+    : { preposition: 0, response: 0, challenge: 0 };
+  todayModeRow[modeKey] = modeDailyEarned + earned;
+  pointState.dailyEarnedByModeByDate = pointState.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object"
+    ? pointState.dailyEarnedByModeByDate
+    : {};
+  pointState.dailyEarnedByModeByDate[todayKey] = todayModeRow;
   savePointState(pointState);
   return earned;
 }
@@ -3942,6 +3970,7 @@ function submitPrepositionAnswer() {
   session.answered = true;
   if (isCorrect) {
     session.correctCount += 1;
+    awardPointsForTrainingMode("preposition");
   } else {
     session.wrongQuestionIds.push(String(currentQuestion.id));
     session.wrongPrepositionCounts[currentQuestion.preposition] = (session.wrongPrepositionCounts[currentQuestion.preposition] || 0) + 1;
@@ -4029,14 +4058,6 @@ function showPrepositionTrainingResult() {
   wrongWrap.classList.toggle("hidden", wrongRows.length === 0);
   wrongList.innerHTML = wrongRows.map(([preposition, count]) => `<li><span>${preposition}</span><span>${count}問</span></li>`).join("");
   reviewWrongBtn.classList.toggle("hidden", session.wrongQuestionIds.length === 0);
-
-  if (!session.pointRewardGranted) {
-    session.pointRewardGranted = true;
-    const earned = awardPointsForTrainingMode("preposition");
-    if (earned > 0) {
-      enqueuePointReward(earned);
-    }
-  }
 
   showScreen("prepositionResultScreen");
 }
@@ -5921,15 +5942,6 @@ function completeCurrentSession(reason = "completed", options = {}) {
   if (reason === "completed" && session.mode === "challenge") {
     processCompletedTicketTraining({ trainingType: "challenge" });
   }
-  if (reason === "completed") {
-    const modeForPoints = session.mode === "challenge" ? "challenge" : "";
-    if (modeForPoints) {
-      const earned = awardPointsForTrainingMode(modeForPoints);
-      if (earned > 0) {
-        enqueuePointReward(earned);
-      }
-    }
-  }
   processStreakBonusTicket(reason);
   updateBestAccuracyFromSession(session);
   updateUnlockedDayByNormalCompletion(session, reason);
@@ -6795,6 +6807,9 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       if (!isTrainingSession) {
         recordDailyPerformance(true);
       }
+      if (session.mode === "challenge") {
+        awardPointsForTrainingMode("challenge");
+      }
       if (isNormalWeakFocusRun) {
         const weakFocusCorrectIds = new Set((session.weakFocusCurrentRoundCorrectIds || []).map((id) => String(id)));
         weakFocusCorrectIds.add(questionId);
@@ -6914,6 +6929,9 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     : updateItemLevelProgress(item, true);
   if (!isTrainingSession) {
     item.lastAnswerWasCorrect = true;
+  }
+  if (session.mode === "challenge") {
+    awardPointsForTrainingMode("challenge");
   }
   session.answered = false;
   session.answerLocked = false;
