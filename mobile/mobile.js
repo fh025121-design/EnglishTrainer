@@ -20,6 +20,7 @@
     homeworkSpeakingDailyMax: 30,
     reviewSpeakingDailyMax: 200,
     totalDailyMax: 230,
+    homeworkCompletionReward: 10,
     seasonalNote: "summer-2026"
   });
   const MOBILE_DAY_MIN = 1;
@@ -42,7 +43,9 @@
   function createDefaultMobilePointState() {
     return {
       homeworkSpeakingPointsByDate: {},
+      homeworkSpeakingCompletionsByDate: {},
       reviewSpeakingPointsByDate: {},
+      reviewSpeakingCountByDate: {},
       todayEarned: 0,
       previousDayEarned: 0,
       totalEarned: 0
@@ -56,14 +59,26 @@
         Object.entries(source.homeworkSpeakingPointsByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
       )
       : {};
+    const homeworkSpeakingCompletionsByDate = source.homeworkSpeakingCompletionsByDate && typeof source.homeworkSpeakingCompletionsByDate === "object"
+      ? Object.fromEntries(
+        Object.entries(source.homeworkSpeakingCompletionsByDate).map(([dayKey, count]) => [String(dayKey), Math.max(0, Math.floor(Number(count) || 0))])
+      )
+      : {};
     const reviewSpeakingPointsByDate = source.reviewSpeakingPointsByDate && typeof source.reviewSpeakingPointsByDate === "object"
       ? Object.fromEntries(
         Object.entries(source.reviewSpeakingPointsByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
       )
       : {};
+    const reviewSpeakingCountByDate = source.reviewSpeakingCountByDate && typeof source.reviewSpeakingCountByDate === "object"
+      ? Object.fromEntries(
+        Object.entries(source.reviewSpeakingCountByDate).map(([dayKey, count]) => [String(dayKey), Math.max(0, Math.floor(Number(count) || 0))])
+      )
+      : {};
     return {
       homeworkSpeakingPointsByDate,
+      homeworkSpeakingCompletionsByDate,
       reviewSpeakingPointsByDate,
+      reviewSpeakingCountByDate,
       todayEarned: Math.max(0, Math.floor(Number(source.todayEarned) || 0)),
       previousDayEarned: Math.max(0, Math.floor(Number(source.previousDayEarned) || 0)),
       totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0))
@@ -85,6 +100,84 @@
     const computedTotal = Math.floor(Math.max(0, homeworkTotal + reviewTotal));
     pointState.totalEarned = computedTotal;
     return pointState;
+  }
+
+  function getMobilePointSummary(pointState = getMobilePointState()) {
+    return {
+      todayEarned: Math.max(0, Number(pointState.todayEarned) || 0),
+      previousDayEarned: Math.max(0, Number(pointState.previousDayEarned) || 0),
+      totalEarned: Math.max(0, Number(pointState.totalEarned) || 0)
+    };
+  }
+
+  function getReviewSpeakingRewardForCount(reviewCount) {
+    const safeCount = Math.max(0, Math.floor(Number(reviewCount) || 0));
+    if (safeCount <= 0) return 0;
+    if (safeCount <= 10) return 5;
+    if (safeCount <= 15) return 10;
+    if (safeCount <= 20) return 20;
+    return 0;
+  }
+
+  function awardHomeworkSpeakingPoints() {
+    const pointState = getMobilePointState();
+    const todayKey = getMobilePointJstDateKey(0);
+    const currentCompletionCount = Math.max(0, Number(pointState.homeworkSpeakingCompletionsByDate?.[todayKey]) || 0);
+    const currentPoints = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[todayKey]) || 0);
+    const nextCompletionCount = currentCompletionCount + 1;
+    pointState.homeworkSpeakingCompletionsByDate[todayKey] = nextCompletionCount;
+
+    if (currentPoints >= MOBILE_POINT_CONFIG.homeworkSpeakingDailyMax) {
+      saveMobilePointState(pointState);
+      return 0;
+    }
+
+    const reward = nextCompletionCount <= 3 ? MOBILE_POINT_CONFIG.homeworkCompletionReward : 0;
+    const earned = Math.max(0, Math.min(reward, MOBILE_POINT_CONFIG.homeworkSpeakingDailyMax - currentPoints));
+    pointState.homeworkSpeakingPointsByDate[todayKey] = currentPoints + earned;
+    saveMobilePointState(pointState);
+    return earned;
+  }
+
+  function awardReviewSpeakingPoints() {
+    const pointState = getMobilePointState();
+    const todayKey = getMobilePointJstDateKey(0);
+    const currentReviewCount = Math.max(0, Number(pointState.reviewSpeakingCountByDate?.[todayKey]) || 0);
+    const currentPoints = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
+    const nextReviewCount = currentReviewCount + 1;
+    const reward = getReviewSpeakingRewardForCount(nextReviewCount);
+    const earned = Math.max(0, Math.min(reward, MOBILE_POINT_CONFIG.reviewSpeakingDailyMax - currentPoints));
+    pointState.reviewSpeakingCountByDate[todayKey] = nextReviewCount;
+    pointState.reviewSpeakingPointsByDate[todayKey] = currentPoints + earned;
+    saveMobilePointState(pointState);
+    return earned;
+  }
+
+  function buildReviewExitConfirmMessage() {
+    const pointState = getMobilePointState();
+    const todayKey = getMobilePointJstDateKey(0);
+    const reviewCount = Math.max(0, Number(pointState.reviewSpeakingCountByDate?.[todayKey]) || 0);
+    const reviewPoints = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
+    let nextLine = "本日の復習ポイントは最大200Pです。";
+
+    if (reviewCount < 10) {
+      const remaining = 10 - reviewCount;
+      nextLine = `あと${remaining}回で＋${remaining * 5}P獲得できます。`;
+    } else if (reviewCount < 15) {
+      const remaining = 15 - reviewCount;
+      nextLine = `あと${remaining}回で＋${remaining * 10}P獲得できます。`;
+    } else if (reviewCount < 20) {
+      const remaining = 20 - reviewCount;
+      nextLine = `あと${remaining}回で＋${remaining * 20}P獲得できます。`;
+    }
+
+    return [
+      "復習を終了しますか？",
+      "",
+      `現在、復習で${formatPointValue(reviewPoints)}獲得中です。`,
+      "",
+      nextLine
+    ].join("\n");
   }
 
   function loadMobilePointState() {
@@ -117,10 +210,10 @@
     const totalText = document.getElementById("mobilePointsTotalText");
     if (!todayText || !previousText || !totalText) return;
     const pointState = getMobilePointState();
-    hydrateMobilePointDaySnapshots(pointState);
-    todayText.textContent = `本日の獲得ポイント ${formatPointValue(pointState.todayEarned)}`;
-    previousText.textContent = `前日の獲得ポイント ${formatPointValue(pointState.previousDayEarned)}`;
-    totalText.textContent = `累計ポイント ${formatPointValue(pointState.totalEarned)}`;
+    const summary = getMobilePointSummary(pointState);
+    todayText.textContent = `本日の獲得ポイント ${formatPointValue(summary.todayEarned)}`;
+    previousText.textContent = `前日の獲得ポイント ${formatPointValue(summary.previousDayEarned)}`;
+    totalText.textContent = `累計ポイント ${formatPointValue(summary.totalEarned)}`;
   }
 
   const SPEAKING_WORD_PRACTICE_DATA = Object.freeze({
@@ -4074,10 +4167,13 @@
     renderSpeakingVocabScreen();
   }
 
-  function showConfirm(message, okLabel, onConfirm) {
+  function showConfirm(message, okLabel, onConfirm, options = {}) {
     state.confirmAction = onConfirm;
-    elements.confirmMessage.textContent = message;
+    elements.confirmMessage.innerHTML = String(message || "").replace(/\n/g, "<br>");
     elements.confirmOkBtn.textContent = okLabel || "OK";
+    if (elements.confirmCancelBtn) {
+      elements.confirmCancelBtn.textContent = options.cancelLabel || "キャンセル";
+    }
     elements.confirmModal.classList.remove("hidden");
     elements.confirmModal.setAttribute("aria-hidden", "false");
   }
@@ -4180,6 +4276,7 @@
       if (!session || !item) return;
 
       recordSpeakingReviewConversationSpoken(item.conversationId);
+      awardReviewSpeakingPoints();
 
       if (session.currentIndex < session.reviewQueue.length - 1) {
         session.currentIndex += 1;
@@ -4759,6 +4856,7 @@
       }
 
       recordSpeakingReviewConversationSpoken(item.conversationId);
+      awardReviewSpeakingPoints();
 
       if (session.currentIndex < session.reviewQueue.length - 1) {
         session.currentIndex += 1;
@@ -4834,9 +4932,26 @@
 
     const progress = state.speakingProgress;
     const reviewActive = isReviewSpeakingModeActive();
-    const completed = reviewActive
-      ? false
-      : Boolean(progress) && getSpeakingCompletedRounds(progress) >= getSpeakingTargetRounds(progress);
+    if (reviewActive) {
+      showConfirm(
+        buildReviewExitConfirmMessage(),
+        "終了する",
+        () => {
+          if (state.learningHistorySession) {
+            finalizeMobileLearningHistorySession({
+              completedReason: "interrupted",
+              mode: "review",
+              summary: getCurrentMobileLearningHistorySummary() || {}
+            });
+          }
+          saveSpeakingReviewSession();
+          renderSpeakingReviewTopScreen();
+        },
+        { cancelLabel: "復習を続ける" }
+      );
+      return;
+    }
+    const completed = Boolean(progress) && getSpeakingCompletedRounds(progress) >= getSpeakingTargetRounds(progress);
     if (state.learningHistorySession) {
       finalizeMobileLearningHistorySession({
         completedReason: completed ? "completed" : "interrupted",
@@ -4844,13 +4959,6 @@
         summary: getCurrentMobileLearningHistorySummary() || {}
       });
     }
-
-    if (isReviewSpeakingModeActive()) {
-      saveSpeakingReviewSession();
-      renderSpeakingReviewTopScreen();
-      return;
-    }
-
     saveSpeakingProgress();
     const sessionProgress = state.speakingProgress;
     const week = getSpeakingProgressWeek();
@@ -4919,6 +5027,7 @@
     }
 
     progress.completedRounds = Math.max(0, Number(progress.completedRounds) || 0) + 1;
+    awardHomeworkSpeakingPoints();
     if (progress.completedRounds < targetSets) {
       const nextRound = progress.completedRounds + 1;
       const selectedDayKeys = getSpeakingSelectedDayKeysFromOrder(week, progress.conversationOrder);
@@ -5445,6 +5554,7 @@
     elements.mobileAdminLearningHistoryPanel = document.getElementById("mobileAdminLearningHistoryPanel");
     elements.confirmModal = document.getElementById("confirmModal");
     elements.confirmMessage = document.getElementById("confirmMessage");
+    elements.confirmCancelBtn = document.getElementById("confirmCancelBtn");
     elements.confirmOkBtn = document.getElementById("confirmOkBtn");
   }
 
