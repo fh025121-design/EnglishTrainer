@@ -91,6 +91,12 @@ p {
   min-width: 86px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--pc-ui-scale));
+}
+
 .settings-version-text {
   margin: 0;
   font-size: 0.75rem;
@@ -860,22 +866,6 @@ p {
   grid-template-columns: minmax(0, 1fr);
   row-gap: 10px;
   min-width: 0;
-}
-
-.home-admin-entry {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.home-admin-entry-btn {
-  font-size: 0.72rem;
-  padding: 6px 10px;
-  border-radius: 999px;
-  opacity: 0.58;
-}
-
-.home-admin-entry-btn:hover {
-  opacity: 0.9;
 }
 
 #adminLearningHistoryScreen .admin-learning-history-panel {

@@ -7,7 +7,7 @@
     <script>
       (function () {
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
-        const cacheToken = window.name || storedToken || "20260722-1619";
+        const cacheToken = window.name || storedToken || "20260723-0932";
         window.MOBILE_CACHE_TOKEN = cacheToken;
         window.name = cacheToken;
         const link = document.createElement("link");
@@ -30,10 +30,8 @@
             <button id="openSpeakingFeatureBtn" class="primary-btn large-btn" type="button">🎤 Speaking</button>
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
             <button id="refreshCacheBtn" class="secondary-btn large-btn" type="button">♻ キャッシュ更新</button>
-            <div class="home-utility-row">
-              <button id="openSettingsBtn" class="ghost-btn" type="button">⚙ 設定</button>
-              <button id="openMobileAdminHistoryBtn" class="ghost-btn" type="button">👤 管理者用</button>
-            </div>
+            <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
+            <button id="openMobileAdminHistoryBtn" class="ghost-btn large-btn" type="button">管理者用</button>
           </section>
         </main>
       </section>
@@ -401,7 +399,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260722-1015";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-0932";
         const scriptSources = [
           "../data.js",
           "../release-info.js",
