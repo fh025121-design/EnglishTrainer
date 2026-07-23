@@ -2836,6 +2836,16 @@
     renderConversationDaySelectScreen();
   }
 
+  function startVocabularyPracticeFromConversationSelector() {
+    const selectedWeek = getSpeakingWeekBySelector();
+    if (!selectedWeek) {
+      return;
+    }
+    state.speakingUi.selectedConversationWeekId = selectedWeek.weekId;
+    state.speakingUi.speakingWordSelectedWeekId = selectedWeek.weekId;
+    renderSpeakingWordDaySelectScreen();
+  }
+
   function executeStartConversationPractice(week, selectedDayKeys) {
     const progress = createSpeakingProgress(week.weekId, selectedDayKeys);
     if (!progress) {
@@ -3405,6 +3415,9 @@
     if (availableWeeks.length && !availableWeeks.some((week) => week.weekId === state.speakingUi.selectedConversationWeekId)) {
       state.speakingUi.selectedConversationWeekId = availableWeeks[0].weekId;
     }
+    if (state.speakingUi.selectedConversationWeekId) {
+      state.speakingUi.speakingWordSelectedWeekId = state.speakingUi.selectedConversationWeekId;
+    }
     elements.conversationWeekSelect.value = String(state.speakingUi.selectedConversationWeekId || "");
     renderSpeakingRecentProgressList();
 
@@ -3544,6 +3557,9 @@
 
   function updateConversationWeekSelection(weekId) {
     state.speakingUi.selectedConversationWeekId = String(weekId || "").trim();
+    if (state.speakingUi.selectedConversationWeekId) {
+      state.speakingUi.speakingWordSelectedWeekId = state.speakingUi.selectedConversationWeekId;
+    }
     renderConversationSelectScreen();
   }
 
@@ -5318,6 +5334,7 @@
     document.getElementById("speakingWordDaySelectBackBtn").addEventListener("click", renderSpeakingWordWeekSelectScreen);
     document.getElementById("speakingWordPracticeBackBtn").addEventListener("click", leaveSpeakingWordPracticeToDaySelect);
     document.getElementById("speakingWordCompleteBackBtn").addEventListener("click", leaveSpeakingWordPracticeToDaySelect);
+    document.getElementById("startVocabularyBtn").addEventListener("click", startVocabularyPracticeFromConversationSelector);
     document.getElementById("startConversationBtn").addEventListener("click", startConversationPracticeFromSelector);
     elements.startSelectedConversationDaysBtn.addEventListener("click", startConversationPracticeFromSelectedDays);
     document.getElementById("startSpeakingWordPracticeBtn").addEventListener("click", startSpeakingVocabularyPractice);

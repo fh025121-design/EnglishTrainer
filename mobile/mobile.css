@@ -586,6 +586,17 @@ select,
   width: 100%;
 }
 
+.conversation-mode-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.conversation-mode-action-row .primary-btn {
+  width: 100%;
+}
+
 .conversation-speaker,
 .conversation-english,
 .conversation-japanese,
