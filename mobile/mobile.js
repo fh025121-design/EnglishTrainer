@@ -17,14 +17,10 @@
   const APP_VERSION = SETTINGS_INFO.releaseHistory[0]?.version || "0/0000/0000";
   const MOBILE_POINT_STORAGE_KEY = "english-trainer-mobile-points-v1";
   const MOBILE_POINT_CONFIG = Object.freeze({
-    dailyLimitModes: Object.freeze({
-      normal: 200,
-      event: 500
-    }),
-    defaultDailyLimitMode: "normal",
-    rewardByMode: Object.freeze({
-      speaking: 8
-    })
+    homeworkSpeakingDailyMax: 30,
+    reviewSpeakingDailyMax: 200,
+    totalDailyMax: 230,
+    seasonalNote: "summer-2026"
   });
   const MOBILE_DAY_MIN = 1;
   const MOBILE_DAY_MAX = 40;
@@ -45,43 +41,49 @@
 
   function createDefaultMobilePointState() {
     return {
-      balance: 0,
-      dailyEarnedByDate: {},
+      homeworkSpeakingPointsByDate: {},
+      reviewSpeakingPointsByDate: {},
       todayEarned: 0,
       previousDayEarned: 0,
-      totalEarned: 0,
-      dailyLimitMode: MOBILE_POINT_CONFIG.defaultDailyLimitMode
+      totalEarned: 0
     };
   }
 
   function sanitizeMobilePointState(value) {
     const source = value && typeof value === "object" ? value : {};
-    const dailyEarnedByDate = source.dailyEarnedByDate && typeof source.dailyEarnedByDate === "object"
+    const homeworkSpeakingPointsByDate = source.homeworkSpeakingPointsByDate && typeof source.homeworkSpeakingPointsByDate === "object"
       ? Object.fromEntries(
-        Object.entries(source.dailyEarnedByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
+        Object.entries(source.homeworkSpeakingPointsByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
       )
       : {};
-    const dailyLimitMode = Object.prototype.hasOwnProperty.call(MOBILE_POINT_CONFIG.dailyLimitModes, source.dailyLimitMode)
-      ? source.dailyLimitMode
-      : MOBILE_POINT_CONFIG.defaultDailyLimitMode;
+    const reviewSpeakingPointsByDate = source.reviewSpeakingPointsByDate && typeof source.reviewSpeakingPointsByDate === "object"
+      ? Object.fromEntries(
+        Object.entries(source.reviewSpeakingPointsByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
+      )
+      : {};
     return {
-      balance: Math.max(0, Math.floor(Number(source.balance) || 0)),
-      dailyEarnedByDate,
+      homeworkSpeakingPointsByDate,
+      reviewSpeakingPointsByDate,
       todayEarned: Math.max(0, Math.floor(Number(source.todayEarned) || 0)),
       previousDayEarned: Math.max(0, Math.floor(Number(source.previousDayEarned) || 0)),
-      totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0)),
-      dailyLimitMode
+      totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0))
     };
   }
 
   function hydrateMobilePointDaySnapshots(pointState) {
     const todayKey = getMobilePointJstDateKey(0);
     const previousKey = getMobilePointJstDateKey(-1);
-    pointState.todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
-    pointState.previousDayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[previousKey]) || 0);
-    if (!Number.isFinite(Number(pointState.totalEarned)) || Number(pointState.totalEarned) < pointState.balance) {
-      pointState.totalEarned = Math.max(pointState.balance, 0);
-    }
+    const todayHomework = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[todayKey]) || 0);
+    const todayReview = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
+    const previousHomework = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[previousKey]) || 0);
+    const previousReview = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[previousKey]) || 0);
+    pointState.todayEarned = todayHomework + todayReview;
+    pointState.previousDayEarned = previousHomework + previousReview;
+
+    const homeworkTotal = Object.values(pointState.homeworkSpeakingPointsByDate || {}).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
+    const reviewTotal = Object.values(pointState.reviewSpeakingPointsByDate || {}).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
+    const computedTotal = Math.floor(Math.max(0, homeworkTotal + reviewTotal));
+    pointState.totalEarned = computedTotal;
     return pointState;
   }
 
@@ -104,29 +106,9 @@
   function getMobilePointState() {
     if (!mobilePointStateCache) {
       mobilePointStateCache = hydrateMobilePointDaySnapshots(loadMobilePointState());
+      saveMobilePointState(mobilePointStateCache);
     }
     return mobilePointStateCache;
-  }
-
-  function getMobilePointDailyLimit(mode = getMobilePointState().dailyLimitMode) {
-    return Math.max(0, Number(MOBILE_POINT_CONFIG.dailyLimitModes[mode] || MOBILE_POINT_CONFIG.dailyLimitModes.normal || 0) || 0);
-  }
-
-  function awardMobilePointsForMode(mode) {
-    const rewardBase = Math.max(0, Number(MOBILE_POINT_CONFIG.rewardByMode[mode]) || 0);
-    if (!rewardBase) return 0;
-    const pointState = getMobilePointState();
-    const todayKey = getMobilePointJstDateKey(0);
-    const todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate[todayKey]) || 0);
-    const dailyLimit = getMobilePointDailyLimit(pointState.dailyLimitMode);
-    const remaining = Math.max(0, dailyLimit - todayEarned);
-    const earned = Math.max(0, Math.min(rewardBase, remaining));
-    if (!earned) return 0;
-    pointState.balance += earned;
-    pointState.totalEarned = Math.max(0, Number(pointState.totalEarned) || 0) + earned;
-    pointState.dailyEarnedByDate[todayKey] = todayEarned + earned;
-    saveMobilePointState(pointState);
-    return earned;
   }
 
   function renderMobilePointSummaryScreen() {
@@ -136,9 +118,9 @@
     if (!todayText || !previousText || !totalText) return;
     const pointState = getMobilePointState();
     hydrateMobilePointDaySnapshots(pointState);
-    todayText.textContent = `本日の獲得 ${formatPointValue(pointState.todayEarned)}`;
-    previousText.textContent = `前日 ${formatPointValue(pointState.previousDayEarned)}`;
-    totalText.textContent = `累計 ${formatPointValue(pointState.totalEarned)}`;
+    todayText.textContent = `本日の獲得ポイント ${formatPointValue(pointState.todayEarned)}`;
+    previousText.textContent = `前日の獲得ポイント ${formatPointValue(pointState.previousDayEarned)}`;
+    totalText.textContent = `累計ポイント ${formatPointValue(pointState.totalEarned)}`;
   }
 
   const SPEAKING_WORD_PRACTICE_DATA = Object.freeze({
@@ -1459,9 +1441,6 @@
 
   function finishSpeakingReviewSession(completedCount) {
     const safeCompletedCount = Math.max(0, Number(completedCount) || 0);
-    if (safeCompletedCount >= SPEAKING_REVIEW_MAX_GROUPS) {
-      awardMobilePointsForMode("speaking");
-    }
     clearSpeakingReviewSession();
     resetSpeakingHintState();
     state.speakingTranslationVisible = false;
@@ -4073,10 +4052,6 @@
     const practice = state.speakingUi.speakingWordPractice;
     if (!practice || practice.readCount < 2) return;
     if (practice.index >= practice.items.length - 1) {
-      if (!practice.pointAwarded) {
-        practice.pointAwarded = true;
-        awardMobilePointsForMode("speaking");
-      }
       renderSpeakingWordCompleteScreen();
       return;
     }
@@ -4906,7 +4881,6 @@
       if (!progress.pointAwarded) {
         progress.pointAwarded = true;
         saveSpeakingProgress();
-        awardMobilePointsForMode("speaking");
       }
       if (state.learningHistorySession) {
         finalizeMobileLearningHistorySession({
