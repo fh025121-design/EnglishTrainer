@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260723-1500";
+        const defaultToken = "20260723-1520";
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
         const cacheToken = [window.name, storedToken, defaultToken].filter(Boolean).sort().at(-1) || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -33,8 +33,10 @@
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
             <button id="refreshCacheBtn" class="secondary-btn large-btn" type="button">♻ キャッシュ更新</button>
             <button id="openAcquiredPointsScreenBtn" class="secondary-btn large-btn" type="button">獲得ポイント</button>
-            <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
-            <button id="openMobileAdminHistoryBtn" class="ghost-btn large-btn" type="button">管理者用</button>
+            <div class="home-utility-row">
+              <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
+              <button id="openMobileAdminHistoryBtn" class="ghost-btn large-btn" type="button">管理者用</button>
+            </div>
           </section>
         </main>
       </section>
@@ -66,7 +68,7 @@
           <section class="panel speaking-feature-panel">
             <button id="openConversationSelectBtn" class="primary-btn large-btn" type="button">💬 会話練習</button>
             <p class="status-text">Weekごとの会話練習</p>
-            <button id="openSpeakingVocabBtn" class="secondary-btn large-btn" type="button">📚 単語・熟語</button>
+            <button id="openSpeakingVocabBtn" class="secondary-btn large-btn" type="button" disabled>📚 単語・熟語（工事中）</button>
             <p class="status-text">単語・熟語を声に出して練習</p>
           </section>
         </main>
@@ -510,7 +512,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-1500";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260723-1520";
         const scriptSources = [
           "../data.js",
           "../release-info.js",

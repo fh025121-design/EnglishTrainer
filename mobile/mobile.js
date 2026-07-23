@@ -5355,7 +5355,7 @@
     document.getElementById("speakingReviewTopBackBtn").addEventListener("click", renderSpeakingHome);
     elements.startTodayReviewBtn.addEventListener("click", startTodaySpeakingReview);
     elements.returnSpeakingReviewCompleteBtn.addEventListener("click", renderSpeakingReviewTopScreen);
-    document.getElementById("openSpeakingVocabBtn").addEventListener("click", renderSpeakingVocabScreen);
+    document.getElementById("openSpeakingVocabBtn").addEventListener("click", () => {});
     document.getElementById("conversationSelectBackBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("conversationDaySelectBackBtn").addEventListener("click", renderConversationSelectScreen);
     document.getElementById("speakingVocabBackBtn").addEventListener("click", renderSpeakingHome);
