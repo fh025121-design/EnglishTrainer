@@ -625,6 +625,10 @@ select,
   font-weight: 800;
 }
 
+#speakingWordMeaningText {
+  text-align: center;
+}
+
 .conversation-status {
   min-height: 1.6em;
   text-align: center;
