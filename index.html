@@ -102,7 +102,7 @@
                 </button>
                 <button id="openExchangeTicketScreenBtn" class="secondary-btn home-ticket-icon-btn home-ticket-icon-btn-exchange hidden" type="button">
                   <span class="home-ticket-icon-shape" aria-hidden="true">🎁</span>
-                  <span class="home-ticket-icon-label">引き換え<br>チケット</span>
+                  <span class="home-ticket-icon-label">ポイント<br>交換</span>
                 </button>
               </div>
             </div>
@@ -113,8 +113,7 @@
           <div class="screen-header">
             <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
             <div>
-              <p class="eyebrow">ポイント交換</p>
-              <h2>引き換えチケット</h2>
+              <h2>ポイント交換</h2>
             </div>
             <div class="header-spacer" aria-hidden="true"></div>
           </div>
@@ -123,11 +122,22 @@
               <p class="point-exchange-label">所持ポイント</p>
               <p id="pointExchangeBalanceText" class="point-exchange-balance">0P</p>
             </div>
-            <div class="point-exchange-goal">
-              <p class="point-exchange-label">💰 ポイント</p>
-              <p id="pointExchangeTodayEarnedText" class="status-text">本日の獲得 0P</p>
-              <p id="pointExchangePreviousEarnedText" class="status-text">前日の獲得 0P</p>
-              <p id="pointExchangeTotalEarnedText" class="status-text">累計 0P</p>
+            <div class="point-exchange-goal point-exchange-summary">
+              <p class="point-exchange-summary-title">💰 ポイント</p>
+              <div class="point-exchange-stats-row">
+                <div class="point-exchange-stat-col point-exchange-stat-col-today">
+                  <p class="point-exchange-stat-label">本日の獲得</p>
+                  <p id="pointExchangeTodayEarnedText" class="point-exchange-stat-value">0P</p>
+                </div>
+                <div class="point-exchange-stat-col">
+                  <p class="point-exchange-stat-label">前日の獲得</p>
+                  <p id="pointExchangePreviousEarnedText" class="point-exchange-stat-value">0P</p>
+                </div>
+                <div class="point-exchange-stat-col">
+                  <p class="point-exchange-stat-label">累計</p>
+                  <p id="pointExchangeTotalEarnedText" class="point-exchange-stat-value">0P</p>
+                </div>
+              </div>
             </div>
             <div class="point-exchange-goal">
               <p id="pointExchangeGoalNameText" class="point-exchange-goal-title">🎯 目標：未設定</p>

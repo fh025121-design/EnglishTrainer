@@ -286,6 +286,57 @@ p {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.point-exchange-summary {
+  gap: 10px;
+}
+
+.point-exchange-summary-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.point-exchange-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+
+.point-exchange-stat-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 76px;
+  padding: 6px 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.point-exchange-stat-col-today {
+  border-left: none;
+}
+
+.point-exchange-stat-label {
+  margin: 0;
+  color: var(--text);
+  text-align: center;
+  font-size: clamp(12px, 0.86rem, 16px);
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.point-exchange-stat-value {
+  margin: 0;
+  color: var(--accent);
+  text-align: center;
+  font-size: clamp(24px, 1.95rem, 38px);
+  font-weight: 900;
+  line-height: 1.1;
+}
+
 .point-exchange-goal-title {
   font-size: 1.04rem;
   font-weight: 800;

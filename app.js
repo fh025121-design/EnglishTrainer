@@ -126,12 +126,12 @@ const POINT_SYSTEM_CONFIG = Object.freeze({
   }),
   rewardCardAutoCloseMs: 1400,
   exchangeItems: Object.freeze([
-    Object.freeze({ id: "bat", name: "野球バット", cost: 20000 }),
-    Object.freeze({ id: "glove", name: "グローブ", cost: 12000 }),
-    Object.freeze({ id: "spike", name: "スパイク", cost: 18000 }),
-    Object.freeze({ id: "game", name: "欲しいゲーム", cost: 25000 }),
-    Object.freeze({ id: "amusement", name: "遊園地", cost: 30000 }),
-    Object.freeze({ id: "baseball-watch", name: "野球観戦", cost: 35000 })
+    Object.freeze({ id: "snack", name: "おかし（5回）", cost: 100, maxRedemptions: 5 }),
+    Object.freeze({ id: "juice", name: "ジュース（3回）", cost: 200, maxRedemptions: 3 }),
+    Object.freeze({ id: "mac", name: "マック（1回）", cost: 1000, maxRedemptions: 1 }),
+    Object.freeze({ id: "glove", name: "グローブ", cost: 10000 }),
+    Object.freeze({ id: "bat", name: "バット（1回）", cost: 20000, maxRedemptions: 1 }),
+    Object.freeze({ id: "other", name: "その他（未定）", cost: 0, available: false })
   ])
 });
 let resultActionFocusMode = null;
@@ -2382,6 +2382,7 @@ function createDefaultPointState() {
     totalEarned: 0,
     dailyLimitMode: POINT_SYSTEM_CONFIG.defaultDailyLimitMode,
     targetItemId: "",
+    redeemedItemCounts: {},
     redeemedItemIds: []
   };
 }
@@ -2425,6 +2426,14 @@ function sanitizePointState(value) {
   const redeemedItemIds = Array.isArray(source.redeemedItemIds)
     ? [...new Set(source.redeemedItemIds.map((id) => String(id)).filter(Boolean))]
     : [];
+  const redeemedItemCounts = source.redeemedItemCounts && typeof source.redeemedItemCounts === "object"
+    ? Object.fromEntries(
+      Object.entries(source.redeemedItemCounts).map(([itemId, count]) => [String(itemId), Math.max(0, Math.floor(Number(count) || 0))])
+    )
+    : {};
+  redeemedItemIds.forEach((itemId) => {
+    redeemedItemCounts[itemId] = Math.max(1, Number(redeemedItemCounts[itemId]) || 0);
+  });
   const dailyLimitMode = Object.prototype.hasOwnProperty.call(POINT_SYSTEM_CONFIG.dailyLimitModes, source.dailyLimitMode)
     ? source.dailyLimitMode
     : POINT_SYSTEM_CONFIG.defaultDailyLimitMode;
@@ -2437,6 +2446,7 @@ function sanitizePointState(value) {
     totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0)),
     dailyLimitMode,
     targetItemId: typeof source.targetItemId === "string" ? source.targetItemId : "",
+    redeemedItemCounts,
     redeemedItemIds
   };
 }
@@ -2476,9 +2486,30 @@ function getPointItemById(itemId) {
   return POINT_SYSTEM_CONFIG.exchangeItems.find((item) => item.id === itemId) || null;
 }
 
+function getPointRedeemedCount(pointState, itemId) {
+  const fromCounts = Math.max(0, Number(pointState.redeemedItemCounts?.[itemId]) || 0);
+  if (fromCounts > 0) return fromCounts;
+  return (pointState.redeemedItemIds || []).includes(itemId) ? 1 : 0;
+}
+
+function getPointItemRemainingRedemptions(pointState, item) {
+  const max = Number(item?.maxRedemptions);
+  if (!Number.isFinite(max) || max <= 0) return null;
+  return Math.max(0, Math.floor(max) - getPointRedeemedCount(pointState, item.id));
+}
+
+function isPointItemRedeemable(pointState, item) {
+  if (!item || item.available === false) return false;
+  const remaining = getPointItemRemainingRedemptions(pointState, item);
+  return remaining === null || remaining > 0;
+}
+
 function getAvailablePointItems(pointState = getPointState()) {
-  const redeemed = new Set(pointState.redeemedItemIds || []);
-  return POINT_SYSTEM_CONFIG.exchangeItems.filter((item) => !redeemed.has(item.id));
+  return POINT_SYSTEM_CONFIG.exchangeItems.filter((item) => {
+    if (item.available === false) return true;
+    const remaining = getPointItemRemainingRedemptions(pointState, item);
+    return remaining === null || remaining > 0;
+  });
 }
 
 function awardPointsForTrainingMode(mode) {
@@ -2570,7 +2601,7 @@ function setPointExchangeTarget(itemId) {
   const pointState = getPointState();
   const item = getPointItemById(itemId);
   if (!item) return;
-  if ((pointState.redeemedItemIds || []).includes(item.id)) return;
+  if (!isPointItemRedeemable(pointState, item)) return;
   pointState.targetItemId = item.id;
   savePointState(pointState);
   renderPointExchangeScreen();
@@ -2583,7 +2614,7 @@ function confirmPointExchange() {
     closePointExchangeConfirmModal();
     return;
   }
-  if ((pointState.redeemedItemIds || []).includes(item.id)) {
+  if (!isPointItemRedeemable(pointState, item)) {
     closePointExchangeConfirmModal();
     renderPointExchangeScreen();
     return;
@@ -2595,8 +2626,13 @@ function confirmPointExchange() {
   }
 
   pointState.balance = Math.max(0, pointState.balance - item.cost);
+  pointState.redeemedItemCounts = pointState.redeemedItemCounts && typeof pointState.redeemedItemCounts === "object"
+    ? pointState.redeemedItemCounts
+    : {};
+  const prevCount = Math.max(0, Number(pointState.redeemedItemCounts[item.id]) || 0);
+  pointState.redeemedItemCounts[item.id] = prevCount + 1;
   pointState.redeemedItemIds = [...new Set([...(pointState.redeemedItemIds || []), item.id])];
-  if (pointState.targetItemId === item.id) {
+  if (pointState.targetItemId === item.id && !isPointItemRedeemable(pointState, item)) {
     pointState.targetItemId = "";
   }
   savePointState(pointState);
@@ -2613,9 +2649,9 @@ function renderPointExchangeGoal(pointState) {
   if (!goalNameText || !goalRemainText || !goalProgressText || !goalProgressBar || !goalProgressFill) return;
 
   const targetItem = getPointItemById(pointState.targetItemId);
-  const targetAlreadyRedeemed = targetItem && (pointState.redeemedItemIds || []).includes(targetItem.id);
-  if (!targetItem || targetAlreadyRedeemed) {
-    if (targetAlreadyRedeemed) {
+  const targetUnavailable = targetItem && !isPointItemRedeemable(pointState, targetItem);
+  if (!targetItem || targetUnavailable) {
+    if (targetUnavailable) {
       pointState.targetItemId = "";
       savePointState(pointState);
     }
@@ -2651,24 +2687,31 @@ function renderPointExchangeScreen() {
   const pointState = getPointState();
   hydratePointDaySnapshots(pointState);
   balanceText.textContent = formatPointValue(pointState.balance);
-  todayEarnedText.textContent = `本日の獲得 ${formatPointValue(pointState.todayEarned)}`;
-  previousEarnedText.textContent = `前日の獲得 ${formatPointValue(pointState.previousDayEarned)}`;
-  totalEarnedText.textContent = `累計 ${formatPointValue(pointState.totalEarned)}`;
+  todayEarnedText.textContent = formatPointValue(pointState.todayEarned);
+  previousEarnedText.textContent = formatPointValue(pointState.previousDayEarned);
+  totalEarnedText.textContent = formatPointValue(pointState.totalEarned);
   renderPointExchangeGoal(pointState);
 
   const rows = getAvailablePointItems(pointState)
     .map((item) => {
-      const canExchange = pointState.balance >= item.cost;
+      const remaining = getPointItemRemainingRedemptions(pointState, item);
+      const isRedeemable = isPointItemRedeemable(pointState, item);
+      const canExchange = isRedeemable && pointState.balance >= item.cost;
+      const canSetGoal = isRedeemable;
       const disabledAttr = canExchange ? "" : " disabled";
+      const goalDisabledAttr = canSetGoal ? "" : " disabled";
+      const remainingText = remaining == null ? "" : `（残り${Math.max(0, remaining)}回）`;
+      const costText = item.available === false ? "未定" : formatPointValue(item.cost);
+      const exchangeLabel = item.available === false ? "準備中" : "交換する";
       return `
         <li class="point-exchange-item">
           <div class="point-exchange-item-main">
             <p class="point-exchange-item-name">${escapeHtml(item.name)}</p>
-            <p class="point-exchange-item-cost">${formatPointValue(item.cost)}</p>
+            <p class="point-exchange-item-cost">${escapeHtml(costText)}${escapeHtml(remainingText)}</p>
           </div>
           <div class="point-exchange-actions">
-            <button class="ghost-btn" type="button" data-point-goal-id="${escapeHtml(item.id)}">目標に設定</button>
-            <button class="primary-btn" type="button" data-point-exchange-id="${escapeHtml(item.id)}"${disabledAttr}>交換する</button>
+            <button class="ghost-btn" type="button" data-point-goal-id="${escapeHtml(item.id)}"${goalDisabledAttr}>目標に設定</button>
+            <button class="primary-btn" type="button" data-point-exchange-id="${escapeHtml(item.id)}"${disabledAttr}>${escapeHtml(exchangeLabel)}</button>
           </div>
         </li>
       `;
