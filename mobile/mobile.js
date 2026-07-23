@@ -23,6 +23,16 @@
     homeworkCompletionReward: 10,
     seasonalNote: "summer-2026"
   });
+  const MOBILE_POINT_REWARD_SCREEN_CONFIG = Object.freeze({
+    homework: Object.freeze({
+      title: "🎉 宿題の発話お疲れさま！",
+      categoryLabel: "宿題発話"
+    }),
+    review: Object.freeze({
+      title: "🎉 復習お疲れさま！",
+      categoryLabel: "復習発話"
+    })
+  });
   const MOBILE_DAY_MIN = 1;
   const MOBILE_DAY_MAX = 40;
   const SPEAKING_WEEK_MIN = 1;
@@ -214,6 +224,55 @@
     todayText.textContent = `本日の獲得ポイント ${formatPointValue(summary.todayEarned)}`;
     previousText.textContent = `前日の獲得ポイント ${formatPointValue(summary.previousDayEarned)}`;
     totalText.textContent = `累計ポイント ${formatPointValue(summary.totalEarned)}`;
+  }
+
+  function createPointRewardScreenState(rewardType, earnedPoints, options = {}) {
+    const config = MOBILE_POINT_REWARD_SCREEN_CONFIG[rewardType] || MOBILE_POINT_REWARD_SCREEN_CONFIG.homework;
+    const summary = getMobilePointSummary();
+    return {
+      rewardType,
+      title: config.title,
+      categoryLabel: config.categoryLabel,
+      earnedPoints: Math.max(0, Math.floor(Number(earnedPoints) || 0)),
+      todayEarned: Math.max(0, Math.floor(Number(options.todayEarned ?? summary.todayEarned) || 0)),
+      totalEarned: Math.max(0, Math.floor(Number(options.totalEarned ?? summary.totalEarned) || 0)),
+      onClose: typeof options.onClose === "function" ? options.onClose : renderHome,
+      extras: options.extras && typeof options.extras === "object" ? { ...options.extras } : {}
+    };
+  }
+
+  function renderPointRewardScreen() {
+    const rewardState = state.pointRewardScreenState;
+    if (!rewardState) {
+      renderHome();
+      return;
+    }
+    elements.pointRewardTitleText.textContent = rewardState.title;
+    elements.pointRewardCategoryText.textContent = rewardState.categoryLabel;
+    elements.pointRewardEarnedText.textContent = `＋${formatPointValue(rewardState.earnedPoints)}`;
+    elements.pointRewardTodayText.textContent = `本日の獲得 ${formatPointValue(rewardState.todayEarned)}`;
+    elements.pointRewardTotalText.textContent = `累計 ${formatPointValue(rewardState.totalEarned)}`;
+    showScreen("pointRewardScreen");
+  }
+
+  function openPointRewardScreen(rewardType, earnedPoints, options = {}) {
+    if (Math.max(0, Number(earnedPoints) || 0) <= 0) {
+      const fallback = typeof options.onClose === "function" ? options.onClose : null;
+      if (fallback) fallback();
+      return;
+    }
+    state.pointRewardScreenState = createPointRewardScreenState(rewardType, earnedPoints, options);
+    renderPointRewardScreen();
+  }
+
+  function closePointRewardScreen() {
+    const onClose = state.pointRewardScreenState?.onClose;
+    state.pointRewardScreenState = null;
+    if (typeof onClose === "function") {
+      onClose();
+      return;
+    }
+    renderHome();
   }
 
   const SPEAKING_WORD_PRACTICE_DATA = Object.freeze({
@@ -552,6 +611,7 @@
     learningHistorySession: null,
     currentScreen: "homeScreen",
     confirmAction: null,
+    pointRewardScreenState: null,
     micTestRecognition: null
   };
 
@@ -1543,6 +1603,20 @@
       return;
     }
     renderSpeakingReviewTopScreen();
+  }
+
+  function continueAfterReviewConversationAdvance(session, onContinue, onFinish) {
+    if (session.currentIndex < session.reviewQueue.length - 1) {
+      session.currentIndex += 1;
+      session.lineIndex = 0;
+      resetSpeakingHintState();
+      state.speakingTranslationVisible = false;
+      saveSpeakingReviewSession();
+      onContinue();
+      return;
+    }
+
+    onFinish();
   }
 
   function getSpeakingConversationForProgress(progress, week = getSpeakingWeek(progress?.weekId)) {
@@ -3303,7 +3377,7 @@
   }
 
   function showScreen(screenId) {
-    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -4276,20 +4350,29 @@
       if (!session || !item) return;
 
       recordSpeakingReviewConversationSpoken(item.conversationId);
-      awardReviewSpeakingPoints();
-
-      if (session.currentIndex < session.reviewQueue.length - 1) {
-        session.currentIndex += 1;
-        session.lineIndex = 0;
-        state.speakingTranslationVisible = false;
-        resetSpeakingHintState();
-        state.speakingLineStatus = "awaitingStart";
-        saveSpeakingReviewSession();
-        renderConversationPracticeWithAutoPlay();
-        return;
-      }
-
-      finishSpeakingReviewSession(session.reviewQueue.length);
+      const earnedPoints = awardReviewSpeakingPoints();
+      continueAfterReviewConversationAdvance(
+        session,
+        () => {
+          state.speakingLineStatus = "awaitingStart";
+          if (earnedPoints > 0) {
+            openPointRewardScreen("review", earnedPoints, {
+              onClose: renderConversationPracticeWithAutoPlay
+            });
+            return;
+          }
+          renderConversationPracticeWithAutoPlay();
+        },
+        () => {
+          if (earnedPoints > 0) {
+            openPointRewardScreen("review", earnedPoints, {
+              onClose: () => finishSpeakingReviewSession(session.reviewQueue.length)
+            });
+            return;
+          }
+          finishSpeakingReviewSession(session.reviewQueue.length);
+        }
+      );
       return;
     }
 
@@ -4856,20 +4939,32 @@
       }
 
       recordSpeakingReviewConversationSpoken(item.conversationId);
-      awardReviewSpeakingPoints();
-
-      if (session.currentIndex < session.reviewQueue.length - 1) {
-        session.currentIndex += 1;
-        session.lineIndex = 0;
-        resetSpeakingHintState();
-        state.speakingTranslationVisible = false;
-        saveSpeakingReviewSession();
-        renderConversationPractice();
-        playCurrentSpeakingLine();
-        return;
-      }
-
-      finishSpeakingReviewSession(session.reviewQueue.length);
+      const earnedPoints = awardReviewSpeakingPoints();
+      continueAfterReviewConversationAdvance(
+        session,
+        () => {
+          if (earnedPoints > 0) {
+            openPointRewardScreen("review", earnedPoints, {
+              onClose: () => {
+                renderConversationPractice();
+                playCurrentSpeakingLine();
+              }
+            });
+            return;
+          }
+          renderConversationPractice();
+          playCurrentSpeakingLine();
+        },
+        () => {
+          if (earnedPoints > 0) {
+            openPointRewardScreen("review", earnedPoints, {
+              onClose: () => finishSpeakingReviewSession(session.reviewQueue.length)
+            });
+            return;
+          }
+          finishSpeakingReviewSession(session.reviewQueue.length);
+        }
+      );
       return;
     }
 
@@ -5027,30 +5122,41 @@
     }
 
     progress.completedRounds = Math.max(0, Number(progress.completedRounds) || 0) + 1;
-    awardHomeworkSpeakingPoints();
-    if (progress.completedRounds < targetSets) {
-      const nextRound = progress.completedRounds + 1;
-      const selectedDayKeys = getSpeakingSelectedDayKeysFromOrder(week, progress.conversationOrder);
-      progress.conversationOrder = getSpeakingConversationOrderForRound(week, nextRound, selectedDayKeys);
-      progress.conversationIndex = 0;
+    const earnedPoints = awardHomeworkSpeakingPoints();
+    const continueAfterHomeworkCompletion = () => {
+      if (progress.completedRounds < targetSets) {
+        const nextRound = progress.completedRounds + 1;
+        const selectedDayKeys = getSpeakingSelectedDayKeysFromOrder(week, progress.conversationOrder);
+        progress.conversationOrder = getSpeakingConversationOrderForRound(week, nextRound, selectedDayKeys);
+        progress.conversationIndex = 0;
+        progress.lineIndex = 0;
+        progress.conversationSetCount = 0;
+        progress.completedConversationIds = [];
+        progress.phase = "line";
+        resetSpeakingHintState();
+        state.speakingTranslationVisible = false;
+        state.speakingLineStatus = "awaitingStart";
+        saveSpeakingProgress();
+        renderConversationPracticeWithAutoPlay();
+        return;
+      }
+
       progress.lineIndex = 0;
       progress.conversationSetCount = 0;
-      progress.completedConversationIds = [];
-      progress.phase = "line";
-      resetSpeakingHintState();
-      state.speakingTranslationVisible = false;
+      progress.phase = "conversationComplete";
       state.speakingLineStatus = "awaitingStart";
       saveSpeakingProgress();
-      renderConversationPracticeWithAutoPlay();
+      renderConversationCompleteScreen();
+    };
+
+    if (earnedPoints > 0) {
+      openPointRewardScreen("homework", earnedPoints, {
+        onClose: continueAfterHomeworkCompletion
+      });
       return;
     }
 
-    progress.lineIndex = 0;
-    progress.conversationSetCount = 0;
-    progress.phase = "conversationComplete";
-    state.speakingLineStatus = "awaitingStart";
-    saveSpeakingProgress();
-    renderConversationCompleteScreen();
+    continueAfterHomeworkCompletion();
   }
 
   function returnToSpeakingLevel1QuestionLine() {
@@ -5463,6 +5569,12 @@
     elements.todayReviewPlannedCountText = document.getElementById("todayReviewPlannedCountText");
     elements.startTodayReviewBtn = document.getElementById("startTodayReviewBtn");
     elements.returnSpeakingReviewCompleteBtn = document.getElementById("returnSpeakingReviewCompleteBtn");
+    elements.pointRewardTitleText = document.getElementById("pointRewardTitleText");
+    elements.pointRewardCategoryText = document.getElementById("pointRewardCategoryText");
+    elements.pointRewardEarnedText = document.getElementById("pointRewardEarnedText");
+    elements.pointRewardTodayText = document.getElementById("pointRewardTodayText");
+    elements.pointRewardTotalText = document.getElementById("pointRewardTotalText");
+    elements.pointRewardOkBtn = document.getElementById("pointRewardOkBtn");
     elements.conversationContinuePanel = document.getElementById("conversationContinuePanel");
     elements.recentProgressList = document.getElementById("recentProgressList");
     elements.conversationDaySelectWeekText = document.getElementById("conversationDaySelectWeekText");
@@ -5575,6 +5687,7 @@
     document.getElementById("speakingReviewTopBackBtn").addEventListener("click", renderSpeakingHome);
     elements.startTodayReviewBtn.addEventListener("click", startTodaySpeakingReview);
     elements.returnSpeakingReviewCompleteBtn.addEventListener("click", renderSpeakingReviewTopScreen);
+    elements.pointRewardOkBtn.addEventListener("click", closePointRewardScreen);
     document.getElementById("openSpeakingVocabBtn").addEventListener("click", () => {});
     document.getElementById("conversationSelectBackBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("conversationDaySelectBackBtn").addEventListener("click", renderConversationSelectScreen);
