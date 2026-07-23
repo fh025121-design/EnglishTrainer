@@ -167,6 +167,8 @@ let activeItemDetailId = null;
 let prepositionTrainingSession = null;
 let responseTrainingSession = null;
 let currentScreenId = "homeScreen";
+let pendingTrainingCompleteContext = null;
+let deferGameTicketRewardModal = false;
 let isAdminLearningHistoryUnlocked = false;
 let adminLearningHistorySelectedDayKey = "";
 const DESKTOP_FIT_REFERENCE = Object.freeze({
@@ -1527,7 +1529,8 @@ function startResponseTraining(scope = "all") {
     currentIndex: 0,
     answered: false,
     correctCount: 0,
-    wrongCategoryCounts: {}
+    wrongCategoryCounts: {},
+    pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0))
   };
   renderResponseTrainingQuestion();
   showScreen("responsePracticeScreen");
@@ -1776,30 +1779,15 @@ function showResponseTrainingResult() {
     openResponseTrainingSelector();
     return;
   }
-  const total = session.questions.length;
-  const correct = session.correctCount;
-  const accuracy = total ? Math.round((correct / total) * 100) : 0;
-
-  const resultTitle = document.getElementById("responseResultTitle");
-  const score = document.getElementById("responseResultScore");
-  const accuracyText = document.getElementById("responseResultAccuracy");
-  const wrongWrap = document.getElementById("responseWrongSummaryWrap");
-  const wrongList = document.getElementById("responseWrongSummaryList");
-  if (!resultTitle || !score || !accuracyText || !wrongWrap || !wrongList) return;
-
-  resultTitle.textContent = `応答文特訓 結果 (${session.scopeLabel})`;
-  score.textContent = `${correct} / ${total}問 正解`;
-  accuracyText.textContent = `${accuracy}%`;
-
-  const wrongRows = Object.entries(session.wrongCategoryCounts)
-    .filter(([, count]) => count > 0)
-    .sort((a, b) => a[0].localeCompare(b[0]));
-  wrongWrap.classList.toggle("hidden", wrongRows.length === 0);
-  wrongList.innerHTML = wrongRows
-    .map(([category, count]) => `<li><span>${getResponseTrainingCategoryLabel(category)}</span><span>${count}問</span></li>`)
-    .join("");
-
-  showScreen("responseResultScreen");
+  const pointSummary = computeSessionEarnedPoints(session);
+  responseTrainingSession = null;
+  openTrainingCompleteScreen({
+    mode: "response",
+    earnedPoints: pointSummary.earnedPoints,
+    pointBalance: pointSummary.pointBalance,
+    interrupted: false,
+    showTicketAfter: true
+  });
 }
 
 function isDesktopGameTicketEnabled() {
@@ -2342,11 +2330,65 @@ function showGameTicketModal(ticket) {
 }
 
 function showPendingGameTicketModalIfAny() {
+  if (deferGameTicketRewardModal) return;
   if (!isDesktopGameTicketEnabled()) return;
   const store = ensureGameTicketState();
   const pending = Array.isArray(store.pendingRewards) ? store.pendingRewards[0] : null;
   if (!pending) return;
   showGameTicketModal(pending);
+}
+
+function getTrainingCompletionModeLabel(mode) {
+  const normalizedMode = String(mode || "").trim();
+  if (normalizedMode === "normal") return "Day学習";
+  if (normalizedMode === "level-focus") return "単語特訓";
+  if (normalizedMode === "phrase-spiral") return "熟語特訓";
+  if (normalizedMode === "challenge" || normalizedMode === "review") return "過去の間違い";
+  if (normalizedMode === "preposition") return "前置詞特訓";
+  if (normalizedMode === "response") return "応答文特訓";
+  if (normalizedMode === "vocabulary") return "Vocabulary";
+  if (normalizedMode === "speaking") return "Speaking";
+  return "特訓";
+}
+
+function openTrainingCompleteScreen(options = {}) {
+  const titleText = document.getElementById("trainingCompleteTitleText");
+  const earnedText = document.getElementById("trainingCompleteEarnedText");
+  const balanceText = document.getElementById("trainingCompleteBalanceText");
+  if (!titleText || !earnedText || !balanceText) {
+    renderHome();
+    showScreen("homeScreen", { recordHistory: false });
+    return;
+  }
+
+  const modeLabel = getTrainingCompletionModeLabel(options.mode);
+  const earnedPoints = Math.max(0, Math.floor(Number(options.earnedPoints) || 0));
+  const pointBalance = Math.max(0, Math.floor(Number(options.pointBalance) || 0));
+
+  titleText.textContent = `🎉 ${modeLabel} おつかれさまでした！`;
+  earnedText.textContent = `＋${earnedPoints}P`;
+  balanceText.textContent = formatPointValue(pointBalance);
+
+  pendingTrainingCompleteContext = {
+    showTicketAfter: options.showTicketAfter !== false,
+    onAfterHome: typeof options.onAfterHome === "function" ? options.onAfterHome : null
+  };
+  deferGameTicketRewardModal = true;
+  showScreen("trainingCompleteScreen", { recordHistory: false });
+}
+
+function closeTrainingCompleteScreenToHome() {
+  const context = pendingTrainingCompleteContext;
+  pendingTrainingCompleteContext = null;
+  deferGameTicketRewardModal = false;
+  renderHome();
+  showScreen("homeScreen", { recordHistory: false });
+  if (typeof context?.onAfterHome === "function") {
+    context.onAfterHome();
+  }
+  if (context?.showTicketAfter) {
+    showPendingGameTicketModalIfAny();
+  }
 }
 
 function dismissCurrentGameTicketReward() {
@@ -3790,7 +3832,8 @@ function startPrepositionTraining(scope, options = {}) {
     correctCount: 0,
     wrongQuestionIds: [],
     wrongPrepositionCounts: {},
-    reviewOnly: Boolean(reviewQuestionIdSet)
+    reviewOnly: Boolean(reviewQuestionIdSet),
+    pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0))
   };
   renderPrepositionQuestion();
   showScreen("prepositionPracticeScreen");
@@ -4088,31 +4131,15 @@ function showPrepositionTrainingResult() {
     openPrepositionTrainingSelector();
     return;
   }
-
-  const total = session.questions.length;
-  const correct = session.correctCount;
-  const accuracy = total ? Math.round((correct / total) * 100) : 0;
-
-  const resultTitle = document.getElementById("prepositionResultTitle");
-  const score = document.getElementById("prepositionResultScore");
-  const accuracyText = document.getElementById("prepositionResultAccuracy");
-  const wrongWrap = document.getElementById("prepositionWrongSummaryWrap");
-  const wrongList = document.getElementById("prepositionWrongSummaryList");
-  const reviewWrongBtn = document.getElementById("prepositionReviewWrongBtn");
-  if (!resultTitle || !score || !accuracyText || !wrongWrap || !wrongList || !reviewWrongBtn) return;
-
-  resultTitle.textContent = `前置詞特訓 結果 (${session.scopeLabel})`;
-  score.textContent = `${correct} / ${total}問 正解`;
-  accuracyText.textContent = `${accuracy}%`;
-
-  const wrongRows = Object.entries(session.wrongPrepositionCounts)
-    .filter(([, count]) => count > 0)
-    .sort((a, b) => a[0].localeCompare(b[0]));
-  wrongWrap.classList.toggle("hidden", wrongRows.length === 0);
-  wrongList.innerHTML = wrongRows.map(([preposition, count]) => `<li><span>${preposition}</span><span>${count}問</span></li>`).join("");
-  reviewWrongBtn.classList.toggle("hidden", session.wrongQuestionIds.length === 0);
-
-  showScreen("prepositionResultScreen");
+  const pointSummary = computeSessionEarnedPoints(session);
+  prepositionTrainingSession = null;
+  openTrainingCompleteScreen({
+    mode: "preposition",
+    earnedPoints: pointSummary.earnedPoints,
+    pointBalance: pointSummary.pointBalance,
+    interrupted: false,
+    showTicketAfter: true
+  });
 }
 
 const defaultState = {
@@ -5969,6 +5996,15 @@ function buildSuspendedSummary(session) {
   };
 }
 
+function computeSessionEarnedPoints(sessionLike) {
+  const beforeBalance = Math.max(0, Math.floor(Number(sessionLike?.pointBalanceBefore) || 0));
+  const currentBalance = Math.max(0, Math.floor(Number(getPointState().balance) || 0));
+  return {
+    earnedPoints: Math.max(0, currentBalance - beforeBalance),
+    pointBalance: currentBalance
+  };
+}
+
 function appendCompletedSession(summary) {
   const history = Array.isArray(state.stats.completedSessions) ? state.stats.completedSessions.slice() : [];
   history.push(sanitizeCompletedSessionEntry({
@@ -5999,6 +6035,7 @@ function completeCurrentSession(reason = "completed", options = {}) {
   updateBestAccuracyFromSession(session);
   updateUnlockedDayByNormalCompletion(session, reason);
   const summary = buildResultSummary(session);
+  const pointSummary = computeSessionEarnedPoints(session);
   state.stats.lastResultSummary = summary;
   if (session.mode === "normal") {
     const weakIds = extractWeakQuestionIdsFromSession(session);
@@ -6013,7 +6050,13 @@ function completeCurrentSession(reason = "completed", options = {}) {
   saveState();
   renderHome();
   if (options.showResult !== false) {
-    showResultScreen(summary);
+    openTrainingCompleteScreen({
+      mode: session.mode,
+      earnedPoints: pointSummary.earnedPoints,
+      pointBalance: pointSummary.pointBalance,
+      interrupted: reason !== "completed",
+      showTicketAfter: true
+    });
   }
 }
 
@@ -6069,6 +6112,7 @@ function suspendCurrentSession() {
     return;
   }
 
+  const pointSummary = computeSessionEarnedPoints(state.session);
   pauseSessionClock(state.session);
   stashNormalSessionIfNeeded(state.session);
   const summary = buildSuspendedSummary(state.session);
@@ -6077,7 +6121,13 @@ function suspendCurrentSession() {
   state.session = null;
   saveState();
   setTestScreenActive(false);
-  showResultScreen(summary);
+  openTrainingCompleteScreen({
+    mode: "normal",
+    earnedPoints: pointSummary.earnedPoints,
+    pointBalance: pointSummary.pointBalance,
+    interrupted: true,
+    showTicketAfter: true
+  });
 }
 
 function returnHomeFromInterruptedResult() {
@@ -6425,6 +6475,7 @@ function prepareSession(mode, options = {}) {
     isFinishingSession: false,
     isSessionCompleted: false,
     ticketSnapshot: captureLearningHistoryTicketSnapshot(),
+    pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
     isDayStudySession: Boolean(options.dayStudy),
     studyRangeStart: Number(state.settings.studyRange?.start) || 1,
     studyRangeEnd: Number(state.settings.studyRange?.end) || 1
@@ -7929,6 +7980,13 @@ function bindEvents() {
     });
   }
 
+  const trainingCompleteHomeBtn = document.getElementById("trainingCompleteHomeBtn");
+  if (trainingCompleteHomeBtn) {
+    trainingCompleteHomeBtn.addEventListener("click", () => {
+      closeTrainingCompleteScreenToHome();
+    });
+  }
+
   const challengeBtn = document.getElementById("challengeBtn");
   if (challengeBtn) {
     challengeBtn.addEventListener("click", () => {
@@ -7964,8 +8022,36 @@ function bindEvents() {
         suspendCurrentSession();
         return;
       }
+      if (currentScreenId === "prepositionPracticeScreen" && prepositionTrainingSession) {
+        const pointSummary = computeSessionEarnedPoints(prepositionTrainingSession);
+        prepositionTrainingSession = null;
+        openTrainingCompleteScreen({
+          mode: "preposition",
+          earnedPoints: pointSummary.earnedPoints,
+          pointBalance: pointSummary.pointBalance,
+          interrupted: true,
+          showTicketAfter: true
+        });
+        return;
+      }
+      if (currentScreenId === "responsePracticeScreen" && responseTrainingSession) {
+        const pointSummary = computeSessionEarnedPoints(responseTrainingSession);
+        responseTrainingSession = null;
+        openTrainingCompleteScreen({
+          mode: "response",
+          earnedPoints: pointSummary.earnedPoints,
+          pointBalance: pointSummary.pointBalance,
+          interrupted: true,
+          showTicketAfter: true
+        });
+        return;
+      }
       if (currentScreenId === "resultScreen") {
         returnHomeFromInterruptedResult();
+        return;
+      }
+      if (currentScreenId === "trainingCompleteScreen") {
+        closeTrainingCompleteScreenToHome();
         return;
       }
       goBackScreen();
