@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/24 18:20", note: "モバイル版のみ: 語順トレーニングにポイント機能を追加。正解時のみ+2P、不正解・答え表示時は0P。語順の日次上限50P（25問正解相当）を追加し、到達後も学習継続は可能でポイントのみ停止。獲得ポイント画面は『発話 200P / 宿題 30P / 語順 50P』と合計280Pの日次上限表示へ更新し、上限達成時のみラベル表示。保存は日付キー単位で管理" },
     { version: "2026/07/24 17:45", note: "モバイル版のみ: 語順トレーニング専用データ `mobile/word-order-data.js` に Day29〜Day40（各12問）を追加。既存形式に合わせて `id/japanese/words/answer/category` を保持し、表示互換のため `english/tag` も併記。レイアウト・カードデザイン・タップ挙動・CSSは変更なし" },
     { version: "2026/07/24 17:30", note: "モバイル版のみ: 語順トレーニング専用データ `mobile/word-order-data.js` に Day22〜Day28（各12問）を追加。既存形式に合わせて `id/japanese/words/answer/category` を保持し、表示互換のため `english/tag` も併記。レイアウト・カードデザイン・タップ挙動・CSSは変更なし" },
     { version: "2026/07/24 17:05", note: "モバイル版のみ: 語順トレーニングのDay範囲選択を語順画面内プルダウンへ一本化。ホーム側のDay範囲プルダウンは撤去し、語順トレーニングボタン押下後の同一画面で Day1-7〜36-40 を選択できる状態に調整。カードUI・タップ挙動・判定仕様・CSSは変更なし" },

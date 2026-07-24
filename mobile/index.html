@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260724-1745";
+        const defaultToken = "20260724-1820";
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
         const cacheToken = [window.name, storedToken, defaultToken].filter(Boolean).sort().at(-1) || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -45,27 +45,29 @@
       <section id="acquiredPointsScreen" class="screen">
         <main class="stack-layout result-layout">
           <section class="panel result-panel speaking-complete-panel acquired-points-panel">
-            <h2>🎉 獲得ポイント</h2>
+            <h2>🎉 本日の獲得ポイント</h2>
             <div class="result-breakdown acquired-points-summary">
-              <p id="mobilePointsTodayLabelText" class="status-text acquired-points-heading">本日の獲得ポイント</p>
-              <p id="mobilePointsTodayText" class="result-summary-text acquired-points-today">0P</p>
-            </div>
-            <div class="result-breakdown acquired-points-breakdown">
-              <p class="status-text acquired-points-heading">【内訳】</p>
+              <p id="mobilePointsTodayLabelText" class="status-text acquired-points-heading">内訳</p>
+              <p id="mobilePointsTodayText" class="result-summary-text acquired-points-today"></p>
+              <div class="acquired-points-line">
+                <span class="acquired-points-line-label">発話</span>
+                <span id="mobilePointsReviewText" class="acquired-points-line-value">0 / 200P</span>
+                <span id="mobilePointsReviewCapText" class="acquired-points-cap hidden">上限達成</span>
+              </div>
               <div class="acquired-points-line">
                 <span class="acquired-points-line-label">宿題</span>
-                <span id="mobilePointsHomeworkText" class="acquired-points-line-value">0P</span>
+                <span id="mobilePointsHomeworkText" class="acquired-points-line-value">0 / 30P</span>
                 <span id="mobilePointsHomeworkCapText" class="acquired-points-cap hidden">上限達成</span>
               </div>
               <div class="acquired-points-line">
-                <span class="acquired-points-line-label">復習</span>
-                <span id="mobilePointsReviewText" class="acquired-points-line-value">0P</span>
-                <span id="mobilePointsReviewCapText" class="acquired-points-cap hidden">上限達成</span>
+                <span class="acquired-points-line-label">語順</span>
+                <span id="mobilePointsWordOrderText" class="acquired-points-line-value">0 / 50P</span>
+                <span id="mobilePointsWordOrderCapText" class="acquired-points-cap hidden">上限達成</span>
               </div>
             </div>
             <div class="result-breakdown acquired-points-balance">
-              <p class="status-text acquired-points-heading">現在の所持ポイント</p>
-              <p id="mobilePointsTotalText" class="result-summary-text acquired-points-total">0P</p>
+              <p class="status-text acquired-points-heading">合計</p>
+              <p id="mobilePointsTotalText" class="result-summary-text acquired-points-total">0 / 280P</p>
             </div>
             <div class="action-panel compact-actions">
               <button id="acquiredPointsHomeBtn" class="primary-btn large-btn" type="button">ホームへ戻る</button>
@@ -611,7 +613,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-1745";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-1820";
         const scriptSources = [
           "../data.js",
           "../preposition-data.js",

@@ -20,8 +20,10 @@
   const MOBILE_POINT_CONFIG = Object.freeze({
     homeworkSpeakingDailyMax: 30,
     reviewSpeakingDailyMax: 200,
-    totalDailyMax: 230,
+    wordOrderDailyMax: 50,
+    totalDailyMax: 280,
     homeworkCompletionReward: 10,
+    wordOrderCorrectReward: 2,
     seasonalNote: "summer-2026"
   });
   const MOBILE_POINT_REWARD_SCREEN_CONFIG = Object.freeze({
@@ -65,6 +67,7 @@
       homeworkSpeakingCompletionsByDate: {},
       reviewSpeakingPointsByDate: {},
       reviewSpeakingCountByDate: {},
+      wordOrderPointsByDate: {},
       todayEarned: 0,
       previousDayEarned: 0,
       totalEarned: 0
@@ -93,11 +96,17 @@
         Object.entries(source.reviewSpeakingCountByDate).map(([dayKey, count]) => [String(dayKey), Math.max(0, Math.floor(Number(count) || 0))])
       )
       : {};
+    const wordOrderPointsByDate = source.wordOrderPointsByDate && typeof source.wordOrderPointsByDate === "object"
+      ? Object.fromEntries(
+        Object.entries(source.wordOrderPointsByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
+      )
+      : {};
     return {
       homeworkSpeakingPointsByDate,
       homeworkSpeakingCompletionsByDate,
       reviewSpeakingPointsByDate,
       reviewSpeakingCountByDate,
+      wordOrderPointsByDate,
       todayEarned: Math.max(0, Math.floor(Number(source.todayEarned) || 0)),
       previousDayEarned: Math.max(0, Math.floor(Number(source.previousDayEarned) || 0)),
       totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0))
@@ -109,14 +118,17 @@
     const previousKey = getMobilePointJstDateKey(-1);
     const todayHomework = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[todayKey]) || 0);
     const todayReview = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
+    const todayWordOrder = Math.max(0, Number(pointState.wordOrderPointsByDate?.[todayKey]) || 0);
     const previousHomework = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[previousKey]) || 0);
     const previousReview = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[previousKey]) || 0);
-    pointState.todayEarned = todayHomework + todayReview;
-    pointState.previousDayEarned = previousHomework + previousReview;
+    const previousWordOrder = Math.max(0, Number(pointState.wordOrderPointsByDate?.[previousKey]) || 0);
+    pointState.todayEarned = todayHomework + todayReview + todayWordOrder;
+    pointState.previousDayEarned = previousHomework + previousReview + previousWordOrder;
 
     const homeworkTotal = Object.values(pointState.homeworkSpeakingPointsByDate || {}).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
     const reviewTotal = Object.values(pointState.reviewSpeakingPointsByDate || {}).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
-    const computedTotal = Math.floor(Math.max(0, homeworkTotal + reviewTotal));
+    const wordOrderTotal = Object.values(pointState.wordOrderPointsByDate || {}).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
+    const computedTotal = Math.floor(Math.max(0, homeworkTotal + reviewTotal + wordOrderTotal));
     pointState.totalEarned = computedTotal;
     return pointState;
   }
@@ -125,13 +137,20 @@
     const todayKey = getMobilePointJstDateKey(0);
     const todayHomework = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[todayKey]) || 0);
     const todayReview = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
+    const todayWordOrder = Math.max(0, Number(pointState.wordOrderPointsByDate?.[todayKey]) || 0);
     return {
       todayHomework,
       todayReview,
+      todayWordOrder,
       todayEarned: Math.max(0, Number(pointState.todayEarned) || 0),
       previousDayEarned: Math.max(0, Number(pointState.previousDayEarned) || 0),
       totalEarned: Math.max(0, Number(pointState.totalEarned) || 0)
     };
+  }
+
+  function getMobilePointDailyTotalRemaining(pointState = getMobilePointState()) {
+    const summary = getMobilePointSummary(pointState);
+    return Math.max(0, MOBILE_POINT_CONFIG.totalDailyMax - summary.todayEarned);
   }
 
   function getReviewSpeakingRewardForCount(reviewCount) {
@@ -148,8 +167,9 @@
     const currentReviewCount = Math.max(0, Number(pointState.reviewSpeakingCountByDate?.[todayKey]) || 0);
     const currentPoints = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
     const safePendingCount = Math.max(0, Math.floor(Number(pendingCount) || 0));
-    const dailyCap = Math.max(0, Number(MOBILE_POINT_CONFIG.reviewSpeakingDailyMax) || 0);
-    let remaining = Math.max(0, dailyCap - currentPoints);
+    const speakingCapRemaining = Math.max(0, Number(MOBILE_POINT_CONFIG.reviewSpeakingDailyMax) || 0) - currentPoints;
+    const totalCapRemaining = getMobilePointDailyTotalRemaining(pointState);
+    let remaining = Math.max(0, Math.min(speakingCapRemaining, totalCapRemaining));
     let earned = 0;
 
     for (let index = 1; index <= safePendingCount; index += 1) {
@@ -182,8 +202,25 @@
     }
 
     const reward = nextCompletionCount <= 3 ? MOBILE_POINT_CONFIG.homeworkCompletionReward : 0;
-    const earned = Math.max(0, Math.min(reward, MOBILE_POINT_CONFIG.homeworkSpeakingDailyMax - currentPoints));
+    const homeworkCapRemaining = Math.max(0, MOBILE_POINT_CONFIG.homeworkSpeakingDailyMax - currentPoints);
+    const totalCapRemaining = getMobilePointDailyTotalRemaining(pointState);
+    const earned = Math.max(0, Math.min(reward, homeworkCapRemaining, totalCapRemaining));
     pointState.homeworkSpeakingPointsByDate[todayKey] = currentPoints + earned;
+    saveMobilePointState(pointState);
+    return earned;
+  }
+
+  function awardWordOrderPoints(correctCount = 1) {
+    const safeCorrectCount = Math.max(0, Math.floor(Number(correctCount) || 0));
+    if (safeCorrectCount <= 0) return 0;
+    const pointState = getMobilePointState();
+    const todayKey = getMobilePointJstDateKey(0);
+    const currentPoints = Math.max(0, Number(pointState.wordOrderPointsByDate?.[todayKey]) || 0);
+    const baseReward = safeCorrectCount * Math.max(0, Number(MOBILE_POINT_CONFIG.wordOrderCorrectReward) || 0);
+    const wordOrderCapRemaining = Math.max(0, MOBILE_POINT_CONFIG.wordOrderDailyMax - currentPoints);
+    const totalCapRemaining = getMobilePointDailyTotalRemaining(pointState);
+    const earned = Math.max(0, Math.min(baseReward, wordOrderCapRemaining, totalCapRemaining));
+    pointState.wordOrderPointsByDate[todayKey] = currentPoints + earned;
     saveMobilePointState(pointState);
     return earned;
   }
@@ -283,16 +320,22 @@
     const homeworkCapText = document.getElementById("mobilePointsHomeworkCapText");
     const reviewText = document.getElementById("mobilePointsReviewText");
     const reviewCapText = document.getElementById("mobilePointsReviewCapText");
+    const wordOrderText = document.getElementById("mobilePointsWordOrderText");
+    const wordOrderCapText = document.getElementById("mobilePointsWordOrderCapText");
     const totalText = document.getElementById("mobilePointsTotalText");
-    if (!todayText || !homeworkText || !homeworkCapText || !reviewText || !reviewCapText || !totalText) return;
+    if (!homeworkText || !homeworkCapText || !reviewText || !reviewCapText || !wordOrderText || !wordOrderCapText || !totalText) return;
     const pointState = getMobilePointState();
     const summary = getMobilePointSummary(pointState);
-    todayText.textContent = formatPointValue(summary.todayEarned);
-    homeworkText.textContent = formatPointValue(summary.todayHomework);
-    reviewText.textContent = formatPointValue(summary.todayReview);
+    if (todayText) {
+      todayText.textContent = "";
+    }
+    homeworkText.textContent = `${Math.max(0, summary.todayHomework)} / ${MOBILE_POINT_CONFIG.homeworkSpeakingDailyMax}P`;
+    reviewText.textContent = `${Math.max(0, summary.todayReview)} / ${MOBILE_POINT_CONFIG.reviewSpeakingDailyMax}P`;
+    wordOrderText.textContent = `${Math.max(0, summary.todayWordOrder)} / ${MOBILE_POINT_CONFIG.wordOrderDailyMax}P`;
     homeworkCapText.classList.toggle("hidden", summary.todayHomework < MOBILE_POINT_CONFIG.homeworkSpeakingDailyMax);
     reviewCapText.classList.toggle("hidden", summary.todayReview < MOBILE_POINT_CONFIG.reviewSpeakingDailyMax);
-    totalText.textContent = formatPointValue(summary.totalEarned);
+    wordOrderCapText.classList.toggle("hidden", summary.todayWordOrder < MOBILE_POINT_CONFIG.wordOrderDailyMax);
+    totalText.textContent = `${Math.max(0, summary.todayEarned)} / ${MOBILE_POINT_CONFIG.totalDailyMax}P`;
   }
 
   function createPointRewardScreenState(rewardType, earnedPoints, options = {}) {
@@ -4927,6 +4970,7 @@
     const isCorrect = selectedTokens.every((token, index) => token === question.tokens[index]);
     if (isCorrect) {
       training.correctCount += 1;
+      awardWordOrderPoints(1);
       training.feedback = "正解です！";
       training.correctAnswer = "";
     } else {
