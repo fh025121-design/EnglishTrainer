@@ -114,7 +114,12 @@
   }
 
   function getMobilePointSummary(pointState = getMobilePointState()) {
+    const todayKey = getMobilePointJstDateKey(0);
+    const todayHomework = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[todayKey]) || 0);
+    const todayReview = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
     return {
+      todayHomework,
+      todayReview,
       todayEarned: Math.max(0, Number(pointState.todayEarned) || 0),
       previousDayEarned: Math.max(0, Number(pointState.previousDayEarned) || 0),
       totalEarned: Math.max(0, Number(pointState.totalEarned) || 0)
@@ -266,14 +271,16 @@
 
   function renderMobilePointSummaryScreen() {
     const todayText = document.getElementById("mobilePointsTodayText");
-    const previousText = document.getElementById("mobilePointsPreviousText");
+    const homeworkText = document.getElementById("mobilePointsHomeworkText");
+    const reviewText = document.getElementById("mobilePointsReviewText");
     const totalText = document.getElementById("mobilePointsTotalText");
-    if (!todayText || !previousText || !totalText) return;
+    if (!todayText || !homeworkText || !reviewText || !totalText) return;
     const pointState = getMobilePointState();
     const summary = getMobilePointSummary(pointState);
-    todayText.textContent = `本日の獲得ポイント ${formatPointValue(summary.todayEarned)}`;
-    previousText.textContent = `前日の獲得ポイント ${formatPointValue(summary.previousDayEarned)}`;
-    totalText.textContent = `累計ポイント ${formatPointValue(summary.totalEarned)}`;
+    todayText.textContent = formatPointValue(summary.todayEarned);
+    homeworkText.textContent = formatPointValue(summary.todayHomework);
+    reviewText.textContent = formatPointValue(summary.todayReview);
+    totalText.textContent = formatPointValue(summary.totalEarned);
   }
 
   function createPointRewardScreenState(rewardType, earnedPoints, options = {}) {
@@ -6870,7 +6877,7 @@
       renderMobilePointSummaryScreen();
       showScreen("acquiredPointsScreen");
     });
-    document.getElementById("acquiredPointsBackBtn").addEventListener("click", renderHome);
+    document.getElementById("acquiredPointsHomeBtn").addEventListener("click", renderHome);
     document.getElementById("openSettingsBtn").addEventListener("click", () => showScreen("settingsScreen"));
     elements.openMobileAdminHistoryBtn.addEventListener("click", renderMobileAdminLearningHistoryScreen);
     document.getElementById("speakingHomeBackBtn").addEventListener("click", renderHome);

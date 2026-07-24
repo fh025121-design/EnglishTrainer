@@ -746,6 +746,62 @@ select,
   margin: 0;
 }
 
+.acquired-points-panel {
+  gap: 14px;
+}
+
+.acquired-points-summary,
+.acquired-points-breakdown,
+.acquired-points-balance {
+  align-items: center;
+}
+
+.acquired-points-breakdown {
+  gap: 6px;
+}
+
+.acquired-points-heading {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.acquired-points-today,
+.acquired-points-total {
+  font-weight: 900;
+  color: var(--text);
+}
+
+.acquired-points-today {
+  font-size: 1.95rem;
+}
+
+.acquired-points-total {
+  font-size: 2.2rem;
+}
+
+.acquired-points-line {
+  margin: 0;
+  width: 100%;
+  max-width: 220px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  column-gap: 12px;
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: #dfeaff;
+}
+
+.acquired-points-line-label {
+  text-align: left;
+}
+
+.acquired-points-line-value {
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .feedback-message {
   font-size: 1rem;
   font-weight: 700;
