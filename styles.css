@@ -1286,6 +1286,13 @@ p {
   color: var(--muted);
 }
 
+#adminLearningHistoryScreen .admin-history-detail-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
 #adminLearningHistoryScreen .admin-learning-history-user-row {
   display: flex;
   flex-direction: column;
@@ -3038,6 +3045,7 @@ select {
   #adminLearningHistoryScreen .admin-history-detail-time,
   #adminLearningHistoryScreen .admin-history-detail-mode,
   #adminLearningHistoryScreen .admin-history-detail-meta,
+  #adminLearningHistoryScreen .admin-history-detail-note,
   #adminLearningHistoryScreen .admin-history-detail-ticket,
   #adminLearningHistoryScreen .admin-history-period-value,
   #adminLearningHistoryScreen .admin-history-period-meta,

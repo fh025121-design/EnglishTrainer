@@ -1017,10 +1017,11 @@ function renderAdminLearningHistoryEntries(entries) {
               const ticketText = buildLearningHistoryTicketText(entry.ticket);
               return `
                 <div class="admin-history-detail-item">
-                  <p class="admin-history-detail-time">${formatLearningHistoryDateTimeRange(entry.startedAt, entry.endedAt)}</p>
+                  <p class="admin-history-detail-time">セッション　${formatLearningHistoryDateTimeRange(entry.startedAt, entry.endedAt)}</p>
                   <p class="admin-history-detail-mode">${escapeHtml(entry.mode || "-")}</p>
                   <p class="admin-history-detail-meta">${escapeHtml(entry.dayNumber || "-")}</p>
-                  <p class="admin-history-detail-meta">${formatLearningHistoryDuration(entry.activeStudySeconds)}</p>
+                  <p class="admin-history-detail-meta">実学習時間　${formatLearningHistoryDuration(entry.activeStudySeconds)}</p>
+                  <p class="admin-history-detail-note">3分を超える無操作区間は除外</p>
                   <p class="admin-history-detail-meta">${Math.max(0, Number(entry.questionCount) || 0)}問</p>
                   <p class="admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</p>
                   <p class="admin-history-detail-meta">${completedLabel}</p>

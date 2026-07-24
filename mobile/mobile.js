@@ -2516,10 +2516,11 @@
                 const ticketText = `${Math.max(0, Number(entry.ticket?.earned?.count) || 0)} / ${Math.max(0, Number(entry.ticket?.used?.count) || 0)}`;
                 return `
                   <div class="mobile-admin-history-detail-item">
-                    <p class="mobile-admin-history-detail-time">${formatMobileLearningHistoryClockRange(entry.startedAt, entry.endedAt)}</p>
+                    <p class="mobile-admin-history-detail-time">セッション　${formatMobileLearningHistoryClockRange(entry.startedAt, entry.endedAt)}</p>
                     <p class="mobile-admin-history-detail-mode">${escapeHtml(entry.mode || "-")}</p>
                     <p class="mobile-admin-history-detail-meta">${escapeHtml(entry.dayNumber || "-")}</p>
-                    <p class="mobile-admin-history-detail-meta">${formatMobileLearningDuration(entry.activeStudySeconds)}</p>
+                    <p class="mobile-admin-history-detail-meta">実学習時間　${formatMobileLearningDuration(entry.activeStudySeconds)}</p>
+                    <p class="mobile-admin-history-detail-note">3分を超える無操作区間は除外</p>
                     <p class="mobile-admin-history-detail-meta">${Math.max(0, Number(entry.questionCount) || 0)}問</p>
                     <p class="mobile-admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</p>
                     <p class="mobile-admin-history-detail-meta">${completionLabel}</p>
