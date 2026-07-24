@@ -4627,6 +4627,21 @@
     return WORD_ORDER_DAY_RANGES.find((item) => item.value === selectedValue) || WORD_ORDER_DAY_RANGES[0];
   }
 
+  function getValidWordOrderDayRangeValue(value) {
+    const selectedValue = String(value || "").trim();
+    return WORD_ORDER_DAY_RANGES.some((item) => item.value === selectedValue)
+      ? selectedValue
+      : WORD_ORDER_DAY_RANGES[0].value;
+  }
+
+  function setWordOrderDayRangeValue(value) {
+    const normalizedValue = getValidWordOrderDayRangeValue(value);
+    if (elements.wordOrderDayRangeSelect) {
+      elements.wordOrderDayRangeSelect.value = normalizedValue;
+    }
+    return normalizedValue;
+  }
+
   function getWordOrderQuestionsByDayRange(startDay, endDay) {
     const bank = Array.isArray(window.wordOrderTrainingBank) ? window.wordOrderTrainingBank : [];
     return bank
@@ -4816,7 +4831,12 @@
   }
 
   function startWordOrderTraining() {
+    const selectedValue = setWordOrderDayRangeValue(elements.wordOrderDayRangeSelect?.value);
+    if (elements.wordOrderDayRangeSelect) {
+      elements.wordOrderDayRangeSelect.value = selectedValue;
+    }
     const dayRange = getSelectedWordOrderDayRange();
+    setWordOrderDayRangeValue(dayRange.value);
     const questions = getWordOrderQuestionsByDayRange(dayRange.startDay, dayRange.endDay);
     if (!questions.length) {
       renderComingSoonScreen({
@@ -4930,6 +4950,7 @@
   }
 
   function renderHome() {
+    setWordOrderDayRangeValue(elements.wordOrderDayRangeSelect?.value);
     hideMobileAdminLearningHistory();
     showScreen("homeScreen");
   }
@@ -7100,6 +7121,8 @@
     [...document.querySelectorAll('input[name="speechRateMode"]')].forEach((radio) => {
       radio.checked = radio.value === state.settings.speechRateMode;
     });
+
+    setWordOrderDayRangeValue(elements.wordOrderDayRangeSelect?.value);
   }
 
   function bindElements() {
@@ -7280,7 +7303,10 @@
     document.getElementById("settingsBackBtn").addEventListener("click", renderHome);
     elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", renderHome);
     document.getElementById("wordOrderBackBtn").addEventListener("click", renderHome);
-    elements.wordOrderDayRangeSelect.addEventListener("change", startWordOrderTraining);
+    elements.wordOrderDayRangeSelect.addEventListener("change", () => {
+      setWordOrderDayRangeValue(elements.wordOrderDayRangeSelect.value);
+      startWordOrderTraining();
+    });
     elements.wordOrderUndoBtn.addEventListener("click", undoWordOrderSelection);
     elements.wordOrderResetBtn.addEventListener("click", resetWordOrderSelection);
     elements.wordOrderSubmitBtn.addEventListener("click", submitWordOrderAnswer);

@@ -1,6 +1,10 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/24 17:30", note: "モバイル版のみ: 語順トレーニング専用データ `mobile/word-order-data.js` に Day22〜Day28（各12問）を追加。既存形式に合わせて `id/japanese/words/answer/category` を保持し、表示互換のため `english/tag` も併記。レイアウト・カードデザイン・タップ挙動・CSSは変更なし" },
+    { version: "2026/07/24 17:05", note: "モバイル版のみ: 語順トレーニングのDay範囲選択を語順画面内プルダウンへ一本化。ホーム側のDay範囲プルダウンは撤去し、語順トレーニングボタン押下後の同一画面で Day1-7〜36-40 を選択できる状態に調整。カードUI・タップ挙動・判定仕様・CSSは変更なし" },
+    { version: "2026/07/24 16:50", note: "モバイル版のみ: ホーム画面に『学習するDay範囲』セレクトを追加し、語順トレーニング開始時にホームで選んだ範囲（Day1-7〜36-40）をそのまま適用するよう更新。語順画面側の範囲セレクトとも値を同期。レイアウト・カードデザイン・タップ挙動・判定ロジック・CSSは変更なし" },
+    { version: "2026/07/24 16:20", note: "モバイル版のみ: 語順トレーニング専用データ `mobile/word-order-data.js` に Day15〜Day21（各12問）を追加。既存形式に合わせて `id/japanese/words/answer/category` を保持し、表示互換のため `english/tag` も併記。レイアウト・カードデザイン・タップ挙動・CSSは未変更" },
     { version: "2026/07/24 15:40", note: "モバイル版のみ: 語順トレーニング専用データ `mobile/word-order-data.js` に Day8〜Day14（各12問）を追加。新規問題は `id/japanese/words/answer/category` を保持しつつ既存表示互換のため `english/tag` も併記。さらに読込側を `english/tag` と `answer/category` の両対応へ拡張し、既存Day1-7データを壊さず Day8-14（84問）を出題可能に更新" },
     { version: "2026/07/24 15:05", note: "モバイル版のみ: 語順トレーニングの専用データ `mobile/word-order-data.js` に Day2〜Day7（各12問）を追加。既存の Day範囲セレクト（Day1-7 など）で Day1-7 を選択した際、Day1だけでなく Day2〜Day7 も連続で出題可能に拡張。出題ロジック・カードUI・判定仕様は変更なし" },
     { version: "2026/07/24 14:50", note: "モバイル版のみ: 語順トレーニングにDay範囲セレクトを追加（Day1-7 / 8-14 / 15-21 / 22-28 / 29-35 / 36-40）。選択範囲のDayデータのみ抽出して出題するよう更新し、対象範囲にデータがない場合は『準備中』メッセージを表示する安全挙動を追加。既存のカードUI・操作挙動・判定仕様は維持" },
