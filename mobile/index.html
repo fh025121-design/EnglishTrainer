@@ -19,7 +19,29 @@
       })();
     </script>
   </head>
-  <body>
+  <body class="auth-pending">
+    <div class="mobile-login-shell">
+      <section class="panel mobile-login-panel">
+        <div class="mobile-login-header">
+          <p class="hero-icon">📱 English Trainer</p>
+          <h2>モバイル版 ログイン</h2>
+          <p class="status-text">メールアドレスとパスワードでログインしてください</p>
+        </div>
+        <form id="mobileLoginForm" class="mobile-login-form">
+          <label class="field-block">
+            <span>メールアドレス</span>
+            <input id="mobileLoginEmailInput" class="typing-input" type="email" autocomplete="email" inputmode="email" />
+          </label>
+          <label class="field-block">
+            <span>パスワード</span>
+            <input id="mobileLoginPasswordInput" class="typing-input" type="password" autocomplete="current-password" />
+          </label>
+          <p id="mobileLoginErrorText" class="status-text mobile-login-error-text"></p>
+          <button id="mobileLoginSubmitBtn" class="primary-btn large-btn" type="submit">ログイン</button>
+        </form>
+      </section>
+    </div>
+
     <div class="mobile-app-shell">
       <section id="homeScreen" class="screen active">
         <header class="hero-card">
@@ -36,7 +58,7 @@
             <button id="openAcquiredPointsScreenBtn" class="secondary-btn large-btn" type="button">獲得ポイント</button>
             <div class="home-utility-row">
               <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
-              <button id="openMobileAdminHistoryBtn" class="ghost-btn large-btn" type="button">管理者用</button>
+              <button id="mobileLogoutBtn" class="ghost-btn large-btn hidden" type="button">ログアウト</button>
             </div>
           </section>
         </main>
@@ -507,26 +529,6 @@
         </main>
       </section>
 
-      <section id="mobileAdminLearningHistoryScreen" class="screen">
-        <header class="screen-topbar">
-          <button id="mobileAdminLearningHistoryBackBtn" class="back-btn" type="button">← ホーム</button>
-        </header>
-
-        <main class="stack-layout">
-          <section class="admin-learning-history-shell">
-            <h2>管理者用 学習履歴</h2>
-            <p class="status-text">PIN を入力すると記録した履歴を表示します。</p>
-            <div class="field-block">
-              <input id="mobileAdminLearningHistoryPinInput" class="typing-input" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" />
-              <button id="mobileAdminLearningHistoryUnlockBtn" class="primary-btn large-btn" type="button">表示する</button>
-              <p id="mobileAdminLearningHistoryStatusText" class="status-text hidden"></p>
-            </div>
-          </section>
-
-          <section id="mobileAdminLearningHistoryPanel" class="admin-learning-history-panel hidden"></section>
-        </main>
-      </section>
-
       <section id="wordOrderTrainingScreen" class="screen">
         <header class="screen-topbar">
           <button id="wordOrderBackBtn" class="back-btn" type="button">← ホーム</button>
@@ -615,19 +617,24 @@
       (function () {
         const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-1905";
         const scriptSources = [
-          "../data.js",
-          "../preposition-data.js",
-          "../release-info.js",
-          "speaking-data.js",
-          "word-order-data.js",
-          "mobile.js"
+          { src: "firebase.js", type: "module" },
+          { src: "../data.js", type: "text/javascript" },
+          { src: "../preposition-data.js", type: "text/javascript" },
+          { src: "../release-info.js", type: "text/javascript" },
+          { src: "speaking-data.js", type: "text/javascript" },
+          { src: "word-order-data.js", type: "text/javascript" },
+          { src: "mobile.js", type: "text/javascript" }
         ];
 
         let index = 0;
         const loadNext = () => {
           if (index >= scriptSources.length) return;
           const script = document.createElement("script");
-          script.src = `${scriptSources[index]}?v=${encodeURIComponent(cacheToken)}`;
+          const next = scriptSources[index];
+          script.src = `${next.src}?v=${encodeURIComponent(cacheToken)}`;
+          if (next.type === "module") {
+            script.type = "module";
+          }
           script.onload = loadNext;
           document.body.appendChild(script);
           index += 1;

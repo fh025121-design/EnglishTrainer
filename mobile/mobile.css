@@ -31,10 +31,46 @@ body {
   color: var(--text);
 }
 
+body.auth-pending .mobile-app-shell,
+body.auth-logged-out .mobile-app-shell {
+  display: none;
+}
+
+body.auth-logged-in .mobile-login-shell {
+  display: none;
+}
+
 button,
 input,
 select {
   font: inherit;
+}
+
+.mobile-login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.mobile-login-panel {
+  width: min(100%, 460px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mobile-login-header,
+.mobile-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-login-error-text {
+  min-height: 1.4em;
+  color: var(--danger);
 }
 
 .mobile-app-shell {

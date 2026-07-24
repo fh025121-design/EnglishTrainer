@@ -1739,6 +1739,8 @@
 
   const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
   let mobileAdminLearningHistorySelectedDayKey = "";
+  let mobileAuthLastStatus = "pending";
+  let mobileAuthListenerBound = false;
 
   const state = {
     settings: {
@@ -2130,9 +2132,22 @@
   }
 
   function appendMobileLearningHistoryEntry(entry) {
+    const sanitized = sanitizeMobileLearningHistoryEntry(entry);
+    if (!sanitized) return;
+    if (Math.max(0, Number(sanitized.questionCount) || 0) === 0) {
+      return;
+    }
+
     const current = loadMobileLearningHistoryEntries();
-    current.push(entry);
+    current.push(sanitized);
     saveMobileLearningHistoryEntries(current);
+
+    const saveToFirestore = window.saveMobileLearningHistoryToFirestore;
+    if (typeof saveToFirestore === "function") {
+      Promise.resolve(saveToFirestore(sanitized)).catch((error) => {
+        console.error("Failed to save mobile learning history to Firestore", error);
+      });
+    }
   }
 
   function startMobileLearningHistorySession(meta = {}) {
@@ -4984,7 +4999,7 @@
   }
 
   function showScreen(screenId) {
-    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "wordOrderTrainingScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "wordOrderTrainingScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -4997,6 +5012,37 @@
     setWordOrderDayRangeValue(elements.wordOrderDayRangeSelect?.value);
     hideMobileAdminLearningHistory();
     showScreen("homeScreen");
+  }
+
+  function applyMobileAuthState(user) {
+    const nextStatus = user ? "logged-in" : "logged-out";
+    if (nextStatus === mobileAuthLastStatus) return;
+    mobileAuthLastStatus = nextStatus;
+    if (user) {
+      renderHome();
+    }
+  }
+
+  function bindMobileAuthState() {
+    if (!mobileAuthListenerBound) {
+      document.addEventListener("mobile-firebase-auth-state", (event) => {
+        applyMobileAuthState(event?.detail?.user || null);
+      });
+      mobileAuthListenerBound = true;
+    }
+
+    const authState = window.MobileFirebaseAuthState || {};
+    const currentUser = typeof window.getMobileFirebaseCurrentUser === "function"
+      ? window.getMobileFirebaseCurrentUser()
+      : (authState.user || null);
+    if (authState.status === "logged-in" || currentUser) {
+      mobileAuthLastStatus = "logged-in";
+      renderHome();
+      return;
+    }
+    if (authState.status === "logged-out") {
+      mobileAuthLastStatus = "logged-out";
+    }
   }
 
   function renderComingSoonScreen(options = {}) {
@@ -7265,7 +7311,6 @@
     elements.mobileUpdateHistoryUnlockBtn = document.getElementById("mobileUpdateHistoryUnlockBtn");
     elements.mobileUpdateHistoryStatusText = document.getElementById("mobileUpdateHistoryStatusText");
     elements.mobileUpdateHistoryPanel = document.getElementById("mobileUpdateHistoryPanel");
-    elements.openMobileAdminHistoryBtn = document.getElementById("openMobileAdminHistoryBtn");
     elements.mobileAdminLearningHistoryScreen = document.getElementById("mobileAdminLearningHistoryScreen");
     elements.mobileAdminLearningHistoryBackBtn = document.getElementById("mobileAdminLearningHistoryBackBtn");
     elements.mobileAdminLearningHistoryPinInput = document.getElementById("mobileAdminLearningHistoryPinInput");
@@ -7307,7 +7352,6 @@
     });
     document.getElementById("acquiredPointsHomeBtn").addEventListener("click", renderHome);
     document.getElementById("openSettingsBtn").addEventListener("click", () => showScreen("settingsScreen"));
-    elements.openMobileAdminHistoryBtn.addEventListener("click", renderMobileAdminLearningHistoryScreen);
     document.getElementById("speakingHomeBackBtn").addEventListener("click", renderHome);
     document.getElementById("openConversationSelectBtn").addEventListener("click", renderConversationSelectScreen);
     document.getElementById("openSpeakingReviewTopBtn").addEventListener("click", renderSpeakingReviewTopScreen);
@@ -7345,7 +7389,6 @@
     elements.nextConversationLineBtn.addEventListener("click", moveToNextSpeakingLine);
     elements.nextConversationBtn.addEventListener("click", moveToNextSpeakingConversation);
     document.getElementById("settingsBackBtn").addEventListener("click", renderHome);
-    elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", renderHome);
     document.getElementById("wordOrderBackBtn").addEventListener("click", renderHome);
     elements.wordOrderDayRangeSelect.addEventListener("change", () => {
       setWordOrderDayRangeValue(elements.wordOrderDayRangeSelect.value);
@@ -7373,12 +7416,6 @@
       if (event.key !== "Enter") return;
       event.preventDefault();
       unlockMobileUpdateHistory();
-    });
-    elements.mobileAdminLearningHistoryUnlockBtn.addEventListener("click", unlockMobileAdminLearningHistory);
-    elements.mobileAdminLearningHistoryPinInput.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter") return;
-      event.preventDefault();
-      unlockMobileAdminLearningHistory();
     });
     document.getElementById("confirmCancelBtn").addEventListener("click", hideConfirm);
     elements.confirmOkBtn.addEventListener("click", () => {
@@ -7425,7 +7462,7 @@
     renderMobileVersionInfo();
     syncFormFromState();
     bindEvents();
-    renderHome();
+    bindMobileAuthState();
   }
 
   if (document.readyState === "loading") {
