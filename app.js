@@ -1167,6 +1167,37 @@ function recordInterruptedLearningHistory(sessionLike, summary) {
   appendLearningHistoryEntry(buildLearningHistoryEntryFromSession(sessionLike, summary || buildSuspendedSummary(sessionLike), "interrupted"));
 }
 
+function buildPrepositionLearningHistoryEntry(sessionLike, reason) {
+  const endedAt = Date.now();
+  const startedAt = Number(sessionLike?.startedAt) || endedAt;
+  const answerCount = Math.max(0, Number(sessionLike?.answerCount) || 0);
+  const correctCount = Math.max(0, Number(sessionLike?.correctCount) || 0);
+  const accuracy = answerCount ? Math.round((correctCount / answerCount) * 100) : 0;
+  return {
+    learnedAt: formatTimestampToJstDisplay(endedAt),
+    startedAt,
+    endedAt,
+    startedAtDisplay: formatTimestampToJstDisplay(startedAt),
+    endedAtDisplay: formatTimestampToJstDisplay(endedAt),
+    activeStudySeconds: computeSessionActiveStudySeconds(sessionLike, endedAt),
+    mode: "前置詞特訓",
+    dayNumber: "",
+    questionCount: answerCount,
+    correctCount,
+    accuracy,
+    completedReason: String(reason || "completed"),
+    ticket: computeLearningHistoryTicketDelta(
+      sanitizeLearningHistoryTicketSnapshot(sessionLike?.ticketSnapshot),
+      captureLearningHistoryTicketSnapshot()
+    )
+  };
+}
+
+function recordPrepositionLearningHistory(sessionLike, reason) {
+  if (!sessionLike || typeof sessionLike !== "object") return;
+  appendLearningHistoryEntry(buildPrepositionLearningHistoryEntry(sessionLike, reason));
+}
+
 function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
   const endedAt = Date.now();
   const startedAt = Number(sessionLike?.startedAt) || endedAt;
@@ -4151,6 +4182,9 @@ function startPrepositionTraining(scope, options = {}) {
   prepositionTrainingSession = {
     scope: safeScope,
     scopeLabel: getPrepositionScopeLabel(safeScope),
+    startedAt: Date.now(),
+    answerHistory: [],
+    answerCount: 0,
     questions,
     currentIndex: 0,
     answered: false,
@@ -4388,6 +4422,9 @@ function submitPrepositionAnswer() {
 
   const normalized = trimmed.toLowerCase();
   const isCorrect = normalized === String(currentQuestion.answer || "").toLowerCase();
+  const answeredAt = Date.now();
+  session.answerHistory.push({ at: answeredAt, isCorrect });
+  session.answerCount += 1;
   session.answered = true;
   if (isCorrect) {
     session.correctCount += 1;
@@ -4456,6 +4493,7 @@ function showPrepositionTrainingResult() {
     openPrepositionTrainingSelector();
     return;
   }
+  recordPrepositionLearningHistory(session, "completed");
   const pointSummary = computeSessionEarnedPoints(session);
   prepositionTrainingSession = null;
   openTrainingCompleteScreen({
@@ -8349,6 +8387,7 @@ function bindEvents() {
         return;
       }
       if (currentScreenId === "prepositionPracticeScreen" && prepositionTrainingSession) {
+        recordPrepositionLearningHistory(prepositionTrainingSession, "interrupted");
         const pointSummary = computeSessionEarnedPoints(prepositionTrainingSession);
         prepositionTrainingSession = null;
         openTrainingCompleteScreen({
