@@ -1286,6 +1286,18 @@ p {
   color: var(--muted);
 }
 
+#adminLearningHistoryScreen .admin-learning-history-user-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+#adminLearningHistoryScreen .admin-learning-history-child-select {
+  width: 100%;
+  min-width: 0;
+}
+
 #adminLearningHistoryScreen .admin-history-detail-separator {
   height: 1px;
   background: rgba(255, 255, 255, 0.08);
@@ -2857,6 +2869,148 @@ select {
   .recent-three-table td {
     font-size: 0.84rem;
     padding: 4px;
+  }
+
+}
+
+@media (max-width: 768px) {
+  #adminLearningHistoryScreen.active {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 0;
+    padding-bottom: 20px;
+  }
+
+  #adminLearningHistoryScreen .screen-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 8px 0 12px;
+    background: linear-gradient(180deg, rgba(7, 17, 31, 0.98), rgba(7, 17, 31, 0.9));
+  }
+
+  #adminLearningHistoryScreen .back-nav-btn,
+  #adminLearningHistoryScreen .admin-history-date-nav-btn,
+  #adminLearningHistoryScreen .admin-learning-history-pin-row button {
+    min-height: 44px;
+  }
+
+  #adminLearningHistoryScreen .back-nav-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #adminLearningHistoryScreen .admin-learning-history-panel {
+    gap: 14px;
+    min-width: 0;
+  }
+
+  #adminLearningHistoryScreen .admin-learning-history-gate {
+    padding-top: 8px;
+  }
+
+  #adminLearningHistoryScreen .admin-learning-history-pin-row {
+    flex-direction: column;
+  }
+
+  #adminLearningHistoryScreen .admin-learning-history-pin-row .settings-update-password-input {
+    max-width: none;
+    width: 100%;
+  }
+
+  #adminLearningHistoryScreen .admin-learning-history-list,
+  #adminLearningHistoryScreen .admin-learning-history-view,
+  #adminLearningHistoryScreen .admin-history-overview,
+  #adminLearningHistoryScreen .admin-history-today-section,
+  #adminLearningHistoryScreen .admin-history-detail-section,
+  #adminLearningHistoryScreen .admin-history-card,
+  #adminLearningHistoryScreen .admin-history-selected-summary,
+  #adminLearningHistoryScreen .admin-history-mode-summary-list,
+  #adminLearningHistoryScreen .admin-history-detail-list {
+    min-width: 0;
+  }
+
+  #adminLearningHistoryScreen .admin-history-period-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  #adminLearningHistoryScreen .admin-history-period-block,
+  #adminLearningHistoryScreen .admin-history-card,
+  #adminLearningHistoryScreen .admin-history-mode-summary-row,
+  #adminLearningHistoryScreen .admin-history-detail-item {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #adminLearningHistoryScreen .admin-history-section-header,
+  #adminLearningHistoryScreen .admin-history-date-switch,
+  #adminLearningHistoryScreen .admin-history-date-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #adminLearningHistoryScreen .admin-history-date-nav {
+    gap: 10px;
+  }
+
+  #adminLearningHistoryScreen .admin-history-date-nav-btn {
+    width: 100%;
+  }
+
+  #adminLearningHistoryScreen .admin-history-mode-summary-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    align-items: start;
+  }
+
+  #adminLearningHistoryScreen .admin-history-mode-summary-row span {
+    overflow-wrap: anywhere;
+  }
+
+  #adminLearningHistoryScreen .admin-history-total-stats {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  #adminLearningHistoryScreen .admin-history-detail-list {
+    gap: 12px;
+  }
+
+  #adminLearningHistoryScreen .admin-history-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  #adminLearningHistoryScreen .admin-history-detail-item:first-child,
+  #adminLearningHistoryScreen .admin-history-detail-item:last-child {
+    padding: 12px;
+  }
+
+  #adminLearningHistoryScreen .admin-history-detail-separator {
+    display: none;
+  }
+
+  #adminLearningHistoryScreen .admin-history-detail-time,
+  #adminLearningHistoryScreen .admin-history-detail-mode,
+  #adminLearningHistoryScreen .admin-history-detail-meta,
+  #adminLearningHistoryScreen .admin-history-detail-ticket,
+  #adminLearningHistoryScreen .admin-history-period-value,
+  #adminLearningHistoryScreen .admin-history-period-meta,
+  #adminLearningHistoryScreen .admin-history-detail-date,
+  #adminLearningHistoryScreen .empty-state,
+  #adminLearningHistoryScreen .subtext {
+    overflow-wrap: anywhere;
   }
 
   .hero-card,

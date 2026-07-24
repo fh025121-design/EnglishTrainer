@@ -522,6 +522,67 @@ function getLearningHistoryModeGroup(mode) {
   return "other";
 }
 
+function getLearningHistoryModeSummaryOrder() {
+  return ["day", "phrase", "review", "word", "other"];
+}
+
+function getLearningHistoryModeSummaryEntries(summary) {
+  const modeTotals = summary?.modeTotals && typeof summary.modeTotals === "object" ? summary.modeTotals : {};
+  return getLearningHistoryModeSummaryOrder()
+    .map((key) => ({ key, ...(modeTotals[key] || {}) }))
+    .filter((entry) => Math.max(0, Number(entry.questionCount) || 0) > 0 || Math.max(0, Number(entry.activeStudySeconds) || 0) > 0);
+}
+
+function renderLearningHistoryModeSummaryContent(summary, options = {}) {
+  const entries = getLearningHistoryModeSummaryEntries(summary);
+  if (!entries.length) {
+    return `<p class="empty-state">${escapeHtml(options.emptyMessage || "この期間の学習記録がありません")}</p>`;
+  }
+
+  const totalSeconds = Math.max(0, Number(summary?.activeStudySeconds) || 0);
+  const totalQuestions = Math.max(0, Number(summary?.questionCount) || 0);
+  const totalAccuracy = Math.max(0, Number(summary?.accuracy) || 0);
+  const modeRows = entries.map((entry) => {
+    const questionCount = Math.max(0, Number(entry.questionCount) || 0);
+    const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
+    if (options.layout === "today") {
+      return `
+        <div class="admin-history-mode-summary-row">
+          <span>${escapeHtml(entry.label)}</span>
+          <span>${questionCount}問</span>
+          <span>${escapeHtml(formatLearningHistoryDuration(activeStudySeconds))}</span>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="admin-history-mode-summary-row">
+        <span>${escapeHtml(entry.label)}</span>
+        <span>${escapeHtml(formatLearningHistoryDuration(activeStudySeconds))}</span>
+        <span>${questionCount}問</span>
+        <span>${Math.max(0, Number(entry.accuracy) || 0)}%</span>
+      </div>
+    `;
+  }).join("");
+
+  const totalRow = options.layout === "today"
+    ? `
+      <div class="admin-history-total-stats">
+        <span>合計 ${escapeHtml(formatLearningHistoryDuration(totalSeconds))}</span>
+        <span>${totalQuestions}問</span>
+      </div>
+    `
+    : `
+      <div class="admin-history-total-stats">
+        <span>合計 ${escapeHtml(formatLearningHistoryDuration(totalSeconds))}</span>
+        <span>${totalQuestions}問</span>
+        <span>${totalAccuracy}%</span>
+      </div>
+    `;
+
+  return `${modeRows}${totalRow}`;
+}
+
 function createLearningHistoryModeTotals() {
   return {
     day: { label: "Day学習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
@@ -825,11 +886,28 @@ function renderAdminLearningHistoryEntries(entries) {
             <p class="admin-history-period-label">今週</p>
             <p class="admin-history-period-value">${formatLearningHistoryDuration(model.weekSummary.activeStudySeconds)}</p>
             <p class="admin-history-period-meta">${model.weekSummary.questionCount}問 ${model.weekSummary.accuracy}%</p>
+            <div class="admin-history-mode-summary-list">
+              ${renderLearningHistoryModeSummaryContent(model.weekSummary, { emptyMessage: "今週の学習記録がありません" })}
+            </div>
           </div>
           <div class="admin-history-period-block">
             <p class="admin-history-period-label">今月</p>
             <p class="admin-history-period-value">${formatLearningHistoryDuration(model.monthSummary.activeStudySeconds)}</p>
             <p class="admin-history-period-meta">${model.monthSummary.questionCount}問 ${model.monthSummary.accuracy}%</p>
+            <div class="admin-history-mode-summary-list">
+              ${renderLearningHistoryModeSummaryContent(model.monthSummary, { emptyMessage: "今月の学習記録がありません" })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-history-today-section">
+        <div class="admin-history-section-header">
+          <h3>今日</h3>
+        </div>
+        <div class="admin-history-selected-summary">
+          <div class="admin-history-mode-summary-list">
+            ${renderLearningHistoryModeSummaryContent(model.todaySummary, { layout: "today", emptyMessage: "今日の学習記録がありません" })}
           </div>
         </div>
       </section>
