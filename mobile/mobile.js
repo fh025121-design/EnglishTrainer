@@ -1742,6 +1742,7 @@
     speakingRecognitionInProgress: false,
     speakingRecognition: null,
     speakingAutoAdvanceTimerId: null,
+    wordOrderTraining: null,
     learningHistorySession: null,
     currentScreen: "homeScreen",
     confirmAction: null,
@@ -4594,8 +4595,308 @@
     };
   }
 
+  function tokenizeWordOrderSentence(sentence) {
+    const normalized = String(sentence || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/([.?])/g, " $1 ")
+      .trim();
+    return normalized ? normalized.split(/\s+/).filter(Boolean) : [];
+  }
+
+  function buildWordOrderAnswerFromTokens(tokens) {
+    return (Array.isArray(tokens) ? tokens : []).reduce((result, token, index) => {
+      if (!index) return token;
+      if (token === "." || token === "?") {
+        return `${result}${token}`;
+      }
+      return `${result} ${token}`;
+    }, "");
+  }
+
+  function getWordOrderDay1Questions() {
+    const bank = Array.isArray(window.wordOrderTrainingBank) ? window.wordOrderTrainingBank : [];
+    return bank
+      .filter((entry) => Number(entry?.day) === 1)
+      .map((entry, index) => {
+        const english = String(entry?.english || "").trim();
+        const japanese = String(entry?.japanese || "").trim();
+        const tag = String(entry?.tag || "").trim();
+        const tokens = tokenizeWordOrderSentence(english);
+        return {
+          id: String(entry?.id || `word-order-day1-${index + 1}`),
+          english,
+          japanese,
+          tag,
+          tokens
+        };
+      })
+      .filter((item) => item.english && item.japanese && item.tokens.length >= 2);
+  }
+
+  function cloneWordOrderCards(cards) {
+    return (Array.isArray(cards) ? cards : []).map((card) => ({
+      id: String(card.id || ""),
+      token: String(card.token || "")
+    }));
+  }
+
+  function buildWordOrderCards(tokens, prefix) {
+    return shuffleArray((Array.isArray(tokens) ? tokens : []).map((token, index) => ({
+      id: `${prefix}-${index}`,
+      token: String(token || "")
+    })));
+  }
+
+  function setupWordOrderQuestionState(training) {
+    if (!training || training.completed) return;
+    const question = training.questions[training.questionIndex];
+    if (!question) {
+      training.completed = true;
+      return;
+    }
+    const cards = buildWordOrderCards(question.tokens, `${question.id}-${training.questionIndex + 1}`);
+    training.selectedCards = [];
+    training.remainingCards = cloneWordOrderCards(cards);
+    training.initialCards = cloneWordOrderCards(cards);
+    training.phase = "answering";
+    training.feedback = "";
+    training.correctAnswer = "";
+  }
+
+  function renderWordOrderTraining() {
+    const training = state.wordOrderTraining;
+    if (!training) return;
+
+    const questionPanel = elements.wordOrderQuestionPanel;
+    const completePanel = elements.wordOrderCompletePanel;
+    if (!questionPanel || !completePanel) return;
+
+    if (training.completed) {
+      questionPanel.classList.add("hidden");
+      completePanel.classList.remove("hidden");
+      if (elements.wordOrderDayText) {
+        elements.wordOrderDayText.textContent = "Day1 完了";
+      }
+      if (elements.wordOrderProgressText) {
+        const total = training.questions.length;
+        elements.wordOrderProgressText.textContent = `${total} / ${total}`;
+      }
+      if (elements.wordOrderCompleteSummaryText) {
+        const total = training.questions.length;
+        elements.wordOrderCompleteSummaryText.textContent = `${training.correctCount} / ${total} 正解`;
+      }
+      if (elements.wordOrderTagText) {
+        elements.wordOrderTagText.textContent = "";
+      }
+      if (elements.wordOrderResultTagText) {
+        elements.wordOrderResultTagText.textContent = "";
+      }
+      showScreen("wordOrderTrainingScreen");
+      return;
+    }
+
+    const question = training.questions[training.questionIndex];
+    if (!question) {
+      training.completed = true;
+      renderWordOrderTraining();
+      return;
+    }
+
+    questionPanel.classList.remove("hidden");
+    completePanel.classList.add("hidden");
+
+    if (elements.wordOrderDayText) {
+      elements.wordOrderDayText.textContent = "Day1";
+    }
+    if (elements.wordOrderProgressText) {
+      elements.wordOrderProgressText.textContent = `${training.questionIndex + 1} / ${training.questions.length}`;
+    }
+    if (elements.wordOrderJapaneseText) {
+      elements.wordOrderJapaneseText.textContent = question.japanese;
+    }
+    if (elements.wordOrderTagText) {
+      elements.wordOrderTagText.textContent = question.tag ? `【${question.tag}】` : "";
+    }
+
+    if (elements.wordOrderAnswerArea) {
+      elements.wordOrderAnswerArea.innerHTML = "";
+      if (!training.selectedCards.length) {
+        const empty = document.createElement("p");
+        empty.className = "word-order-card-empty";
+        empty.textContent = "ここにカードが並びます";
+        elements.wordOrderAnswerArea.appendChild(empty);
+      } else {
+        const fragment = document.createDocumentFragment();
+        training.selectedCards.forEach((card) => {
+          const chip = document.createElement("span");
+          chip.className = "word-order-card-btn word-order-answer-card";
+          chip.textContent = card.token;
+          fragment.appendChild(chip);
+        });
+        elements.wordOrderAnswerArea.appendChild(fragment);
+      }
+    }
+
+    if (elements.wordOrderCardPool) {
+      elements.wordOrderCardPool.innerHTML = "";
+      if (training.phase === "judged") {
+        elements.wordOrderCardPool.classList.add("hidden");
+      } else if (!training.remainingCards.length) {
+        elements.wordOrderCardPool.classList.remove("hidden");
+        const empty = document.createElement("p");
+        empty.className = "word-order-card-empty";
+        empty.textContent = "すべて並べ終わりました";
+        elements.wordOrderCardPool.appendChild(empty);
+      } else {
+        elements.wordOrderCardPool.classList.remove("hidden");
+        const fragment = document.createDocumentFragment();
+        training.remainingCards.forEach((card) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "word-order-card-btn";
+          button.textContent = card.token;
+          button.disabled = training.phase !== "answering";
+          button.addEventListener("click", () => {
+            selectWordOrderCard(card.id);
+          });
+          fragment.appendChild(button);
+        });
+        elements.wordOrderCardPool.appendChild(fragment);
+      }
+    }
+    if (elements.wordOrderCardLabelText) {
+      elements.wordOrderCardLabelText.textContent = training.phase === "judged" ? "" : "カード";
+    }
+
+    if (elements.wordOrderFeedbackText) {
+      elements.wordOrderFeedbackText.textContent = training.feedback || "";
+    }
+    if (elements.wordOrderCorrectAnswerText) {
+      elements.wordOrderCorrectAnswerText.textContent = training.correctAnswer ? `正解: ${training.correctAnswer}` : "";
+    }
+    if (elements.wordOrderResultTagText) {
+      elements.wordOrderResultTagText.textContent = training.phase === "judged" && question.tag
+        ? `単元: 【${question.tag}】`
+        : "";
+    }
+
+    if (elements.wordOrderUndoBtn) {
+      elements.wordOrderUndoBtn.disabled = training.phase !== "answering" || !training.selectedCards.length;
+    }
+    if (elements.wordOrderResetBtn) {
+      elements.wordOrderResetBtn.disabled = training.phase !== "answering" || !training.selectedCards.length;
+    }
+    if (elements.wordOrderSubmitBtn) {
+      elements.wordOrderSubmitBtn.textContent = training.phase === "judged"
+        ? (training.questionIndex >= training.questions.length - 1 ? "結果へ" : "次へ")
+        : "回答";
+    }
+
+    showScreen("wordOrderTrainingScreen");
+  }
+
+  function startWordOrderTraining() {
+    const questions = getWordOrderDay1Questions();
+    if (!questions.length) {
+      renderComingSoonScreen({
+        title: "語順トレーニング（準備中）",
+        message: "Day1 の語順データがまだありません。"
+      });
+      return;
+    }
+    state.wordOrderTraining = {
+      questions,
+      questionIndex: 0,
+      correctCount: 0,
+      incorrectCount: 0,
+      selectedCards: [],
+      remainingCards: [],
+      initialCards: [],
+      phase: "answering",
+      feedback: "",
+      correctAnswer: "",
+      completed: false
+    };
+    setupWordOrderQuestionState(state.wordOrderTraining);
+    renderWordOrderTraining();
+  }
+
+  function selectWordOrderCard(cardId) {
+    const training = state.wordOrderTraining;
+    if (!training || training.phase !== "answering") return;
+    const index = training.remainingCards.findIndex((card) => card.id === cardId);
+    if (index < 0) return;
+    const [card] = training.remainingCards.splice(index, 1);
+    training.selectedCards.push(card);
+    renderWordOrderTraining();
+  }
+
+  function undoWordOrderSelection() {
+    const training = state.wordOrderTraining;
+    if (!training || training.phase !== "answering" || !training.selectedCards.length) return;
+    const card = training.selectedCards.pop();
+    training.remainingCards.push(card);
+    renderWordOrderTraining();
+  }
+
+  function resetWordOrderSelection() {
+    const training = state.wordOrderTraining;
+    if (!training || training.phase !== "answering") return;
+    training.selectedCards = [];
+    training.remainingCards = cloneWordOrderCards(training.initialCards);
+    training.feedback = "";
+    training.correctAnswer = "";
+    renderWordOrderTraining();
+  }
+
+  function moveToNextWordOrderQuestion() {
+    const training = state.wordOrderTraining;
+    if (!training) return;
+    if (training.questionIndex >= training.questions.length - 1) {
+      training.completed = true;
+      renderWordOrderTraining();
+      return;
+    }
+    training.questionIndex += 1;
+    setupWordOrderQuestionState(training);
+    renderWordOrderTraining();
+  }
+
+  function submitWordOrderAnswer() {
+    const training = state.wordOrderTraining;
+    if (!training) return;
+    if (training.phase === "judged") {
+      moveToNextWordOrderQuestion();
+      return;
+    }
+    const question = training.questions[training.questionIndex];
+    if (!question) return;
+    if (training.selectedCards.length !== question.tokens.length) {
+      training.feedback = "カードをすべて並べてから回答してください。";
+      training.correctAnswer = "";
+      renderWordOrderTraining();
+      return;
+    }
+
+    const selectedTokens = training.selectedCards.map((card) => card.token);
+    const isCorrect = selectedTokens.every((token, index) => token === question.tokens[index]);
+    if (isCorrect) {
+      training.correctCount += 1;
+      training.feedback = "正解です！";
+      training.correctAnswer = "";
+    } else {
+      training.incorrectCount += 1;
+      training.feedback = "不正解です。";
+      training.correctAnswer = buildWordOrderAnswerFromTokens(question.tokens);
+    }
+
+    training.phase = "judged";
+    renderWordOrderTraining();
+  }
+
   function showScreen(screenId) {
-    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileAdminLearningHistoryScreen", "wordOrderTrainingScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -6710,6 +7011,7 @@
           speakingRecognitionInProgress: false,
           speakingRecognition: null,
           speakingAutoAdvanceTimerId: null,
+          wordOrderTraining: null,
           currentScreen: "homeScreen",
           confirmAction: null,
           micTestRecognition: null
@@ -6879,6 +7181,24 @@
     elements.mobileAdminLearningHistoryUnlockBtn = document.getElementById("mobileAdminLearningHistoryUnlockBtn");
     elements.mobileAdminLearningHistoryStatusText = document.getElementById("mobileAdminLearningHistoryStatusText");
     elements.mobileAdminLearningHistoryPanel = document.getElementById("mobileAdminLearningHistoryPanel");
+    elements.wordOrderQuestionPanel = document.getElementById("wordOrderQuestionPanel");
+    elements.wordOrderCompletePanel = document.getElementById("wordOrderCompletePanel");
+    elements.wordOrderDayText = document.getElementById("wordOrderDayText");
+    elements.wordOrderProgressText = document.getElementById("wordOrderProgressText");
+    elements.wordOrderTagText = document.getElementById("wordOrderTagText");
+    elements.wordOrderJapaneseText = document.getElementById("wordOrderJapaneseText");
+    elements.wordOrderAnswerArea = document.getElementById("wordOrderAnswerArea");
+    elements.wordOrderCardLabelText = document.getElementById("wordOrderCardLabelText");
+    elements.wordOrderCardPool = document.getElementById("wordOrderCardPool");
+    elements.wordOrderFeedbackText = document.getElementById("wordOrderFeedbackText");
+    elements.wordOrderCorrectAnswerText = document.getElementById("wordOrderCorrectAnswerText");
+    elements.wordOrderResultTagText = document.getElementById("wordOrderResultTagText");
+    elements.wordOrderUndoBtn = document.getElementById("wordOrderUndoBtn");
+    elements.wordOrderResetBtn = document.getElementById("wordOrderResetBtn");
+    elements.wordOrderSubmitBtn = document.getElementById("wordOrderSubmitBtn");
+    elements.wordOrderCompleteSummaryText = document.getElementById("wordOrderCompleteSummaryText");
+    elements.wordOrderRestartBtn = document.getElementById("wordOrderRestartBtn");
+    elements.wordOrderHomeBtn = document.getElementById("wordOrderHomeBtn");
     elements.confirmModal = document.getElementById("confirmModal");
     elements.confirmMessage = document.getElementById("confirmMessage");
     elements.confirmCancelBtn = document.getElementById("confirmCancelBtn");
@@ -6887,12 +7207,7 @@
 
   function bindEvents() {
     document.getElementById("openSpeakingFeatureBtn").addEventListener("click", renderSpeakingHome);
-    document.getElementById("openWordOrderTrainingBtn").addEventListener("click", () => {
-      renderComingSoonScreen({
-        title: "語順トレーニング（準備中）",
-        message: "語順トレーニングは準備中です。"
-      });
-    });
+    document.getElementById("openWordOrderTrainingBtn").addEventListener("click", startWordOrderTraining);
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
     document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", () => {
@@ -6940,6 +7255,12 @@
     elements.nextConversationBtn.addEventListener("click", moveToNextSpeakingConversation);
     document.getElementById("settingsBackBtn").addEventListener("click", renderHome);
     elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", renderHome);
+    document.getElementById("wordOrderBackBtn").addEventListener("click", renderHome);
+    elements.wordOrderUndoBtn.addEventListener("click", undoWordOrderSelection);
+    elements.wordOrderResetBtn.addEventListener("click", resetWordOrderSelection);
+    elements.wordOrderSubmitBtn.addEventListener("click", submitWordOrderAnswer);
+    elements.wordOrderRestartBtn.addEventListener("click", startWordOrderTraining);
+    elements.wordOrderHomeBtn.addEventListener("click", renderHome);
     document.getElementById("comingSoonBackBtn").addEventListener("click", renderHome);
     document.getElementById("studyBackBtn").addEventListener("click", confirmLeaveStudy);
     document.getElementById("retrySessionBtn").addEventListener("click", () => startStudy(state.lastSessionMode || "speaking"));

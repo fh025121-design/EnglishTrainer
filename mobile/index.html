@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260724-1116";
+        const defaultToken = "20260724-1352";
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
         const cacheToken = [window.name, storedToken, defaultToken].filter(Boolean).sort().at(-1) || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -525,6 +525,53 @@
         </main>
       </section>
 
+      <section id="wordOrderTrainingScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="wordOrderBackBtn" class="back-btn" type="button">← ホーム</button>
+        </header>
+
+        <main class="study-layout">
+          <div class="study-meta">
+            <p id="wordOrderDayText" class="day-badge">Day1</p>
+            <p id="wordOrderProgressText" class="progress-text">1 / 1</p>
+            <p id="wordOrderTagText" class="status-text">【単元】</p>
+          </div>
+
+          <section id="wordOrderQuestionPanel" class="study-card conversation-card">
+            <p class="study-type-text">日本語を見て英語カードを正しい順番に並べよう</p>
+            <p id="wordOrderJapaneseText" class="word-order-prompt-text">日本語</p>
+
+            <div class="recognized-block word-order-zone">
+              <p class="recognized-label">あなたの回答</p>
+              <div id="wordOrderAnswerArea" class="word-order-card-grid"></div>
+            </div>
+
+            <div class="recognized-block word-order-zone">
+              <p id="wordOrderCardLabelText" class="recognized-label">カード</p>
+              <div id="wordOrderCardPool" class="word-order-card-grid"></div>
+              <p id="wordOrderFeedbackText" class="word-order-feedback-text"></p>
+              <p id="wordOrderCorrectAnswerText" class="word-order-correct-text"></p>
+              <p id="wordOrderResultTagText" class="word-order-feedback-text"></p>
+            </div>
+
+            <div class="word-order-actions-row">
+              <button id="wordOrderUndoBtn" class="secondary-btn" type="button">1語戻る</button>
+              <button id="wordOrderResetBtn" class="secondary-btn" type="button">リセット</button>
+              <button id="wordOrderSubmitBtn" class="primary-btn" type="button">回答</button>
+            </div>
+          </section>
+
+          <section id="wordOrderCompletePanel" class="panel result-panel speaking-complete-panel hidden">
+            <h2>Day1 完了！</h2>
+            <p id="wordOrderCompleteSummaryText" class="status-text">0 / 0 正解</p>
+            <div class="action-panel compact-actions">
+              <button id="wordOrderRestartBtn" class="primary-btn large-btn" type="button">もう一度 Day1</button>
+              <button id="wordOrderHomeBtn" class="secondary-btn large-btn" type="button">ホームへ戻る</button>
+            </div>
+          </section>
+        </main>
+      </section>
+
       <section id="comingSoonScreen" class="screen">
         <header class="screen-topbar">
           <button id="comingSoonBackBtn" class="back-btn" type="button">← ホーム</button>
@@ -551,11 +598,13 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-1116";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-1352";
         const scriptSources = [
           "../data.js",
+          "../preposition-data.js",
           "../release-info.js",
           "speaking-data.js",
+          "word-order-data.js",
           "mobile.js"
         ];
 
