@@ -170,6 +170,7 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
     : Math.max(0, Number(data.createdAt?.seconds) || 0) * 1000;
   const startedAt = Math.max(0, Number(data.startedAt) || 0);
   const endedAt = Math.max(0, Number(data.endedAt) || 0);
+  const normalizedDeviceType = String(data.deviceType || "").trim().toLowerCase() === "mobile" ? "mobile" : (String(data.deviceType || "").trim().toLowerCase() === "pc" ? "pc" : "");
   return {
     id: String(docSnapshot?.id || ""),
     uid: String(data.uid || ""),
@@ -191,7 +192,7 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
       earnedMinutes: Math.max(0, Number(data.ticketEarned) || 0),
       usedMinutes: Math.max(0, Number(data.ticketUsed) || 0)
     },
-    deviceType: String(data.deviceType || ""),
+    deviceType: normalizedDeviceType,
     createdAt: createdAtMillis
   };
 }

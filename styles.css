@@ -1293,6 +1293,38 @@ p {
   min-width: 0;
 }
 
+#adminLearningHistoryScreen .admin-learning-history-controls,
+#adminLearningHistoryScreen .admin-learning-history-device-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+#adminLearningHistoryScreen .admin-history-toggle-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+#adminLearningHistoryScreen .admin-history-toggle-btn {
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  font-weight: 700;
+}
+
+#adminLearningHistoryScreen .admin-history-toggle-btn.is-active {
+  color: var(--text);
+  border-color: rgba(94, 214, 214, 0.45);
+  background: rgba(94, 214, 214, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(94, 214, 214, 0.12);
+}
+
 #adminLearningHistoryScreen .admin-learning-history-child-select {
   width: 100%;
   min-width: 0;
@@ -2895,6 +2927,7 @@ select {
   }
 
   #adminLearningHistoryScreen .back-nav-btn,
+  #adminLearningHistoryScreen .admin-history-toggle-btn,
   #adminLearningHistoryScreen .admin-history-date-nav-btn,
   #adminLearningHistoryScreen .admin-learning-history-pin-row button {
     min-height: 44px;
@@ -2943,7 +2976,8 @@ select {
   #adminLearningHistoryScreen .admin-history-period-block,
   #adminLearningHistoryScreen .admin-history-card,
   #adminLearningHistoryScreen .admin-history-mode-summary-row,
-  #adminLearningHistoryScreen .admin-history-detail-item {
+  #adminLearningHistoryScreen .admin-history-detail-item,
+  #adminLearningHistoryScreen .admin-history-toggle-btn {
     width: 100%;
     min-width: 0;
   }

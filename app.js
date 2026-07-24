@@ -176,8 +176,10 @@ let adminLearningHistoryFirestoreLoadToken = 0;
 let adminLearningHistoryFamilyUnsubscribe = null;
 let adminLearningHistoryFamilyLoadToken = 0;
 let adminLearningHistoryFamilyChildren = [];
-let adminLearningHistorySelectedChildKey = "son";
+let adminLearningHistorySelectedChildKey = "parent";
 let adminLearningHistorySelectedChildUid = "";
+let adminLearningHistorySelectedDeviceType = "pc";
+let adminLearningHistorySourceEntries = [];
 const DESKTOP_FIT_REFERENCE = Object.freeze({
   width: 1366,
   height: 920,
@@ -697,12 +699,21 @@ function buildLearningHistoryInsights(entries) {
 
   const weekSummary = buildPeriodTotals(withinWeekEntries);
   const monthSummary = buildPeriodTotals(withinMonthEntries);
+  const uniqueSortedDayKeys = [...new Set(source.map((entry) => getLearningHistoryDayKey(entry.endedAt)).filter(Boolean))].sort((left, right) => right.localeCompare(left));
+  let streak = 0;
+  let expectedDayKey = todayDayKey;
+  uniqueSortedDayKeys.forEach((dayKey) => {
+    if (dayKey !== expectedDayKey) return;
+    streak += 1;
+    expectedDayKey = shiftLearningHistoryDayKey(expectedDayKey, -1);
+  });
 
   return {
     todaySummary,
     recentDaySummaries,
     weekSummary,
     monthSummary,
+    streak,
     dayMap,
     source
   };
@@ -714,8 +725,86 @@ function buildLearningHistoryDetailEntries(dayEntries) {
     .sort((left, right) => Number(left.startedAt || left.endedAt || 0) - Number(right.startedAt || right.endedAt || 0));
 }
 
-function getAdminLearningHistoryChildSelect() {
-  return document.getElementById("adminLearningHistoryChildSelect");
+function buildAdminLearningHistoryFamilyOptions(family) {
+  const familyChildren = Array.isArray(family?.children) ? family.children : [];
+  const sonEntry = familyChildren.find((child) => child?.key === "son" && child?.uid);
+  const options = [];
+  if (String(family?.parentUid || "").trim()) {
+    options.push({ key: "parent", name: "私", uid: String(family.parentUid || "").trim() });
+  }
+  if (sonEntry?.uid) {
+    options.push({ key: "son", name: "長男", uid: String(sonEntry.uid || "").trim() });
+  }
+  return options;
+}
+
+function getAdminLearningHistoryDeviceOptions() {
+  return [
+    { key: "pc", label: "PC版" },
+    { key: "mobile", label: "モバイル版" }
+  ];
+}
+
+function normalizeAdminLearningHistoryDeviceType(deviceType) {
+  return String(deviceType || "").trim().toLowerCase() === "mobile" ? "mobile" : "pc";
+}
+
+function getAdminLearningHistoryFilteredEntries(entries) {
+  const source = Array.isArray(entries) ? entries : [];
+  return source.filter((entry) => normalizeAdminLearningHistoryDeviceType(entry?.deviceType) === adminLearningHistorySelectedDeviceType);
+}
+
+function renderAdminLearningHistoryControls() {
+  const userButtons = adminLearningHistoryFamilyChildren.length
+    ? adminLearningHistoryFamilyChildren.map((child) => {
+      const isSelected = child.key === adminLearningHistorySelectedChildKey;
+      return `<button class="admin-history-toggle-btn${isSelected ? " is-active" : ""}" type="button" data-admin-history-user-key="${escapeHtml(child.key)}" aria-pressed="${isSelected ? "true" : "false"}">${escapeHtml(child.name || child.key)}</button>`;
+    }).join("")
+    : '<p class="empty-state">表示できるユーザーがありません</p>';
+  const deviceButtons = getAdminLearningHistoryDeviceOptions().map((device) => {
+    const isSelected = device.key === adminLearningHistorySelectedDeviceType;
+    return `<button class="admin-history-toggle-btn${isSelected ? " is-active" : ""}" type="button" data-admin-history-device-key="${escapeHtml(device.key)}" aria-pressed="${isSelected ? "true" : "false"}">${escapeHtml(device.label)}</button>`;
+  }).join("");
+  return `
+    <div class="admin-learning-history-controls">
+      <div class="admin-learning-history-user-row">
+        <label class="subtext">表示するユーザー</label>
+        <div class="admin-history-toggle-group" role="group" aria-label="表示するユーザー">${userButtons}</div>
+      </div>
+      <div class="admin-learning-history-device-row">
+        <label class="subtext">表示する端末</label>
+        <div class="admin-history-toggle-group" role="group" aria-label="表示する端末">${deviceButtons}</div>
+      </div>
+    </div>
+  `;
+}
+
+function bindAdminLearningHistoryControls() {
+  const content = document.getElementById("adminLearningHistoryContent");
+  if (!content) return;
+
+  content.querySelectorAll("[data-admin-history-user-key]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextKey = String(button.getAttribute("data-admin-history-user-key") || "");
+      const selectedChild = adminLearningHistoryFamilyChildren.find((child) => child.key === nextKey) || null;
+      if (!selectedChild || selectedChild.key === adminLearningHistorySelectedChildKey) return;
+      adminLearningHistorySelectedChildKey = selectedChild.key;
+      adminLearningHistorySelectedChildUid = selectedChild.uid;
+      adminLearningHistorySelectedDayKey = "";
+      adminLearningHistorySourceEntries = [];
+      renderAdminLearningHistoryHistoryWatch(selectedChild.uid);
+    });
+  });
+
+  content.querySelectorAll("[data-admin-history-device-key]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextKey = String(button.getAttribute("data-admin-history-device-key") || "");
+      if (!nextKey || nextKey === adminLearningHistorySelectedDeviceType) return;
+      adminLearningHistorySelectedDeviceType = nextKey === "mobile" ? "mobile" : "pc";
+      adminLearningHistorySelectedDayKey = "";
+      renderAdminLearningHistoryEntries(adminLearningHistorySourceEntries);
+    });
+  });
 }
 
 function stopAdminLearningHistoryFirestoreListener() {
@@ -744,34 +833,13 @@ function renderAdminLearningHistoryState(message, options = {}) {
   if (countText) {
     countText.textContent = options.countText || "";
   }
-  content.innerHTML = `<p class="empty-state">${escapeHtml(message)}</p>`;
-}
-
-function renderAdminLearningHistoryChildOptions(children) {
-  const select = getAdminLearningHistoryChildSelect();
-  if (!select) return;
-  select.innerHTML = children.map((child) => `<option value="${escapeHtml(child.key)}">${escapeHtml(child.name || child.key)}</option>`).join("");
-  select.disabled = children.length <= 0;
-  if (children.length && !children.some((child) => child.key === adminLearningHistorySelectedChildKey)) {
-    adminLearningHistorySelectedChildKey = children[0].key;
-  }
-  select.value = adminLearningHistorySelectedChildKey;
-}
-
-function bindAdminLearningHistoryChildSelect() {
-  const select = getAdminLearningHistoryChildSelect();
-  if (!select || select.dataset.bound === "true") return;
-  select.addEventListener("change", () => {
-    adminLearningHistorySelectedChildKey = String(select.value || "");
-    const selectedChild = adminLearningHistoryFamilyChildren.find((child) => child.key === adminLearningHistorySelectedChildKey) || adminLearningHistoryFamilyChildren[0] || null;
-    if (!selectedChild) return;
-    if (selectedChild.uid !== adminLearningHistorySelectedChildUid) {
-      adminLearningHistorySelectedChildUid = selectedChild.uid;
-      adminLearningHistorySelectedDayKey = "";
-      renderAdminLearningHistoryHistoryWatch(selectedChild.uid);
-    }
-  });
-  select.dataset.bound = "true";
+  content.innerHTML = `
+    <div class="admin-learning-history-view">
+      ${renderAdminLearningHistoryControls()}
+      <p class="empty-state">${escapeHtml(message)}</p>
+    </div>
+  `;
+  bindAdminLearningHistoryControls();
 }
 
 function renderAdminLearningHistoryHistoryWatch(targetUid) {
@@ -782,16 +850,19 @@ function renderAdminLearningHistoryHistoryWatch(targetUid) {
   }
 
   stopAdminLearningHistoryHistoryListener();
+  adminLearningHistorySourceEntries = [];
   const loadToken = ++adminLearningHistoryFirestoreLoadToken;
   renderAdminLearningHistoryState("読み込み中...", { countText: "読み込み中..." });
 
   adminLearningHistoryFirestoreUnsubscribe = watchFn(targetUid, {
     onUpdate: (entries) => {
       if (loadToken !== adminLearningHistoryFirestoreLoadToken) return;
+      adminLearningHistorySourceEntries = Array.isArray(entries) ? entries.slice() : [];
       renderAdminLearningHistoryEntries(entries);
     },
     onError: () => {
       if (loadToken !== adminLearningHistoryFirestoreLoadToken) return;
+      adminLearningHistorySourceEntries = [];
       renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
     }
   });
@@ -812,15 +883,13 @@ function renderAdminLearningHistoryFamilyWatch() {
   adminLearningHistoryFamilyUnsubscribe = watchFn("inoue", {
     onUpdate: (family) => {
       if (loadToken !== adminLearningHistoryFamilyLoadToken) return;
-      const children = Array.isArray(family?.children) ? family.children : [];
+      const children = buildAdminLearningHistoryFamilyOptions(family);
       adminLearningHistoryFamilyChildren = children;
-      renderAdminLearningHistoryChildOptions(children);
-      bindAdminLearningHistoryChildSelect();
       if (!children.length) {
         renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
         return;
       }
-      const selectedChild = children.find((child) => child.key === adminLearningHistorySelectedChildKey) || children[0];
+      const selectedChild = children.find((child) => child.key === adminLearningHistorySelectedChildKey) || children.find((child) => child.key === "parent") || children[0];
       adminLearningHistorySelectedChildKey = selectedChild.key;
       adminLearningHistorySelectedChildUid = selectedChild.uid;
       renderAdminLearningHistoryHistoryWatch(selectedChild.uid);
@@ -838,9 +907,9 @@ function renderAdminLearningHistoryEntries(entries) {
   const countText = document.getElementById("adminLearningHistoryCountText");
   const todayDayKey = getLearningHistoryDayKey(Date.now());
 
-  const normalizedEntries = (Array.isArray(entries) ? entries : [])
+  const normalizedEntries = getAdminLearningHistoryFilteredEntries((Array.isArray(entries) ? entries : [])
     .slice()
-    .sort((a, b) => Number(b.createdAt || b.endedAt || 0) - Number(a.createdAt || a.endedAt || 0));
+    .sort((a, b) => Number(b.createdAt || b.endedAt || 0) - Number(a.createdAt || a.endedAt || 0)));
 
   if (countText) {
     countText.textContent = `${normalizedEntries.length}件`;
@@ -848,15 +917,11 @@ function renderAdminLearningHistoryEntries(entries) {
   if (!normalizedEntries.length) {
     content.innerHTML = `
       <div class="admin-learning-history-view">
-        <div class="admin-learning-history-user-row">
-          <label for="adminLearningHistoryChildSelect" class="subtext">表示するユーザー</label>
-          <select id="adminLearningHistoryChildSelect" class="settings-update-password-input admin-learning-history-child-select"></select>
-        </div>
-        <p class="empty-state">まだ履歴はありません</p>
+        ${renderAdminLearningHistoryControls()}
+        <p class="empty-state">選択中のユーザーと端末の履歴はまだありません</p>
       </div>
     `;
-    renderAdminLearningHistoryChildOptions(adminLearningHistoryFamilyChildren);
-    bindAdminLearningHistoryChildSelect();
+    bindAdminLearningHistoryControls();
     return;
   }
 
@@ -875,12 +940,9 @@ function renderAdminLearningHistoryEntries(entries) {
 
   content.innerHTML = `
     <div class="admin-learning-history-view">
-      <div class="admin-learning-history-user-row">
-        <label for="adminLearningHistoryChildSelect" class="subtext">表示するユーザー</label>
-        <select id="adminLearningHistoryChildSelect" class="settings-update-password-input admin-learning-history-child-select"></select>
-      </div>
+      ${renderAdminLearningHistoryControls()}
       <section class="admin-history-overview">
-        <div class="admin-history-streak-row">🔥連続${state.stats.streak || 0}日</div>
+        <div class="admin-history-streak-row">🔥連続${model.streak || 0}日</div>
         <div class="admin-history-period-grid">
           <div class="admin-history-period-block">
             <p class="admin-history-period-label">今週</p>
@@ -972,8 +1034,7 @@ function renderAdminLearningHistoryEntries(entries) {
     </div>
   `;
 
-  renderAdminLearningHistoryChildOptions(adminLearningHistoryFamilyChildren);
-  bindAdminLearningHistoryChildSelect();
+  bindAdminLearningHistoryControls();
 
   content.querySelectorAll("[data-day-shift]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -993,8 +1054,11 @@ function renderAdminLearningHistoryEntries(entries) {
 
 function renderAdminLearningHistoryList() {
   adminLearningHistoryFamilyChildren = [];
+  adminLearningHistorySelectedChildKey = "parent";
   adminLearningHistorySelectedChildUid = "";
-  bindAdminLearningHistoryChildSelect();
+  adminLearningHistorySelectedDeviceType = "pc";
+  adminLearningHistorySelectedDayKey = "";
+  adminLearningHistorySourceEntries = [];
   renderAdminLearningHistoryFamilyWatch();
 }
 
