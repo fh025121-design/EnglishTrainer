@@ -782,9 +782,9 @@ select,
 .acquired-points-line {
   margin: 0;
   width: 100%;
-  max-width: 220px;
+  max-width: 290px;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: baseline;
   column-gap: 12px;
   font-size: 1.02rem;
@@ -800,6 +800,15 @@ select,
   min-width: 3ch;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.acquired-points-cap {
+  min-width: 4.8em;
+  text-align: right;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #f3d46e;
+  white-space: nowrap;
 }
 
 .feedback-message {

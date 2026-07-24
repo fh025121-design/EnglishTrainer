@@ -272,14 +272,18 @@
   function renderMobilePointSummaryScreen() {
     const todayText = document.getElementById("mobilePointsTodayText");
     const homeworkText = document.getElementById("mobilePointsHomeworkText");
+    const homeworkCapText = document.getElementById("mobilePointsHomeworkCapText");
     const reviewText = document.getElementById("mobilePointsReviewText");
+    const reviewCapText = document.getElementById("mobilePointsReviewCapText");
     const totalText = document.getElementById("mobilePointsTotalText");
-    if (!todayText || !homeworkText || !reviewText || !totalText) return;
+    if (!todayText || !homeworkText || !homeworkCapText || !reviewText || !reviewCapText || !totalText) return;
     const pointState = getMobilePointState();
     const summary = getMobilePointSummary(pointState);
     todayText.textContent = formatPointValue(summary.todayEarned);
     homeworkText.textContent = formatPointValue(summary.todayHomework);
     reviewText.textContent = formatPointValue(summary.todayReview);
+    homeworkCapText.classList.toggle("hidden", summary.todayHomework < MOBILE_POINT_CONFIG.homeworkSpeakingDailyMax);
+    reviewCapText.classList.toggle("hidden", summary.todayReview < MOBILE_POINT_CONFIG.reviewSpeakingDailyMax);
     totalText.textContent = formatPointValue(summary.totalEarned);
   }
 

@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260724-0956";
+        const defaultToken = "20260724-1011";
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
         const cacheToken = [window.name, storedToken, defaultToken].filter(Boolean).sort().at(-1) || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -54,10 +54,12 @@
               <div class="acquired-points-line">
                 <span class="acquired-points-line-label">宿題</span>
                 <span id="mobilePointsHomeworkText" class="acquired-points-line-value">0P</span>
+                <span id="mobilePointsHomeworkCapText" class="acquired-points-cap hidden">上限達成</span>
               </div>
               <div class="acquired-points-line">
                 <span class="acquired-points-line-label">復習</span>
                 <span id="mobilePointsReviewText" class="acquired-points-line-value">0P</span>
+                <span id="mobilePointsReviewCapText" class="acquired-points-cap hidden">上限達成</span>
               </div>
             </div>
             <div class="result-breakdown acquired-points-balance">
@@ -548,7 +550,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-0956";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-1011";
         const scriptSources = [
           "../data.js",
           "../release-info.js",
