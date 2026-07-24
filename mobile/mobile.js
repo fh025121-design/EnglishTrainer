@@ -4637,7 +4637,8 @@
   function cloneWordOrderCards(cards) {
     return (Array.isArray(cards) ? cards : []).map((card) => ({
       id: String(card.id || ""),
-      token: String(card.token || "")
+      token: String(card.token || ""),
+      isHidden: Boolean(card.isHidden)
     }));
   }
 
@@ -4657,8 +4658,8 @@
     }
     const cards = buildWordOrderCards(question.tokens, `${question.id}-${training.questionIndex + 1}`);
     training.selectedCards = [];
-    training.remainingCards = cloneWordOrderCards(cards);
-    training.initialCards = cloneWordOrderCards(cards);
+    training.remainingCards = cloneWordOrderCards(cards).map((card) => ({ ...card, isHidden: false }));
+    training.initialCards = cloneWordOrderCards(cards).map((card) => ({ ...card, isHidden: false }));
     training.phase = "answering";
     training.feedback = "";
     training.correctAnswer = "";
@@ -4686,9 +4687,6 @@
         const total = training.questions.length;
         elements.wordOrderCompleteSummaryText.textContent = `${training.correctCount} / ${total} 正解`;
       }
-      if (elements.wordOrderTagText) {
-        elements.wordOrderTagText.textContent = "";
-      }
       if (elements.wordOrderResultTagText) {
         elements.wordOrderResultTagText.textContent = "";
       }
@@ -4715,10 +4713,6 @@
     if (elements.wordOrderJapaneseText) {
       elements.wordOrderJapaneseText.textContent = question.japanese;
     }
-    if (elements.wordOrderTagText) {
-      elements.wordOrderTagText.textContent = question.tag ? `【${question.tag}】` : "";
-    }
-
     if (elements.wordOrderAnswerArea) {
       elements.wordOrderAnswerArea.innerHTML = "";
       if (!training.selectedCards.length) {
@@ -4742,27 +4736,34 @@
       elements.wordOrderCardPool.innerHTML = "";
       if (training.phase === "judged") {
         elements.wordOrderCardPool.classList.add("hidden");
-      } else if (!training.remainingCards.length) {
-        elements.wordOrderCardPool.classList.remove("hidden");
-        const empty = document.createElement("p");
-        empty.className = "word-order-card-empty";
-        empty.textContent = "すべて並べ終わりました";
-        elements.wordOrderCardPool.appendChild(empty);
       } else {
         elements.wordOrderCardPool.classList.remove("hidden");
         const fragment = document.createDocumentFragment();
+        let visibleCount = 0;
         training.remainingCards.forEach((card) => {
           const button = document.createElement("button");
           button.type = "button";
           button.className = "word-order-card-btn";
           button.textContent = card.token;
-          button.disabled = training.phase !== "answering";
-          button.addEventListener("click", () => {
-            selectWordOrderCard(card.id);
-          });
+          if (card.isHidden) {
+            button.classList.add("word-order-card-hidden-slot");
+            button.disabled = true;
+          } else {
+            visibleCount += 1;
+            button.disabled = training.phase !== "answering";
+            button.addEventListener("click", () => {
+              selectWordOrderCard(card.id);
+            });
+          }
           fragment.appendChild(button);
         });
         elements.wordOrderCardPool.appendChild(fragment);
+        if (!visibleCount) {
+          const empty = document.createElement("p");
+          empty.className = "word-order-card-empty";
+          empty.textContent = "すべて並べ終わりました";
+          elements.wordOrderCardPool.appendChild(empty);
+        }
       }
     }
     if (elements.wordOrderCardLabelText) {
@@ -4825,10 +4826,10 @@
   function selectWordOrderCard(cardId) {
     const training = state.wordOrderTraining;
     if (!training || training.phase !== "answering") return;
-    const index = training.remainingCards.findIndex((card) => card.id === cardId);
-    if (index < 0) return;
-    const [card] = training.remainingCards.splice(index, 1);
-    training.selectedCards.push(card);
+    const card = training.remainingCards.find((item) => item.id === cardId);
+    if (!card || card.isHidden) return;
+    card.isHidden = true;
+    training.selectedCards.push({ id: card.id, token: card.token });
     renderWordOrderTraining();
   }
 
@@ -4836,7 +4837,10 @@
     const training = state.wordOrderTraining;
     if (!training || training.phase !== "answering" || !training.selectedCards.length) return;
     const card = training.selectedCards.pop();
-    training.remainingCards.push(card);
+    const slot = training.remainingCards.find((item) => item.id === card.id);
+    if (slot) {
+      slot.isHidden = false;
+    }
     renderWordOrderTraining();
   }
 
@@ -4844,7 +4848,7 @@
     const training = state.wordOrderTraining;
     if (!training || training.phase !== "answering") return;
     training.selectedCards = [];
-    training.remainingCards = cloneWordOrderCards(training.initialCards);
+    training.remainingCards = cloneWordOrderCards(training.initialCards).map((card) => ({ ...card, isHidden: false }));
     training.feedback = "";
     training.correctAnswer = "";
     renderWordOrderTraining();
@@ -7185,7 +7189,6 @@
     elements.wordOrderCompletePanel = document.getElementById("wordOrderCompletePanel");
     elements.wordOrderDayText = document.getElementById("wordOrderDayText");
     elements.wordOrderProgressText = document.getElementById("wordOrderProgressText");
-    elements.wordOrderTagText = document.getElementById("wordOrderTagText");
     elements.wordOrderJapaneseText = document.getElementById("wordOrderJapaneseText");
     elements.wordOrderAnswerArea = document.getElementById("wordOrderAnswerArea");
     elements.wordOrderCardLabelText = document.getElementById("wordOrderCardLabelText");

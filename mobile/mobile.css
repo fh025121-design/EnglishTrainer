@@ -597,6 +597,11 @@ select,
   font-weight: 800;
 }
 
+.word-order-card-hidden-slot {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .word-order-answer-card {
   border-color: rgba(123, 108, 255, 0.46);
   background: rgba(123, 108, 255, 0.16);
