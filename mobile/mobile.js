@@ -1945,9 +1945,24 @@
   }
 
   function formatMobileLearningHistoryClockRange(startedAt, endedAt) {
-    const startParts = getMobileLearningHistoryJstParts(startedAt);
-    const endParts = getMobileLearningHistoryJstParts(endedAt);
-    return `${startParts.hour || "00"}:${startParts.minute || "00"}〜${endParts.hour || "00"}:${endParts.minute || "00"}`;
+    const startValue = Number(startedAt);
+    const endValue = Number(endedAt);
+    const normalizedStart = Number.isFinite(startValue) && Number.isFinite(endValue)
+      ? Math.min(startValue, endValue)
+      : startedAt;
+    const normalizedEnd = Number.isFinite(startValue) && Number.isFinite(endValue)
+      ? Math.max(startValue, endValue)
+      : endedAt;
+    const startParts = getMobileLearningHistoryJstParts(normalizedStart);
+    const endParts = getMobileLearningHistoryJstParts(normalizedEnd);
+    const startClock = `${startParts.hour || "00"}:${startParts.minute || "00"}`;
+    const endClock = `${endParts.hour || "00"}:${endParts.minute || "00"}`;
+    const startClockRank = Number((startParts.hour || "00") + (startParts.minute || "00"));
+    const endClockRank = Number((endParts.hour || "00") + (endParts.minute || "00"));
+    if (Number.isFinite(startClockRank) && Number.isFinite(endClockRank) && startClockRank > endClockRank) {
+      return `${endClock}〜${startClock}`;
+    }
+    return `${startClock}〜${endClock}`;
   }
 
   function formatMobileLearningHistoryFullDateLabel(dayKey) {
@@ -2514,14 +2529,15 @@
               ${selectedDayHasEntries ? selectedDayEntries.map((entry) => {
                 const completionLabel = entry.completedReason === "interrupted" ? "中断" : "完了";
                 const ticketText = `${Math.max(0, Number(entry.ticket?.earned?.count) || 0)} / ${Math.max(0, Number(entry.ticket?.used?.count) || 0)}`;
+                const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
+                const questionCount = Math.max(0, Number(entry.questionCount) || 0);
                 return `
                   <div class="mobile-admin-history-detail-item">
                     <p class="mobile-admin-history-detail-time">セッション　${formatMobileLearningHistoryClockRange(entry.startedAt, entry.endedAt)}</p>
                     <p class="mobile-admin-history-detail-mode">${escapeHtml(entry.mode || "-")}</p>
                     <p class="mobile-admin-history-detail-meta">${escapeHtml(entry.dayNumber || "-")}</p>
-                    <p class="mobile-admin-history-detail-meta">実学習時間　${formatMobileLearningDuration(entry.activeStudySeconds)}</p>
-                    <p class="mobile-admin-history-detail-note">3分を超える無操作区間は除外</p>
-                    <p class="mobile-admin-history-detail-meta">${Math.max(0, Number(entry.questionCount) || 0)}問</p>
+                    ${activeStudySeconds >= 60 ? `<p class="mobile-admin-history-detail-meta">実学習時間　${formatMobileLearningDuration(activeStudySeconds)}</p><p class="mobile-admin-history-detail-note">3分を超える無操作区間は除外</p>` : ""}
+                    ${questionCount > 0 ? `<p class="mobile-admin-history-detail-meta">${questionCount}問</p>` : ""}
                     <p class="mobile-admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</p>
                     <p class="mobile-admin-history-detail-meta">${completionLabel}</p>
                     <p class="mobile-admin-history-detail-ticket">チケット ${ticketText}</p>

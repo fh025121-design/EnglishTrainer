@@ -462,9 +462,24 @@ function formatLearningHistoryDateLabel(dayKey) {
 }
 
 function formatLearningHistoryDateTimeRange(startedAt, endedAt) {
-  const startParts = getLearningHistoryJstParts(startedAt);
-  const endParts = getLearningHistoryJstParts(endedAt);
-  return `${startParts.hour || "00"}:${startParts.minute || "00"}〜${endParts.hour || "00"}:${endParts.minute || "00"}`;
+  const startValue = Number(startedAt);
+  const endValue = Number(endedAt);
+  const normalizedStart = Number.isFinite(startValue) && Number.isFinite(endValue)
+    ? Math.min(startValue, endValue)
+    : startedAt;
+  const normalizedEnd = Number.isFinite(startValue) && Number.isFinite(endValue)
+    ? Math.max(startValue, endValue)
+    : endedAt;
+  const startParts = getLearningHistoryJstParts(normalizedStart);
+  const endParts = getLearningHistoryJstParts(normalizedEnd);
+  const startClock = `${startParts.hour || "00"}:${startParts.minute || "00"}`;
+  const endClock = `${endParts.hour || "00"}:${endParts.minute || "00"}`;
+  const startClockRank = Number((startParts.hour || "00") + (startParts.minute || "00"));
+  const endClockRank = Number((endParts.hour || "00") + (endParts.minute || "00"));
+  if (Number.isFinite(startClockRank) && Number.isFinite(endClockRank) && startClockRank > endClockRank) {
+    return `${endClock}〜${startClock}`;
+  }
+  return `${startClock}〜${endClock}`;
 }
 
 function formatLearningHistoryFullDateLabel(dayKey) {
@@ -1015,14 +1030,15 @@ function renderAdminLearningHistoryEntries(entries) {
             ${selectedDayHasEntries ? selectedDayEntries.map((entry) => {
               const completedLabel = entry.completedReason === "interrupted" ? "中断" : "完了";
               const ticketText = buildLearningHistoryTicketText(entry.ticket);
+              const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
+              const questionCount = Math.max(0, Number(entry.questionCount) || 0);
               return `
                 <div class="admin-history-detail-item">
                   <p class="admin-history-detail-time">セッション　${formatLearningHistoryDateTimeRange(entry.startedAt, entry.endedAt)}</p>
                   <p class="admin-history-detail-mode">${escapeHtml(entry.mode || "-")}</p>
                   <p class="admin-history-detail-meta">${escapeHtml(entry.dayNumber || "-")}</p>
-                  <p class="admin-history-detail-meta">実学習時間　${formatLearningHistoryDuration(entry.activeStudySeconds)}</p>
-                  <p class="admin-history-detail-note">3分を超える無操作区間は除外</p>
-                  <p class="admin-history-detail-meta">${Math.max(0, Number(entry.questionCount) || 0)}問</p>
+                  ${activeStudySeconds >= 60 ? `<p class="admin-history-detail-meta">実学習時間　${formatLearningHistoryDuration(activeStudySeconds)}</p><p class="admin-history-detail-note">3分を超える無操作区間は除外</p>` : ""}
+                  ${questionCount > 0 ? `<p class="admin-history-detail-meta">${questionCount}問</p>` : ""}
                   <p class="admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</p>
                   <p class="admin-history-detail-meta">${completedLabel}</p>
                   <p class="admin-history-detail-ticket">${escapeHtml(ticketText.earned)} / ${escapeHtml(ticketText.used)}</p>
