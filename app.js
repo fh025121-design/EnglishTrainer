@@ -5985,7 +5985,14 @@ function startNextDaySession() {
   const nextDay = getNextAdvanceDay();
   state.settings.studyRange = { start: nextDay, end: nextDay };
   saveState();
-  prepareSession("normal");
+  prepareSession("normal", {
+    forceNewSession: true,
+    dayStudy: {
+      start: nextDay,
+      end: nextDay,
+      type: "all"
+    }
+  });
 }
 
 function getNextAdvanceDay() {
