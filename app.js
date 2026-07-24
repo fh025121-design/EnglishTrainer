@@ -1037,18 +1037,25 @@ function renderAdminLearningHistoryEntries(entries) {
 
   bindAdminLearningHistoryControls();
 
+  const moveAdminLearningHistoryDay = (deltaDays) => {
+    const todayKey = getLearningHistoryDayKey(Date.now());
+    const currentDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(adminLearningHistorySelectedDayKey || ""))
+      ? String(adminLearningHistorySelectedDayKey)
+      : todayKey;
+    const shiftedDayKey = shiftLearningHistoryDayKey(currentDayKey, deltaDays);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(shiftedDayKey || ""))) return;
+    adminLearningHistorySelectedDayKey = shiftedDayKey > todayKey ? todayKey : shiftedDayKey;
+    renderAdminLearningHistoryEntries(adminLearningHistorySourceEntries);
+  };
+
   content.querySelectorAll("[data-day-shift]").forEach((button) => {
     button.addEventListener("click", () => {
       const shift = button.getAttribute("data-day-shift");
       if (shift === "prev") {
-        adminLearningHistorySelectedDayKey = shiftLearningHistoryDayKey(selectedDayKey, -1);
+        moveAdminLearningHistoryDay(-1);
       } else if (shift === "next" && canMoveNext) {
-        adminLearningHistorySelectedDayKey = shiftLearningHistoryDayKey(selectedDayKey, 1);
+        moveAdminLearningHistoryDay(1);
       }
-      if (adminLearningHistorySelectedDayKey > todayDayKey) {
-        adminLearningHistorySelectedDayKey = todayDayKey;
-      }
-      renderAdminLearningHistoryList();
     });
   });
 }

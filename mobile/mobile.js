@@ -2537,13 +2537,17 @@
     elements.mobileAdminLearningHistoryPanel.querySelectorAll("[data-day-shift]").forEach((button) => {
       button.addEventListener("click", () => {
         const shift = button.getAttribute("data-day-shift");
+        const todayKey = getMobileLearningHistoryDayKey(Date.now());
+        const currentDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(mobileAdminLearningHistorySelectedDayKey || ""))
+          ? String(mobileAdminLearningHistorySelectedDayKey)
+          : todayKey;
         if (shift === "prev") {
-          mobileAdminLearningHistorySelectedDayKey = shiftMobileLearningHistoryDayKey(selectedDayKey, -1);
+          mobileAdminLearningHistorySelectedDayKey = shiftMobileLearningHistoryDayKey(currentDayKey, -1);
         } else if (shift === "next" && canMoveNext) {
-          mobileAdminLearningHistorySelectedDayKey = shiftMobileLearningHistoryDayKey(selectedDayKey, 1);
+          mobileAdminLearningHistorySelectedDayKey = shiftMobileLearningHistoryDayKey(currentDayKey, 1);
         }
-        if (mobileAdminLearningHistorySelectedDayKey > todayDayKey) {
-          mobileAdminLearningHistorySelectedDayKey = todayDayKey;
+        if (mobileAdminLearningHistorySelectedDayKey > todayKey) {
+          mobileAdminLearningHistorySelectedDayKey = todayKey;
         }
         renderMobileAdminLearningHistoryList();
       });
