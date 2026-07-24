@@ -963,6 +963,43 @@ select,
   background: rgba(255, 255, 255, 0.04);
 }
 
+.settings-update-action-stack {
+  margin-top: 12px;
+}
+
+.admin-learning-history-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-learning-history-user-row,
+.admin-learning-history-device-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-history-toggle-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-history-toggle-btn {
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.admin-history-toggle-btn.is-active {
+  border-color: rgba(94, 214, 214, 0.58);
+  background: rgba(94, 214, 214, 0.14);
+}
+
 .admin-learning-history-panel {
   display: flex;
   flex-direction: column;

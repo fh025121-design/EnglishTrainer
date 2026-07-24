@@ -3,6 +3,7 @@
   const MOBILE_LEARNING_HISTORY_MAX_ENTRIES = 1000;
   const MOBILE_LEARNING_HISTORY_ACTIVE_TIMEOUT_MS = 3 * 60 * 1000;
   const MOBILE_ADMIN_LEARNING_HISTORY_PIN = "12345";
+  const MOBILE_ADMIN_FAMILY_ID = "inoue";
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
   const SPEAKING_PROGRESS_KEY = "englishTrainerSpeakingProgress";
   const SPEAKING_RECENT_PROGRESS_KEY = "englishTrainerSpeakingRecentProgress_v1";
@@ -1739,6 +1740,12 @@
 
   const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
   let mobileAdminLearningHistorySelectedDayKey = "";
+  let mobileAdminLearningHistoryFamilyChildren = [];
+  let mobileAdminLearningHistorySelectedChildKey = "parent";
+  let mobileAdminLearningHistorySelectedChildUid = "";
+  let mobileAdminLearningHistorySelectedDeviceType = "pc";
+  let mobileAdminLearningHistorySourceEntries = [];
+  let mobileFirestoreSdkPromise = null;
   let mobileAuthLastStatus = "pending";
   let mobileAuthListenerBound = false;
 
@@ -2426,7 +2433,9 @@
   function renderMobileAdminLearningHistoryList() {
     if (!elements.mobileAdminLearningHistoryPanel) return;
     const todayDayKey = getMobileLearningHistoryDayKey(Date.now());
-    const entries = loadMobileLearningHistoryEntries().slice().sort((left, right) => Number(right.endedAt) - Number(left.endedAt));
+    const entries = getMobileAdminLearningHistoryFilteredEntries((Array.isArray(mobileAdminLearningHistorySourceEntries) ? mobileAdminLearningHistorySourceEntries : [])
+      .slice()
+      .sort((left, right) => Number(right.createdAt || right.endedAt || 0) - Number(left.createdAt || left.endedAt || 0)));
     if (!entries.length) {
       elements.mobileAdminLearningHistoryPanel.innerHTML = '<p class="status-text">履歴はありません</p>';
       elements.mobileAdminLearningHistoryPanel.classList.remove("hidden");
@@ -2447,6 +2456,7 @@
 
     elements.mobileAdminLearningHistoryPanel.innerHTML = `
       <div class="mobile-admin-history-view">
+        ${renderMobileAdminLearningHistoryControls()}
         <section class="mobile-admin-history-overview">
           <div class="mobile-admin-history-streak-row">🔥連続${state.stats.streak || 0}日</div>
           <div class="mobile-admin-history-period-blocks">
@@ -2537,10 +2547,11 @@
         renderMobileAdminLearningHistoryList();
       });
     });
+    bindMobileAdminLearningHistoryControls();
     elements.mobileAdminLearningHistoryPanel.classList.remove("hidden");
   }
 
-  function unlockMobileAdminLearningHistory() {
+  async function unlockMobileAdminLearningHistory() {
     if (!elements.mobileAdminLearningHistoryPinInput || !elements.mobileAdminLearningHistoryPanel) return;
     if (elements.mobileAdminLearningHistoryPinInput.value !== MOBILE_ADMIN_LEARNING_HISTORY_PIN) {
       hideMobileAdminLearningHistory();
@@ -2551,10 +2562,36 @@
       return;
     }
 
-    renderMobileAdminLearningHistoryList();
     if (elements.mobileAdminLearningHistoryStatusText) {
-      elements.mobileAdminLearningHistoryStatusText.textContent = "";
-      elements.mobileAdminLearningHistoryStatusText.classList.add("hidden");
+      elements.mobileAdminLearningHistoryStatusText.textContent = "読み込み中...";
+      elements.mobileAdminLearningHistoryStatusText.classList.remove("hidden");
+    }
+    try {
+      const options = await loadMobileAdminFamilyOptionsFromFirestore();
+      mobileAdminLearningHistoryFamilyChildren = options;
+      if (!mobileAdminLearningHistoryFamilyChildren.length) {
+        throw new Error("family options unavailable");
+      }
+
+      const selected = mobileAdminLearningHistoryFamilyChildren.find((child) => child.key === mobileAdminLearningHistorySelectedChildKey)
+        || mobileAdminLearningHistoryFamilyChildren.find((child) => child.key === "parent")
+        || mobileAdminLearningHistoryFamilyChildren[0];
+      mobileAdminLearningHistorySelectedChildKey = selected.key;
+      mobileAdminLearningHistorySelectedChildUid = selected.uid;
+      mobileAdminLearningHistorySelectedDeviceType = "pc";
+      mobileAdminLearningHistorySelectedDayKey = "";
+      mobileAdminLearningHistorySourceEntries = await loadMobileAdminLearningHistoryEntriesFromFirestore(selected.uid);
+      renderMobileAdminLearningHistoryList();
+      if (elements.mobileAdminLearningHistoryStatusText) {
+        elements.mobileAdminLearningHistoryStatusText.textContent = "";
+        elements.mobileAdminLearningHistoryStatusText.classList.add("hidden");
+      }
+    } catch (_error) {
+      hideMobileAdminLearningHistory();
+      if (elements.mobileAdminLearningHistoryStatusText) {
+        elements.mobileAdminLearningHistoryStatusText.textContent = "履歴の取得に失敗しました。";
+        elements.mobileAdminLearningHistoryStatusText.classList.remove("hidden");
+      }
     }
   }
 
@@ -2567,6 +2604,161 @@
     if (elements.mobileAdminLearningHistoryPinInput) {
       elements.mobileAdminLearningHistoryPinInput.focus();
     }
+  }
+
+  function getMobileAdminLearningHistoryDeviceOptions() {
+    return [
+      { key: "pc", label: "PC版" },
+      { key: "mobile", label: "モバイル版" }
+    ];
+  }
+
+  function normalizeMobileAdminLearningHistoryDeviceType(deviceType) {
+    return String(deviceType || "").trim().toLowerCase() === "mobile" ? "mobile" : "pc";
+  }
+
+  function getMobileAdminLearningHistoryFilteredEntries(entries) {
+    const source = Array.isArray(entries) ? entries : [];
+    return source.filter((entry) => normalizeMobileAdminLearningHistoryDeviceType(entry?.deviceType) === mobileAdminLearningHistorySelectedDeviceType);
+  }
+
+  function buildMobileAdminFamilyOptions(family, currentUser) {
+    const familyChildren = Array.isArray(family?.children) ? family.children : [];
+    const sonEntry = familyChildren.find((child) => child?.key === "son" && child?.uid);
+    const options = [];
+    if (String(family?.parentUid || "").trim()) {
+      options.push({ key: "parent", name: "私", uid: String(family.parentUid || "").trim() });
+    }
+    if (sonEntry?.uid) {
+      options.push({ key: "son", name: "長男", uid: String(sonEntry.uid || "").trim() });
+    }
+    if (!options.length && String(currentUser?.uid || "").trim()) {
+      options.push({ key: "parent", name: "私", uid: String(currentUser.uid || "").trim() });
+    }
+    return options;
+  }
+
+  function renderMobileAdminLearningHistoryControls() {
+    const userButtons = mobileAdminLearningHistoryFamilyChildren.length
+      ? mobileAdminLearningHistoryFamilyChildren.map((child) => {
+        const isSelected = child.key === mobileAdminLearningHistorySelectedChildKey;
+        return `<button class="admin-history-toggle-btn${isSelected ? " is-active" : ""}" type="button" data-mobile-admin-history-user-key="${escapeHtml(child.key)}" aria-pressed="${isSelected ? "true" : "false"}">${escapeHtml(child.name || child.key)}</button>`;
+      }).join("")
+      : '<p class="status-text">表示できるユーザーがありません</p>';
+    const deviceButtons = getMobileAdminLearningHistoryDeviceOptions().map((device) => {
+      const isSelected = device.key === mobileAdminLearningHistorySelectedDeviceType;
+      return `<button class="admin-history-toggle-btn${isSelected ? " is-active" : ""}" type="button" data-mobile-admin-history-device-key="${escapeHtml(device.key)}" aria-pressed="${isSelected ? "true" : "false"}">${escapeHtml(device.label)}</button>`;
+    }).join("");
+    return `
+      <div class="admin-learning-history-controls">
+        <div class="admin-learning-history-user-row">
+          <label class="status-text">表示するユーザー</label>
+          <div class="admin-history-toggle-group" role="group" aria-label="表示するユーザー">${userButtons}</div>
+        </div>
+        <div class="admin-learning-history-device-row">
+          <label class="status-text">表示する端末</label>
+          <div class="admin-history-toggle-group" role="group" aria-label="表示する端末">${deviceButtons}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindMobileAdminLearningHistoryControls() {
+    const root = elements.mobileAdminLearningHistoryPanel;
+    if (!root) return;
+
+    root.querySelectorAll("[data-mobile-admin-history-user-key]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const nextKey = String(button.getAttribute("data-mobile-admin-history-user-key") || "");
+        const selectedChild = mobileAdminLearningHistoryFamilyChildren.find((child) => child.key === nextKey) || null;
+        if (!selectedChild || selectedChild.key === mobileAdminLearningHistorySelectedChildKey) return;
+        mobileAdminLearningHistorySelectedChildKey = selectedChild.key;
+        mobileAdminLearningHistorySelectedChildUid = selectedChild.uid;
+        mobileAdminLearningHistorySelectedDayKey = "";
+        mobileAdminLearningHistorySourceEntries = await loadMobileAdminLearningHistoryEntriesFromFirestore(selectedChild.uid);
+        renderMobileAdminLearningHistoryList();
+      });
+    });
+
+    root.querySelectorAll("[data-mobile-admin-history-device-key]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const nextKey = String(button.getAttribute("data-mobile-admin-history-device-key") || "");
+        if (!nextKey || nextKey === mobileAdminLearningHistorySelectedDeviceType) return;
+        mobileAdminLearningHistorySelectedDeviceType = nextKey === "mobile" ? "mobile" : "pc";
+        mobileAdminLearningHistorySelectedDayKey = "";
+        renderMobileAdminLearningHistoryList();
+      });
+    });
+  }
+
+  async function getMobileFirestoreSdk() {
+    if (!mobileFirestoreSdkPromise) {
+      mobileFirestoreSdkPromise = import("https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js");
+    }
+    return mobileFirestoreSdkPromise;
+  }
+
+  async function loadMobileAdminFamilyOptionsFromFirestore() {
+    const user = typeof window.getMobileFirebaseCurrentUser === "function"
+      ? window.getMobileFirebaseCurrentUser()
+      : (window.MobileFirebase?.auth?.currentUser || null);
+    const firestore = window.MobileFirebase?.firestore || null;
+    if (!firestore) {
+      return buildMobileAdminFamilyOptions(null, user);
+    }
+
+    const sdk = await getMobileFirestoreSdk();
+    const familyDoc = await sdk.getDoc(sdk.doc(firestore, "families", MOBILE_ADMIN_FAMILY_ID));
+    const familyData = familyDoc.exists() ? {
+      parentUid: String(familyDoc.data()?.parentUid || ""),
+      children: Object.entries(familyDoc.data()?.children || {}).map(([key, value]) => ({
+        key: String(key || ""),
+        uid: String(value?.uid || "")
+      }))
+    } : null;
+    return buildMobileAdminFamilyOptions(familyData, user);
+  }
+
+  function normalizeMobileAdminLearningHistoryFirestoreEntry(docSnapshot) {
+    const data = typeof docSnapshot?.data === "function" ? docSnapshot.data() || {} : {};
+    const createdAtMillis = typeof data.createdAt?.toMillis === "function"
+      ? Number(data.createdAt.toMillis()) || 0
+      : Math.max(0, Number(data.createdAt?.seconds) || 0) * 1000;
+    const startedAt = Math.max(0, Number(data.startedAt) || 0);
+    const endedAt = Math.max(0, Number(data.endedAt) || 0);
+    const normalizedDeviceType = normalizeMobileAdminLearningHistoryDeviceType(data.deviceType);
+    return {
+      id: String(docSnapshot?.id || ""),
+      uid: String(data.uid || ""),
+      email: String(data.email || ""),
+      learnedAt: String(data.studyDate || ""),
+      startedAt,
+      endedAt,
+      activeStudySeconds: Math.max(0, Number(data.activeStudySeconds) || 0),
+      mode: String(data.mode || ""),
+      dayNumber: String(data.dayNumber || ""),
+      questionCount: Math.max(0, Number(data.questionCount) || 0),
+      correctCount: Math.max(0, Number(data.correctCount) || 0),
+      accuracy: Math.max(0, Math.min(100, Number(data.accuracy) || 0)),
+      completedReason: String(data.completedReason || "completed"),
+      ticket: {
+        earned: { count: Math.max(0, Number(data.ticketEarned) || 0) },
+        used: { count: Math.max(0, Number(data.ticketUsed) || 0) }
+      },
+      deviceType: normalizedDeviceType,
+      createdAt: createdAtMillis
+    };
+  }
+
+  async function loadMobileAdminLearningHistoryEntriesFromFirestore(targetUid) {
+    const resolvedUid = String(targetUid || "").trim();
+    const firestore = window.MobileFirebase?.firestore || null;
+    if (!resolvedUid || !firestore) {
+      return [];
+    }
+    const sdk = await getMobileFirestoreSdk();
+    const snapshot = await sdk.getDocs(sdk.query(sdk.collection(firestore, "users", resolvedUid, "learningHistory"), sdk.orderBy("createdAt", "desc")));
+    return snapshot.docs.map(normalizeMobileAdminLearningHistoryFirestoreEntry);
   }
 
   function createDefaultMobileState() {
@@ -4999,7 +5191,7 @@
   }
 
   function showScreen(screenId) {
-    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "wordOrderTrainingScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileUpdateHistoryScreen", "mobileAdminLearningHistoryScreen", "wordOrderTrainingScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -7311,6 +7503,8 @@
     elements.mobileUpdateHistoryUnlockBtn = document.getElementById("mobileUpdateHistoryUnlockBtn");
     elements.mobileUpdateHistoryStatusText = document.getElementById("mobileUpdateHistoryStatusText");
     elements.mobileUpdateHistoryPanel = document.getElementById("mobileUpdateHistoryPanel");
+    elements.openMobileAdminFromUpdateBtn = document.getElementById("openMobileAdminFromUpdateBtn");
+    elements.mobileUpdateHistoryBackBtn = document.getElementById("mobileUpdateHistoryBackBtn");
     elements.mobileAdminLearningHistoryScreen = document.getElementById("mobileAdminLearningHistoryScreen");
     elements.mobileAdminLearningHistoryBackBtn = document.getElementById("mobileAdminLearningHistoryBackBtn");
     elements.mobileAdminLearningHistoryPinInput = document.getElementById("mobileAdminLearningHistoryPinInput");
@@ -7406,6 +7600,7 @@
     document.getElementById("runMicTestBtn").addEventListener("click", runMicTest);
     document.getElementById("resetMobileDataBtn").addEventListener("click", resetMobileData);
     elements.showMobileUpdateHistoryBtn.addEventListener("click", () => {
+      showScreen("mobileUpdateHistoryScreen");
       elements.mobileUpdateHistoryGate.classList.remove("hidden");
       hideMobileUpdateHistory();
       elements.mobileUpdateHistoryPasswordInput.value = "";
@@ -7416,6 +7611,15 @@
       if (event.key !== "Enter") return;
       event.preventDefault();
       unlockMobileUpdateHistory();
+    });
+    elements.openMobileAdminFromUpdateBtn.addEventListener("click", renderMobileAdminLearningHistoryScreen);
+    elements.mobileUpdateHistoryBackBtn.addEventListener("click", () => showScreen("settingsScreen"));
+    elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", () => showScreen("mobileUpdateHistoryScreen"));
+    elements.mobileAdminLearningHistoryUnlockBtn.addEventListener("click", unlockMobileAdminLearningHistory);
+    elements.mobileAdminLearningHistoryPinInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      unlockMobileAdminLearningHistory();
     });
     document.getElementById("confirmCancelBtn").addEventListener("click", hideConfirm);
     elements.confirmOkBtn.addEventListener("click", () => {

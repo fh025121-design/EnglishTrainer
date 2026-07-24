@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/24 23:03", note: "モバイル版のみ: Firebase連携後の旧キャッシュ混在を防ぐため、キャッシュトークン解決を更新。`mobile/index.html` で `?v=` クエリ値を最優先し、未指定時は既定トークン `20260724-2335` を使用する方式へ変更。これに合わせてスクリプト読み込み時のフォールバックトークンも同値へ統一し、古いバンドル参照による画面遷移不整合の再発を抑止" },
     { version: "2026/07/24 19:05", note: "PC版のみ: GitHub Pages 配信用の Firebase 接続準備として `firebase.js` を追加し、CDN版 Firebase SDK で Firebase App の初期化のみを実装。`index.html` からモジュール読込し、接続成功時は Console に `Firebase connected` を出力。Authentication・Firestore・ログイン画面・学習履歴送信・既存の学習処理や localStorage は未変更" },
     { version: "2026/07/24 18:20", note: "モバイル版のみ: 語順トレーニングにポイント機能を追加。正解時のみ+2P、不正解・答え表示時は0P。語順の日次上限50P（25問正解相当）を追加し、到達後も学習継続は可能でポイントのみ停止。獲得ポイント画面は『発話 200P / 宿題 30P / 語順 50P』と合計280Pの日次上限表示へ更新し、上限達成時のみラベル表示。保存は日付キー単位で管理" },
     { version: "2026/07/24 17:45", note: "モバイル版のみ: 語順トレーニング専用データ `mobile/word-order-data.js` に Day29〜Day40（各12問）を追加。既存形式に合わせて `id/japanese/words/answer/category` を保持し、表示互換のため `english/tag` も併記。レイアウト・カードデザイン・タップ挙動・CSSは変更なし" },

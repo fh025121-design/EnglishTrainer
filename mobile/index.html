@@ -512,12 +512,6 @@
             <div class="field-block settings-update-block">
               <span>更新内容</span>
               <button id="showMobileUpdateHistoryBtn" class="secondary-btn large-btn" type="button">更新内容を見る</button>
-              <div id="mobileUpdateHistoryGate" class="field-block hidden">
-                <input id="mobileUpdateHistoryPasswordInput" class="typing-input" type="password" inputmode="numeric" autocomplete="off" placeholder="パスワード" />
-                <button id="mobileUpdateHistoryUnlockBtn" class="primary-btn large-btn" type="button">表示する</button>
-                <p id="mobileUpdateHistoryStatusText" class="status-text hidden"></p>
-              </div>
-              <div id="mobileUpdateHistoryPanel" class="settings-history-panel hidden"></div>
             </div>
           </section>
 
@@ -525,6 +519,47 @@
             <button id="runMicTestBtn" class="secondary-btn large-btn" type="button">マイクテスト</button>
             <p id="micTestStatusText" class="status-text"></p>
             <button id="resetMobileDataBtn" class="danger-btn large-btn" type="button">スマホ版データ初期化</button>
+          </section>
+        </main>
+      </section>
+
+      <section id="mobileUpdateHistoryScreen" class="screen">
+        <header class="screen-topbar">
+          <p class="status-text">更新内容</p>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel">
+            <h2>更新内容</h2>
+            <div id="mobileUpdateHistoryGate" class="field-block">
+              <input id="mobileUpdateHistoryPasswordInput" class="typing-input" type="password" inputmode="numeric" autocomplete="off" placeholder="パスワード" />
+              <button id="mobileUpdateHistoryUnlockBtn" class="primary-btn large-btn" type="button">表示する</button>
+              <p id="mobileUpdateHistoryStatusText" class="status-text hidden"></p>
+            </div>
+            <div id="mobileUpdateHistoryPanel" class="settings-history-panel hidden"></div>
+            <div class="action-panel compact-actions settings-update-action-stack">
+              <button id="openMobileAdminFromUpdateBtn" class="secondary-btn large-btn" type="button">管理画面</button>
+              <button id="mobileUpdateHistoryBackBtn" class="ghost-btn large-btn" type="button">戻る</button>
+            </div>
+          </section>
+        </main>
+      </section>
+
+      <section id="mobileAdminLearningHistoryScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="mobileAdminLearningHistoryBackBtn" class="back-btn" type="button">← 更新内容</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel admin-learning-history-shell">
+            <h2>管理者用 学習履歴</h2>
+            <div class="field-block">
+              <span>PIN（5桁）</span>
+              <input id="mobileAdminLearningHistoryPinInput" class="typing-input" type="password" inputmode="numeric" autocomplete="off" placeholder="12345" />
+              <button id="mobileAdminLearningHistoryUnlockBtn" class="primary-btn large-btn" type="button">表示する</button>
+              <p id="mobileAdminLearningHistoryStatusText" class="status-text hidden"></p>
+            </div>
+            <div id="mobileAdminLearningHistoryPanel" class="admin-learning-history-panel hidden"></div>
           </section>
         </main>
       </section>
