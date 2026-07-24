@@ -325,32 +325,28 @@ function computeLearningHistoryTicketDelta(before, after) {
   };
 }
 
-const LEARNING_HISTORY_MODE_NAMES = Object.freeze({
-  day: "Day",
-  wordTraining: "単語特訓",
-  phraseTraining: "熟語特訓",
-  wrongAnswerReview: "過去の間違い",
-  prepositionTraining: "前置詞特訓"
+const LEARNING_MODE = Object.freeze({
+  DAY: "Day",
+  REVIEW: "過去の間違い",
+  PREPOSITION: "前置詞特訓"
 });
 
-function getLearningModeLabel(mode) {
-  const normalizedMode = String(mode || "").trim();
-  if (!normalizedMode) return "";
+const VALID_LEARNING_MODE_SET = new Set(Object.values(LEARNING_MODE));
 
-  if (normalizedMode === "normal" || normalizedMode === "Day" || normalizedMode === "Day学習") {
-    return LEARNING_HISTORY_MODE_NAMES.day;
+function normalizeLearningMode(mode) {
+  const rawMode = String(mode || "").trim();
+  let normalizedMode = "";
+
+  if (rawMode === "normal" || rawMode === "Day" || rawMode === "Day学習") {
+    normalizedMode = LEARNING_MODE.DAY;
+  } else if (rawMode === "challenge" || rawMode === "review" || rawMode === LEARNING_MODE.REVIEW) {
+    normalizedMode = LEARNING_MODE.REVIEW;
+  } else if (rawMode === "preposition" || rawMode === "preposition-training" || rawMode === LEARNING_MODE.PREPOSITION) {
+    normalizedMode = LEARNING_MODE.PREPOSITION;
   }
-  if (normalizedMode === "level-focus" || normalizedMode === LEARNING_HISTORY_MODE_NAMES.wordTraining) {
-    return LEARNING_HISTORY_MODE_NAMES.wordTraining;
-  }
-  if (normalizedMode === "phrase-spiral" || normalizedMode === LEARNING_HISTORY_MODE_NAMES.phraseTraining) {
-    return LEARNING_HISTORY_MODE_NAMES.phraseTraining;
-  }
-  if (normalizedMode === "challenge" || normalizedMode === "review" || normalizedMode === LEARNING_HISTORY_MODE_NAMES.wrongAnswerReview) {
-    return LEARNING_HISTORY_MODE_NAMES.wrongAnswerReview;
-  }
-  if (normalizedMode === "preposition" || normalizedMode === "preposition-training" || normalizedMode === LEARNING_HISTORY_MODE_NAMES.prepositionTraining) {
-    return LEARNING_HISTORY_MODE_NAMES.prepositionTraining;
+
+  if (!VALID_LEARNING_MODE_SET.has(normalizedMode)) {
+    console.warn("Unexpected learning mode for history", { mode: rawMode });
   }
 
   return normalizedMode;
@@ -1165,11 +1161,15 @@ function unlockAdminLearningHistory() {
 function appendLearningHistoryEntry(entry) {
   const sanitized = sanitizeLearningHistoryEntry(entry);
   if (!sanitized) return;
+  const normalizedEntry = {
+    ...sanitized,
+    mode: normalizeLearningMode(sanitized.mode)
+  };
   if (Math.max(0, Number(sanitized.questionCount) || 0) === 0 || Math.max(0, Number(sanitized.activeStudySeconds) || 0) === 0) {
     return;
   }
   const history = loadLearningHistoryEntries();
-  history.push(sanitized);
+  history.push(normalizedEntry);
   localStorage.setItem(
     LEARNING_HISTORY_STORAGE_KEY,
     JSON.stringify(history.slice(-LEARNING_HISTORY_MAX_ENTRIES))
@@ -1177,7 +1177,7 @@ function appendLearningHistoryEntry(entry) {
 
   const saveToFirestore = window.saveLearningHistoryToFirestore;
   if (typeof saveToFirestore === "function") {
-    Promise.resolve(saveToFirestore(sanitized)).catch((error) => {
+    Promise.resolve(saveToFirestore(normalizedEntry)).catch((error) => {
       console.error("Failed to save learning history to Firestore", error);
     });
   }
@@ -1203,7 +1203,7 @@ function buildPrepositionLearningHistoryEntry(sessionLike, reason) {
     startedAtDisplay: formatTimestampToJstDisplay(startedAt),
     endedAtDisplay: formatTimestampToJstDisplay(endedAt),
     activeStudySeconds: computeSessionActiveStudySeconds(sessionLike, endedAt),
-    mode: LEARNING_HISTORY_MODE_NAMES.prepositionTraining,
+    mode: "preposition-training",
     dayNumber: "",
     questionCount: answerCount,
     correctCount,
@@ -1233,7 +1233,7 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
     startedAtDisplay: formatTimestampToJstDisplay(startedAt),
     endedAtDisplay: formatTimestampToJstDisplay(endedAt),
     activeStudySeconds: computeSessionActiveStudySeconds(sessionLike, endedAt),
-    mode: getLearningModeLabel(sessionLike?.mode),
+    mode: String(sessionLike?.mode || ""),
     dayNumber: resolveSessionDayNumber(sessionLike),
     questionCount: Math.max(0, Number(summary?.answerCount) || 0),
     correctCount: Math.max(0, Number(summary?.correctCount) || 0),
