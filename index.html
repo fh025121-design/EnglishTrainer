@@ -5,9 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260723-1645" />
+    <link rel="stylesheet" href="styles.css?v=20260724-1945" />
   </head>
-  <body>
+  <body class="auth-pending">
+    <div id="loginScreen" class="login-shell" aria-live="polite">
+      <section class="panel login-panel">
+        <div class="login-panel-header">
+          <h2>PC版 ログイン</h2>
+          <p class="subtext">メールアドレスとパスワードでログインしてください</p>
+        </div>
+        <form id="loginForm" class="login-form">
+          <label class="login-field" for="loginEmailInput">
+            <span>メールアドレス</span>
+            <input id="loginEmailInput" class="settings-update-password-input" type="email" autocomplete="username" inputmode="email" required />
+          </label>
+          <label class="login-field" for="loginPasswordInput">
+            <span>パスワード</span>
+            <input id="loginPasswordInput" class="settings-update-password-input" type="password" autocomplete="current-password" required />
+          </label>
+          <p id="loginErrorText" class="login-error-text" role="alert"></p>
+          <button id="loginSubmitBtn" class="primary-btn" type="submit">ログイン</button>
+        </form>
+      </section>
+    </div>
     <div class="app-shell">
       <header class="topbar">
         <div class="topbar-title">
@@ -15,6 +35,7 @@
           <p class="subtext">タイピングで単語・熟語を定着させよう</p>
         </div>
         <div class="topbar-actions">
+          <button id="logoutBtn" class="ghost-btn settings-btn hidden" type="button">ログアウト</button>
           <button id="settingsBtn" class="ghost-btn settings-btn" type="button">設定</button>
           <button id="openAdminLearningHistoryBtn" class="ghost-btn settings-btn" type="button" aria-label="管理者用 学習履歴">管理者用</button>
         </div>
@@ -950,7 +971,8 @@
     <script src="data.js?v=20260722-1135"></script>
     <script src="preposition-data.js?v=20260722-1135"></script>
     <script src="response-data.js?v=20260722-1135"></script>
-    <script src="release-info.js?v=20260724-1820"></script>
+    <script src="release-info.js?v=20260724-1905"></script>
     <script src="app.js?v=20260723-1715"></script>
+    <script type="module" src="firebase.js?v=20260724-1945"></script>
   </body>
 </html>

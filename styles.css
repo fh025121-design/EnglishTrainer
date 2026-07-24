@@ -49,6 +49,56 @@ input {
   overflow: hidden;
 }
 
+body.auth-pending .app-shell,
+body.auth-logged-out .app-shell {
+  display: none;
+}
+
+body.auth-logged-in .login-shell {
+  display: none;
+}
+
+.login-shell {
+  width: 100%;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-panel {
+  width: min(460px, 100%);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.login-panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+}
+
+.login-error-text {
+  min-height: 1.4em;
+  color: var(--danger);
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
