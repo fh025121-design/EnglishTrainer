@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/25 01:45", note: "PC版のみ: 学習履歴のmode保存名を整理。履歴保存時のmode正規化を統一し、Day学習は『Day』、過去の間違い（challenge/review）は『過去の間違い』、前置詞特訓は『前置詞特訓』で保存されるよう固定。管理者用 学習履歴『日別詳細』のmode表示はFirestore値をそのまま表示し、mode未設定/空白時のみ『-』を表示（Dayへの置換はしない）。startedAt/endedAt/学習時間計測ロジック・既存Firestore履歴・モバイル版は未変更" },
     { version: "2026/07/25 01:24", note: "PC版のみ: Day学習の分岐を修正。『次へ進む Day○』は常に新規セッションとして開始し、保存済み中断セッションの復元経路を通らないよう変更（forceNewSessionを付与）。これにより startedAt は開始時点のDate.now()で新規採番され、lastResumedAt・accumulatedMs・answerHistoryを含むセッション初期値を毎回リセット。『続きから学習』は従来どおり保存済み通常セッションの復元経路を維持し、startedAt/進捗を引き継いで再開。buildLearningHistoryEntryFromSession・endedAt保存・Firestore既存履歴・3分無操作除外ロジック・モバイル版は未変更" },
     { version: "2026/07/25 01:35", note: "PC版のみ: 前置詞特訓の学習履歴保存を追加。開始時に startedAt を記録し、完了・中断の各時点で endedAt=Date.now() をその場で採番して learningHistory へ1件保存（mode: 前置詞特訓）。保存項目は開始/終了時刻・実学習時間（3分無操作除外ロジックは既存関数を利用）・問題数・正解数・正答率・完了/中断状態を含む。既存のDay学習/復習の保存処理・mode名は変更なし。既存Firestore履歴データは未変更" },
     { version: "2026/07/25 00:36", note: "PC版・モバイル版の管理者用 学習履歴『日別詳細』表示を整理。実学習時間が1分未満（0〜59秒）の場合は『実学習時間』行を非表示、問題数が0問の場合は『0問』行を非表示にする表示側調整を適用。学習時間計測ロジック・Firestore保存内容・正答率計算は変更なし" },

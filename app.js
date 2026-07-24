@@ -325,12 +325,35 @@ function computeLearningHistoryTicketDelta(before, after) {
   };
 }
 
+const LEARNING_HISTORY_MODE_NAMES = Object.freeze({
+  day: "Day",
+  wordTraining: "単語特訓",
+  phraseTraining: "熟語特訓",
+  wrongAnswerReview: "過去の間違い",
+  prepositionTraining: "前置詞特訓"
+});
+
 function getLearningModeLabel(mode) {
-  if (mode === "normal") return "Day";
-  if (mode === "level-focus") return "単語特訓";
-  if (mode === "phrase-spiral") return "熟語特訓";
-  if (mode === "challenge" || mode === "review") return "過去の間違い";
-  return String(mode || "");
+  const normalizedMode = String(mode || "").trim();
+  if (!normalizedMode) return "";
+
+  if (normalizedMode === "normal" || normalizedMode === "Day" || normalizedMode === "Day学習") {
+    return LEARNING_HISTORY_MODE_NAMES.day;
+  }
+  if (normalizedMode === "level-focus" || normalizedMode === LEARNING_HISTORY_MODE_NAMES.wordTraining) {
+    return LEARNING_HISTORY_MODE_NAMES.wordTraining;
+  }
+  if (normalizedMode === "phrase-spiral" || normalizedMode === LEARNING_HISTORY_MODE_NAMES.phraseTraining) {
+    return LEARNING_HISTORY_MODE_NAMES.phraseTraining;
+  }
+  if (normalizedMode === "challenge" || normalizedMode === "review" || normalizedMode === LEARNING_HISTORY_MODE_NAMES.wrongAnswerReview) {
+    return LEARNING_HISTORY_MODE_NAMES.wrongAnswerReview;
+  }
+  if (normalizedMode === "preposition" || normalizedMode === "preposition-training" || normalizedMode === LEARNING_HISTORY_MODE_NAMES.prepositionTraining) {
+    return LEARNING_HISTORY_MODE_NAMES.prepositionTraining;
+  }
+
+  return normalizedMode;
 }
 
 function resolveSessionDayNumber(sessionLike) {
@@ -1035,7 +1058,7 @@ function renderAdminLearningHistoryEntries(entries) {
               return `
                 <div class="admin-history-detail-item">
                   <p class="admin-history-detail-time">セッション　${formatLearningHistoryDateTimeRange(entry.startedAt, entry.endedAt)}</p>
-                  <p class="admin-history-detail-mode">${escapeHtml(entry.mode || "-")}</p>
+                  <p class="admin-history-detail-mode">${escapeHtml(String(entry.mode || "").trim() || "-")}</p>
                   <p class="admin-history-detail-meta">${escapeHtml(entry.dayNumber || "-")}</p>
                   ${activeStudySeconds >= 60 ? `<p class="admin-history-detail-meta">実学習時間　${formatLearningHistoryDuration(activeStudySeconds)}</p><p class="admin-history-detail-note">3分を超える無操作区間は除外</p>` : ""}
                   ${questionCount > 0 ? `<p class="admin-history-detail-meta">${questionCount}問</p>` : ""}
@@ -1180,7 +1203,7 @@ function buildPrepositionLearningHistoryEntry(sessionLike, reason) {
     startedAtDisplay: formatTimestampToJstDisplay(startedAt),
     endedAtDisplay: formatTimestampToJstDisplay(endedAt),
     activeStudySeconds: computeSessionActiveStudySeconds(sessionLike, endedAt),
-    mode: "前置詞特訓",
+    mode: LEARNING_HISTORY_MODE_NAMES.prepositionTraining,
     dayNumber: "",
     questionCount: answerCount,
     correctCount,
