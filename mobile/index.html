@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260724-1410";
+        const defaultToken = "20260724-1450";
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
         const cacheToken = [window.name, storedToken, defaultToken].filter(Boolean).sort().at(-1) || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -531,6 +531,20 @@
         </header>
 
         <main class="study-layout">
+          <section class="panel">
+            <label class="field-block">
+              <span>学習するDay範囲</span>
+              <select id="wordOrderDayRangeSelect">
+                <option value="1-7">Day 1 - 7</option>
+                <option value="8-14">Day 8 - 14</option>
+                <option value="15-21">Day 15 - 21</option>
+                <option value="22-28">Day 22 - 28</option>
+                <option value="29-35">Day 29 - 35</option>
+                <option value="36-40">Day 36 - 40</option>
+              </select>
+            </label>
+          </section>
+
           <div class="study-meta">
             <p id="wordOrderDayText" class="day-badge">Day1</p>
             <p id="wordOrderProgressText" class="progress-text">1 / 1</p>
@@ -597,7 +611,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-1410";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-1450";
         const scriptSources = [
           "../data.js",
           "../preposition-data.js",

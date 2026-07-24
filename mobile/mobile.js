@@ -40,6 +40,14 @@
   const SPEAKING_WEEK_MAX = 20;
   const ENABLE_SPEAKING_KEYWORD_DEBUG = true;
   const SESSION_QUESTION_COUNT = 10;
+  const WORD_ORDER_DAY_RANGES = Object.freeze([
+    Object.freeze({ value: "1-7", label: "Day 1 - 7", startDay: 1, endDay: 7 }),
+    Object.freeze({ value: "8-14", label: "Day 8 - 14", startDay: 8, endDay: 14 }),
+    Object.freeze({ value: "15-21", label: "Day 15 - 21", startDay: 15, endDay: 21 }),
+    Object.freeze({ value: "22-28", label: "Day 22 - 28", startDay: 22, endDay: 28 }),
+    Object.freeze({ value: "29-35", label: "Day 29 - 35", startDay: 29, endDay: 35 }),
+    Object.freeze({ value: "36-40", label: "Day 36 - 40", startDay: 36, endDay: 40 })
+  ]);
   let mobilePointStateCache = null;
 
   function formatPointValue(value) {
@@ -4614,17 +4622,27 @@
     }, "");
   }
 
-  function getWordOrderDay1Questions() {
+  function getSelectedWordOrderDayRange() {
+    const selectedValue = String(elements.wordOrderDayRangeSelect?.value || WORD_ORDER_DAY_RANGES[0].value);
+    return WORD_ORDER_DAY_RANGES.find((item) => item.value === selectedValue) || WORD_ORDER_DAY_RANGES[0];
+  }
+
+  function getWordOrderQuestionsByDayRange(startDay, endDay) {
     const bank = Array.isArray(window.wordOrderTrainingBank) ? window.wordOrderTrainingBank : [];
     return bank
-      .filter((entry) => Number(entry?.day) === 1)
+      .filter((entry) => {
+        const day = Number(entry?.day);
+        return Number.isFinite(day) && day >= startDay && day <= endDay;
+      })
       .map((entry, index) => {
         const english = String(entry?.english || "").trim();
         const japanese = String(entry?.japanese || "").trim();
         const tag = String(entry?.tag || "").trim();
+        const day = Math.floor(Number(entry?.day) || 0);
         const tokens = tokenizeWordOrderSentence(english);
         return {
           id: String(entry?.id || `word-order-day1-${index + 1}`),
+          day,
           english,
           japanese,
           tag,
@@ -4677,7 +4695,7 @@
       questionPanel.classList.add("hidden");
       completePanel.classList.remove("hidden");
       if (elements.wordOrderDayText) {
-        elements.wordOrderDayText.textContent = "Day1 完了";
+        elements.wordOrderDayText.textContent = `${training.dayRange?.label || "Day"} 完了`;
       }
       if (elements.wordOrderProgressText) {
         const total = training.questions.length;
@@ -4705,7 +4723,7 @@
     completePanel.classList.add("hidden");
 
     if (elements.wordOrderDayText) {
-      elements.wordOrderDayText.textContent = "Day1";
+      elements.wordOrderDayText.textContent = training.dayRange?.label || "Day";
     }
     if (elements.wordOrderProgressText) {
       elements.wordOrderProgressText.textContent = `${training.questionIndex + 1} / ${training.questions.length}`;
@@ -4798,15 +4816,17 @@
   }
 
   function startWordOrderTraining() {
-    const questions = getWordOrderDay1Questions();
+    const dayRange = getSelectedWordOrderDayRange();
+    const questions = getWordOrderQuestionsByDayRange(dayRange.startDay, dayRange.endDay);
     if (!questions.length) {
       renderComingSoonScreen({
         title: "語順トレーニング（準備中）",
-        message: "Day1 の語順データがまだありません。"
+        message: `${dayRange.label} の語順データは準備中です。`
       });
       return;
     }
     state.wordOrderTraining = {
+      dayRange,
       questions,
       questionIndex: 0,
       correctCount: 0,
@@ -7187,6 +7207,7 @@
     elements.mobileAdminLearningHistoryPanel = document.getElementById("mobileAdminLearningHistoryPanel");
     elements.wordOrderQuestionPanel = document.getElementById("wordOrderQuestionPanel");
     elements.wordOrderCompletePanel = document.getElementById("wordOrderCompletePanel");
+    elements.wordOrderDayRangeSelect = document.getElementById("wordOrderDayRangeSelect");
     elements.wordOrderDayText = document.getElementById("wordOrderDayText");
     elements.wordOrderProgressText = document.getElementById("wordOrderProgressText");
     elements.wordOrderJapaneseText = document.getElementById("wordOrderJapaneseText");
@@ -7259,6 +7280,7 @@
     document.getElementById("settingsBackBtn").addEventListener("click", renderHome);
     elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", renderHome);
     document.getElementById("wordOrderBackBtn").addEventListener("click", renderHome);
+    elements.wordOrderDayRangeSelect.addEventListener("change", startWordOrderTraining);
     elements.wordOrderUndoBtn.addEventListener("click", undoWordOrderSelection);
     elements.wordOrderResetBtn.addEventListener("click", resetWordOrderSelection);
     elements.wordOrderSubmitBtn.addEventListener("click", submitWordOrderAnswer);
