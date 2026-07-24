@@ -4635,13 +4635,13 @@
         return Number.isFinite(day) && day >= startDay && day <= endDay;
       })
       .map((entry, index) => {
-        const english = String(entry?.english || "").trim();
+        const english = String(entry?.english || entry?.answer || "").trim();
         const japanese = String(entry?.japanese || "").trim();
-        const tag = String(entry?.tag || "").trim();
+        const tag = String(entry?.tag || entry?.category || "").trim();
         const day = Math.floor(Number(entry?.day) || 0);
         const tokens = tokenizeWordOrderSentence(english);
         return {
-          id: String(entry?.id || `word-order-day1-${index + 1}`),
+          id: String(entry?.id || `word-order-day${day}-${index + 1}`),
           day,
           english,
           japanese,
