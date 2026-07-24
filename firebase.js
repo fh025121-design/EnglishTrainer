@@ -7,6 +7,12 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+import {
+  addDoc,
+  collection,
+  getFirestore,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBdeEZ2uKt3p_KS0kxZpUFICcNP5gzKM08",
@@ -19,6 +25,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const firestore = getFirestore(app);
 
 console.log("Firebase connected");
 
@@ -116,6 +123,41 @@ function bindAuthUi() {
   }
 }
 
+async function saveLearningHistoryToFirestore(historyEntry) {
+  const user = auth.currentUser;
+  if (!user || !historyEntry || typeof historyEntry !== "object") {
+    return false;
+  }
+
+  const payload = {
+    uid: String(user.uid || ""),
+    email: String(user.email || ""),
+    studyDate: String(historyEntry.learnedAt || historyEntry.endedAtDisplay || ""),
+    startedAt: Number(historyEntry.startedAt) || 0,
+    endedAt: Number(historyEntry.endedAt) || 0,
+    activeStudySeconds: Math.max(0, Number(historyEntry.activeStudySeconds) || 0),
+    mode: String(historyEntry.mode || ""),
+    dayNumber: Number(historyEntry.dayNumber) || 0,
+    questionCount: Math.max(0, Number(historyEntry.questionCount) || 0),
+    correctCount: Math.max(0, Number(historyEntry.correctCount) || 0),
+    accuracy: Math.max(0, Math.min(100, Number(historyEntry.accuracy) || 0)),
+    completedReason: String(historyEntry.completedReason || "completed"),
+    ticketEarned: Math.max(0, Number(historyEntry?.ticket?.earnedMinutes) || 0),
+    ticketUsed: Math.max(0, Number(historyEntry?.ticket?.usedMinutes) || 0),
+    deviceType: "pc",
+    createdAt: serverTimestamp()
+  };
+
+  try {
+    await addDoc(collection(firestore, "users", user.uid, "learningHistory"), payload);
+    console.log("Learning history saved to Firestore");
+    return true;
+  } catch (error) {
+    console.error("Failed to save learning history to Firestore", error);
+    return false;
+  }
+}
+
 async function initFirebaseAuthUi() {
   bindAuthUi();
   setLoginBusy(false);
@@ -149,7 +191,8 @@ async function initFirebaseAuthUi() {
   });
 }
 
-window.EnglishTrainerFirebase = Object.freeze({ app, auth });
+window.saveLearningHistoryToFirestore = saveLearningHistoryToFirestore;
+window.EnglishTrainerFirebase = Object.freeze({ app, auth, firestore });
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initFirebaseAuthUi, { once: true });

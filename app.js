@@ -833,6 +833,13 @@ function appendLearningHistoryEntry(entry) {
     LEARNING_HISTORY_STORAGE_KEY,
     JSON.stringify(history.slice(-LEARNING_HISTORY_MAX_ENTRIES))
   );
+
+  const saveToFirestore = window.saveLearningHistoryToFirestore;
+  if (typeof saveToFirestore === "function") {
+    Promise.resolve(saveToFirestore(sanitized)).catch((error) => {
+      console.error("Failed to save learning history to Firestore", error);
+    });
+  }
 }
 
 function recordInterruptedLearningHistory(sessionLike, summary) {
