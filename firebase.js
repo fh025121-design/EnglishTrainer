@@ -9,8 +9,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import {
   addDoc,
+  doc,
   collection,
+  getDocs,
   getFirestore,
+  onSnapshot,
+  orderBy,
+  query,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
@@ -158,6 +163,116 @@ async function saveLearningHistoryToFirestore(historyEntry) {
   }
 }
 
+function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
+  const data = typeof docSnapshot?.data === "function" ? docSnapshot.data() || {} : {};
+  const createdAtMillis = typeof data.createdAt?.toMillis === "function"
+    ? Number(data.createdAt.toMillis()) || 0
+    : Math.max(0, Number(data.createdAt?.seconds) || 0) * 1000;
+  const startedAt = Math.max(0, Number(data.startedAt) || 0);
+  const endedAt = Math.max(0, Number(data.endedAt) || 0);
+  return {
+    id: String(docSnapshot?.id || ""),
+    uid: String(data.uid || ""),
+    email: String(data.email || ""),
+    studyDate: String(data.studyDate || ""),
+    learnedAt: String(data.studyDate || ""),
+    startedAt,
+    endedAt,
+    startedAtDisplay: String(data.startedAtDisplay || ""),
+    endedAtDisplay: String(data.endedAtDisplay || ""),
+    activeStudySeconds: Math.max(0, Number(data.activeStudySeconds) || 0),
+    mode: String(data.mode || ""),
+    dayNumber: Math.max(0, Number(data.dayNumber) || 0),
+    questionCount: Math.max(0, Number(data.questionCount) || 0),
+    correctCount: Math.max(0, Number(data.correctCount) || 0),
+    accuracy: Math.max(0, Math.min(100, Number(data.accuracy) || 0)),
+    completedReason: String(data.completedReason || "completed"),
+    ticket: {
+      earnedMinutes: Math.max(0, Number(data.ticketEarned) || 0),
+      usedMinutes: Math.max(0, Number(data.ticketUsed) || 0)
+    },
+    deviceType: String(data.deviceType || ""),
+    createdAt: createdAtMillis
+  };
+}
+
+function normalizeFamilyChildren(familyData) {
+  const children = familyData && typeof familyData === "object" && familyData.children && typeof familyData.children === "object"
+    ? familyData.children
+    : {};
+  return Object.entries(children)
+    .map(([key, value]) => ({
+      key: String(key || ""),
+      name: String(value?.name || key || ""),
+      uid: String(value?.uid || "")
+    }))
+    .filter((item) => item.key && item.uid)
+    .sort((left, right) => left.key.localeCompare(right.key, "ja"));
+}
+
+function normalizeFamilyDocument(docSnapshot) {
+  const data = typeof docSnapshot?.data === "function" ? docSnapshot.data() || {} : {};
+  return {
+    id: String(docSnapshot?.id || ""),
+    parentUid: String(data.parentUid || ""),
+    children: normalizeFamilyChildren(data)
+  };
+}
+
+async function loadLearningHistoryEntriesFromFirestore(targetUid = null) {
+  const user = auth.currentUser;
+  const resolvedUid = String(targetUid || user?.uid || "").trim();
+  if (!resolvedUid) {
+    return [];
+  }
+  const snapshot = await getDocs(query(collection(firestore, "users", resolvedUid, "learningHistory"), orderBy("createdAt", "desc")));
+  return snapshot.docs.map(normalizeLearningHistoryFirestoreEntry);
+}
+
+function watchLearningHistoryEntriesFromFirestore(targetUidOrCallbacks = null, maybeCallbacks = {}) {
+  const user = auth.currentUser;
+  const targetUid = typeof targetUidOrCallbacks === "string" ? String(targetUidOrCallbacks || "").trim() : String(user?.uid || "").trim();
+  const callbacks = typeof targetUidOrCallbacks === "object" && targetUidOrCallbacks !== null && !Array.isArray(targetUidOrCallbacks)
+    ? targetUidOrCallbacks
+    : maybeCallbacks;
+  const onLoading = typeof callbacks.onLoading === "function" ? callbacks.onLoading : null;
+  const onUpdate = typeof callbacks.onUpdate === "function" ? callbacks.onUpdate : null;
+  const onError = typeof callbacks.onError === "function" ? callbacks.onError : null;
+  if (!targetUid) {
+    onUpdate?.([]);
+    return () => {};
+  }
+
+  onLoading?.();
+  const q = query(collection(firestore, "users", targetUid, "learningHistory"), orderBy("createdAt", "desc"));
+  return onSnapshot(q, (snapshot) => {
+    const entries = snapshot.docs.map(normalizeLearningHistoryFirestoreEntry);
+    onUpdate?.(entries);
+  }, (error) => {
+    console.error("Failed to load learning history from Firestore", error);
+    onError?.(error);
+  });
+}
+
+function watchFamilyDocument(familyId, callbacks = {}) {
+  const onLoading = typeof callbacks.onLoading === "function" ? callbacks.onLoading : null;
+  const onUpdate = typeof callbacks.onUpdate === "function" ? callbacks.onUpdate : null;
+  const onError = typeof callbacks.onError === "function" ? callbacks.onError : null;
+  const normalizedFamilyId = String(familyId || "").trim();
+  if (!normalizedFamilyId) {
+    onError?.(new Error("familyId is required"));
+    return () => {};
+  }
+
+  onLoading?.();
+  return onSnapshot(doc(firestore, "families", normalizedFamilyId), (snapshot) => {
+    onUpdate?.(normalizeFamilyDocument(snapshot));
+  }, (error) => {
+    console.error("Failed to load family document from Firestore", error);
+    onError?.(error);
+  });
+}
+
 async function initFirebaseAuthUi() {
   bindAuthUi();
   setLoginBusy(false);
@@ -192,6 +307,9 @@ async function initFirebaseAuthUi() {
 }
 
 window.saveLearningHistoryToFirestore = saveLearningHistoryToFirestore;
+window.loadLearningHistoryEntriesFromFirestore = loadLearningHistoryEntriesFromFirestore;
+window.watchLearningHistoryEntriesFromFirestore = watchLearningHistoryEntriesFromFirestore;
+window.watchFamilyDocument = watchFamilyDocument;
 window.EnglishTrainerFirebase = Object.freeze({ app, auth, firestore });
 
 if (document.readyState === "loading") {

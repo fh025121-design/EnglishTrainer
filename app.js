@@ -171,6 +171,13 @@ let pendingTrainingCompleteContext = null;
 let deferGameTicketRewardModal = false;
 let isAdminLearningHistoryUnlocked = false;
 let adminLearningHistorySelectedDayKey = "";
+let adminLearningHistoryFirestoreUnsubscribe = null;
+let adminLearningHistoryFirestoreLoadToken = 0;
+let adminLearningHistoryFamilyUnsubscribe = null;
+let adminLearningHistoryFamilyLoadToken = 0;
+let adminLearningHistoryFamilyChildren = [];
+let adminLearningHistorySelectedChildKey = "son";
+let adminLearningHistorySelectedChildUid = "";
 const DESKTOP_FIT_REFERENCE = Object.freeze({
   width: 1366,
   height: 920,
@@ -646,25 +653,153 @@ function buildLearningHistoryDetailEntries(dayEntries) {
     .sort((left, right) => Number(left.startedAt || left.endedAt || 0) - Number(right.startedAt || right.endedAt || 0));
 }
 
-function renderAdminLearningHistoryList() {
+function getAdminLearningHistoryChildSelect() {
+  return document.getElementById("adminLearningHistoryChildSelect");
+}
+
+function stopAdminLearningHistoryFirestoreListener() {
+  stopAdminLearningHistoryHistoryListener();
+  stopAdminLearningHistoryFamilyListener();
+}
+
+function stopAdminLearningHistoryHistoryListener() {
+  if (typeof adminLearningHistoryFirestoreUnsubscribe === "function") {
+    adminLearningHistoryFirestoreUnsubscribe();
+  }
+  adminLearningHistoryFirestoreUnsubscribe = null;
+}
+
+function stopAdminLearningHistoryFamilyListener() {
+  if (typeof adminLearningHistoryFamilyUnsubscribe === "function") {
+    adminLearningHistoryFamilyUnsubscribe();
+  }
+  adminLearningHistoryFamilyUnsubscribe = null;
+}
+
+function renderAdminLearningHistoryState(message, options = {}) {
+  const content = document.getElementById("adminLearningHistoryContent");
+  if (!content) return;
+  const countText = document.getElementById("adminLearningHistoryCountText");
+  if (countText) {
+    countText.textContent = options.countText || "";
+  }
+  content.innerHTML = `<p class="empty-state">${escapeHtml(message)}</p>`;
+}
+
+function renderAdminLearningHistoryChildOptions(children) {
+  const select = getAdminLearningHistoryChildSelect();
+  if (!select) return;
+  select.innerHTML = children.map((child) => `<option value="${escapeHtml(child.key)}">${escapeHtml(child.name || child.key)}</option>`).join("");
+  select.disabled = children.length <= 0;
+  if (children.length && !children.some((child) => child.key === adminLearningHistorySelectedChildKey)) {
+    adminLearningHistorySelectedChildKey = children[0].key;
+  }
+  select.value = adminLearningHistorySelectedChildKey;
+}
+
+function bindAdminLearningHistoryChildSelect() {
+  const select = getAdminLearningHistoryChildSelect();
+  if (!select || select.dataset.bound === "true") return;
+  select.addEventListener("change", () => {
+    adminLearningHistorySelectedChildKey = String(select.value || "");
+    const selectedChild = adminLearningHistoryFamilyChildren.find((child) => child.key === adminLearningHistorySelectedChildKey) || adminLearningHistoryFamilyChildren[0] || null;
+    if (!selectedChild) return;
+    if (selectedChild.uid !== adminLearningHistorySelectedChildUid) {
+      adminLearningHistorySelectedChildUid = selectedChild.uid;
+      adminLearningHistorySelectedDayKey = "";
+      renderAdminLearningHistoryHistoryWatch(selectedChild.uid);
+    }
+  });
+  select.dataset.bound = "true";
+}
+
+function renderAdminLearningHistoryHistoryWatch(targetUid) {
+  const watchFn = window.watchLearningHistoryEntriesFromFirestore;
+  if (typeof watchFn !== "function") {
+    renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
+    return;
+  }
+
+  stopAdminLearningHistoryHistoryListener();
+  const loadToken = ++adminLearningHistoryFirestoreLoadToken;
+  renderAdminLearningHistoryState("読み込み中...", { countText: "読み込み中..." });
+
+  adminLearningHistoryFirestoreUnsubscribe = watchFn(targetUid, {
+    onUpdate: (entries) => {
+      if (loadToken !== adminLearningHistoryFirestoreLoadToken) return;
+      renderAdminLearningHistoryEntries(entries);
+    },
+    onError: () => {
+      if (loadToken !== adminLearningHistoryFirestoreLoadToken) return;
+      renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
+    }
+  });
+}
+
+function renderAdminLearningHistoryFamilyWatch() {
+  const watchFn = window.watchFamilyDocument;
+  if (typeof watchFn !== "function") {
+    renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
+    return;
+  }
+
+  stopAdminLearningHistoryFamilyListener();
+  stopAdminLearningHistoryHistoryListener();
+  const loadToken = ++adminLearningHistoryFamilyLoadToken;
+  renderAdminLearningHistoryState("読み込み中...", { countText: "読み込み中..." });
+
+  adminLearningHistoryFamilyUnsubscribe = watchFn("inoue", {
+    onUpdate: (family) => {
+      if (loadToken !== adminLearningHistoryFamilyLoadToken) return;
+      const children = Array.isArray(family?.children) ? family.children : [];
+      adminLearningHistoryFamilyChildren = children;
+      renderAdminLearningHistoryChildOptions(children);
+      bindAdminLearningHistoryChildSelect();
+      if (!children.length) {
+        renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
+        return;
+      }
+      const selectedChild = children.find((child) => child.key === adminLearningHistorySelectedChildKey) || children[0];
+      adminLearningHistorySelectedChildKey = selectedChild.key;
+      adminLearningHistorySelectedChildUid = selectedChild.uid;
+      renderAdminLearningHistoryHistoryWatch(selectedChild.uid);
+    },
+    onError: () => {
+      if (loadToken !== adminLearningHistoryFamilyLoadToken) return;
+      renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
+    }
+  });
+}
+
+function renderAdminLearningHistoryEntries(entries) {
   const content = document.getElementById("adminLearningHistoryContent");
   if (!content) return;
   const countText = document.getElementById("adminLearningHistoryCountText");
   const todayDayKey = getLearningHistoryDayKey(Date.now());
 
-  const entries = loadLearningHistoryEntries()
+  const normalizedEntries = (Array.isArray(entries) ? entries : [])
     .slice()
-    .sort((a, b) => Number(b.endedAt || 0) - Number(a.endedAt || 0));
+    .sort((a, b) => Number(b.createdAt || b.endedAt || 0) - Number(a.createdAt || a.endedAt || 0));
 
   if (countText) {
-    countText.textContent = `${entries.length}件`;
+    countText.textContent = `${normalizedEntries.length}件`;
   }
-  if (!entries.length) {
-    content.innerHTML = '<p class="empty-state">履歴はありません</p>';
+  if (!normalizedEntries.length) {
+    content.innerHTML = `
+      <div class="admin-learning-history-view">
+        <div class="admin-learning-history-user-row">
+          <label for="adminLearningHistoryChildSelect" class="subtext">表示するユーザー</label>
+          <select id="adminLearningHistoryChildSelect" class="settings-update-password-input admin-learning-history-child-select"></select>
+        </div>
+        <p class="empty-state">まだ履歴はありません</p>
+      </div>
+    `;
+    renderAdminLearningHistoryChildOptions(adminLearningHistoryFamilyChildren);
+    bindAdminLearningHistoryChildSelect();
     return;
   }
 
-  const model = buildLearningHistoryInsights(entries);
+  const model = buildLearningHistoryInsights(normalizedEntries);
   if (!adminLearningHistorySelectedDayKey || !/^\d{4}-\d{2}-\d{2}$/.test(adminLearningHistorySelectedDayKey) || adminLearningHistorySelectedDayKey > todayDayKey) {
     adminLearningHistorySelectedDayKey = todayDayKey;
   }
@@ -679,6 +814,10 @@ function renderAdminLearningHistoryList() {
 
   content.innerHTML = `
     <div class="admin-learning-history-view">
+      <div class="admin-learning-history-user-row">
+        <label for="adminLearningHistoryChildSelect" class="subtext">表示するユーザー</label>
+        <select id="adminLearningHistoryChildSelect" class="settings-update-password-input admin-learning-history-child-select"></select>
+      </div>
       <section class="admin-history-overview">
         <div class="admin-history-streak-row">🔥連続${state.stats.streak || 0}日</div>
         <div class="admin-history-period-grid">
@@ -755,6 +894,9 @@ function renderAdminLearningHistoryList() {
     </div>
   `;
 
+  renderAdminLearningHistoryChildOptions(adminLearningHistoryFamilyChildren);
+  bindAdminLearningHistoryChildSelect();
+
   content.querySelectorAll("[data-day-shift]").forEach((button) => {
     button.addEventListener("click", () => {
       const shift = button.getAttribute("data-day-shift");
@@ -769,6 +911,13 @@ function renderAdminLearningHistoryList() {
       renderAdminLearningHistoryList();
     });
   });
+}
+
+function renderAdminLearningHistoryList() {
+  adminLearningHistoryFamilyChildren = [];
+  adminLearningHistorySelectedChildUid = "";
+  bindAdminLearningHistoryChildSelect();
+  renderAdminLearningHistoryFamilyWatch();
 }
 
 function resetAdminLearningHistoryGate() {
@@ -827,6 +976,9 @@ function unlockAdminLearningHistory() {
 function appendLearningHistoryEntry(entry) {
   const sanitized = sanitizeLearningHistoryEntry(entry);
   if (!sanitized) return;
+  if (Math.max(0, Number(sanitized.questionCount) || 0) === 0 || Math.max(0, Number(sanitized.activeStudySeconds) || 0) === 0) {
+    return;
+  }
   const history = loadLearningHistoryEntries();
   history.push(sanitized);
   localStorage.setItem(
@@ -5480,6 +5632,7 @@ function renderDayProgress() {
 }
 
 function renderHome() {
+  stopAdminLearningHistoryFirestoreListener();
   syncDerivedStats();
   const advanceDayText = document.getElementById("advanceDayText");
   const advanceBtn = document.getElementById("advanceBtn");
