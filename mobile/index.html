@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260724-1011";
+        const defaultToken = "20260724-1116";
         const storedToken = window.localStorage.getItem("englishTrainerMobileCacheToken") || "";
         const cacheToken = [window.name, storedToken, defaultToken].filter(Boolean).sort().at(-1) || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -30,6 +30,7 @@
         <main class="stack-layout">
           <section class="panel action-panel">
             <button id="openSpeakingFeatureBtn" class="primary-btn large-btn" type="button">🎤 Speaking</button>
+            <button id="openWordOrderTrainingBtn" class="secondary-btn large-btn" type="button">語順トレーニング</button>
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
             <button id="refreshCacheBtn" class="secondary-btn large-btn" type="button">♻ キャッシュ更新</button>
             <button id="openAcquiredPointsScreenBtn" class="secondary-btn large-btn" type="button">獲得ポイント</button>
@@ -530,8 +531,8 @@
         </header>
         <main class="stack-layout">
           <section class="panel result-panel">
-            <h2>準備中</h2>
-            <p class="status-text">この画面は準備中です。まずはスピーキング学習を利用してください。</p>
+            <h2 id="comingSoonTitleText">準備中</h2>
+            <p id="comingSoonMessageText" class="status-text">この画面は準備中です。まずはスピーキング学習を利用してください。</p>
           </section>
         </main>
       </section>
@@ -550,7 +551,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-1011";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260724-1116";
         const scriptSources = [
           "../data.js",
           "../release-info.js",

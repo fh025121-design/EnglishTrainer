@@ -4609,6 +4609,18 @@
     showScreen("homeScreen");
   }
 
+  function renderComingSoonScreen(options = {}) {
+    const titleText = document.getElementById("comingSoonTitleText");
+    const messageText = document.getElementById("comingSoonMessageText");
+    if (titleText) {
+      titleText.textContent = options.title || "準備中";
+    }
+    if (messageText) {
+      messageText.textContent = options.message || "この画面は準備中です。まずはスピーキング学習を利用してください。";
+    }
+    showScreen("comingSoonScreen");
+  }
+
   function refreshMobileCache() {
     const cacheToken = String(Date.now());
     try {
@@ -6875,6 +6887,12 @@
 
   function bindEvents() {
     document.getElementById("openSpeakingFeatureBtn").addEventListener("click", renderSpeakingHome);
+    document.getElementById("openWordOrderTrainingBtn").addEventListener("click", () => {
+      renderComingSoonScreen({
+        title: "語順トレーニング（準備中）",
+        message: "語順トレーニングは準備中です。"
+      });
+    });
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
     document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", () => {
