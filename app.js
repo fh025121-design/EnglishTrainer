@@ -181,6 +181,10 @@ let adminLearningHistorySelectedChildUid = "";
 let adminLearningHistoryCanSelectFamily = false;
 let adminLearningHistorySelectedDeviceType = "pc";
 let adminLearningHistorySourceEntries = [];
+window.AdminLearningHistoryAccessState = window.AdminLearningHistoryAccessState || {
+  canSelectFamily: false,
+  currentUid: ""
+};
 const DESKTOP_FIT_REFERENCE = Object.freeze({
   width: 1366,
   height: 920,
@@ -862,6 +866,7 @@ function resetAdminLearningHistorySelectionState() {
   adminLearningHistorySelectedDeviceType = "pc";
   adminLearningHistorySelectedDayKey = "";
   adminLearningHistorySourceEntries = [];
+  setAdminLearningHistoryAccessState("", false);
 }
 
 function clearAdminLearningHistoryView() {
@@ -890,6 +895,13 @@ function getCurrentPcFirebaseUser() {
     return window.getFirebaseCurrentUser();
   }
   return window.EnglishTrainerFirebase?.auth?.currentUser || null;
+}
+
+function setAdminLearningHistoryAccessState(currentUid, canSelectFamily) {
+  window.AdminLearningHistoryAccessState = {
+    currentUid: String(currentUid || "").trim(),
+    canSelectFamily: Boolean(canSelectFamily)
+  };
 }
 
 function stopAdminLearningHistoryHistoryListener() {
@@ -965,17 +977,19 @@ function renderAdminLearningHistoryFamilyWatch() {
   stopAdminLearningHistoryHistoryListener();
   const loadToken = ++adminLearningHistoryFamilyLoadToken;
   renderAdminLearningHistoryState("読み込み中...", { countText: "読み込み中..." });
+  setAdminLearningHistoryAccessState(currentUid, false);
 
   adminLearningHistoryFamilyUnsubscribe = watchFn("inoue", {
     onUpdate: (family) => {
       if (loadToken !== adminLearningHistoryFamilyLoadToken) return;
-      const children = buildAdminLearningHistoryFamilyOptions(family);
       const parentUid = String(family?.parentUid || "").trim();
       const isParentLogin = Boolean(parentUid && currentUid && parentUid === currentUid);
 
       if (isParentLogin) {
+        const children = buildAdminLearningHistoryFamilyOptions(family);
         adminLearningHistoryCanSelectFamily = true;
         adminLearningHistoryFamilyChildren = children;
+        setAdminLearningHistoryAccessState(currentUid, true);
         if (!children.length) {
           renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
           return;
@@ -988,7 +1002,8 @@ function renderAdminLearningHistoryFamilyWatch() {
       }
 
       adminLearningHistoryCanSelectFamily = false;
-      const selfEntry = children.find((child) => child.uid === currentUid) || { key: "self", name: "私", uid: currentUid };
+      setAdminLearningHistoryAccessState(currentUid, false);
+      const selfEntry = { key: "self", name: "私", uid: currentUid };
       adminLearningHistoryFamilyChildren = [selfEntry];
       adminLearningHistorySelectedChildKey = selfEntry.key;
       adminLearningHistorySelectedChildUid = currentUid;

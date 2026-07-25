@@ -83,6 +83,10 @@ function setLogoutVisibility(isVisible) {
   }
 }
 
+function canAccessOtherUserLearningHistory() {
+  return Boolean(window.AdminLearningHistoryAccessState?.canSelectFamily === true);
+}
+
 function getFirebaseAuthErrorMessage(error) {
   const code = String(error?.code || "");
   if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
@@ -125,6 +129,9 @@ async function handleLoginSubmit(event) {
 
 async function handleLogoutClick() {
   try {
+    if (typeof window.resetAdminLearningHistoryAuthScope === "function") {
+      window.resetAdminLearningHistoryAuthScope();
+    }
     await signOut(auth);
   } catch (_error) {
     setLoginError("ログアウトに失敗しました。");
@@ -240,7 +247,7 @@ async function loadLearningHistoryEntriesFromFirestore(targetUid = null, options
   const user = auth.currentUser;
   const requestedUid = String(targetUid || "").trim();
   const currentUid = String(user?.uid || "").trim();
-  const allowOtherUser = Boolean(options && typeof options === "object" && options.allowOtherUser === true);
+  const allowOtherUser = Boolean(options && typeof options === "object" && options.allowOtherUser === true && canAccessOtherUserLearningHistory());
   if (requestedUid && currentUid && requestedUid !== currentUid && !allowOtherUser) {
     console.warn("Blocked cross-user learning history load", { requestedUid, currentUid });
     return [];
@@ -266,7 +273,7 @@ function watchLearningHistoryEntriesFromFirestore(targetUidOrCallbacks = null, m
   const onUpdate = typeof callbacks.onUpdate === "function" ? callbacks.onUpdate : null;
   const onError = typeof callbacks.onError === "function" ? callbacks.onError : null;
   const currentUid = String(user?.uid || "").trim();
-  const allowOtherUser = Boolean(options && typeof options === "object" && options.allowOtherUser === true);
+  const allowOtherUser = Boolean(options && typeof options === "object" && options.allowOtherUser === true && canAccessOtherUserLearningHistory());
   if (targetUid && currentUid && targetUid !== currentUid && !allowOtherUser) {
     console.warn("Blocked cross-user learning history watch", { requestedUid: targetUid, currentUid });
     onUpdate?.([]);
