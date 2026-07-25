@@ -347,6 +347,36 @@
 			"command": "$repoApi='https://api.github.com/repos/fh025121-design/EnglishTrainer/pages'; $headers=@{ 'User-Agent'='Mozilla/5.0' }; $p=(Invoke-WebRequest -UseBasicParsing -Headers $headers $repoApi).Content | ConvertFrom-Json; Write-Output ('PAGES_STATUS=' + $p.status); Write-Output ('PAGES_SOURCE_BRANCH=' + $p.source.branch); Write-Output ('PAGES_SOURCE_PATH=' + $p.source.path); Write-Output ('PAGES_BUILD_TYPE=' + $p.build_type); $r=(Invoke-WebRequest -UseBasicParsing 'https://fh025121-design.github.io/EnglishTrainer/release-info.js').Content; $m=[regex]::Match($r,'\\{ version: \"([^\"]+)\"'); if($m.Success){ Write-Output ('RELEASE_HEAD_VERSION=' + $m.Groups[1].Value) } else { Write-Output 'RELEASE_HEAD_VERSION=NOT_FOUND' }",
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "commit-pc-admin-history-fix",
+			"type": "shell",
+			"command": "$git='C:\\Users\\hiroshiinoue\\AppData\\Local\\GitHubDesktop\\app-3.6.3\\resources\\app\\git\\cmd\\git.exe'; & $git add app.js firebase.js; & $git commit -m \"Fix PC admin history family scoping\"; & $git push origin main",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "commit-pc-admin-history-fix-2",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$git='C:\\Users\\hiroshiinoue\\AppData\\Local\\GitHubDesktop\\app-3.6.3\\resources\\app\\git\\cmd\\git.exe'; & $git add app.js firebase.js; & $git commit -m 'Fix PC admin history family scoping'; & $git push origin main"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "commit-pc-admin-history-fix-3",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/c",
+				"\"C:\\Users\\hiroshiinoue\\AppData\\Local\\GitHubDesktop\\app-3.6.3\\resources\\app\\git\\cmd\\git.exe\" add app.js firebase.js && \"C:\\Users\\hiroshiinoue\\AppData\\Local\\GitHubDesktop\\app-3.6.3\\resources\\app\\git\\cmd\\git.exe\" commit -m Fix-PC-admin-history-family-scoping && \"C:\\Users\\hiroshiinoue\\AppData\\Local\\GitHubDesktop\\app-3.6.3\\resources\\app\\git\\cmd\\git.exe\" push origin main"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }
