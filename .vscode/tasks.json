@@ -377,6 +377,34 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "commit-appjs-learninghistorydebug",
+			"type": "shell",
+			"command": "$git='C:\\Users\\hiroshiinoue\\AppData\\Local\\GitHubDesktop\\app-3.6.3\\resources\\app\\git\\cmd\\git.exe'; & $git add app.js; & $git commit -m \"Add LearningHistory debug logs\"; & $git push origin main",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "commit-appjs-learninghistorydebug-2",
+			"type": "shell",
+			"command": "$git='C:\\Users\\hiroshiinoue\\AppData\\Local\\GitHubDesktop\\app-3.6.3\\resources\\app\\git\\cmd\\git.exe'; & $git add app.js; & $git commit -m Add-LearningHistoryDebugLogs; & $git push origin main",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "verify-pages-learninghistorydebug",
+			"type": "shell",
+			"command": "$content = (Invoke-WebRequest -UseBasicParsing 'https://fh025121-design.github.io/EnglishTrainer/app.js').Content; @('[LearningHistoryDebug] sanitizeLearningHistoryEntry before','[LearningHistoryDebug] appendLearningHistoryEntry before sanitize','[LearningHistoryDebug] saveLearningHistoryToFirestore success') | ForEach-Object { if($content -like \"*$_*\"){ \"FOUND: $_\" } else { \"MISSING: $_\" } }",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "verify-pages-learninghistorydebug-2",
+			"type": "shell",
+			"command": "$content = (Invoke-WebRequest -UseBasicParsing 'https://fh025121-design.github.io/EnglishTrainer/app.js').Content; $markers = @('[LearningHistoryDebug] sanitizeLearningHistoryEntry before','[LearningHistoryDebug] appendLearningHistoryEntry before sanitize','[LearningHistoryDebug] saveLearningHistoryToFirestore success'); foreach($m in $markers){ if($content.Contains($m)){ Write-Output ('FOUND: ' + $m) } else { Write-Output ('MISSING: ' + $m) } }",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }
