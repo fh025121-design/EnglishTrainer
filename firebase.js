@@ -32,6 +32,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
+window.PcFirebaseAuthState = {
+  status: "pending",
+  user: null
+};
+
 console.log("Firebase connected");
 
 function setAuthViewState(status) {
@@ -39,6 +44,17 @@ function setAuthViewState(status) {
   if (!body) return;
   body.classList.remove("auth-pending", "auth-logged-in", "auth-logged-out");
   body.classList.add(status);
+  window.PcFirebaseAuthState.status = status.replace("auth-", "");
+}
+
+function dispatchPcAuthState(user) {
+  window.PcFirebaseAuthState.user = user || null;
+  document.dispatchEvent(new CustomEvent("pc-firebase-auth-state", {
+    detail: {
+      status: window.PcFirebaseAuthState.status,
+      user: user || null
+    }
+  }));
 }
 
 function setLoginError(message) {
@@ -220,8 +236,15 @@ function normalizeFamilyDocument(docSnapshot) {
   };
 }
 
-async function loadLearningHistoryEntriesFromFirestore(targetUid = null) {
+async function loadLearningHistoryEntriesFromFirestore(targetUid = null, options = {}) {
   const user = auth.currentUser;
+  const requestedUid = String(targetUid || "").trim();
+  const currentUid = String(user?.uid || "").trim();
+  const allowOtherUser = Boolean(options && typeof options === "object" && options.allowOtherUser === true);
+  if (requestedUid && currentUid && requestedUid !== currentUid && !allowOtherUser) {
+    console.warn("Blocked cross-user learning history load", { requestedUid, currentUid });
+    return [];
+  }
   const resolvedUid = String(targetUid || user?.uid || "").trim();
   if (!resolvedUid) {
     return [];
@@ -230,15 +253,25 @@ async function loadLearningHistoryEntriesFromFirestore(targetUid = null) {
   return snapshot.docs.map(normalizeLearningHistoryFirestoreEntry);
 }
 
-function watchLearningHistoryEntriesFromFirestore(targetUidOrCallbacks = null, maybeCallbacks = {}) {
+function watchLearningHistoryEntriesFromFirestore(targetUidOrCallbacks = null, maybeCallbacks = {}, maybeOptions = {}) {
   const user = auth.currentUser;
   const targetUid = typeof targetUidOrCallbacks === "string" ? String(targetUidOrCallbacks || "").trim() : String(user?.uid || "").trim();
   const callbacks = typeof targetUidOrCallbacks === "object" && targetUidOrCallbacks !== null && !Array.isArray(targetUidOrCallbacks)
     ? targetUidOrCallbacks
     : maybeCallbacks;
+  const options = typeof targetUidOrCallbacks === "object" && targetUidOrCallbacks !== null && !Array.isArray(targetUidOrCallbacks)
+    ? maybeCallbacks
+    : maybeOptions;
   const onLoading = typeof callbacks.onLoading === "function" ? callbacks.onLoading : null;
   const onUpdate = typeof callbacks.onUpdate === "function" ? callbacks.onUpdate : null;
   const onError = typeof callbacks.onError === "function" ? callbacks.onError : null;
+  const currentUid = String(user?.uid || "").trim();
+  const allowOtherUser = Boolean(options && typeof options === "object" && options.allowOtherUser === true);
+  if (targetUid && currentUid && targetUid !== currentUid && !allowOtherUser) {
+    console.warn("Blocked cross-user learning history watch", { requestedUid: targetUid, currentUid });
+    onUpdate?.([]);
+    return () => {};
+  }
   if (!targetUid) {
     onUpdate?.([]);
     return () => {};
@@ -294,6 +327,7 @@ async function initFirebaseAuthUi() {
       if (passwordInput) passwordInput.value = "";
       setLogoutVisibility(true);
       setAuthViewState("auth-logged-in");
+      dispatchPcAuthState(user);
       return;
     }
 
@@ -304,6 +338,7 @@ async function initFirebaseAuthUi() {
     setLogoutVisibility(false);
     setLoginBusy(false);
     setAuthViewState("auth-logged-out");
+    dispatchPcAuthState(null);
   });
 }
 
@@ -311,6 +346,7 @@ window.saveLearningHistoryToFirestore = saveLearningHistoryToFirestore;
 window.loadLearningHistoryEntriesFromFirestore = loadLearningHistoryEntriesFromFirestore;
 window.watchLearningHistoryEntriesFromFirestore = watchLearningHistoryEntriesFromFirestore;
 window.watchFamilyDocument = watchFamilyDocument;
+window.getFirebaseCurrentUser = () => auth.currentUser;
 window.EnglishTrainerFirebase = Object.freeze({ app, auth, firestore });
 
 if (document.readyState === "loading") {

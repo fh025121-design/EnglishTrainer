@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/25 23:21", note: "PC版のみ: 管理者用 学習履歴のアクセス制御を修正。親ログイン時は従来どおり family（私/長男）切替を維持し、子どもログイン時は家族選択UIを非表示化してログイン中本人の uid の履歴のみ表示。認証状態変更時に学習履歴のFirestore購読を即時停止し、管理画面解除状態（PIN解除）と選択中ユーザー状態を強制リセットして別アカウント履歴の残留表示を防止。加えて Firestore履歴取得関数にガードを追加し、allowOtherUser 未許可で currentUser.uid 以外の targetUid 指定を受けた場合は console.warn を出して取得/購読を拒否。学習履歴の保存処理・時間計測・mode処理・モバイル版は未変更" },
     { version: "2026/07/25 02:03", note: "PC版のみ: 学習履歴mode管理を再発防止向けに一元化するリファクタリングを実施。mode定義を単一定数（Day / 過去の間違い / 前置詞特訓）へ集約し、Firestore保存直前に normalizeLearningMode() を1回だけ通す構成へ統一。管理者用 学習履歴の表示側は mode 変換を行わず entry.mode をそのまま表示し、許可外mode入力時のみ console.warn を出力。動作仕様（時刻・学習時間計測・既存Firestore履歴・モバイル版）は変更なし" },
     { version: "2026/07/25 01:45", note: "PC版のみ: 学習履歴のmode保存名を整理。履歴保存時のmode正規化を統一し、Day学習は『Day』、過去の間違い（challenge/review）は『過去の間違い』、前置詞特訓は『前置詞特訓』で保存されるよう固定。管理者用 学習履歴『日別詳細』のmode表示はFirestore値をそのまま表示し、mode未設定/空白時のみ『-』を表示（Dayへの置換はしない）。startedAt/endedAt/学習時間計測ロジック・既存Firestore履歴・モバイル版は未変更" },
     { version: "2026/07/25 01:24", note: "PC版のみ: Day学習の分岐を修正。『次へ進む Day○』は常に新規セッションとして開始し、保存済み中断セッションの復元経路を通らないよう変更（forceNewSessionを付与）。これにより startedAt は開始時点のDate.now()で新規採番され、lastResumedAt・accumulatedMs・answerHistoryを含むセッション初期値を毎回リセット。『続きから学習』は従来どおり保存済み通常セッションの復元経路を維持し、startedAt/進捗を引き継いで再開。buildLearningHistoryEntryFromSession・endedAt保存・Firestore既存履歴・3分無操作除外ロジック・モバイル版は未変更" },
