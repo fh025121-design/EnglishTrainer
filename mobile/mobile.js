@@ -2594,14 +2594,24 @@
         throw new Error("family options unavailable");
       }
 
-      const selected = mobileAdminLearningHistoryFamilyChildren.find((child) => child.key === mobileAdminLearningHistorySelectedChildKey)
-        || mobileAdminLearningHistoryFamilyChildren.find((child) => child.key === "parent")
-        || mobileAdminLearningHistoryFamilyChildren[0];
-      mobileAdminLearningHistorySelectedChildKey = selected.key;
-      mobileAdminLearningHistorySelectedChildUid = selected.uid;
+      const currentUser = typeof window.getMobileFirebaseCurrentUser === "function"
+        ? window.getMobileFirebaseCurrentUser()
+        : (window.MobileFirebase?.auth?.currentUser || null);
+      const currentUid = String(currentUser?.uid || "").trim();
+      const selectedParent = mobileAdminLearningHistoryFamilyChildren.find((child) => child.key === "parent") || null;
+      const selectedSon = mobileAdminLearningHistoryFamilyChildren.find((child) => child.key === "son") || null;
+      const isChildLogin = Boolean(selectedSon?.uid && currentUid && selectedSon.uid === currentUid);
+
+      const selected = isChildLogin
+        ? (selectedSon || mobileAdminLearningHistoryFamilyChildren[0])
+        : (mobileAdminLearningHistoryFamilyChildren.find((child) => child.key === mobileAdminLearningHistorySelectedChildKey)
+          || selectedParent
+          || mobileAdminLearningHistoryFamilyChildren[0]);
+      mobileAdminLearningHistorySelectedChildKey = isChildLogin ? "son" : selected.key;
+      mobileAdminLearningHistorySelectedChildUid = isChildLogin ? currentUid : selected.uid;
       mobileAdminLearningHistorySelectedDeviceType = "pc";
       mobileAdminLearningHistorySelectedDayKey = "";
-      mobileAdminLearningHistorySourceEntries = await loadMobileAdminLearningHistoryEntriesFromFirestore(selected.uid);
+      mobileAdminLearningHistorySourceEntries = await loadMobileAdminLearningHistoryEntriesFromFirestore(mobileAdminLearningHistorySelectedChildUid);
       renderMobileAdminLearningHistoryList();
       if (elements.mobileAdminLearningHistoryStatusText) {
         elements.mobileAdminLearningHistoryStatusText.textContent = "";
@@ -2646,8 +2656,17 @@
   function buildMobileAdminFamilyOptions(family, currentUser) {
     const familyChildren = Array.isArray(family?.children) ? family.children : [];
     const sonEntry = familyChildren.find((child) => child?.key === "son" && child?.uid);
+    const currentUid = String(currentUser?.uid || "").trim();
+    const parentUid = String(family?.parentUid || "").trim();
+    const sonUid = String(sonEntry?.uid || "").trim();
+    const isParentLogin = Boolean(currentUid && parentUid && currentUid === parentUid);
+    const isChildLogin = Boolean(currentUid && sonUid && currentUid === sonUid);
     const options = [];
-    if (String(family?.parentUid || "").trim()) {
+    if (isChildLogin) {
+      options.push({ key: "son", name: "長男", uid: currentUid });
+      return options;
+    }
+    if (isParentLogin && parentUid) {
       options.push({ key: "parent", name: "私", uid: String(family.parentUid || "").trim() });
     }
     if (sonEntry?.uid) {
@@ -2772,13 +2791,18 @@
   }
 
   async function loadMobileAdminLearningHistoryEntriesFromFirestore(targetUid) {
+    const currentUser = typeof window.getMobileFirebaseCurrentUser === "function"
+      ? window.getMobileFirebaseCurrentUser()
+      : (window.MobileFirebase?.auth?.currentUser || null);
+    const currentUid = String(currentUser?.uid || "").trim();
     const resolvedUid = String(targetUid || "").trim();
+    const safeTargetUid = currentUid && resolvedUid && resolvedUid !== currentUid ? currentUid : resolvedUid;
     const firestore = window.MobileFirebase?.firestore || null;
-    if (!resolvedUid || !firestore) {
+    if (!safeTargetUid || !firestore) {
       return [];
     }
     const sdk = await getMobileFirestoreSdk();
-    const snapshot = await sdk.getDocs(sdk.query(sdk.collection(firestore, "users", resolvedUid, "learningHistory"), sdk.orderBy("createdAt", "desc")));
+    const snapshot = await sdk.getDocs(sdk.query(sdk.collection(firestore, "users", safeTargetUid, "learningHistory"), sdk.orderBy("createdAt", "desc")));
     return snapshot.docs.map(normalizeMobileAdminLearningHistoryFirestoreEntry);
   }
 
