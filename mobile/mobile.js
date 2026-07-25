@@ -1,7 +1,6 @@
 (function () {
   const MOBILE_LEARNING_HISTORY_STORAGE_KEY = "english-trainer-mobile-learning-history-v1";
   const MOBILE_LEARNING_HISTORY_MAX_ENTRIES = 1000;
-  const MOBILE_LEARNING_HISTORY_ACTIVE_TIMEOUT_MS = 3 * 60 * 1000;
   const MOBILE_ADMIN_LEARNING_HISTORY_PIN = "12345";
   const MOBILE_ADMIN_FAMILY_ID = "inoue";
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
@@ -2180,31 +2179,54 @@
       startedAt: Number(meta.startedAt) || Date.now(),
       lastActivityAt: Number(meta.startedAt) || Date.now(),
       activeStudyMs: 0,
+      isPaused: false,
+      pausedAt: null,
       ticketSnapshot: getMobileLearningTicketSnapshot(),
       meta: { ...meta }
     };
   }
 
-  function recordMobileLearningActivity() {
+  function accumulateMobileLearningActivityUntil(now = Date.now()) {
     const session = state.learningHistorySession;
-    if (!session) return;
-    const now = Date.now();
-    const lastActivityAt = Number(session.lastActivityAt) || session.startedAt || now;
-    const delta = now - lastActivityAt;
-    if (delta > 0 && delta <= MOBILE_LEARNING_HISTORY_ACTIVE_TIMEOUT_MS) {
+    if (!session || session.isPaused) return;
+    const safeNow = Number(now) || Date.now();
+    const lastActivityAt = Number(session.lastActivityAt) || session.startedAt || safeNow;
+    const delta = safeNow - lastActivityAt;
+    if (delta > 0) {
       session.activeStudyMs += delta;
     }
-    session.lastActivityAt = now;
+    session.lastActivityAt = safeNow;
+  }
+
+  function pauseMobileLearningHistorySession(now = Date.now()) {
+    const session = state.learningHistorySession;
+    if (!session || session.isPaused) return;
+    const safeNow = Number(now) || Date.now();
+    accumulateMobileLearningActivityUntil(safeNow);
+    session.isPaused = true;
+    session.pausedAt = safeNow;
+    session.lastActivityAt = null;
+  }
+
+  function resumeMobileLearningHistorySession(now = Date.now()) {
+    const session = state.learningHistorySession;
+    if (!session || !session.isPaused) return;
+    const safeNow = Number(now) || Date.now();
+    session.isPaused = false;
+    session.pausedAt = null;
+    session.lastActivityAt = safeNow;
+  }
+
+  function recordMobileLearningActivity() {
+    accumulateMobileLearningActivityUntil(Date.now());
   }
 
   function finalizeMobileLearningHistorySession(options = {}) {
     const session = state.learningHistorySession;
     if (!session) return;
     const now = Number(options.endedAt) || Date.now();
-    const lastActivityAt = Number(session.lastActivityAt) || session.startedAt || now;
-    const delta = now - lastActivityAt;
-    if (delta > 0 && delta <= MOBILE_LEARNING_HISTORY_ACTIVE_TIMEOUT_MS) {
-      session.activeStudyMs += delta;
+    if (!session.isPaused) {
+      accumulateMobileLearningActivityUntil(now);
     }
 
     const summary = options.summary || {};
@@ -7082,6 +7104,12 @@
   }
 
   function handlePageVisibilityChange() {
+    if (document.visibilityState === "hidden") {
+      pauseMobileLearningHistorySession(Date.now());
+    } else {
+      resumeMobileLearningHistorySession(Date.now());
+    }
+
     const speechSynthesis = getSpeechSynthesisEngine();
     if (!speechSynthesis) return;
     if (document.visibilityState === "hidden") {
@@ -7098,10 +7126,12 @@
   }
 
   function handlePageHide() {
+    pauseMobileLearningHistorySession(Date.now());
     stopSpeakingAudio();
   }
 
   function handlePageShow() {
+    resumeMobileLearningHistorySession(Date.now());
     const speechSynthesis = getSpeechSynthesisEngine();
     if (!speechSynthesis || !speechSynthesis.paused) return;
     try {
