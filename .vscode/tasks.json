@@ -312,6 +312,41 @@
 			"command": "py -3 _prune_hints_by_answer.py",
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "push-pages-workflow-delete",
+			"type": "shell",
+			"command": "\"C:\\Users\\hiroshiinoue\\AppData\\Local\\GitHubDesktop\\app-3.6.3\\resources\\app\\git\\cmd\\git.exe\" push origin main",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "verify-origin-main-head",
+			"type": "shell",
+			"command": "$git='C:\\Users\\hiroshiinoue\\AppData\\Local\\GitHubDesktop\\app-3.6.3\\resources\\app\\git\\cmd\\git.exe'; $local=& $git rev-parse HEAD; $remote=& $git ls-remote origin refs/heads/main; Write-Output \"LOCAL=$local\"; Write-Output \"REMOTE=$remote\"",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "push-pages-workflow-delete-retry",
+			"type": "shell",
+			"command": "\"C:\\Users\\hiroshiinoue\\AppData\\Local\\GitHubDesktop\\app-3.6.3\\resources\\app\\git\\cmd\\git.exe\" push origin main",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "verify-pages-branch-and-release",
+			"type": "shell",
+			"command": "$repoApi='https://api.github.com/repos/fh025121-design/EnglishTrainer/pages'; $headers=@{ 'User-Agent'='Mozilla/5.0' }; $p=(Invoke-WebRequest -UseBasicParsing -Headers $headers $repoApi).Content | ConvertFrom-Json; Write-Output \"PAGES_STATUS=$($p.status)\"; Write-Output \"PAGES_CNAME=$($p.cname)\"; Write-Output \"PAGES_SOURCE_BRANCH=$($p.source.branch)\"; Write-Output \"PAGES_SOURCE_PATH=$($p.source.path)\"; Write-Output \"PAGES_BUILD_TYPE=$($p.build_type)\"; $r=(Invoke-WebRequest -UseBasicParsing 'https://fh025121-design.github.io/EnglishTrainer/release-info.js').Content; $first = (($r -split \"`n\") | Select-Object -Skip 3 -First 1).Trim(); Write-Output \"RELEASE_FIRST=$first\";",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "verify-pages-branch-and-release-2",
+			"type": "shell",
+			"command": "$repoApi='https://api.github.com/repos/fh025121-design/EnglishTrainer/pages'; $headers=@{ 'User-Agent'='Mozilla/5.0' }; $p=(Invoke-WebRequest -UseBasicParsing -Headers $headers $repoApi).Content | ConvertFrom-Json; Write-Output ('PAGES_STATUS=' + $p.status); Write-Output ('PAGES_SOURCE_BRANCH=' + $p.source.branch); Write-Output ('PAGES_SOURCE_PATH=' + $p.source.path); Write-Output ('PAGES_BUILD_TYPE=' + $p.build_type); $r=(Invoke-WebRequest -UseBasicParsing 'https://fh025121-design.github.io/EnglishTrainer/release-info.js').Content; $m=[regex]::Match($r,'\\{ version: \"([^\"]+)\"'); if($m.Success){ Write-Output ('RELEASE_HEAD_VERSION=' + $m.Groups[1].Value) } else { Write-Output 'RELEASE_HEAD_VERSION=NOT_FOUND' }",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }
