@@ -394,11 +394,37 @@ function computeSessionActiveStudySeconds(sessionLike, endedAt) {
 }
 
 function sanitizeLearningHistoryEntry(entry) {
+  console.log("[LearningHistoryDebug] sanitizeLearningHistoryEntry before", {
+    entry,
+    mode: String(entry?.mode || ""),
+    questionCount: Number(entry?.questionCount),
+    activeStudySeconds: Number(entry?.activeStudySeconds),
+    startedAt: Number(entry?.startedAt),
+    endedAt: Number(entry?.endedAt),
+    createdAt: entry?.createdAt ?? null
+  });
   if (!entry || typeof entry !== "object") return null;
   const endedAt = Number(entry.endedAt);
   const startedAt = Number(entry.startedAt);
-  if (!Number.isFinite(endedAt) || !Number.isFinite(startedAt)) return null;
-  return {
+  if (!Number.isFinite(startedAt) || !Number.isFinite(endedAt)) {
+    const reason = !Number.isFinite(startedAt) && !Number.isFinite(endedAt)
+      ? "startedAtが不正 / endedAtが不正"
+      : !Number.isFinite(startedAt)
+        ? "startedAtが不正"
+        : "endedAtが不正";
+    console.log("[LearningHistoryDebug] sanitizeLearningHistoryEntry stopped", {
+      reason,
+      entry,
+      mode: String(entry?.mode || ""),
+      questionCount: Number(entry?.questionCount),
+      activeStudySeconds: Number(entry?.activeStudySeconds),
+      startedAt: Number(entry?.startedAt),
+      endedAt: Number(entry?.endedAt),
+      createdAt: entry?.createdAt ?? null
+    });
+    return null;
+  }
+  const sanitized = {
     learnedAt: typeof entry.learnedAt === "string" && entry.learnedAt ? entry.learnedAt : formatTimestampToJstDisplay(endedAt),
     startedAt,
     endedAt,
@@ -423,6 +449,16 @@ function sanitizeLearningHistoryEntry(entry) {
       }
     }
   };
+  console.log("[LearningHistoryDebug] sanitizeLearningHistoryEntry after", {
+    entry: sanitized,
+    mode: String(sanitized?.mode || ""),
+    questionCount: Number(sanitized?.questionCount),
+    activeStudySeconds: Number(sanitized?.activeStudySeconds),
+    startedAt: Number(sanitized?.startedAt),
+    endedAt: Number(sanitized?.endedAt),
+    createdAt: sanitized?.createdAt ?? null
+  });
+  return sanitized;
 }
 
 function loadLearningHistoryEntries() {
@@ -1266,13 +1302,45 @@ function bindAdminLearningHistoryAuthStateListener() {
 }
 
 function appendLearningHistoryEntry(entry) {
+  console.log("[LearningHistoryDebug] appendLearningHistoryEntry before sanitize", {
+    entry,
+    mode: String(entry?.mode || ""),
+    questionCount: Number(entry?.questionCount),
+    activeStudySeconds: Number(entry?.activeStudySeconds),
+    startedAt: Number(entry?.startedAt),
+    endedAt: Number(entry?.endedAt),
+    createdAt: entry?.createdAt ?? null
+  });
   const sanitized = sanitizeLearningHistoryEntry(entry);
+  console.log("[LearningHistoryDebug] appendLearningHistoryEntry after sanitize", {
+    entry: sanitized,
+    mode: String(sanitized?.mode || ""),
+    questionCount: Number(sanitized?.questionCount),
+    activeStudySeconds: Number(sanitized?.activeStudySeconds),
+    startedAt: Number(sanitized?.startedAt),
+    endedAt: Number(sanitized?.endedAt),
+    createdAt: sanitized?.createdAt ?? null
+  });
   if (!sanitized) return;
   const normalizedEntry = {
     ...sanitized,
     mode: normalizeLearningMode(sanitized.mode)
   };
   if (Math.max(0, Number(sanitized.questionCount) || 0) === 0 || Math.max(0, Number(sanitized.activeStudySeconds) || 0) === 0) {
+    console.log("[LearningHistoryDebug] appendLearningHistoryEntry stopped", {
+      reason: Math.max(0, Number(sanitized.questionCount) || 0) === 0
+        ? "questionCount === 0"
+        : Math.max(0, Number(sanitized.activeStudySeconds) || 0) === 0
+          ? "activeStudySeconds === 0"
+          : "その他",
+      entry: normalizedEntry,
+      mode: String(normalizedEntry?.mode || ""),
+      questionCount: Number(normalizedEntry?.questionCount),
+      activeStudySeconds: Number(normalizedEntry?.activeStudySeconds),
+      startedAt: Number(normalizedEntry?.startedAt),
+      endedAt: Number(normalizedEntry?.endedAt),
+      createdAt: normalizedEntry?.createdAt ?? null
+    });
     return;
   }
   const history = loadLearningHistoryEntries();
@@ -1284,9 +1352,41 @@ function appendLearningHistoryEntry(entry) {
 
   const saveToFirestore = window.saveLearningHistoryToFirestore;
   if (typeof saveToFirestore === "function") {
-    Promise.resolve(saveToFirestore(normalizedEntry)).catch((error) => {
-      console.error("Failed to save learning history to Firestore", error);
+    console.log("[LearningHistoryDebug] saveLearningHistoryToFirestore before", {
+      entry: normalizedEntry,
+      mode: String(normalizedEntry?.mode || ""),
+      questionCount: Number(normalizedEntry?.questionCount),
+      activeStudySeconds: Number(normalizedEntry?.activeStudySeconds),
+      startedAt: Number(normalizedEntry?.startedAt),
+      endedAt: Number(normalizedEntry?.endedAt),
+      createdAt: normalizedEntry?.createdAt ?? null
     });
+    Promise.resolve(saveToFirestore(normalizedEntry))
+      .then((result) => {
+        console.log("[LearningHistoryDebug] saveLearningHistoryToFirestore success", {
+          result,
+          entry: normalizedEntry,
+          mode: String(normalizedEntry?.mode || ""),
+          questionCount: Number(normalizedEntry?.questionCount),
+          activeStudySeconds: Number(normalizedEntry?.activeStudySeconds),
+          startedAt: Number(normalizedEntry?.startedAt),
+          endedAt: Number(normalizedEntry?.endedAt),
+          createdAt: normalizedEntry?.createdAt ?? null
+        });
+      })
+      .catch((error) => {
+        console.log("[LearningHistoryDebug] saveLearningHistoryToFirestore failed", {
+          error,
+          entry: normalizedEntry,
+          mode: String(normalizedEntry?.mode || ""),
+          questionCount: Number(normalizedEntry?.questionCount),
+          activeStudySeconds: Number(normalizedEntry?.activeStudySeconds),
+          startedAt: Number(normalizedEntry?.startedAt),
+          endedAt: Number(normalizedEntry?.endedAt),
+          createdAt: normalizedEntry?.createdAt ?? null
+        });
+        console.error("Failed to save learning history to Firestore", error);
+      });
   }
 }
 
