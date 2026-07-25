@@ -946,10 +946,20 @@ function renderAdminLearningHistoryHistoryWatch(targetUid, options = {}) {
   const loadToken = ++adminLearningHistoryFirestoreLoadToken;
   renderAdminLearningHistoryState("読み込み中...", { countText: "読み込み中..." });
 
+  console.log("[AdminLearningHistory] watchLearningHistoryEntriesFromFirestore targetUid", targetUid);
+
   adminLearningHistoryFirestoreUnsubscribe = watchFn(targetUid, {
     onUpdate: (entries) => {
       if (loadToken !== adminLearningHistoryFirestoreLoadToken) return;
       adminLearningHistorySourceEntries = Array.isArray(entries) ? entries.slice() : [];
+      console.log("[AdminLearningHistory] loaded entries count", adminLearningHistorySourceEntries.length);
+      console.log(
+        "[AdminLearningHistory] loaded entry owners and modes",
+        adminLearningHistorySourceEntries.slice(0, 5).map((entry) => ({
+          ownerUid: String(entry?.uid || entry?.ownerUid || entry?.userUid || ""),
+          mode: String(entry?.mode || "")
+        }))
+      );
       renderAdminLearningHistoryEntries(entries);
     },
     onError: () => {
@@ -979,11 +989,20 @@ function renderAdminLearningHistoryFamilyWatch() {
   renderAdminLearningHistoryState("読み込み中...", { countText: "読み込み中..." });
   setAdminLearningHistoryAccessState(currentUid, false);
 
+  console.log("[AdminLearningHistory] auth.currentUser.uid", currentUid);
+
   adminLearningHistoryFamilyUnsubscribe = watchFn("inoue", {
     onUpdate: (family) => {
       if (loadToken !== adminLearningHistoryFamilyLoadToken) return;
       const parentUid = String(family?.parentUid || "").trim();
       const isParentLogin = Boolean(parentUid && currentUid && parentUid === currentUid);
+      const sonUid = String(family?.children?.son?.uid || "").trim();
+      const isChildLogin = Boolean(sonUid && currentUid && sonUid === currentUid);
+
+      console.log("[AdminLearningHistory] family.parentUid", parentUid);
+      console.log("[AdminLearningHistory] family.children.son.uid", sonUid);
+      console.log("[AdminLearningHistory] isParent", isParentLogin);
+      console.log("[AdminLearningHistory] isChild", isChildLogin);
 
       if (isParentLogin) {
         const children = buildAdminLearningHistoryFamilyOptions(family);
@@ -997,6 +1016,7 @@ function renderAdminLearningHistoryFamilyWatch() {
         const selectedChild = children.find((child) => child.key === adminLearningHistorySelectedChildKey) || children.find((child) => child.key === "parent") || children[0];
         adminLearningHistorySelectedChildKey = selectedChild.key;
         adminLearningHistorySelectedChildUid = selectedChild.uid;
+        console.log("[AdminLearningHistory] adminLearningHistorySelectedChildUid", adminLearningHistorySelectedChildUid);
         renderAdminLearningHistoryHistoryWatch(selectedChild.uid, { allowOtherUser: true });
         return;
       }
@@ -1007,6 +1027,7 @@ function renderAdminLearningHistoryFamilyWatch() {
       adminLearningHistoryFamilyChildren = [selfEntry];
       adminLearningHistorySelectedChildKey = selfEntry.key;
       adminLearningHistorySelectedChildUid = currentUid;
+      console.log("[AdminLearningHistory] adminLearningHistorySelectedChildUid", adminLearningHistorySelectedChildUid);
       renderAdminLearningHistoryHistoryWatch(currentUid, { allowOtherUser: false });
     },
     onError: () => {
