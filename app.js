@@ -3015,15 +3015,53 @@ function createDefaultPointState() {
   };
 }
 
-function getPointDateKeyWithOffset(offsetDays) {
+function getPointLegacyLocalDateKeyWithOffset(offsetDays) {
   const base = new Date();
   base.setDate(base.getDate() + Number(offsetDays || 0));
   return formatDateKey(base);
 }
 
+function getPointDateKeyWithOffset(offsetDays) {
+  const safeOffsetDays = Number(offsetDays || 0);
+  const targetTimestamp = Date.now() + (safeOffsetDays * 86400000);
+  return getLearningHistoryDayKey(targetTimestamp);
+}
+
+function migratePointDayKeyRow(pointState, jstDayKey, offsetDays) {
+  const legacyLocalKey = getPointLegacyLocalDateKeyWithOffset(offsetDays);
+  if (!legacyLocalKey || legacyLocalKey === jstDayKey) return;
+
+  const legacyDaily = Math.max(0, Number(pointState.dailyEarnedByDate?.[legacyLocalKey]) || 0);
+  if (legacyDaily > 0) {
+    pointState.dailyEarnedByDate = pointState.dailyEarnedByDate && typeof pointState.dailyEarnedByDate === "object"
+      ? pointState.dailyEarnedByDate
+      : {};
+    pointState.dailyEarnedByDate[jstDayKey] = Math.max(0, Number(pointState.dailyEarnedByDate?.[jstDayKey]) || 0) + legacyDaily;
+    delete pointState.dailyEarnedByDate[legacyLocalKey];
+  }
+
+  const legacyModeRow = pointState.dailyEarnedByModeByDate?.[legacyLocalKey];
+  if (legacyModeRow && typeof legacyModeRow === "object") {
+    const targetModeRow = pointState.dailyEarnedByModeByDate?.[jstDayKey] && typeof pointState.dailyEarnedByModeByDate[jstDayKey] === "object"
+      ? pointState.dailyEarnedByModeByDate[jstDayKey]
+      : { preposition: 0, response: 0, challenge: 0 };
+    targetModeRow.preposition = Math.max(0, Number(targetModeRow.preposition) || 0) + Math.max(0, Number(legacyModeRow.preposition) || 0);
+    targetModeRow.response = Math.max(0, Number(targetModeRow.response) || 0) + Math.max(0, Number(legacyModeRow.response) || 0);
+    targetModeRow.challenge = Math.max(0, Number(targetModeRow.challenge) || 0) + Math.max(0, Number(legacyModeRow.challenge) || 0);
+
+    pointState.dailyEarnedByModeByDate = pointState.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object"
+      ? pointState.dailyEarnedByModeByDate
+      : {};
+    pointState.dailyEarnedByModeByDate[jstDayKey] = targetModeRow;
+    delete pointState.dailyEarnedByModeByDate[legacyLocalKey];
+  }
+}
+
 function hydratePointDaySnapshots(pointState) {
   const todayKey = getPointDateKeyWithOffset(0);
   const previousKey = getPointDateKeyWithOffset(-1);
+  migratePointDayKeyRow(pointState, todayKey, 0);
+  migratePointDayKeyRow(pointState, previousKey, -1);
   pointState.todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
   pointState.previousDayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[previousKey]) || 0);
   if (!Number.isFinite(Number(pointState.totalEarned)) || Number(pointState.totalEarned) < pointState.balance) {
@@ -3107,7 +3145,7 @@ function getPointDailyLimit(mode = getPointState().dailyLimitMode) {
 }
 
 function getPointTodayKey() {
-  return formatDateKey(new Date());
+  return getPointDateKeyWithOffset(0);
 }
 
 function getPointItemById(itemId) {
@@ -3147,6 +3185,7 @@ function awardPointsForTrainingMode(mode) {
 
   const pointState = getPointState();
   const todayKey = getPointTodayKey();
+  migratePointDayKeyRow(pointState, todayKey, 0);
   const todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate[todayKey]) || 0);
   const modeDailyCap = Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode[modeKey]) || 0);
   const modeDailyEarned = Math.max(0, Number(pointState.dailyEarnedByModeByDate?.[todayKey]?.[modeKey]) || 0);
