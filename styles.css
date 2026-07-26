@@ -2523,6 +2523,19 @@ select {
   color: var(--accent);
 }
 
+.training-complete-point-summary {
+  margin: -2px 0 2px;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.training-complete-point-total {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .training-complete-balance {
   margin: 0 0 10px;
   font-size: 1.8rem;
@@ -2843,6 +2856,162 @@ select {
 .empty-state {
   color: var(--muted);
   padding: 16px 0;
+}
+
+@media (max-width: 1920px), (max-height: 1080px) {
+  :root {
+    --pc-ui-scale: 1;
+  }
+}
+
+@media (max-width: 1600px), (max-height: 900px) {
+  :root {
+    --pc-ui-scale: 0.92;
+  }
+
+  .app-shell {
+    max-width: 1220px;
+    width: min(1220px, 100%);
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .home-grid {
+    gap: 10px;
+  }
+
+  .home-message-bar {
+    margin-top: 10px;
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .recent-progress-list li {
+    padding: 5px 8px;
+  }
+}
+
+@media (max-width: 1536px), (max-height: 864px) {
+  :root {
+    --pc-ui-scale: 0.86;
+  }
+
+  .app-shell {
+    max-width: 1180px;
+    width: min(1180px, 100%);
+    padding-top: 8px;
+    padding-bottom: 9px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .topbar {
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+
+  .main-content {
+    margin-top: 6px;
+  }
+
+  .home-grid {
+    gap: 8px;
+    --home-list-item-height: clamp(48px, calc(66px * var(--pc-ui-scale)), 66px);
+  }
+
+  .study-actions-grid {
+    gap: 6px;
+  }
+
+  .panel {
+    padding: 11px 12px;
+  }
+
+  .home-message-bar {
+    margin-top: 8px;
+    padding: 10px 12px;
+    gap: 7px;
+  }
+}
+
+@media (max-width: 1366px), (max-height: 768px) {
+  :root {
+    --pc-ui-scale: 0.78;
+  }
+
+  .app-shell {
+    max-width: 1080px;
+    width: min(1080px, 100%);
+    padding-top: 6px;
+    padding-bottom: 7px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .topbar {
+    border-radius: 14px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    gap: 8px;
+  }
+
+  .topbar-title {
+    padding-left: 10px;
+    padding-right: 8px;
+  }
+
+  .main-content {
+    margin-top: 5px;
+  }
+
+  .home-grid {
+    gap: 7px;
+    --home-list-item-height: clamp(44px, calc(58px * var(--pc-ui-scale)), 58px);
+  }
+
+  .study-actions-grid {
+    gap: 5px;
+  }
+
+  .panel {
+    border-radius: 14px;
+    padding: 9px 10px;
+  }
+
+  .screen-header {
+    margin-bottom: 4px;
+  }
+
+  .question-stage {
+    padding-top: 0;
+  }
+
+  .question-card {
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  .home-message-bar {
+    margin-top: 6px;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .recent-progress-list {
+    gap: 5px;
+  }
+
+  .recent-progress-list li {
+    padding: 4px 7px;
+  }
+
+  .day-catalog-grid {
+    gap: 8px;
+  }
+
+  .preposition-scope-grid {
+    gap: 8px;
+  }
 }
 
 @media (max-width: 860px) {

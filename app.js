@@ -181,6 +181,10 @@ let adminLearningHistorySelectedChildUid = "";
 let adminLearningHistoryCanSelectFamily = false;
 let adminLearningHistorySelectedDeviceType = "pc";
 let adminLearningHistorySourceEntries = [];
+let homeHistoryFirestoreUnsubscribe = null;
+let homeHistoryFirestoreEntries = [];
+let homeHistoryFirestoreLoaded = false;
+let homeHistoryFirestoreLoading = false;
 window.AdminLearningHistoryAccessState = window.AdminLearningHistoryAccessState || {
   canSelectFamily: false,
   currentUid: ""
@@ -435,6 +439,7 @@ function sanitizeLearningHistoryEntry(entry) {
     dayNumber: typeof entry.dayNumber === "string" ? entry.dayNumber : "",
     questionCount: Math.max(0, Number(entry.questionCount) || 0),
     correctCount: Math.max(0, Number(entry.correctCount) || 0),
+    earnedPoints: Math.max(0, Number(entry.earnedPoints) || 0),
     accuracy: Math.max(0, Math.min(100, Number(entry.accuracy) || 0)),
     completedReason: typeof entry.completedReason === "string" ? entry.completedReason : "completed",
     ticket: {
@@ -563,6 +568,7 @@ function createEmptyLearningHistoryDaySummary(dayKey) {
     activeStudySeconds: 0,
     questionCount: 0,
     correctCount: 0,
+    earnedPoints: 0,
     modeTotals: createLearningHistoryModeTotals(),
     entries: []
   });
@@ -618,6 +624,7 @@ function renderLearningHistoryModeSummaryContent(summary, options = {}) {
 
   const totalSeconds = Math.max(0, Number(summary?.activeStudySeconds) || 0);
   const totalQuestions = Math.max(0, Number(summary?.questionCount) || 0);
+  const totalEarnedPoints = Math.max(0, Number(summary?.earnedPoints) || 0);
   const totalAccuracy = Math.max(0, Number(summary?.accuracy) || 0);
   const modeRows = entries.map((entry) => {
     const questionCount = Math.max(0, Number(entry.questionCount) || 0);
@@ -627,6 +634,7 @@ function renderLearningHistoryModeSummaryContent(summary, options = {}) {
         <div class="admin-history-mode-summary-row">
           <span>${escapeHtml(entry.label)}</span>
           <span>${questionCount}問</span>
+          <span>+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>
           <span>${escapeHtml(formatLearningHistoryDuration(activeStudySeconds))}</span>
         </div>
       `;
@@ -637,6 +645,7 @@ function renderLearningHistoryModeSummaryContent(summary, options = {}) {
         <span>${escapeHtml(entry.label)}</span>
         <span>${escapeHtml(formatLearningHistoryDuration(activeStudySeconds))}</span>
         <span>${questionCount}問</span>
+        <span>+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>
         <span>${Math.max(0, Number(entry.accuracy) || 0)}%</span>
       </div>
     `;
@@ -647,12 +656,14 @@ function renderLearningHistoryModeSummaryContent(summary, options = {}) {
       <div class="admin-history-total-stats">
         <span>合計 ${escapeHtml(formatLearningHistoryDuration(totalSeconds))}</span>
         <span>${totalQuestions}問</span>
+        <span>+${totalEarnedPoints}P</span>
       </div>
     `
     : `
       <div class="admin-history-total-stats">
         <span>合計 ${escapeHtml(formatLearningHistoryDuration(totalSeconds))}</span>
         <span>${totalQuestions}問</span>
+        <span>+${totalEarnedPoints}P</span>
         <span>${totalAccuracy}%</span>
       </div>
     `;
@@ -662,12 +673,23 @@ function renderLearningHistoryModeSummaryContent(summary, options = {}) {
 
 function createLearningHistoryModeTotals() {
   return {
-    day: { label: "Day学習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
-    word: { label: "単語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
-    phrase: { label: "熟語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
-    review: { label: "過去の間違い", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
-    other: { label: "その他", activeStudySeconds: 0, questionCount: 0, correctCount: 0 }
+    day: { label: "Day学習", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
+    word: { label: "単語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
+    phrase: { label: "熟語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
+    review: { label: "過去の間違い", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
+    other: { label: "その他", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 }
   };
+}
+
+function getLearningHistoryEntryEarnedPoints(entry) {
+  const explicit = Number(entry?.earnedPoints);
+  if (Number.isFinite(explicit) && explicit > 0) {
+    return Math.max(0, Math.floor(explicit));
+  }
+
+  const inferredMode = inferPointModeFromLearningHistoryEntry(entry?.mode);
+  if (!inferredMode) return 0;
+  return Math.max(0, Math.floor(Number(entry?.correctCount) || 0));
 }
 
 function accumulateLearningHistoryTotals(target, entry) {
@@ -675,14 +697,17 @@ function accumulateLearningHistoryTotals(target, entry) {
   target.activeStudySeconds += Math.max(0, Number(entry.activeStudySeconds) || 0);
   target.questionCount += Math.max(0, Number(entry.questionCount) || 0);
   target.correctCount += Math.max(0, Number(entry.correctCount) || 0);
+  target.earnedPoints = Math.max(0, Number(target.earnedPoints) || 0) + getLearningHistoryEntryEarnedPoints(entry);
 }
 
 function finalizeLearningHistoryTotals(entry) {
   const questionCount = Math.max(0, Number(entry.questionCount) || 0);
   const correctCount = Math.max(0, Number(entry.correctCount) || 0);
+  const earnedPoints = Math.max(0, Number(entry.earnedPoints) || 0);
   return {
     ...entry,
     accuracy: questionCount ? Math.round((correctCount / questionCount) * 100) : 0,
+    earnedPoints,
     activeStudyMinutes: Math.max(0, Math.round(Math.max(0, Number(entry.activeStudySeconds) || 0) / 60))
   };
 }
@@ -705,6 +730,7 @@ function buildLearningHistoryInsights(entries) {
         activeStudySeconds: 0,
         questionCount: 0,
         correctCount: 0,
+        earnedPoints: 0,
         modeTotals: createLearningHistoryModeTotals()
       });
     }
@@ -737,6 +763,7 @@ function buildLearningHistoryInsights(entries) {
     activeStudySeconds: 0,
     questionCount: 0,
     correctCount: 0,
+    earnedPoints: 0,
     modeTotals: createLearningHistoryModeTotals()
   });
   todayEntries.forEach((entry) => {
@@ -931,6 +958,64 @@ function getCurrentPcFirebaseUser() {
     return window.getFirebaseCurrentUser();
   }
   return window.EnglishTrainerFirebase?.auth?.currentUser || null;
+}
+
+function shouldUseFirestoreForHomeMetrics() {
+  return Boolean(String(getCurrentPcFirebaseUser()?.uid || "").trim());
+}
+
+function isFirestoreHomeHistoryEntryEligible(entry) {
+  const deviceType = String(entry?.deviceType || "").trim().toLowerCase();
+  return deviceType !== "mobile";
+}
+
+function stopHomeHistoryFirestoreSync() {
+  if (typeof homeHistoryFirestoreUnsubscribe === "function") {
+    homeHistoryFirestoreUnsubscribe();
+  }
+  homeHistoryFirestoreUnsubscribe = null;
+  homeHistoryFirestoreEntries = [];
+  homeHistoryFirestoreLoaded = false;
+  homeHistoryFirestoreLoading = false;
+}
+
+function startHomeHistoryFirestoreSync() {
+  const currentUid = String(getCurrentPcFirebaseUser()?.uid || "").trim();
+  const watchFn = window.watchLearningHistoryEntriesFromFirestore;
+
+  stopHomeHistoryFirestoreSync();
+  if (!currentUid) {
+    renderHomeMessage();
+    return;
+  }
+
+  if (typeof watchFn !== "function") {
+    homeHistoryFirestoreLoaded = true;
+    homeHistoryFirestoreLoading = false;
+    renderHomeMessage();
+    return;
+  }
+
+  homeHistoryFirestoreLoading = true;
+  homeHistoryFirestoreLoaded = false;
+  renderHomeMessage();
+
+  homeHistoryFirestoreUnsubscribe = watchFn(currentUid, {
+    onUpdate: (entries) => {
+      homeHistoryFirestoreEntries = (Array.isArray(entries) ? entries : []).filter(isFirestoreHomeHistoryEntryEligible);
+      homeHistoryFirestoreLoaded = true;
+      homeHistoryFirestoreLoading = false;
+      renderHomeMessage();
+    },
+    onError: () => {
+      homeHistoryFirestoreEntries = [];
+      homeHistoryFirestoreLoaded = true;
+      homeHistoryFirestoreLoading = false;
+      renderHomeMessage();
+    }
+  }, {
+    allowOtherUser: false
+  });
 }
 
 function setAdminLearningHistoryAccessState(currentUid, canSelectFamily) {
@@ -1161,6 +1246,7 @@ function renderAdminLearningHistoryEntries(entries) {
             <div class="admin-history-total-stats">
               <span>${formatLearningHistoryDuration(selectedDaySummary.activeStudySeconds)}</span>
               <span>${selectedDaySummary.questionCount}問</span>
+              <span>+${Math.max(0, Number(selectedDaySummary.earnedPoints) || 0)}P</span>
               <span>${selectedDaySummary.accuracy}%</span>
             </div>
             <div class="admin-history-mode-summary-list">
@@ -1169,6 +1255,7 @@ function renderAdminLearningHistoryEntries(entries) {
                   <span>${escapeHtml(entry.label)}</span>
                   <span>${escapeHtml(formatLearningHistoryDuration(entry.activeStudySeconds))}</span>
                   <span>${entry.questionCount}問</span>
+                  <span>+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>
                   <span>${entry.accuracy}%</span>
                 </div>
               `).join("")}
@@ -1196,6 +1283,7 @@ function renderAdminLearningHistoryEntries(entries) {
                   <p class="admin-history-detail-meta">${escapeHtml(entry.dayNumber || "-")}</p>
                   ${activeStudySeconds >= 60 ? `<p class="admin-history-detail-meta">実学習時間　${formatLearningHistoryDuration(activeStudySeconds)}</p><p class="admin-history-detail-note">3分を超える無操作区間は除外</p>` : ""}
                   ${questionCount > 0 ? `<p class="admin-history-detail-meta">${questionCount}問</p>` : ""}
+                  <p class="admin-history-detail-meta">特訓ポイント　+${Math.max(0, Number(entry.earnedPoints) || 0)}P</p>
                   <p class="admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</p>
                   <p class="admin-history-detail-meta">${completedLabel}</p>
                   <p class="admin-history-detail-ticket">${escapeHtml(ticketText.earned)} / ${escapeHtml(ticketText.used)}</p>
@@ -1301,6 +1389,26 @@ function bindAdminLearningHistoryAuthStateListener() {
   }
 }
 
+function bindHomeHistoryAuthStateListener() {
+  if (document.body?.dataset.homeHistoryAuthBound === "true") return;
+  document.addEventListener("pc-firebase-auth-state", () => {
+    if (shouldUseFirestoreForHomeMetrics()) {
+      startHomeHistoryFirestoreSync();
+      ensurePointStateFromFirestoreIfMissing().then((didBootstrap) => {
+        if (didBootstrap) {
+          renderPointExchangeScreen();
+        }
+      });
+      return;
+    }
+    stopHomeHistoryFirestoreSync();
+    renderHomeMessage();
+  });
+  if (document.body) {
+    document.body.dataset.homeHistoryAuthBound = "true";
+  }
+}
+
 function appendLearningHistoryEntry(entry) {
   console.log("[LearningHistoryDebug] appendLearningHistoryEntry before sanitize", {
     entry,
@@ -1403,6 +1511,7 @@ function buildPrepositionLearningHistoryEntry(sessionLike, reason) {
   const answerCount = Math.max(0, Number(sessionLike?.answerCount) || 0);
   const correctCount = Math.max(0, Number(sessionLike?.correctCount) || 0);
   const accuracy = answerCount ? Math.round((correctCount / answerCount) * 100) : 0;
+  const pointSummary = computeSessionEarnedPoints(sessionLike);
   return {
     learnedAt: formatTimestampToJstDisplay(endedAt),
     startedAt,
@@ -1414,6 +1523,7 @@ function buildPrepositionLearningHistoryEntry(sessionLike, reason) {
     dayNumber: "",
     questionCount: answerCount,
     correctCount,
+    earnedPoints: pointSummary.earnedPoints,
     accuracy,
     completedReason: String(reason || "completed"),
     ticket: computeLearningHistoryTicketDelta(
@@ -1433,6 +1543,7 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
   const startedAt = Number(sessionLike?.startedAt) || endedAt;
   const ticketBefore = sanitizeLearningHistoryTicketSnapshot(sessionLike?.ticketSnapshot);
   const ticketAfter = captureLearningHistoryTicketSnapshot();
+  const pointSummary = computeSessionEarnedPoints(sessionLike);
   return {
     learnedAt: formatTimestampToJstDisplay(endedAt),
     startedAt,
@@ -1444,6 +1555,7 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
     dayNumber: resolveSessionDayNumber(sessionLike),
     questionCount: Math.max(0, Number(summary?.answerCount) || 0),
     correctCount: Math.max(0, Number(summary?.correctCount) || 0),
+    earnedPoints: pointSummary.earnedPoints,
     accuracy: Math.max(0, Math.min(100, Number(summary?.accuracy) || 0)),
     completedReason: String(reason || "completed"),
     ticket: computeLearningHistoryTicketDelta(ticketBefore, ticketAfter)
@@ -2940,8 +3052,10 @@ function getTrainingCompletionModeLabel(mode) {
 function openTrainingCompleteScreen(options = {}) {
   const titleText = document.getElementById("trainingCompleteTitleText");
   const earnedText = document.getElementById("trainingCompleteEarnedText");
+  const dailySummaryText = document.getElementById("trainingCompleteDailySummaryText");
+  const lifetimeSummaryText = document.getElementById("trainingCompleteLifetimeSummaryText");
   const balanceText = document.getElementById("trainingCompleteBalanceText");
-  if (!titleText || !earnedText || !balanceText) {
+  if (!titleText || !earnedText || !balanceText || !dailySummaryText || !lifetimeSummaryText) {
     renderHome();
     showScreen("homeScreen", { recordHistory: false });
     return;
@@ -2953,6 +3067,25 @@ function openTrainingCompleteScreen(options = {}) {
 
   titleText.textContent = `🎉 ${modeLabel} おつかれさまでした！`;
   earnedText.textContent = `＋${earnedPoints}P`;
+
+  const pointState = getPointState();
+  hydratePointDaySnapshots(pointState);
+  const todayKey = getPointTodayKey();
+  const todayTotal = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
+  const todayModeRow = pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
+    ? pointState.dailyEarnedByModeByDate[todayKey]
+    : { preposition: 0, response: 0, challenge: 0 };
+  const prepositionEarned = Math.max(0, Number(todayModeRow.preposition) || 0);
+  const responseEarned = Math.max(0, Number(todayModeRow.response) || 0);
+  const challengeEarned = Math.max(0, Number(todayModeRow.challenge) || 0);
+  const totalEarned = Math.max(0, Number(pointState.totalEarned) || 0);
+
+  dailySummaryText.textContent = `本日の累計${formatPointValue(todayTotal)}（前置詞${formatPointValue(prepositionEarned)}　応答文${formatPointValue(responseEarned)}　過去問${formatPointValue(challengeEarned)}）`;
+  lifetimeSummaryText.textContent = `通算累計${formatPointValue(totalEarned)}`;
+  const hasEarnedPointsNow = earnedPoints > 0;
+  dailySummaryText.classList.toggle("hidden", !hasEarnedPointsNow);
+  lifetimeSummaryText.classList.toggle("hidden", !hasEarnedPointsNow);
+
   balanceText.textContent = formatPointValue(pointBalance);
 
   pendingTrainingCompleteContext = {
@@ -2995,6 +3128,7 @@ let pointStateCache = null;
 let pointRewardQueue = [];
 let pointRewardTimerId = null;
 let pendingPointExchangeItemId = "";
+let pointStateBootstrapPromise = null;
 
 function formatPointValue(value) {
   return `${new Intl.NumberFormat("ja-JP").format(Math.max(0, Math.floor(Number(value) || 0)))}P`;
@@ -3146,6 +3280,157 @@ function getPointDailyLimit(mode = getPointState().dailyLimitMode) {
 
 function getPointTodayKey() {
   return getPointDateKeyWithOffset(0);
+}
+
+function inferPointModeFromLearningHistoryEntry(mode) {
+  const normalized = String(mode || "").trim();
+  if (!normalized) return "";
+  if (normalized === "preposition" || normalized === "preposition-training" || normalized === "前置詞特訓") {
+    return "preposition";
+  }
+  if (normalized === "response" || normalized === "response-training" || normalized === "応答文特訓") {
+    return "response";
+  }
+  if (normalized === "challenge" || normalized === "review" || normalized === "過去の間違い") {
+    return "challenge";
+  }
+  return "";
+}
+
+function getLearningHistoryEntryDayKeyForPoints(entry) {
+  const endedAt = Number(entry?.endedAt);
+  if (Number.isFinite(endedAt) && endedAt > 0) {
+    return getLearningHistoryDayKey(endedAt);
+  }
+  const startedAt = Number(entry?.startedAt);
+  if (Number.isFinite(startedAt) && startedAt > 0) {
+    return getLearningHistoryDayKey(startedAt);
+  }
+  const dateText = String(entry?.studyDate || entry?.learnedAt || "").trim();
+  const match = dateText.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+}
+
+function shouldBootstrapPointStateFromFirestore() {
+  const currentUid = String(getCurrentPcFirebaseUser()?.uid || "").trim();
+  if (!currentUid) return false;
+
+  const raw = localStorage.getItem(POINT_SYSTEM_STORAGE_KEY);
+  if (!raw) return true;
+
+  try {
+    const existing = sanitizePointState(JSON.parse(raw));
+    if ((existing.totalEarned || 0) > 0) return false;
+    if ((existing.balance || 0) > 0) return false;
+    if (Object.keys(existing.dailyEarnedByDate || {}).length > 0) return false;
+    return true;
+  } catch (_error) {
+    return true;
+  }
+}
+
+async function ensurePointStateFromFirestoreIfMissing() {
+  if (!shouldBootstrapPointStateFromFirestore()) return false;
+  if (pointStateBootstrapPromise) return pointStateBootstrapPromise;
+
+  const currentUid = String(getCurrentPcFirebaseUser()?.uid || "").trim();
+  const watchFn = window.watchLearningHistoryEntriesFromFirestore;
+  if (!currentUid || typeof watchFn !== "function") return false;
+
+  pointStateBootstrapPromise = new Promise((resolve) => {
+    let finished = false;
+    const finish = (didBootstrap) => {
+      if (finished) return;
+      finished = true;
+      resolve(Boolean(didBootstrap));
+    };
+
+    const unsubscribe = watchFn(currentUid, {
+      onUpdate: (entries) => {
+        if (!shouldBootstrapPointStateFromFirestore()) {
+          try {
+            unsubscribe?.();
+          } catch (_error) {
+            // no-op
+          }
+          finish(false);
+          return;
+        }
+
+        const source = (Array.isArray(entries) ? entries : []).filter((entry) => isFirestoreHomeHistoryEntryEligible(entry));
+        if (!source.length) {
+          try {
+            unsubscribe?.();
+          } catch (_error) {
+            // no-op
+          }
+          finish(false);
+          return;
+        }
+
+        const restored = createDefaultPointState();
+        const sortedEntries = [...source].sort((left, right) => {
+          const leftTs = Number(left?.endedAt || left?.startedAt || 0);
+          const rightTs = Number(right?.endedAt || right?.startedAt || 0);
+          return leftTs - rightTs;
+        });
+
+        sortedEntries.forEach((entry) => {
+          const pointMode = inferPointModeFromLearningHistoryEntry(entry?.mode);
+          if (!pointMode) return;
+          const dayKey = getLearningHistoryEntryDayKeyForPoints(entry);
+          if (!dayKey) return;
+
+          const dayTotal = Math.max(0, Number(restored.dailyEarnedByDate?.[dayKey]) || 0);
+          const dayModeRow = restored.dailyEarnedByModeByDate?.[dayKey] && typeof restored.dailyEarnedByModeByDate[dayKey] === "object"
+            ? restored.dailyEarnedByModeByDate[dayKey]
+            : { preposition: 0, response: 0, challenge: 0 };
+          const modeEarned = Math.max(0, Number(dayModeRow[pointMode]) || 0);
+
+          const modeCap = Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode[pointMode]) || 0);
+          const totalCap = Math.max(0, Number(POINT_SYSTEM_CONFIG.typingDailyTotalCap) || 0);
+          if (modeEarned >= modeCap || dayTotal >= totalCap) return;
+
+          dayModeRow[pointMode] = modeEarned + 1;
+          restored.dailyEarnedByModeByDate[dayKey] = dayModeRow;
+          restored.dailyEarnedByDate[dayKey] = dayTotal + 1;
+          restored.totalEarned += 1;
+          restored.balance += 1;
+        });
+
+        savePointState(restored);
+        try {
+          unsubscribe?.();
+        } catch (_error) {
+          // no-op
+        }
+        finish(true);
+      },
+      onError: () => {
+        try {
+          unsubscribe?.();
+        } catch (_error) {
+          // no-op
+        }
+        finish(false);
+      }
+    }, {
+      allowOtherUser: false
+    });
+
+    setTimeout(() => {
+      try {
+        unsubscribe?.();
+      } catch (_error) {
+        // no-op
+      }
+      finish(false);
+    }, 4000);
+  }).finally(() => {
+    pointStateBootstrapPromise = null;
+  });
+
+  return pointStateBootstrapPromise;
 }
 
 function getPointItemById(itemId) {
@@ -3350,6 +3635,12 @@ function renderPointExchangeScreen() {
   const totalEarnedText = document.getElementById("pointExchangeTotalEarnedText");
   const itemList = document.getElementById("pointExchangeItemList");
   if (!balanceText || !todayEarnedText || !previousEarnedText || !totalEarnedText || !itemList) return;
+
+  ensurePointStateFromFirestoreIfMissing().then((didBootstrap) => {
+    if (didBootstrap) {
+      renderPointExchangeScreen();
+    }
+  });
 
   const pointState = getPointState();
   hydratePointDaySnapshots(pointState);
@@ -3770,11 +4061,10 @@ function formatMonthDayLabel(dateKey) {
 }
 
 function buildRecentThreeDayRows() {
+  const todayDayKey = getLearningHistoryDayKey(Date.now());
   const rows = [];
   for (let offset = 2; offset >= 0; offset -= 1) {
-    const date = new Date();
-    date.setDate(date.getDate() - offset);
-    const key = formatDateKey(date);
+    const key = shiftLearningHistoryDayKey(todayDayKey, -offset);
     rows.push({ key, label: formatMonthDayLabel(key) });
   }
   return rows;
@@ -3898,6 +4188,75 @@ function buildAccuracyEvaluationMarkup(accuracy, wrapperClass = "recent-accuracy
 }
 
 function getDailySessionAggregate(dayKey) {
+  if (shouldUseFirestoreForHomeMetrics()) {
+    const parseFirestoreEntryDayKey = (entry) => {
+      const endedAt = Number(entry?.endedAt);
+      if (Number.isFinite(endedAt) && endedAt > 0) {
+        return getLearningHistoryDayKey(endedAt);
+      }
+      const startedAt = Number(entry?.startedAt);
+      if (Number.isFinite(startedAt) && startedAt > 0) {
+        return getLearningHistoryDayKey(startedAt);
+      }
+      const dateText = String(entry?.studyDate || entry?.learnedAt || "").trim();
+      const match = dateText.match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/);
+      return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+    };
+
+    const dailyMap = {};
+    const source = Array.isArray(homeHistoryFirestoreEntries) ? homeHistoryFirestoreEntries : [];
+    source.forEach((entry) => {
+      const key = parseFirestoreEntryDayKey(entry);
+      if (!key) return;
+      const questionCount = Math.max(0, Number(entry?.questionCount) || 0);
+      const activeStudySeconds = Math.max(0, Number(entry?.activeStudySeconds) || 0);
+      if (!questionCount && !activeStudySeconds) return;
+
+      const modeGroup = getLearningHistoryModeGroup(entry?.mode);
+      const current = dailyMap[key] || {
+        count: 0,
+        activeStudySeconds: 0,
+        questionCount: 0,
+        dayQuestionCount: 0,
+        trainingQuestionCount: 0,
+        correctCount: 0
+      };
+      current.count += 1;
+      current.activeStudySeconds += activeStudySeconds;
+      current.questionCount += questionCount;
+      if (modeGroup === "day") {
+        current.dayQuestionCount += questionCount;
+        current.correctCount += Math.max(0, Number(entry?.correctCount) || 0);
+      } else {
+        current.trainingQuestionCount += questionCount;
+      }
+      dailyMap[key] = current;
+    });
+
+    const row = dailyMap[dayKey] || {
+      count: 0,
+      activeStudySeconds: 0,
+      questionCount: 0,
+      dayQuestionCount: 0,
+      trainingQuestionCount: 0,
+      correctCount: 0
+    };
+    const durationMinutes = Math.max(0, Math.round(row.activeStudySeconds / 60));
+    const averageAccuracy = row.dayQuestionCount > 0
+      ? Math.max(0, Math.min(100, Math.round((row.correctCount / row.dayQuestionCount) * 100)))
+      : null;
+
+    return {
+      count: row.count,
+      durationMinutes,
+      questionCount: row.questionCount,
+      dayQuestionCount: row.dayQuestionCount,
+      trainingQuestionCount: row.trainingQuestionCount,
+      correctCount: row.correctCount,
+      averageAccuracy
+    };
+  }
+
   const dailyPerformanceByDate = sanitizeDailyPerformanceByDate(state.stats.dailyPerformanceByDate);
   state.stats.dailyPerformanceByDate = dailyPerformanceByDate;
   const studyTimeByDate = sanitizeStudyTimeByDate(state.stats.studyTimeByDate);
@@ -4263,7 +4622,40 @@ function renderHomeMessage() {
   const accuracyCells = [recentAccuracy1, recentAccuracy2, recentAccuracy3];
 
   learnedCountText.textContent = `📚 ${learnedCount} / 1000語 学習済み`;
-  streakFooterText.textContent = `🔥 ${state.stats.streak || 0}日連続継続中`;
+  if (shouldUseFirestoreForHomeMetrics()) {
+    if (homeHistoryFirestoreLoading && !homeHistoryFirestoreLoaded) {
+      streakFooterText.textContent = "🔥 読み込み中...";
+    } else {
+      const dayKeys = [...new Set(
+        (Array.isArray(homeHistoryFirestoreEntries) ? homeHistoryFirestoreEntries : [])
+          .map((entry) => {
+            const endedAt = Number(entry?.endedAt);
+            if (Number.isFinite(endedAt) && endedAt > 0) {
+              return getLearningHistoryDayKey(endedAt);
+            }
+            const startedAt = Number(entry?.startedAt);
+            if (Number.isFinite(startedAt) && startedAt > 0) {
+              return getLearningHistoryDayKey(startedAt);
+            }
+            const dateText = String(entry?.studyDate || entry?.learnedAt || "").trim();
+            const match = dateText.match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/);
+            return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+          })
+          .filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key))
+      )].sort((a, b) => b.localeCompare(a));
+
+      let streak = 0;
+      let expectedDayKey = getLearningHistoryDayKey(Date.now());
+      dayKeys.forEach((dayKey) => {
+        if (dayKey !== expectedDayKey) return;
+        streak += 1;
+        expectedDayKey = shiftLearningHistoryDayKey(expectedDayKey, -1);
+      });
+      streakFooterText.textContent = `🔥 ${streak}日連続継続中`;
+    }
+  } else {
+    streakFooterText.textContent = `🔥 ${state.stats.streak || 0}日連続継続中`;
+  }
   studyRangeFooterText.textContent = `学習中：Day${state.settings.studyRange.start}～${state.settings.studyRange.end}`;
   remainFooterText.textContent = `🎯 1000語まであと${Math.max(0, 1000 - learnedCount)}語`;
   todaySessionCountText.textContent = `📘 学習回数 ${todayAggregate.count}回`;
@@ -6256,46 +6648,9 @@ function showScreen(screenId, options = {}) {
 
 function applyDesktopResponsiveScale() {
   const doc = typeof document !== "undefined" ? document.documentElement : null;
-  if (!doc || typeof window === "undefined") return;
-  const width = Math.max(1, Number(window.innerWidth) || 1);
-  const height = Math.max(1, Number(window.innerHeight) || 1);
-  const scaleByWidth = width / DESKTOP_FIT_REFERENCE.width;
-  const scaleByHeight = height / DESKTOP_FIT_REFERENCE.height;
-  let scale = Math.max(
-    DESKTOP_FIT_REFERENCE.minScale,
-    Math.min(1, scaleByWidth, scaleByHeight)
-  );
-
-  const getOverflowRatio = (element) => {
-    if (!element) return 1;
-    const clientHeight = Math.max(1, Number(element.clientHeight) || 1);
-    const scrollHeight = Math.max(1, Number(element.scrollHeight) || 1);
-    return scrollHeight / clientHeight;
-  };
-
-  for (let i = 0; i < 6; i += 1) {
-    doc.style.setProperty("--pc-ui-scale", scale.toFixed(4));
-    const active = document.querySelector(".screen.active");
-    const appShell = document.querySelector(".app-shell");
-    const homeGrid = currentScreenId === "homeScreen" ? document.querySelector("#homeScreen .home-grid") : null;
-    const overflowRatio = Math.max(
-      getOverflowRatio(active),
-      getOverflowRatio(appShell),
-      getOverflowRatio(homeGrid)
-    );
-    if (overflowRatio <= 1.002) break;
-    const ratio = 1 / overflowRatio;
-    const nextScale = Math.max(DESKTOP_FIT_REFERENCE.minScale, scale * ratio);
-    if (Math.abs(nextScale - scale) < 0.001) break;
-    scale = nextScale;
-  }
-
-  // Keep a small safety margin on home to avoid edge-case 1px scrollbars.
-  if (currentScreenId === "homeScreen") {
-    scale = Math.max(DESKTOP_FIT_REFERENCE.minScale, scale * 0.985);
-  }
-
-  doc.style.setProperty("--pc-ui-scale", scale.toFixed(4));
+  if (!doc) return;
+  // Responsive scaling is handled by CSS media queries.
+  doc.style.removeProperty("--pc-ui-scale");
 }
 
 function goBackScreen() {
@@ -8217,6 +8572,7 @@ function handleEnterKey(event) {
 
 function bindEvents() {
   bindAdminLearningHistoryAuthStateListener();
+  bindHomeHistoryAuthStateListener();
   const typingAudioRepeatSelect = document.getElementById("typingAudioRepeatSelect");
   const typingAudioRateSelect = document.getElementById("typingAudioRateSelect");
   const typingDelayQuestionToAudioSelect = document.getElementById("typingDelayQuestionToAudioSelect");
@@ -8911,6 +9267,10 @@ function init() {
   initializeRecentDayProgress();
   syncDaySelectOptions();
   bindEvents();
+  if (shouldUseFirestoreForHomeMetrics()) {
+    startHomeHistoryFirestoreSync();
+    ensurePointStateFromFirestoreIfMissing();
+  }
   renderDayCatalog();
   renderPrepositionScopeSelector();
   renderHome();
