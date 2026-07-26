@@ -68,11 +68,11 @@ body.auth-logged-in .login-shell {
 }
 
 .login-panel {
-  width: min(460px, 100%);
-  padding: 28px;
+  width: min(400px, 100%);
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 
 .login-panel-header {
@@ -84,14 +84,22 @@ body.auth-logged-in .login-shell {
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .login-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   color: var(--text);
+}
+
+#loginScreen .settings-update-password-input {
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: 320px;
+  padding: 8px 10px;
+  border-radius: 10px;
 }
 
 .login-error-text {
@@ -618,6 +626,11 @@ p {
 #adminLearningHistoryScreen.active {
   overflow-y: auto;
   padding-right: 6px;
+}
+
+/* Keep learning history readable; scroll instead of shrinking too much. */
+#adminLearningHistoryScreen {
+  font-size: clamp(15px, 1rem, 16px);
 }
 
 @keyframes fadeIn {
@@ -2889,6 +2902,10 @@ select {
   .recent-progress-list li {
     padding: 5px 8px;
   }
+
+  #adminLearningHistoryScreen {
+    font-size: 15px;
+  }
 }
 
 @media (max-width: 1536px), (max-height: 864px) {
@@ -2931,6 +2948,10 @@ select {
     margin-top: 8px;
     padding: 10px 12px;
     gap: 7px;
+  }
+
+  #adminLearningHistoryScreen {
+    font-size: 15px;
   }
 }
 
@@ -3003,6 +3024,10 @@ select {
 
   .recent-progress-list li {
     padding: 4px 7px;
+  }
+
+  #adminLearningHistoryScreen {
+    font-size: 15px;
   }
 
   .day-catalog-grid {

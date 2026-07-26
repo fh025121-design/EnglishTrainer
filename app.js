@@ -472,7 +472,9 @@ function loadLearningHistoryEntries() {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map(sanitizeLearningHistoryEntry).filter(Boolean);
+    return parsed
+      .map(sanitizeLearningHistoryEntry)
+      .filter((entry) => Boolean(entry) && Math.max(0, Number(entry?.questionCount) || 0) > 0);
   } catch (error) {
     console.error("Could not read learning history", error);
     return [];
@@ -853,7 +855,12 @@ function normalizeAdminLearningHistoryDeviceType(deviceType) {
 
 function getAdminLearningHistoryFilteredEntries(entries) {
   const source = Array.isArray(entries) ? entries : [];
-  return source.filter((entry) => normalizeAdminLearningHistoryDeviceType(entry?.deviceType) === adminLearningHistorySelectedDeviceType);
+  return source.filter((entry) => {
+    if (normalizeAdminLearningHistoryDeviceType(entry?.deviceType) !== adminLearningHistorySelectedDeviceType) {
+      return false;
+    }
+    return Math.max(0, Number(entry?.questionCount) || 0) > 0;
+  });
 }
 
 function renderAdminLearningHistoryControls() {
