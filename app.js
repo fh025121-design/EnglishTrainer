@@ -6109,6 +6109,7 @@ function renderHome() {
   syncDerivedStats();
   const advanceDayText = document.getElementById("advanceDayText");
   const advanceBtn = document.getElementById("advanceBtn");
+  const todayExtraTrainingBtn = document.getElementById("todayExtraTrainingBtn");
   const progressMasterCount = document.getElementById("progressMasterCount");
   const daySelectWordBtn = document.getElementById("daySelectWordBtn");
   const daySelectPhraseBtn = document.getElementById("daySelectPhraseBtn");
@@ -6118,6 +6119,7 @@ function renderHome() {
   if (advanceDayText) advanceDayText.textContent = `Day${nextDay}`;
   if (progressMasterCount) progressMasterCount.textContent = state.stats.masterCount;
   if (advanceBtn) advanceBtn.disabled = false;
+  if (todayExtraTrainingBtn) todayExtraTrainingBtn.disabled = false;
   if (daySelectWordBtn) daySelectWordBtn.disabled = false;
   if (daySelectPhraseBtn) daySelectPhraseBtn.disabled = false;
   if (challengeBtn) challengeBtn.disabled = false;
@@ -6126,6 +6128,43 @@ function renderHome() {
   renderRecentProgressTop5();
   renderHomeMessage();
   refreshResumeSessionButton();
+}
+
+function hasCompletedTodayNormalDaySession() {
+  const today = todayKey();
+  const sessions = Array.isArray(state.stats?.completedSessions) ? state.stats.completedSessions : [];
+  return sessions.some((entry) => {
+    const row = sanitizeCompletedSessionEntry(entry);
+    if (!row) return false;
+    return row.dayKey === today && row.mode === "normal" && !row.interrupted;
+  });
+}
+
+function updateTodayExtraTrainingButtonVisibility() {
+  const todayExtraTrainingBtn = document.getElementById("todayExtraTrainingBtn");
+  if (!todayExtraTrainingBtn) return;
+  const shouldShow = hasCompletedTodayNormalDaySession();
+  todayExtraTrainingBtn.classList.toggle("hidden", !shouldShow);
+}
+
+function startTodayExtraTrainingFromHome() {
+  const virtualWeakFocusSession = {
+    baseQuestionIds: [],
+    weakFocusAskedQuestionIds: [],
+    weakFocusLastRoundCorrectIds: [],
+    weakFocusLastRoundWrongIds: [],
+    weakFocusLastQuestionId: ""
+  };
+  const questions = getWeakPhasePool(virtualWeakFocusSession, NORMAL_WEAK_FOCUS_BATCH_SIZE);
+  if (!questions.length) {
+    alert("追加特訓で出題できる問題がありません。通常学習を進めてください。");
+    return;
+  }
+  prepareSession("normal", {
+    customPool: questions,
+    forceNewSession: true,
+    startWeakFocusOnly: true
+  });
 }
 
 function renderHomeUpdateHistory() {
@@ -6148,11 +6187,16 @@ function hasResumableNormalSession() {
 function refreshResumeSessionButton() {
   const button = document.getElementById("resumeSessionBtn");
   const advanceBtn = document.getElementById("advanceBtn");
+  const todayExtraTrainingBtn = document.getElementById("todayExtraTrainingBtn");
   if (!button) return;
   const hasResume = hasResumableNormalSession();
   button.classList.toggle("hidden", !hasResume);
   if (advanceBtn) {
     advanceBtn.classList.toggle("hidden", hasResume);
+  }
+  updateTodayExtraTrainingButtonVisibility();
+  if (todayExtraTrainingBtn) {
+    todayExtraTrainingBtn.classList.toggle("hidden", hasResume || !hasCompletedTodayNormalDaySession());
   }
 }
 
@@ -6222,17 +6266,33 @@ function applyDesktopResponsiveScale() {
     Math.min(1, scaleByWidth, scaleByHeight)
   );
 
-  for (let i = 0; i < 3; i += 1) {
+  const getOverflowRatio = (element) => {
+    if (!element) return 1;
+    const clientHeight = Math.max(1, Number(element.clientHeight) || 1);
+    const scrollHeight = Math.max(1, Number(element.scrollHeight) || 1);
+    return scrollHeight / clientHeight;
+  };
+
+  for (let i = 0; i < 6; i += 1) {
     doc.style.setProperty("--pc-ui-scale", scale.toFixed(4));
     const active = document.querySelector(".screen.active");
-    if (!active) break;
-    const activeHeight = Math.max(1, active.clientHeight);
-    const activeScrollHeight = Math.max(1, active.scrollHeight);
-    if (activeScrollHeight <= activeHeight + 1) break;
-    const ratio = activeHeight / activeScrollHeight;
+    const appShell = document.querySelector(".app-shell");
+    const homeGrid = currentScreenId === "homeScreen" ? document.querySelector("#homeScreen .home-grid") : null;
+    const overflowRatio = Math.max(
+      getOverflowRatio(active),
+      getOverflowRatio(appShell),
+      getOverflowRatio(homeGrid)
+    );
+    if (overflowRatio <= 1.002) break;
+    const ratio = 1 / overflowRatio;
     const nextScale = Math.max(DESKTOP_FIT_REFERENCE.minScale, scale * ratio);
     if (Math.abs(nextScale - scale) < 0.001) break;
     scale = nextScale;
+  }
+
+  // Keep a small safety margin on home to avoid edge-case 1px scrollbars.
+  if (currentScreenId === "homeScreen") {
+    scale = Math.max(DESKTOP_FIT_REFERENCE.minScale, scale * 0.985);
   }
 
   doc.style.setProperty("--pc-ui-scale", scale.toFixed(4));
@@ -7019,6 +7079,8 @@ function prepareSession(mode, options = {}) {
   let questions = [];
   let mainQuestions = [];
   let previousReviewQuestions = [];
+  const startWeakFocusOnly = mode === "normal" && Boolean(options.startWeakFocusOnly);
+
   if (mode === "review") {
     questions = getReviewPool();
   } else if (mode === "challenge") {
@@ -7035,11 +7097,17 @@ function prepareSession(mode, options = {}) {
   } else {
     const hasCustomPool = Array.isArray(options.customPool);
     const pool = hasCustomPool ? options.customPool.filter((item) => Boolean(item)) : getFilteredPool();
-    mainQuestions = hasCustomPool
-      ? shuffle(pool).slice(0, Math.min(10, pool.length))
-      : buildNormalSpiralMainQuestions();
-    previousReviewQuestions = hasCustomPool ? [] : getPreviousSessionReviewPool();
-    questions = previousReviewQuestions.length ? previousReviewQuestions : mainQuestions;
+    if (startWeakFocusOnly) {
+      questions = shuffle(pool).slice(0, Math.min(NORMAL_WEAK_FOCUS_BATCH_SIZE, pool.length));
+      mainQuestions = [];
+      previousReviewQuestions = [];
+    } else {
+      mainQuestions = hasCustomPool
+        ? shuffle(pool).slice(0, Math.min(10, pool.length))
+        : buildNormalSpiralMainQuestions();
+      previousReviewQuestions = hasCustomPool ? [] : getPreviousSessionReviewPool();
+      questions = previousReviewQuestions.length ? previousReviewQuestions : mainQuestions;
+    }
   }
 
   if (!questions.length) {
@@ -7069,7 +7137,13 @@ function prepareSession(mode, options = {}) {
 
   state.session = {
     mode,
-    phase: mode === "normal" ? (previousReviewQuestions.length ? "phase0" : "phase1") : mode === "review" ? "phase2" : mode === "phrase-spiral" ? "phase1" : "phase3",
+    phase: mode === "normal"
+      ? (startWeakFocusOnly ? "phase3" : (previousReviewQuestions.length ? "phase0" : "phase1"))
+      : mode === "review"
+        ? "phase2"
+        : mode === "phrase-spiral"
+          ? "phase1"
+          : "phase3",
     focusLevel: Number(options.level) || null,
     questions,
     baseQuestions: (mode === "normal" || mode === "phrase-spiral" ? mainQuestions : questions).slice(),
@@ -7097,15 +7171,15 @@ function prepareSession(mode, options = {}) {
       return acc;
     }, {}),
     awaitingPhaseStart: false,
-    phase0Completed: false,
-    phase0Skipped: mode === "normal" ? previousReviewQuestions.length === 0 : true,
-    phase1Completed: false,
-    phase2Completed: false,
-    phase2Skipped: false,
+    phase0Completed: startWeakFocusOnly,
+    phase0Skipped: mode === "normal" ? (startWeakFocusOnly || previousReviewQuestions.length === 0) : true,
+    phase1Completed: startWeakFocusOnly,
+    phase2Completed: startWeakFocusOnly,
+    phase2Skipped: startWeakFocusOnly,
     phase3Completed: false,
     phase3Skipped: mode === "phrase-spiral" ? true : false,
-    weakFocusRoundCount: 0,
-    weakFocusAskedQuestionIds: [],
+    weakFocusRoundCount: startWeakFocusOnly ? 1 : 0,
+    weakFocusAskedQuestionIds: startWeakFocusOnly ? questions.map((question) => String(question.id)) : [],
     weakFocusLastRoundCorrectIds: [],
     weakFocusLastRoundWrongIds: [],
     weakFocusCurrentRoundCorrectIds: [],
@@ -7129,7 +7203,9 @@ function prepareSession(mode, options = {}) {
   } else if (mode === "challenge" || mode === "level-focus") {
     beginSessionPhase(state.session, "phase3", questions, { showIntro: true });
   } else {
-    if (previousReviewQuestions.length) {
+    if (startWeakFocusOnly) {
+      beginSessionPhase(state.session, "phase3", questions, { showIntro: true });
+    } else if (previousReviewQuestions.length) {
       beginSessionPhase(state.session, "phase0", previousReviewQuestions, { showIntro: true });
     } else {
       beginSessionPhase(state.session, "phase1", mainQuestions, { showIntro: true });
@@ -8401,6 +8477,13 @@ function bindEvents() {
       if (restoreSavedNormalSession()) {
         resumeActiveSession();
       }
+    });
+  }
+
+  const todayExtraTrainingBtn = document.getElementById("todayExtraTrainingBtn");
+  if (todayExtraTrainingBtn) {
+    todayExtraTrainingBtn.addEventListener("click", () => {
+      startTodayExtraTrainingFromHome();
     });
   }
 
