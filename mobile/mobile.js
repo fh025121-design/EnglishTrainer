@@ -4392,7 +4392,7 @@
   function isSpeakingLevel1Week(week) {
     const weekNumber = parseWeekNumber(week?.weekId);
     if (!Number.isFinite(weekNumber)) return false;
-    return weekNumber >= 1 && weekNumber <= 5;
+    return weekNumber >= 1 && weekNumber <= 6;
   }
 
   function getSpeakingWeekDisplayName(week) {

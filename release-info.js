@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/28 22:45", note: "モバイル版のみ: Speaking会話練習のUI分岐を修正し、Week6もWeek1〜Week5と同じLevel1インターフェース（『🎤 話す』ボタン表示・Level1進行）で動作するよう更新" },
     { version: "2026/07/28 22:30", note: "モバイル版のみ: Speaking会話データにWeek6（2026/07/27〜08/02）を追加。W6の shortConversations（7日分）を投入し、dailyHomework を全日 `sc:2 / qr:4 / scLineStarts:[0,2]` に更新。各行は hintType:`none`・hints:[] で統一。PC版は未変更" },
     { version: "2026/07/28 21:10", note: "モバイル版のみ: 会話練習の『Weekを選ぶ』にWeek6（7/27～8/2）を表示するよう修正。Week選択タブのみ追加し、会話例文データは未投入のため開始ボタンは曜日未選択のまま（例文追加は未実施）" },
     { version: "2026/07/28 20:00", note: "モバイル版のみ: VocabularyのWeekデータにWeek6（2026/07/27〜08/02）を追加。月〜日の7日分それぞれ6語を登録し、既存Week1/Week2/Week3/Week4/Week5と同じ学習導線（曜日選択・単語音声・意味/例文/訳表示・例文2回音読・進捗保存）で利用可能に拡張。PC版は未変更" },
