@@ -1727,6 +1727,274 @@
           exampleJapanese: "私には新しい目標があります。"
         }
       ])
+    }),
+    W6: Object.freeze({
+      "2026-07-27": Object.freeze([
+        {
+          word: "decide",
+          meaning: "決める",
+          example: "I decided to practice every day.",
+          exampleJapanese: "私は毎日練習することに決めました。"
+        },
+        {
+          word: "quiet",
+          meaning: "静かな",
+          example: "The library is quiet.",
+          exampleJapanese: "図書館は静かです。"
+        },
+        {
+          word: "enough",
+          meaning: "十分な",
+          example: "Ten minutes is enough for today.",
+          exampleJapanese: "今日は10分で十分です。"
+        },
+        {
+          word: "however",
+          meaning: "しかし",
+          example: "It was difficult. However, I tried again.",
+          exampleJapanese: "それは難しかったです。しかし、私はもう一度やってみました。"
+        },
+        {
+          word: "result",
+          meaning: "結果",
+          example: "I saw a good result.",
+          exampleJapanese: "私は良い結果を得ました。"
+        },
+        {
+          word: "confident",
+          meaning: "自信のある",
+          example: "I feel more confident now.",
+          exampleJapanese: "今はより自信を感じています。"
+        }
+      ]),
+      "2026-07-28": Object.freeze([
+        {
+          word: "always",
+          meaning: "いつも",
+          example: "She always reads after dinner.",
+          exampleJapanese: "彼女はいつも夕食後に読みます。"
+        },
+        {
+          word: "usually",
+          meaning: "たいてい",
+          example: "He usually walks to school.",
+          exampleJapanese: "彼はたいてい歩いて学校に行きます。"
+        },
+        {
+          word: "sometimes",
+          meaning: "ときどき",
+          example: "She sometimes studies with me.",
+          exampleJapanese: "彼女はときどき私と一緒に勉強します。"
+        },
+        {
+          word: "never",
+          meaning: "決して〜ない",
+          example: "He never forgets his notebook.",
+          exampleJapanese: "彼は決して自分のノートを忘れません。"
+        },
+        {
+          word: "prepare",
+          meaning: "準備する",
+          example: "She prepares for class.",
+          exampleJapanese: "彼女は授業の準備をします。"
+        },
+        {
+          word: "explain",
+          meaning: "説明する",
+          example: "He explains the answer clearly.",
+          exampleJapanese: "彼は答えをはっきりと説明します。"
+        }
+      ]),
+      "2026-07-29": Object.freeze([
+        {
+          word: "during",
+          meaning: "〜の間に",
+          example: "I read during lunch break.",
+          exampleJapanese: "私は昼休みの間に読みます。"
+        },
+        {
+          word: "meeting",
+          meaning: "集まり、会議",
+          example: "We had a club meeting.",
+          exampleJapanese: "私たちは部活のミーティングを開きました。"
+        },
+        {
+          word: "member",
+          meaning: "メンバー",
+          example: "Each member had a job.",
+          exampleJapanese: "各メンバーに仕事がありました。"
+        },
+        {
+          word: "choose",
+          meaning: "選ぶ",
+          example: "We chose a short story.",
+          exampleJapanese: "私たちは短い物語を選びました。"
+        },
+        {
+          word: "reason",
+          meaning: "理由",
+          example: "Tell me the reason.",
+          exampleJapanese: "理由を教えてください。"
+        },
+        {
+          word: "together",
+          meaning: "一緒に",
+          example: "We practiced together.",
+          exampleJapanese: "私たちは一緒に練習しました。"
+        }
+      ]),
+      "2026-07-30": Object.freeze([
+        {
+          word: "find",
+          meaning: "見つける",
+          example: "I found my old notebook.",
+          exampleJapanese: "私は自分の古いノートを見つけました。"
+        },
+        {
+          word: "make",
+          meaning: "作る",
+          example: "We made a poster.",
+          exampleJapanese: "私たちはポスターを作りました。"
+        },
+        {
+          word: "feel",
+          meaning: "感じる",
+          example: "I felt nervous.",
+          exampleJapanese: "私は緊張を感じました。"
+        },
+        {
+          word: "finally",
+          meaning: "ついに、最後に",
+          example: "Finally, I finished it.",
+          exampleJapanese: "ついに、私はそれを終わらせました。"
+        },
+        {
+          word: "before",
+          meaning: "〜の前に",
+          example: "I checked it before class.",
+          exampleJapanese: "私は授業の前にそれを確認しました。"
+        },
+        {
+          word: "afterwards",
+          meaning: "その後で",
+          example: "We talked afterwards.",
+          exampleJapanese: "私たちはその後で話しました。"
+        }
+      ]),
+      "2026-07-31": Object.freeze([
+        {
+          word: "subject",
+          meaning: "主語",
+          example: "Check the subject first.",
+          exampleJapanese: "最初に主語を確認しなさい。"
+        },
+        {
+          word: "verb",
+          meaning: "動詞",
+          example: "Then check the verb.",
+          exampleJapanese: "それから動詞を確認しなさい。"
+        },
+        {
+          word: "form",
+          meaning: "形",
+          example: "Use the correct form.",
+          exampleJapanese: "正しい形を使いなさい。"
+        },
+        {
+          word: "order",
+          meaning: "順番",
+          example: "Check the word order.",
+          exampleJapanese: "語順を確認しなさい。"
+        },
+        {
+          word: "correct",
+          meaning: "正しい",
+          example: "Write the correct sentence.",
+          exampleJapanese: "正しい文を書きなさい。"
+        },
+        {
+          word: "compare",
+          meaning: "比べる",
+          example: "Compare the two sentences.",
+          exampleJapanese: "2つの文を比べなさい。"
+        }
+      ]),
+      "2026-08-01": Object.freeze([
+        {
+          word: "message",
+          meaning: "メッセージ",
+          example: "I read your message.",
+          exampleJapanese: "私はあなたのメッセージを読みました。"
+        },
+        {
+          word: "invite",
+          meaning: "招待する",
+          example: "I want to invite you.",
+          exampleJapanese: "私はあなたを招待したいです。"
+        },
+        {
+          word: "available",
+          meaning: "都合がつく",
+          example: "Are you available on Saturday?",
+          exampleJapanese: "土曜日は都合がつきますか？"
+        },
+        {
+          word: "bring",
+          meaning: "持ってくる",
+          example: "Please bring your notebook.",
+          exampleJapanese: "ノートを持ってきてください。"
+        },
+        {
+          word: "practice room",
+          meaning: "練習室",
+          example: "Meet me in the practice room.",
+          exampleJapanese: "練習室で会いましょう。"
+        },
+        {
+          word: "reply",
+          meaning: "返信する",
+          example: "Please reply today.",
+          exampleJapanese: "今日中に返信してください。"
+        }
+      ]),
+      "2026-08-02": Object.freeze([
+        {
+          word: "review",
+          meaning: "復習する",
+          example: "I reviewed this week's work.",
+          exampleJapanese: "私は今週の課題を復習しました。"
+        },
+        {
+          word: "detail",
+          meaning: "細部、詳しい情報",
+          example: "I found an important detail.",
+          exampleJapanese: "私は重要な詳細を見つけました。"
+        },
+        {
+          word: "main idea",
+          meaning: "要点",
+          example: "I understood the main idea.",
+          exampleJapanese: "私は要点を理解しました。"
+        },
+        {
+          word: "mistake",
+          meaning: "間違い",
+          example: "I corrected a mistake.",
+          exampleJapanese: "私は間違いを直しました。"
+        },
+        {
+          word: "reason",
+          meaning: "理由",
+          example: "I explained the reason.",
+          exampleJapanese: "私は理由を説明しました。"
+        },
+        {
+          word: "goal",
+          meaning: "目標",
+          example: "I made a new goal.",
+          exampleJapanese: "私は新しい目標を立てました。"
+        }
+      ])
     })
   });
   const SPEAKING_WORD_DEFAULT_WEEK_ID = Object.keys(SPEAKING_WORD_PRACTICE_DATA)[0] || "";
@@ -4626,7 +4894,7 @@
   }
 
   function getAvailableConversationWeeks() {
-    const availableWeeks = getSpeakingWeeks().filter((week) => week.shortConversations.length > 0);
+    const availableWeeks = getSpeakingWeeks();
     return availableWeeks.sort((a, b) => {
       const aWeek = parseWeekNumber(a.weekId);
       const bWeek = parseWeekNumber(b.weekId);

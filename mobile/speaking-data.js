@@ -5397,6 +5397,13 @@ window.speakingData = {
           ]
         }
       ]
+    },
+    {
+      "weekId": "W6",
+      "label": "7/27～8/2",
+      "startDate": "2026-07-27",
+      "endDate": "2026-08-02",
+      "shortConversations": []
     }
   ],
   "dailyHomework": {
@@ -5709,6 +5716,43 @@ window.speakingData = {
           0,
           2
         ]
+      }
+    },
+    "W6": {
+      "2026-07-27": {
+        "sc": 0,
+        "qr": 0,
+        "scLineStarts": []
+      },
+      "2026-07-28": {
+        "sc": 0,
+        "qr": 0,
+        "scLineStarts": []
+      },
+      "2026-07-29": {
+        "sc": 0,
+        "qr": 0,
+        "scLineStarts": []
+      },
+      "2026-07-30": {
+        "sc": 0,
+        "qr": 0,
+        "scLineStarts": []
+      },
+      "2026-07-31": {
+        "sc": 0,
+        "qr": 0,
+        "scLineStarts": []
+      },
+      "2026-08-01": {
+        "sc": 0,
+        "qr": 0,
+        "scLineStarts": []
+      },
+      "2026-08-02": {
+        "sc": 0,
+        "qr": 0,
+        "scLineStarts": []
       }
     }
   }
