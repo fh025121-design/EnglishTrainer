@@ -4,6 +4,7 @@
   const MOBILE_ADMIN_LEARNING_HISTORY_PIN = "12345";
   const MOBILE_ADMIN_FAMILY_ID = "inoue";
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
+  const MOBILE_WORD_ORDER_STATS_STORAGE_KEY = "englishTrainerMobileWordOrderStats_v1";
   const SPEAKING_PROGRESS_KEY = "englishTrainerSpeakingProgress";
   const SPEAKING_RECENT_PROGRESS_KEY = "englishTrainerSpeakingRecentProgress_v1";
   const SPEAKING_REVIEW_STATS_KEY = "englishTrainerSpeakingReviewStats_v1";
@@ -2070,6 +2071,7 @@
     speakingRecognition: null,
     speakingAutoAdvanceTimerId: null,
     wordOrderTraining: null,
+    wordOrderSelectedRangeValue: WORD_ORDER_DAY_RANGES[0].value,
     learningHistorySession: null,
     currentScreen: "homeScreen",
     confirmAction: null,
@@ -5207,8 +5209,99 @@
     }, "");
   }
 
+  function createDefaultWordOrderStatsMap() {
+    return {};
+  }
+
+  function sanitizeWordOrderStatsEntry(raw) {
+    const attempts = Math.max(0, Math.floor(Number(raw?.attempts) || 0));
+    const correct = Math.max(0, Math.min(attempts, Math.floor(Number(raw?.correct) || 0)));
+    return { attempts, correct };
+  }
+
+  function sanitizeWordOrderStatsMap(raw) {
+    const source = raw && typeof raw === "object" ? raw : {};
+    const next = {};
+    Object.entries(source).forEach(([questionId, value]) => {
+      const key = String(questionId || "").trim();
+      if (!key) return;
+      next[key] = sanitizeWordOrderStatsEntry(value);
+    });
+    return next;
+  }
+
+  function loadWordOrderStatsMap() {
+    try {
+      const raw = window.localStorage.getItem(MOBILE_WORD_ORDER_STATS_STORAGE_KEY);
+      if (!raw) return createDefaultWordOrderStatsMap();
+      return sanitizeWordOrderStatsMap(JSON.parse(raw));
+    } catch (_error) {
+      return createDefaultWordOrderStatsMap();
+    }
+  }
+
+  function saveWordOrderStatsMap(statsMap) {
+    const normalized = sanitizeWordOrderStatsMap(statsMap);
+    window.localStorage.setItem(MOBILE_WORD_ORDER_STATS_STORAGE_KEY, JSON.stringify(normalized));
+    return normalized;
+  }
+
+  function getWordOrderQuestionStats(questionId) {
+    const map = loadWordOrderStatsMap();
+    return map[String(questionId || "").trim()] || { attempts: 0, correct: 0 };
+  }
+
+  function recordWordOrderQuestionResult(questionId, isCorrect) {
+    const key = String(questionId || "").trim();
+    if (!key) return;
+    const map = loadWordOrderStatsMap();
+    const current = sanitizeWordOrderStatsEntry(map[key] || {});
+    current.attempts += 1;
+    if (isCorrect) {
+      current.correct = Math.min(current.attempts, current.correct + 1);
+    }
+    map[key] = current;
+    saveWordOrderStatsMap(map);
+  }
+
+  function formatWordOrderQuestionId(day, entryId, fallbackNumber) {
+    const safeDay = Math.max(1, Math.floor(Number(day) || 1));
+    const numericEntryId = Math.floor(Number(entryId));
+    const safeQuestionNumber = Number.isFinite(numericEntryId) && numericEntryId > 0
+      ? numericEntryId
+      : Math.max(1, Math.floor(Number(fallbackNumber) || 1));
+    return `D${String(safeDay).padStart(2, "0")}-Q${String(safeQuestionNumber).padStart(2, "0")}`;
+  }
+
+  function buildWeightedWordOrderQuestions(questions) {
+    return questions
+      .map((question) => {
+        const stats = getWordOrderQuestionStats(question.id);
+        const attempts = Math.max(0, Number(stats.attempts) || 0);
+        const accuracy = attempts > 0 ? (Math.max(0, Number(stats.correct) || 0) / attempts) : 0;
+
+        // Weighted shuffle key (Efraimidis-Spirakis): smaller key appears earlier.
+        // This keeps all questions exactly once while making higher-weight items appear sooner.
+        let weight = 1.0;
+        if (attempts >= 3 && accuracy < 0.7) {
+          weight = 1.8;
+        } else if (attempts >= 3 && accuracy >= 0.9) {
+          weight = 0.65;
+        }
+        const safeWeight = Math.max(0.2, weight);
+        const random = Math.max(Number.EPSILON, Math.random());
+        const key = -Math.log(random) / safeWeight;
+        return {
+          question,
+          key
+        };
+      })
+      .sort((a, b) => a.key - b.key)
+      .map((item) => item.question);
+  }
+
   function getSelectedWordOrderDayRange() {
-    const selectedValue = String(elements.wordOrderDayRangeSelect?.value || WORD_ORDER_DAY_RANGES[0].value);
+    const selectedValue = String(state.wordOrderSelectedRangeValue || WORD_ORDER_DAY_RANGES[0].value);
     return WORD_ORDER_DAY_RANGES.find((item) => item.value === selectedValue) || WORD_ORDER_DAY_RANGES[0];
   }
 
@@ -5221,27 +5314,33 @@
 
   function setWordOrderDayRangeValue(value) {
     const normalizedValue = getValidWordOrderDayRangeValue(value);
-    if (elements.wordOrderDayRangeSelect) {
-      elements.wordOrderDayRangeSelect.value = normalizedValue;
+    state.wordOrderSelectedRangeValue = normalizedValue;
+    if (Array.isArray(elements.wordOrderDayRangeButtons)) {
+      elements.wordOrderDayRangeButtons.forEach((button) => {
+        button.classList.toggle("is-selected", String(button.dataset.rangeValue || "") === normalizedValue);
+      });
     }
     return normalizedValue;
   }
 
   function getWordOrderQuestionsByDayRange(startDay, endDay) {
     const bank = Array.isArray(window.wordOrderTrainingBank) ? window.wordOrderTrainingBank : [];
+    const dayCounters = {};
     return bank
       .filter((entry) => {
         const day = Number(entry?.day);
         return Number.isFinite(day) && day >= startDay && day <= endDay;
       })
-      .map((entry, index) => {
+      .map((entry) => {
         const english = String(entry?.english || entry?.answer || "").trim();
         const japanese = String(entry?.japanese || "").trim();
         const tag = String(entry?.tag || entry?.category || "").trim();
         const day = Math.floor(Number(entry?.day) || 0);
+        dayCounters[day] = (dayCounters[day] || 0) + 1;
+        const stableId = formatWordOrderQuestionId(day, entry?.id, dayCounters[day]);
         const tokens = tokenizeWordOrderSentence(english);
         return {
-          id: String(entry?.id || `word-order-day${day}-${index + 1}`),
+          id: stableId,
           day,
           english,
           japanese,
@@ -5283,6 +5382,21 @@
     training.correctAnswer = "";
   }
 
+  function renderWordOrderRangeSelectScreen() {
+    setWordOrderDayRangeValue(state.wordOrderSelectedRangeValue);
+    state.wordOrderTraining = null;
+    if (elements.wordOrderQuestionPanel) {
+      elements.wordOrderQuestionPanel.classList.add("hidden");
+    }
+    if (elements.wordOrderCompletePanel) {
+      elements.wordOrderCompletePanel.classList.add("hidden");
+    }
+    if (elements.wordOrderRangePanel) {
+      elements.wordOrderRangePanel.classList.remove("hidden");
+    }
+    showScreen("wordOrderTrainingScreen");
+  }
+
   function renderWordOrderTraining() {
     const training = state.wordOrderTraining;
     if (!training) return;
@@ -5290,6 +5404,9 @@
     const questionPanel = elements.wordOrderQuestionPanel;
     const completePanel = elements.wordOrderCompletePanel;
     if (!questionPanel || !completePanel) return;
+    if (elements.wordOrderRangePanel) {
+      elements.wordOrderRangePanel.classList.add("hidden");
+    }
 
     if (training.completed) {
       questionPanel.classList.add("hidden");
@@ -5416,13 +5533,9 @@
   }
 
   function startWordOrderTraining() {
-    const selectedValue = setWordOrderDayRangeValue(elements.wordOrderDayRangeSelect?.value);
-    if (elements.wordOrderDayRangeSelect) {
-      elements.wordOrderDayRangeSelect.value = selectedValue;
-    }
+    setWordOrderDayRangeValue(state.wordOrderSelectedRangeValue);
     const dayRange = getSelectedWordOrderDayRange();
-    setWordOrderDayRangeValue(dayRange.value);
-    const questions = getWordOrderQuestionsByDayRange(dayRange.startDay, dayRange.endDay);
+    const questions = buildWeightedWordOrderQuestions(getWordOrderQuestionsByDayRange(dayRange.startDay, dayRange.endDay));
     if (!questions.length) {
       renderComingSoonScreen({
         title: "語順トレーニング（準備中）",
@@ -5510,6 +5623,7 @@
 
     const selectedTokens = training.selectedCards.map((card) => card.token);
     const isCorrect = selectedTokens.every((token, index) => token === question.tokens[index]);
+    recordWordOrderQuestionResult(question.id, isCorrect);
     if (isCorrect) {
       training.correctCount += 1;
       awardWordOrderPoints(1);
@@ -5536,7 +5650,7 @@
   }
 
   function renderHome() {
-    setWordOrderDayRangeValue(elements.wordOrderDayRangeSelect?.value);
+    setWordOrderDayRangeValue(state.wordOrderSelectedRangeValue);
     hideMobileAdminLearningHistory();
     showScreen("homeScreen");
   }
@@ -7682,6 +7796,7 @@
           speakingRecognition: null,
           speakingAutoAdvanceTimerId: null,
           wordOrderTraining: null,
+          wordOrderSelectedRangeValue: WORD_ORDER_DAY_RANGES[0].value,
           currentScreen: "homeScreen",
           confirmAction: null,
           micTestRecognition: null
@@ -7747,7 +7862,7 @@
       radio.checked = radio.value === state.settings.speechRateMode;
     });
 
-    setWordOrderDayRangeValue(elements.wordOrderDayRangeSelect?.value);
+    setWordOrderDayRangeValue(state.wordOrderSelectedRangeValue);
   }
 
   function bindElements() {
@@ -7854,9 +7969,11 @@
     elements.mobileAdminLearningHistoryUnlockBtn = document.getElementById("mobileAdminLearningHistoryUnlockBtn");
     elements.mobileAdminLearningHistoryStatusText = document.getElementById("mobileAdminLearningHistoryStatusText");
     elements.mobileAdminLearningHistoryPanel = document.getElementById("mobileAdminLearningHistoryPanel");
+    elements.wordOrderRangePanel = document.getElementById("wordOrderRangePanel");
+    elements.wordOrderDayRangeButtons = [...document.querySelectorAll(".word-order-range-btn")];
+    elements.wordOrderStartBtn = document.getElementById("wordOrderStartBtn");
     elements.wordOrderQuestionPanel = document.getElementById("wordOrderQuestionPanel");
     elements.wordOrderCompletePanel = document.getElementById("wordOrderCompletePanel");
-    elements.wordOrderDayRangeSelect = document.getElementById("wordOrderDayRangeSelect");
     elements.wordOrderDayText = document.getElementById("wordOrderDayText");
     elements.wordOrderProgressText = document.getElementById("wordOrderProgressText");
     elements.wordOrderJapaneseText = document.getElementById("wordOrderJapaneseText");
@@ -7880,7 +7997,7 @@
 
   function bindEvents() {
     document.getElementById("openSpeakingFeatureBtn").addEventListener("click", renderSpeakingHome);
-    document.getElementById("openWordOrderTrainingBtn").addEventListener("click", startWordOrderTraining);
+    document.getElementById("openWordOrderTrainingBtn").addEventListener("click", renderWordOrderRangeSelectScreen);
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
     document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", () => {
@@ -7927,10 +8044,12 @@
     elements.nextConversationBtn.addEventListener("click", moveToNextSpeakingConversation);
     document.getElementById("settingsBackBtn").addEventListener("click", renderHome);
     document.getElementById("wordOrderBackBtn").addEventListener("click", renderHome);
-    elements.wordOrderDayRangeSelect.addEventListener("change", () => {
-      setWordOrderDayRangeValue(elements.wordOrderDayRangeSelect.value);
-      startWordOrderTraining();
+    elements.wordOrderDayRangeButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        setWordOrderDayRangeValue(button.dataset.rangeValue || "");
+      });
     });
+    elements.wordOrderStartBtn.addEventListener("click", startWordOrderTraining);
     elements.wordOrderUndoBtn.addEventListener("click", undoWordOrderSelection);
     elements.wordOrderResetBtn.addEventListener("click", resetWordOrderSelection);
     elements.wordOrderSubmitBtn.addEventListener("click", submitWordOrderAnswer);

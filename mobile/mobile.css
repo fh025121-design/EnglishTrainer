@@ -606,6 +606,22 @@ select,
   color: var(--text);
 }
 
+.word-order-range-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.word-order-range-btn {
+  min-height: 46px;
+}
+
+.word-order-range-btn.is-selected {
+  background: linear-gradient(135deg, rgba(94, 214, 214, 0.24), rgba(123, 108, 255, 0.22));
+  border-color: rgba(94, 214, 214, 0.68);
+  color: #ffffff;
+}
+
 .word-order-zone {
   padding: 12px;
 }

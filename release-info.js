@@ -1,6 +1,8 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/07/30 17:01", note: "モバイル版のみ: 語順トレーニングの重み付きランダムを改良。前半/後半への固定寄せ方式を廃止し、問題ごとの重み（attempts/correct由来）を使った重み付きシャッフル（重複なし）で並び順を決定する方式へ更新。全問題を1回ずつ出題する仕様は維持" },
+    { version: "2026/07/30 16:54", note: "モバイル版のみ: 語順トレーニングのDay範囲選択UIをプルダウンから6ボタン＋『問題開始』へ変更。選択範囲の全問題を1回ずつ重複なしで出題する仕様は維持しつつ、出題順を問題別履歴（attempts/correct）に基づく重み付きランダムへ更新。attempts 0〜2は未判定、attempts 3回以上で正答率70%未満は前半寄り、90%以上は後半寄りに配置し、全問題は必ず出題。問題別履歴は localStorage に互換性を保って追加保存" },
     { version: "2026/07/28 22:45", note: "モバイル版のみ: Speaking会話練習のUI分岐を修正し、Week6もWeek1〜Week5と同じLevel1インターフェース（『🎤 話す』ボタン表示・Level1進行）で動作するよう更新" },
     { version: "2026/07/28 22:30", note: "モバイル版のみ: Speaking会話データにWeek6（2026/07/27〜08/02）を追加。W6の shortConversations（7日分）を投入し、dailyHomework を全日 `sc:2 / qr:4 / scLineStarts:[0,2]` に更新。各行は hintType:`none`・hints:[] で統一。PC版は未変更" },
     { version: "2026/07/28 21:10", note: "モバイル版のみ: 会話練習の『Weekを選ぶ』にWeek6（7/27～8/2）を表示するよう修正。Week選択タブのみ追加し、会話例文データは未投入のため開始ボタンは曜日未選択のまま（例文追加は未実施）" },

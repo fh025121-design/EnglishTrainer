@@ -571,17 +571,18 @@
 
         <main class="study-layout">
           <section class="panel">
-            <label class="field-block">
+            <div id="wordOrderRangePanel" class="field-block">
               <span>学習するDay範囲</span>
-              <select id="wordOrderDayRangeSelect">
-                <option value="1-7">Day 1 - 7</option>
-                <option value="8-14">Day 8 - 14</option>
-                <option value="15-21">Day 15 - 21</option>
-                <option value="22-28">Day 22 - 28</option>
-                <option value="29-35">Day 29 - 35</option>
-                <option value="36-40">Day 36 - 40</option>
-              </select>
-            </label>
+              <div id="wordOrderDayRangeButtons" class="word-order-range-grid" role="group" aria-label="語順トレーニングのDay範囲選択">
+                <button id="wordOrderRangeBtn1_7" class="secondary-btn word-order-range-btn" type="button" data-range-value="1-7">Day1-7</button>
+                <button id="wordOrderRangeBtn8_14" class="secondary-btn word-order-range-btn" type="button" data-range-value="8-14">Day8-14</button>
+                <button id="wordOrderRangeBtn15_21" class="secondary-btn word-order-range-btn" type="button" data-range-value="15-21">Day15-21</button>
+                <button id="wordOrderRangeBtn22_28" class="secondary-btn word-order-range-btn" type="button" data-range-value="22-28">Day22-28</button>
+                <button id="wordOrderRangeBtn29_35" class="secondary-btn word-order-range-btn" type="button" data-range-value="29-35">Day29-35</button>
+                <button id="wordOrderRangeBtn36_40" class="secondary-btn word-order-range-btn" type="button" data-range-value="36-40">Day36-40</button>
+              </div>
+              <button id="wordOrderStartBtn" class="primary-btn large-btn" type="button">問題開始</button>
+            </div>
           </section>
 
           <div class="study-meta">
