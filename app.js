@@ -2424,7 +2424,7 @@ function renderResponseTrainingQuestion() {
   const preAnswerHintText = shouldShowResponsePreAnswerHint(currentQuestion) ? String(currentQuestion.translationAnswer || "") : "";
   answerTranslationText.textContent = preAnswerHintText;
   answerTranslationText.classList.toggle("hidden", !preAnswerHintText);
-  answerInput.placeholder = currentQuestion.answerSpec.canonicalAnswer ? `例: ${currentQuestion.answerSpec.canonicalAnswer}` : "例: isn't";
+  answerInput.placeholder = "";
 
   answerInput.value = "";
   answerInput.disabled = false;
