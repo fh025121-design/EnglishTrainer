@@ -6735,12 +6735,7 @@ function startNextDaySession() {
   state.settings.studyRange = { start: nextDay, end: nextDay };
   saveState();
   prepareSession("normal", {
-    forceNewSession: true,
-    dayStudy: {
-      start: nextDay,
-      end: nextDay,
-      type: "all"
-    }
+    forceNewSession: true
   });
 }
 
