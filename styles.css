@@ -1055,6 +1055,13 @@ p {
   text-align: center;
 }
 
+.footer-subhint-text {
+  color: rgba(214, 232, 255, 0.92);
+  font-size: clamp(12px, calc(18px * var(--pc-ui-scale)), 18px);
+  text-align: center;
+  min-height: 1.2em;
+}
+
 .compact-footer-info-text {
   font-size: clamp(12px, calc(18px * var(--pc-ui-scale)), 18px);
 }

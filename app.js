@@ -563,6 +563,71 @@ function shiftLearningHistoryDayKey(dayKey, deltaDays) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }
 
+function getLearningHistoryEntryDayKey(entry) {
+  const endedAt = Number(entry?.endedAt);
+  if (Number.isFinite(endedAt) && endedAt > 0) {
+    return getLearningHistoryDayKey(endedAt);
+  }
+  const startedAt = Number(entry?.startedAt);
+  if (Number.isFinite(startedAt) && startedAt > 0) {
+    return getLearningHistoryDayKey(startedAt);
+  }
+  const dateText = String(entry?.studyDate || entry?.learnedAt || "").trim();
+  const match = dateText.match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+}
+
+function collectUniqueLearningHistoryDayKeys(entries) {
+  return [...new Set(
+    (Array.isArray(entries) ? entries : [])
+      .map((entry) => getLearningHistoryEntryDayKey(entry))
+      .filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key))
+  )].sort((a, b) => b.localeCompare(a));
+}
+
+function computeDisplayStreakInfo(dayKeys, referenceDayKey = getLearningHistoryDayKey(Date.now())) {
+  const validKeys = Array.isArray(dayKeys)
+    ? dayKeys.filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(String(key || "")))
+    : [];
+  const keySet = new Set(validKeys);
+  const todayDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(referenceDayKey || ""))
+    ? String(referenceDayKey)
+    : getLearningHistoryDayKey(Date.now());
+  const yesterdayDayKey = shiftLearningHistoryDayKey(todayDayKey, -1);
+  const hasToday = keySet.has(todayDayKey);
+  const hasYesterday = keySet.has(yesterdayDayKey);
+
+  let anchorDayKey = "";
+  if (hasToday) {
+    anchorDayKey = todayDayKey;
+  } else if (hasYesterday) {
+    anchorDayKey = yesterdayDayKey;
+  } else {
+    return {
+      streak: 0,
+      isGrace: false,
+      hasToday: false,
+      hasYesterday: false,
+      nextStreak: 1
+    };
+  }
+
+  let streak = 0;
+  let expectedDayKey = anchorDayKey;
+  while (keySet.has(expectedDayKey)) {
+    streak += 1;
+    expectedDayKey = shiftLearningHistoryDayKey(expectedDayKey, -1);
+  }
+
+  return {
+    streak,
+    isGrace: !hasToday && hasYesterday,
+    hasToday,
+    hasYesterday,
+    nextStreak: streak + 1
+  };
+}
+
 function createEmptyLearningHistoryDaySummary(dayKey) {
   return finalizeLearningHistoryDaySummary({
     dayKey,
@@ -4596,6 +4661,7 @@ function beginSessionPhase(sessionLike, phase, questions, options = {}) {
 function renderHomeMessage() {
   const learnedCountText = document.getElementById("learnedCountText");
   const streakFooterText = document.getElementById("streakFooterText");
+  const streakHintFooterText = document.getElementById("streakHintFooterText");
   const studyRangeFooterText = document.getElementById("studyRangeFooterText");
   const remainFooterText = document.getElementById("remainFooterText");
   const todaySessionCountText = document.getElementById("todaySessionCountText");
@@ -4632,36 +4698,28 @@ function renderHomeMessage() {
   if (shouldUseFirestoreForHomeMetrics()) {
     if (homeHistoryFirestoreLoading && !homeHistoryFirestoreLoaded) {
       streakFooterText.textContent = "🔥 読み込み中...";
+      if (streakHintFooterText) {
+        streakHintFooterText.textContent = "";
+      }
     } else {
-      const dayKeys = [...new Set(
-        (Array.isArray(homeHistoryFirestoreEntries) ? homeHistoryFirestoreEntries : [])
-          .map((entry) => {
-            const endedAt = Number(entry?.endedAt);
-            if (Number.isFinite(endedAt) && endedAt > 0) {
-              return getLearningHistoryDayKey(endedAt);
-            }
-            const startedAt = Number(entry?.startedAt);
-            if (Number.isFinite(startedAt) && startedAt > 0) {
-              return getLearningHistoryDayKey(startedAt);
-            }
-            const dateText = String(entry?.studyDate || entry?.learnedAt || "").trim();
-            const match = dateText.match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/);
-            return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
-          })
-          .filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key))
-      )].sort((a, b) => b.localeCompare(a));
-
-      let streak = 0;
-      let expectedDayKey = getLearningHistoryDayKey(Date.now());
-      dayKeys.forEach((dayKey) => {
-        if (dayKey !== expectedDayKey) return;
-        streak += 1;
-        expectedDayKey = shiftLearningHistoryDayKey(expectedDayKey, -1);
-      });
-      streakFooterText.textContent = `🔥 ${streak}日連続継続中`;
+      const dayKeys = collectUniqueLearningHistoryDayKeys(homeHistoryFirestoreEntries);
+      const streakInfo = computeDisplayStreakInfo(dayKeys);
+      streakFooterText.textContent = `🔥 ${streakInfo.streak}日連続継続中`;
+      if (streakHintFooterText) {
+        streakHintFooterText.textContent = streakInfo.isGrace && streakInfo.streak > 0
+          ? `今日も学習すると${streakInfo.nextStreak}日になります`
+          : "";
+      }
     }
   } else {
-    streakFooterText.textContent = `🔥 ${state.stats.streak || 0}日連続継続中`;
+    const dayKeys = collectUniqueLearningHistoryDayKeys(loadLearningHistoryEntries());
+    const streakInfo = computeDisplayStreakInfo(dayKeys);
+    streakFooterText.textContent = `🔥 ${streakInfo.streak}日連続継続中`;
+    if (streakHintFooterText) {
+      streakHintFooterText.textContent = streakInfo.isGrace && streakInfo.streak > 0
+        ? `今日も学習すると${streakInfo.nextStreak}日になります`
+        : "";
+    }
   }
   studyRangeFooterText.textContent = `学習中：Day${state.settings.studyRange.start}～${state.settings.studyRange.end}`;
   remainFooterText.textContent = `🎯 1000語まであと${Math.max(0, 1000 - learnedCount)}語`;
