@@ -1144,7 +1144,8 @@ function computeLearningHistoryTicketDelta(before, after) {
 const LEARNING_MODE = Object.freeze({
   DAY: "Day",
   REVIEW: "過去の間違い",
-  PREPOSITION: "前置詞特訓"
+  PREPOSITION: "前置詞特訓",
+  RESPONSE: "応答文特訓"
 });
 
 const VALID_LEARNING_MODE_SET = new Set(Object.values(LEARNING_MODE));
@@ -1159,6 +1160,8 @@ function normalizeLearningMode(mode) {
     normalizedMode = LEARNING_MODE.REVIEW;
   } else if (rawMode === "preposition" || rawMode === "preposition-training" || rawMode === LEARNING_MODE.PREPOSITION) {
     normalizedMode = LEARNING_MODE.PREPOSITION;
+  } else if (rawMode === "response" || rawMode === "response-training" || rawMode === LEARNING_MODE.RESPONSE) {
+    normalizedMode = LEARNING_MODE.RESPONSE;
   }
 
   if (!VALID_LEARNING_MODE_SET.has(normalizedMode)) {
@@ -2417,6 +2420,18 @@ function recordPrepositionLearningHistory(sessionLike, reason) {
   appendLearningHistoryEntry(buildPrepositionLearningHistoryEntry(sessionLike, reason));
 }
 
+function recordResponseLearningHistory(sessionLike, reason) {
+  if (!sessionLike || typeof sessionLike !== "object") return;
+  const answerCount = Math.max(0, Number(sessionLike?.answerCount) || 0);
+  const correctCount = Math.max(0, Number(sessionLike?.correctCount) || 0);
+  const summary = {
+    answerCount,
+    correctCount,
+    accuracy: answerCount ? Math.round((correctCount / answerCount) * 100) : 0
+  };
+  appendLearningHistoryEntry(buildLearningHistoryEntryFromSession(sessionLike, summary, reason));
+}
+
 function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
   const endedAt = Date.now();
   const startedAt = Number(sessionLike?.startedAt) || endedAt;
@@ -3099,14 +3114,20 @@ function startResponseTraining(scope = "all") {
     alert("出題可能な応答文問題がありません。");
     return;
   }
+  const startedAt = Date.now();
   responseTrainingSession = {
+    mode: "response-training",
     scope: "all",
     scopeLabel: "すべて",
     questions,
     currentIndex: 0,
     answered: false,
+    startedAt,
     correctCount: 0,
+    answerCount: 0,
+    answerHistory: [],
     wrongCategoryCounts: {},
+    ticketSnapshot: captureLearningHistoryTicketSnapshot(),
     pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0))
   };
   renderResponseTrainingQuestion();
@@ -3300,8 +3321,11 @@ function submitResponseTrainingAnswer() {
   const normalizedPrimary = normalizeResponseInput(primaryRaw);
   const normalized = normalizedPrimary;
   const isCorrect = currentQuestion.answerSpec.acceptedAnswers.some((answer) => answer === normalized);
+  const answeredAt = Date.now();
 
   session.answered = true;
+  session.answerCount += 1;
+  session.answerHistory.push({ at: answeredAt, isCorrect });
   if (isCorrect) {
     session.correctCount += 1;
     awardPointsForTrainingMode("response");
@@ -3356,6 +3380,7 @@ function showResponseTrainingResult() {
     openResponseTrainingSelector();
     return;
   }
+  recordResponseLearningHistory(session, "completed");
   const pointSummary = computeSessionEarnedPoints(session);
   responseTrainingSession = null;
   openTrainingCompleteScreen({
