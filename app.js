@@ -906,6 +906,53 @@ async function inspectStudyCoreFromFirestoreInSettings() {
   }
 }
 
+async function applyStudyCoreFromFirestoreFromSettings() {
+  const currentUid = getStudyCoreCurrentUid();
+  if (!currentUid) {
+    alert("先にPC版へログインしてください。");
+    return;
+  }
+  if (typeof window.loadStudyCoreFromFirestore !== "function") {
+    alert("Firestore読取機能を利用できません。");
+    return;
+  }
+
+  const confirmed = await openBackupRestoreConfirmModal({
+    title: "Firestoreの学習データを反映します",
+    message: "現在のPCの学習状況は上書きされます。\nよろしいですか？",
+    confirmText: "はい"
+  });
+  if (!confirmed) return;
+
+  try {
+    const remoteResult = await window.loadStudyCoreFromFirestore(currentUid);
+    if (!remoteResult?.exists || !remoteResult?.data || typeof remoteResult.data !== "object") {
+      alert("Firestoreの学習データが見つかりませんでした。");
+      return;
+    }
+
+    applyStudyCoreFromFirestore(remoteResult.data, { replaceAll: true });
+    reconcileReviewDueFromReviewRecords();
+    syncDerivedStats();
+    saveState();
+    refreshStudyCoreSyncScreens();
+
+    const remoteUpdatedAt = Math.max(0, Number(remoteResult.data.updatedAt) || 0);
+    recordStudyCoreSyncResolution({
+      uid: currentUid,
+      adopted: "firestore-manual-apply",
+      remoteUpdatedAt,
+      localUpdatedAt: remoteUpdatedAt,
+      localInfoSource: "manual"
+    });
+
+    alert("反映が完了しました。");
+  } catch (error) {
+    console.error("Failed to apply study core from Firestore", error);
+    alert("Firestoreの学習データ反映に失敗しました。時間をおいて再度お試しください。");
+  }
+}
+
 async function syncStudyCoreAfterLogin() {
   const currentUid = getStudyCoreCurrentUid();
   if (!currentUid || typeof window.loadStudyCoreFromFirestore !== "function" || typeof window.saveStudyCoreToFirestore !== "function") {
@@ -9642,6 +9689,13 @@ function bindEvents() {
   if (inspectStudyCoreFromFirestoreBtn) {
     inspectStudyCoreFromFirestoreBtn.addEventListener("click", async () => {
       await inspectStudyCoreFromFirestoreInSettings();
+    });
+  }
+
+  const applyStudyCoreFromFirestoreBtn = document.getElementById("applyStudyCoreFromFirestoreBtn");
+  if (applyStudyCoreFromFirestoreBtn) {
+    applyStudyCoreFromFirestoreBtn.addEventListener("click", async () => {
+      await applyStudyCoreFromFirestoreFromSettings();
     });
   }
 
