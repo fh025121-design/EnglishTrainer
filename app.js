@@ -639,6 +639,11 @@ function clearStudyCoreSynchronizedState() {
     item.levelData = createDefaultLevelData();
     item.learningStats = sanitizeLearningStats();
     item.reviewDue = false;
+    item.hasBeenStudied = false;
+    item.mastered = false;
+    item.lastAnswerWasCorrect = false;
+    item.consecutiveCorrect = 0;
+    item.reviewTodayCount = 0;
     syncLegacyItemFields(item);
   });
 }
