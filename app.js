@@ -828,6 +828,84 @@ async function saveCurrentPcStudyCoreToFirestoreFromSettings() {
   }
 }
 
+async function inspectStudyCoreFromFirestoreInSettings() {
+  const resultEl = document.getElementById("studyCoreInspectResult");
+  const showResult = (text) => {
+    if (!resultEl) return;
+    resultEl.textContent = text;
+    resultEl.classList.remove("hidden");
+  };
+
+  const currentUid = getStudyCoreCurrentUid();
+  if (!currentUid) {
+    showResult("Firestoreの学習データ\n\n先にPC版へログインしてください。");
+    return;
+  }
+  if (typeof window.loadStudyCoreFromFirestore !== "function") {
+    showResult("Firestoreの学習データ\n\nFirestore読取機能を利用できません。");
+    return;
+  }
+
+  showResult("Firestoreの学習データ\n\n読み取り中...");
+
+  try {
+    const remoteResult = await window.loadStudyCoreFromFirestore(currentUid);
+    if (!remoteResult?.exists || !remoteResult?.data || typeof remoteResult.data !== "object") {
+      showResult("Firestoreの学習データ\n\nstudyCoreが見つかりませんでした。");
+      return;
+    }
+
+    const data = remoteResult.data;
+    const unlockedDayMax = Math.max(1, Number(data.unlockedDayMax) || 1);
+    const itemsMap = data.items && typeof data.items === "object" ? data.items : {};
+    const itemIds = Object.keys(itemsMap);
+
+    let levelDataCount = 0;
+    let learningStatsCount = 0;
+    let reviewDueCount = 0;
+
+    itemIds.forEach((questionId) => {
+      const entry = itemsMap[questionId];
+      if (!entry || typeof entry !== "object") return;
+      if (entry.levelData && typeof entry.levelData === "object") {
+        levelDataCount += 1;
+      }
+      if (entry.learningStats && typeof entry.learningStats === "object") {
+        learningStatsCount += 1;
+      }
+      if (Object.prototype.hasOwnProperty.call(entry, "reviewDue")) {
+        reviewDueCount += 1;
+      }
+    });
+
+    let reviewRecordsMap = {};
+    if (data.reviewRecords && typeof data.reviewRecords === "object") {
+      reviewRecordsMap = data.reviewRecords;
+    } else if (data.review && typeof data.review === "object" && data.review.records && typeof data.review.records === "object") {
+      reviewRecordsMap = data.review.records;
+    }
+    const reviewRecordsCount = Object.keys(reviewRecordsMap).length;
+
+    const updatedAt = Math.max(0, Number(data.updatedAt) || 0);
+    const updatedAtLabel = updatedAt > 0 ? formatTimestampToJstDisplay(updatedAt) : "-";
+
+    showResult([
+      "Firestoreの学習データ",
+      "",
+      `Day進捗：${unlockedDayMax}`,
+      `問題データ：${itemIds.length}件`,
+      `レベルデータ：${levelDataCount}件`,
+      `学習回数データ：${learningStatsCount}件`,
+      `復習記録：${reviewRecordsCount}件`,
+      `復習対象データ：${reviewDueCount}件`,
+      `更新日時：${updatedAtLabel}`
+    ].join("\n"));
+  } catch (error) {
+    console.error("Failed to inspect studyCore from Firestore", error);
+    showResult("Firestoreの学習データ\n\n読取に失敗しました。時間をおいて再度お試しください。");
+  }
+}
+
 async function syncStudyCoreAfterLogin() {
   const currentUid = getStudyCoreCurrentUid();
   if (!currentUid || typeof window.loadStudyCoreFromFirestore !== "function" || typeof window.saveStudyCoreToFirestore !== "function") {
@@ -9557,6 +9635,13 @@ function bindEvents() {
   if (saveStudyCoreToFirestoreBtn) {
     saveStudyCoreToFirestoreBtn.addEventListener("click", async () => {
       await saveCurrentPcStudyCoreToFirestoreFromSettings();
+    });
+  }
+
+  const inspectStudyCoreFromFirestoreBtn = document.getElementById("inspectStudyCoreFromFirestoreBtn");
+  if (inspectStudyCoreFromFirestoreBtn) {
+    inspectStudyCoreFromFirestoreBtn.addEventListener("click", async () => {
+      await inspectStudyCoreFromFirestoreInSettings();
     });
   }
 

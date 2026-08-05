@@ -241,6 +241,10 @@
               <p class="settings-studycore-note">長男PCでのみ実行してください。</p>
               <input id="backupRestoreFileInput" class="hidden" type="file" accept="application/json,.json" />
             </div>
+            <div class="settings-studycore-wrap" aria-label="Firestore学習データ確認">
+              <button id="inspectStudyCoreFromFirestoreBtn" class="secondary-btn settings-backup-btn" type="button">Firestoreの学習データを確認</button>
+              <div id="studyCoreInspectResult" class="settings-studycore-result hidden" aria-live="polite"></div>
+            </div>
             <div class="settings-danger-wrap">
               <button id="openResetLearningDataModalBtn" class="secondary-btn settings-reset-btn" type="button">学習記録をすべて初期化</button>
             </div>
