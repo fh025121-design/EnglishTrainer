@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260725-2327" />
+    <link rel="stylesheet" href="styles.css?v=20260806-0158" />
   </head>
   <body class="auth-pending">
     <div id="loginScreen" class="login-shell" aria-live="polite">
@@ -237,6 +237,8 @@
             <div class="settings-backup-wrap" aria-label="学習記録バックアップ操作">
               <button id="backupLearningDataBtn" class="secondary-btn settings-backup-btn" type="button">💾 学習記録をバックアップ</button>
               <button id="restoreLearningDataBtn" class="secondary-btn settings-backup-btn" type="button">📂 学習記録を復元</button>
+              <button id="saveStudyCoreToFirestoreBtn" class="secondary-btn settings-backup-btn" type="button">このPCの学習データをFirestoreへ保存</button>
+              <p class="settings-studycore-note">長男PCでのみ実行してください。</p>
               <input id="backupRestoreFileInput" class="hidden" type="file" accept="application/json,.json" />
             </div>
             <div class="settings-danger-wrap">
@@ -972,11 +974,11 @@
       </div>
     </div>
 
-    <script src="data.js?v=20260725-2327"></script>
-    <script src="preposition-data.js?v=20260725-2327"></script>
-    <script src="response-data.js?v=20260725-2327"></script>
-    <script src="release-info.js?v=20260725-2327"></script>
-    <script src="app.js?v=20260725-2327"></script>
-    <script type="module" src="firebase.js?v=20260725-2327"></script>
+    <script src="data.js?v=20260806-0158"></script>
+    <script src="preposition-data.js?v=20260806-0158"></script>
+    <script src="response-data.js?v=20260806-0158"></script>
+    <script src="release-info.js?v=20260806-0158"></script>
+    <script src="app.js?v=20260806-0158"></script>
+    <script type="module" src="firebase.js?v=20260806-0158"></script>
   </body>
 </html>

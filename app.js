@@ -134,6 +134,21 @@ const POINT_SYSTEM_CONFIG = Object.freeze({
     Object.freeze({ id: "other", name: "その他（未定）", cost: 0, available: false })
   ])
 });
+const STUDY_CORE_SYNC_SCHEMA_VERSION = 1;
+const STUDY_CORE_SYNC_LOCAL_META_KEY = "english-trainer-pc-study-core-sync-v1";
+const STUDY_CORE_SYNC_DEBUG_KEY = "english-trainer-pc-study-core-sync-debug-v1";
+const STUDY_CORE_SYNC_DEBOUNCE_MS = 250;
+const studyCoreSyncRuntime = {
+  pendingItemIds: new Set(),
+  pendingReviewRecordIds: new Set(),
+  pendingUnlockedDayMax: false,
+  flushTimer: null,
+  isFlushing: false,
+  initializedUid: "",
+  remoteData: null,
+  isApplying: false
+};
+window.StudyCoreSyncDebugInfo = window.StudyCoreSyncDebugInfo || {};
 let resultActionFocusMode = null;
 const PHASE_METADATA = {
   phase0: {
@@ -210,6 +225,668 @@ const keyboardNavState = {
   isExecuting: false,
   lastExecuteAt: 0
 };
+
+function createDefaultStudyCoreSyncMeta() {
+  return {
+    schemaVersion: STUDY_CORE_SYNC_SCHEMA_VERSION,
+    uid: "",
+    initialized: false,
+    lastLocalChangeAt: 0,
+    unlockedDayMaxUpdatedAt: 0,
+    items: {},
+    reviewRecords: {},
+    lastResolution: null
+  };
+}
+
+let studyCoreSyncMetaCache = null;
+
+function sanitizeStudyCoreSyncMeta(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const items = source.items && typeof source.items === "object" ? source.items : {};
+  const reviewRecords = source.reviewRecords && typeof source.reviewRecords === "object" ? source.reviewRecords : {};
+  const sanitizeUpdatedAtMap = (map) => Object.fromEntries(
+    Object.entries(map)
+      .map(([key, row]) => {
+        const updatedAt = Math.max(0, Number(row?.updatedAt) || 0);
+        return key ? [String(key), { updatedAt }] : null;
+      })
+      .filter(Boolean)
+  );
+  return {
+    schemaVersion: STUDY_CORE_SYNC_SCHEMA_VERSION,
+    uid: typeof source.uid === "string" ? source.uid : "",
+    initialized: Boolean(source.initialized),
+    lastLocalChangeAt: Math.max(0, Number(source.lastLocalChangeAt) || 0),
+    unlockedDayMaxUpdatedAt: Math.max(0, Number(source.unlockedDayMaxUpdatedAt) || 0),
+    items: sanitizeUpdatedAtMap(items),
+    reviewRecords: sanitizeUpdatedAtMap(reviewRecords),
+    lastResolution: source.lastResolution && typeof source.lastResolution === "object"
+      ? {
+        uid: typeof source.lastResolution.uid === "string" ? source.lastResolution.uid : "",
+        adopted: typeof source.lastResolution.adopted === "string" ? source.lastResolution.adopted : "",
+        remoteUpdatedAt: Math.max(0, Number(source.lastResolution.remoteUpdatedAt) || 0),
+        localUpdatedAt: Math.max(0, Number(source.lastResolution.localUpdatedAt) || 0),
+        localInfoSource: typeof source.lastResolution.localInfoSource === "string" ? source.lastResolution.localInfoSource : "",
+        happenedAt: Math.max(0, Number(source.lastResolution.happenedAt) || 0)
+      }
+      : null
+  };
+}
+
+function loadStudyCoreSyncMeta() {
+  if (studyCoreSyncMetaCache) return studyCoreSyncMetaCache;
+  try {
+    const raw = localStorage.getItem(STUDY_CORE_SYNC_LOCAL_META_KEY);
+    if (!raw) {
+      studyCoreSyncMetaCache = createDefaultStudyCoreSyncMeta();
+      return studyCoreSyncMetaCache;
+    }
+    studyCoreSyncMetaCache = sanitizeStudyCoreSyncMeta(JSON.parse(raw));
+    return studyCoreSyncMetaCache;
+  } catch (_error) {
+    studyCoreSyncMetaCache = createDefaultStudyCoreSyncMeta();
+    return studyCoreSyncMetaCache;
+  }
+}
+
+function saveStudyCoreSyncMeta(nextMeta) {
+  studyCoreSyncMetaCache = sanitizeStudyCoreSyncMeta(nextMeta);
+  localStorage.setItem(STUDY_CORE_SYNC_LOCAL_META_KEY, JSON.stringify(studyCoreSyncMetaCache));
+  return studyCoreSyncMetaCache;
+}
+
+function updateStudyCoreSyncDebugInfo(payload) {
+  window.StudyCoreSyncDebugInfo = {
+    ...(window.StudyCoreSyncDebugInfo || {}),
+    ...(payload && typeof payload === "object" ? payload : {})
+  };
+  try {
+    localStorage.setItem(STUDY_CORE_SYNC_DEBUG_KEY, JSON.stringify(window.StudyCoreSyncDebugInfo));
+  } catch (_error) {
+    // Ignore debug cache failures.
+  }
+}
+
+function parseStudyCoreDateKeyToTimestamp(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+  if (!match) return 0;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!year || !month || !day) return 0;
+  return Date.UTC(year, month - 1, day, 14, 59, 59, 999);
+}
+
+function getStudyCoreCurrentUid() {
+  return String(getCurrentPcFirebaseUser()?.uid || "").trim();
+}
+
+function getStudyCoreItemDerivedUpdatedAt(item, record) {
+  const stats = sanitizeLearningStats(item?.learningStats);
+  return Math.max(
+    parseStudyCoreDateKeyToTimestamp(stats.lastStudiedDate),
+    parseStudyCoreDateKeyToTimestamp(stats.lastCorrectDate),
+    getStudyCoreReviewRecordDerivedUpdatedAt(record)
+  );
+}
+
+function getStudyCoreReviewRecordDerivedUpdatedAt(record) {
+  if (!record || typeof record !== "object") return 0;
+  return Math.max(
+    parseStudyCoreDateKeyToTimestamp(record.lastReviewedDate),
+    parseStudyCoreDateKeyToTimestamp(record.nextReviewDate)
+  );
+}
+
+function getStudyCoreLocalUpdateInfo() {
+  const meta = loadStudyCoreSyncMeta();
+  if (meta.lastLocalChangeAt > 0) {
+    return {
+      updatedAt: meta.lastLocalChangeAt,
+      source: "meta",
+      label: formatTimestampToJstDisplay(meta.lastLocalChangeAt)
+    };
+  }
+
+  let derivedUpdatedAt = Math.max(0, Number(meta.unlockedDayMaxUpdatedAt) || 0);
+  Object.values(state.review.records || {}).forEach((record) => {
+    derivedUpdatedAt = Math.max(derivedUpdatedAt, getStudyCoreReviewRecordDerivedUpdatedAt(record));
+  });
+  state.items.forEach((item) => {
+    derivedUpdatedAt = Math.max(
+      derivedUpdatedAt,
+      getStudyCoreItemDerivedUpdatedAt(item, state.review.records?.[item.id])
+    );
+  });
+
+  return {
+    updatedAt: derivedUpdatedAt,
+    source: "derived",
+    label: derivedUpdatedAt ? formatTimestampToJstDisplay(derivedUpdatedAt) : ""
+  };
+}
+
+function getStudyCoreItemLocalUpdatedAt(questionId) {
+  const meta = loadStudyCoreSyncMeta();
+  const stored = Math.max(0, Number(meta.items?.[questionId]?.updatedAt) || 0);
+  if (stored > 0) return stored;
+  return getStudyCoreItemDerivedUpdatedAt(getQuestionById(questionId), state.review.records?.[questionId]);
+}
+
+function getStudyCoreReviewRecordLocalUpdatedAt(questionId) {
+  const meta = loadStudyCoreSyncMeta();
+  const stored = Math.max(0, Number(meta.reviewRecords?.[questionId]?.updatedAt) || 0);
+  if (stored > 0) return stored;
+  return getStudyCoreReviewRecordDerivedUpdatedAt(state.review.records?.[questionId]);
+}
+
+function hasStudyCoreMeaningfulItemState(item, record) {
+  if (!item) return false;
+  const levelData = sanitizeLevelData(item.levelData);
+  const learningStats = sanitizeLearningStats(item.learningStats);
+  return Boolean(
+    levelData.level > 1 ||
+    levelData.successCount > 0 ||
+    levelData.lv4FailureCount > 0 ||
+    levelData.lv4Celebrated ||
+    learningStats.attempts > 0 ||
+    learningStats.correct > 0 ||
+    learningStats.lastStudiedDate ||
+    learningStats.lastCorrectDate ||
+    item.reviewDue ||
+    record
+  );
+}
+
+function collectStudyCoreTrackedItemIds() {
+  const ids = new Set();
+  state.items.forEach((item) => {
+    if (hasStudyCoreMeaningfulItemState(item, state.review.records?.[item.id])) {
+      ids.add(String(item.id));
+    }
+  });
+  Object.keys(state.review.records || {}).forEach((questionId) => {
+    if (questionId) ids.add(String(questionId));
+  });
+  return [...ids];
+}
+
+function buildStudyCoreSource() {
+  return {
+    deviceType: "pc",
+    appVersion: APP_VERSION
+  };
+}
+
+function buildStudyCoreItemSyncEntry(questionId, updatedAt = 0) {
+  const item = getQuestionById(questionId);
+  if (!item) return null;
+  return {
+    levelData: sanitizeLevelData(item.levelData),
+    learningStats: sanitizeLearningStats(item.learningStats),
+    reviewDue: Boolean(item.reviewDue),
+    updatedAt: Math.max(0, Number(updatedAt) || 0)
+  };
+}
+
+function buildStudyCoreReviewRecordSyncEntry(questionId, updatedAt = 0) {
+  const record = state.review.records?.[questionId];
+  if (!record) return null;
+  return {
+    ...sanitizeReviewRecord(questionId, record),
+    updatedAt: Math.max(0, Number(updatedAt) || 0)
+  };
+}
+
+function ensureStudyCoreLocalMetaBaseline(uid, options = {}) {
+  const now = Math.max(0, Number(options.now) || Date.now());
+  const meta = loadStudyCoreSyncMeta();
+  meta.uid = String(uid || meta.uid || "");
+  meta.lastLocalChangeAt = Math.max(meta.lastLocalChangeAt, now);
+  meta.unlockedDayMaxUpdatedAt = Math.max(meta.unlockedDayMaxUpdatedAt, now);
+  collectStudyCoreTrackedItemIds().forEach((questionId) => {
+    meta.items[questionId] = {
+      updatedAt: Math.max(0, Number(meta.items?.[questionId]?.updatedAt) || now)
+    };
+  });
+  Object.keys(state.review.records || {}).forEach((questionId) => {
+    meta.reviewRecords[questionId] = {
+      updatedAt: Math.max(0, Number(meta.reviewRecords?.[questionId]?.updatedAt) || now)
+    };
+  });
+  return saveStudyCoreSyncMeta(meta);
+}
+
+function markStudyCoreLocalChange(options = {}) {
+  if (studyCoreSyncRuntime.isApplying) return;
+  const now = Date.now();
+  const meta = loadStudyCoreSyncMeta();
+  meta.lastLocalChangeAt = Math.max(meta.lastLocalChangeAt, now);
+  if (options.unlockedDayMax) {
+    meta.unlockedDayMaxUpdatedAt = now;
+    studyCoreSyncRuntime.pendingUnlockedDayMax = true;
+  }
+  (Array.isArray(options.itemIds) ? options.itemIds : []).forEach((questionId) => {
+    const key = String(questionId || "").trim();
+    if (!key) return;
+    meta.items[key] = { updatedAt: now };
+    studyCoreSyncRuntime.pendingItemIds.add(key);
+  });
+  (Array.isArray(options.reviewRecordIds) ? options.reviewRecordIds : []).forEach((questionId) => {
+    const key = String(questionId || "").trim();
+    if (!key) return;
+    meta.reviewRecords[key] = { updatedAt: now };
+    studyCoreSyncRuntime.pendingReviewRecordIds.add(key);
+  });
+  saveStudyCoreSyncMeta(meta);
+}
+
+function canSyncStudyCoreToFirestore() {
+  return Boolean(getStudyCoreCurrentUid() && typeof window.loadStudyCoreFromFirestore === "function" && typeof window.saveStudyCoreToFirestore === "function");
+}
+
+function buildStudyCoreFullPayload(uid) {
+  const meta = ensureStudyCoreLocalMetaBaseline(uid);
+  const payload = {
+    schemaVersion: STUDY_CORE_SYNC_SCHEMA_VERSION,
+    updatedAt: Math.max(meta.lastLocalChangeAt, Date.now()),
+    source: buildStudyCoreSource(),
+    unlockedDayMax: Math.max(1, Number(state.stats?.unlockedDayMax) || 1),
+    unlockedDayMaxUpdatedAt: Math.max(0, Number(meta.unlockedDayMaxUpdatedAt) || 0),
+    items: {},
+    reviewRecords: {}
+  };
+
+  collectStudyCoreTrackedItemIds().forEach((questionId) => {
+    const entry = buildStudyCoreItemSyncEntry(questionId, meta.items?.[questionId]?.updatedAt || meta.lastLocalChangeAt);
+    if (entry) {
+      payload.items[questionId] = entry;
+    }
+  });
+
+  Object.keys(state.review.records || {}).forEach((questionId) => {
+    const entry = buildStudyCoreReviewRecordSyncEntry(questionId, meta.reviewRecords?.[questionId]?.updatedAt || meta.lastLocalChangeAt);
+    if (entry) {
+      payload.reviewRecords[questionId] = entry;
+    }
+  });
+
+  return payload;
+}
+
+function buildStudyCoreDeltaPayload(itemIds, reviewRecordIds, includeUnlockedDayMax) {
+  const meta = loadStudyCoreSyncMeta();
+  const payload = {
+    schemaVersion: STUDY_CORE_SYNC_SCHEMA_VERSION,
+    updatedAt: Math.max(meta.lastLocalChangeAt, Date.now()),
+    source: buildStudyCoreSource()
+  };
+
+  if (includeUnlockedDayMax) {
+    payload.unlockedDayMax = Math.max(1, Number(state.stats?.unlockedDayMax) || 1);
+    payload.unlockedDayMaxUpdatedAt = Math.max(0, Number(meta.unlockedDayMaxUpdatedAt) || 0);
+  }
+
+  const itemEntries = {};
+  (Array.isArray(itemIds) ? itemIds : []).forEach((questionId) => {
+    const entry = buildStudyCoreItemSyncEntry(questionId, meta.items?.[questionId]?.updatedAt || meta.lastLocalChangeAt);
+    if (entry) {
+      itemEntries[String(questionId)] = entry;
+    }
+  });
+  if (Object.keys(itemEntries).length > 0) {
+    payload.items = itemEntries;
+  }
+
+  const reviewEntries = {};
+  (Array.isArray(reviewRecordIds) ? reviewRecordIds : []).forEach((questionId) => {
+    const entry = buildStudyCoreReviewRecordSyncEntry(questionId, meta.reviewRecords?.[questionId]?.updatedAt || meta.lastLocalChangeAt);
+    if (entry) {
+      reviewEntries[String(questionId)] = entry;
+    }
+  });
+  if (Object.keys(reviewEntries).length > 0) {
+    payload.reviewRecords = reviewEntries;
+  }
+
+  return payload;
+}
+
+function resolveStudyCoreDeltaAgainstRemote(remoteData, delta) {
+  const payload = {
+    schemaVersion: STUDY_CORE_SYNC_SCHEMA_VERSION,
+    updatedAt: Math.max(0, Number(delta?.updatedAt) || Date.now()),
+    source: buildStudyCoreSource()
+  };
+  let hasAnyChange = false;
+
+  if (Object.prototype.hasOwnProperty.call(delta || {}, "unlockedDayMax")) {
+    const currentValue = Math.max(1, Number(remoteData?.unlockedDayMax) || 1);
+    const incomingValue = Math.max(1, Number(delta?.unlockedDayMax) || 1);
+    const currentUpdatedAt = Math.max(0, Number(remoteData?.unlockedDayMaxUpdatedAt) || 0);
+    const incomingUpdatedAt = Math.max(0, Number(delta?.unlockedDayMaxUpdatedAt) || 0);
+    if (incomingValue > currentValue || (incomingValue === currentValue && incomingUpdatedAt >= currentUpdatedAt)) {
+      payload.unlockedDayMax = Math.max(currentValue, incomingValue);
+      payload.unlockedDayMaxUpdatedAt = Math.max(currentUpdatedAt, incomingUpdatedAt, payload.updatedAt);
+      hasAnyChange = true;
+    }
+  }
+
+  const itemEntries = {};
+  Object.entries(delta?.items || {}).forEach(([questionId, entry]) => {
+    const currentEntry = remoteData?.items?.[questionId];
+    const currentUpdatedAt = Math.max(0, Number(currentEntry?.updatedAt) || 0);
+    const incomingUpdatedAt = Math.max(0, Number(entry?.updatedAt) || 0);
+    if (!currentEntry || incomingUpdatedAt >= currentUpdatedAt) {
+      itemEntries[questionId] = {
+        levelData: sanitizeLevelData(entry.levelData),
+        learningStats: sanitizeLearningStats(entry.learningStats),
+        reviewDue: Boolean(entry.reviewDue),
+        updatedAt: incomingUpdatedAt
+      };
+      hasAnyChange = true;
+    }
+  });
+  if (Object.keys(itemEntries).length > 0) {
+    payload.items = itemEntries;
+  }
+
+  const reviewEntries = {};
+  Object.entries(delta?.reviewRecords || {}).forEach(([questionId, entry]) => {
+    const currentEntry = remoteData?.reviewRecords?.[questionId];
+    const currentUpdatedAt = Math.max(0, Number(currentEntry?.updatedAt) || 0);
+    const incomingUpdatedAt = Math.max(0, Number(entry?.updatedAt) || 0);
+    if (!currentEntry || incomingUpdatedAt >= currentUpdatedAt) {
+      reviewEntries[questionId] = {
+        ...sanitizeReviewRecord(questionId, entry),
+        updatedAt: incomingUpdatedAt
+      };
+      hasAnyChange = true;
+    }
+  });
+  if (Object.keys(reviewEntries).length > 0) {
+    payload.reviewRecords = reviewEntries;
+  }
+
+  return hasAnyChange ? payload : null;
+}
+
+function mergeStudyCoreData(baseData, patchData) {
+  const nextData = {
+    ...(baseData && typeof baseData === "object" ? baseData : {}),
+    ...(patchData && typeof patchData === "object" ? patchData : {})
+  };
+  if (patchData?.items) {
+    nextData.items = {
+      ...(baseData?.items && typeof baseData.items === "object" ? baseData.items : {}),
+      ...patchData.items
+    };
+  }
+  if (patchData?.reviewRecords) {
+    nextData.reviewRecords = {
+      ...(baseData?.reviewRecords && typeof baseData.reviewRecords === "object" ? baseData.reviewRecords : {}),
+      ...patchData.reviewRecords
+    };
+  }
+  return nextData;
+}
+
+function clearStudyCoreSynchronizedState() {
+  state.stats.unlockedDayMax = 1;
+  state.review.records = {};
+  state.items.forEach((item) => {
+    item.levelData = createDefaultLevelData();
+    item.learningStats = sanitizeLearningStats();
+    item.reviewDue = false;
+    syncLegacyItemFields(item);
+  });
+}
+
+function applyStudyCoreFromFirestore(remoteData, options = {}) {
+  if (!remoteData || typeof remoteData !== "object") return;
+  const replaceAll = Boolean(options.replaceAll);
+  const meta = loadStudyCoreSyncMeta();
+  if (replaceAll) {
+    studyCoreSyncRuntime.isApplying = true;
+    clearStudyCoreSynchronizedState();
+    meta.items = {};
+    meta.reviewRecords = {};
+  }
+
+  const remoteUnlockedDayMax = Math.max(1, Number(remoteData.unlockedDayMax) || 1);
+  const remoteUnlockedUpdatedAt = Math.max(0, Number(remoteData.unlockedDayMaxUpdatedAt) || Number(remoteData.updatedAt) || 0);
+  if (remoteUnlockedDayMax > Math.max(1, Number(state.stats?.unlockedDayMax) || 1) || replaceAll) {
+    state.stats.unlockedDayMax = Math.max(Math.max(1, Number(state.stats?.unlockedDayMax) || 1), remoteUnlockedDayMax);
+  }
+  meta.unlockedDayMaxUpdatedAt = Math.max(meta.unlockedDayMaxUpdatedAt, remoteUnlockedUpdatedAt);
+
+  Object.entries(remoteData.items || {}).forEach(([questionId, entry]) => {
+    const item = getQuestionById(questionId);
+    if (!item) return;
+    const remoteUpdatedAt = Math.max(0, Number(entry?.updatedAt) || 0);
+    const localUpdatedAt = getStudyCoreItemLocalUpdatedAt(questionId);
+    if (!replaceAll && remoteUpdatedAt < localUpdatedAt) return;
+    item.levelData = sanitizeLevelData(entry.levelData);
+    item.learningStats = sanitizeLearningStats(entry.learningStats);
+    item.reviewDue = Boolean(entry.reviewDue);
+    syncLegacyItemFields(item);
+    meta.items[questionId] = { updatedAt: remoteUpdatedAt };
+  });
+
+  Object.entries(remoteData.reviewRecords || {}).forEach(([questionId, entry]) => {
+    const remoteUpdatedAt = Math.max(0, Number(entry?.updatedAt) || 0);
+    const localUpdatedAt = getStudyCoreReviewRecordLocalUpdatedAt(questionId);
+    if (!replaceAll && remoteUpdatedAt < localUpdatedAt) return;
+    state.review.records[questionId] = sanitizeReviewRecord(questionId, entry);
+    meta.reviewRecords[questionId] = { updatedAt: remoteUpdatedAt };
+  });
+
+  meta.uid = String(getStudyCoreCurrentUid() || meta.uid || "");
+  meta.initialized = true;
+  meta.lastLocalChangeAt = Math.max(meta.lastLocalChangeAt, Math.max(0, Number(remoteData.updatedAt) || 0));
+  saveStudyCoreSyncMeta(meta);
+  studyCoreSyncRuntime.isApplying = false;
+}
+
+function reconcileReviewDueFromReviewRecords() {
+  const previousApplying = studyCoreSyncRuntime.isApplying;
+  studyCoreSyncRuntime.isApplying = true;
+  state.items.forEach((item) => {
+    item.reviewDue = false;
+  });
+  activateDueReviewItems();
+  Object.values(state.review.records || {}).forEach((record) => {
+    if (record?.questionId && record.isVisibleInReviewList) {
+      setItemReviewDue(record.questionId, true);
+    }
+  });
+  studyCoreSyncRuntime.isApplying = previousApplying;
+}
+
+function refreshStudyCoreSyncScreens() {
+  syncDaySelectOptions();
+  renderDayCatalog();
+  renderHome();
+  renderProgress();
+}
+
+function recordStudyCoreSyncResolution(payload) {
+  const meta = loadStudyCoreSyncMeta();
+  meta.lastResolution = {
+    uid: String(payload?.uid || meta.uid || ""),
+    adopted: typeof payload?.adopted === "string" ? payload.adopted : "",
+    remoteUpdatedAt: Math.max(0, Number(payload?.remoteUpdatedAt) || 0),
+    localUpdatedAt: Math.max(0, Number(payload?.localUpdatedAt) || 0),
+    localInfoSource: typeof payload?.localInfoSource === "string" ? payload.localInfoSource : "",
+    happenedAt: Date.now()
+  };
+  saveStudyCoreSyncMeta(meta);
+  updateStudyCoreSyncDebugInfo({
+    lastResolution: meta.lastResolution,
+    currentUid: meta.uid,
+    remoteUpdatedAtLabel: meta.lastResolution.remoteUpdatedAt ? formatTimestampToJstDisplay(meta.lastResolution.remoteUpdatedAt) : "",
+    localUpdatedAtLabel: meta.lastResolution.localUpdatedAt ? formatTimestampToJstDisplay(meta.lastResolution.localUpdatedAt) : ""
+  });
+}
+
+async function flushPendingStudyCoreSync() {
+  if (studyCoreSyncRuntime.isFlushing || studyCoreSyncRuntime.isApplying) return false;
+  if (!canSyncStudyCoreToFirestore()) return false;
+
+  const itemIds = [...studyCoreSyncRuntime.pendingItemIds];
+  const reviewRecordIds = [...studyCoreSyncRuntime.pendingReviewRecordIds];
+  const includeUnlockedDayMax = studyCoreSyncRuntime.pendingUnlockedDayMax;
+  if (!itemIds.length && !reviewRecordIds.length && !includeUnlockedDayMax) {
+    return false;
+  }
+
+  studyCoreSyncRuntime.isFlushing = true;
+  studyCoreSyncRuntime.pendingItemIds.clear();
+  studyCoreSyncRuntime.pendingReviewRecordIds.clear();
+  studyCoreSyncRuntime.pendingUnlockedDayMax = false;
+
+  try {
+    const currentUid = getStudyCoreCurrentUid();
+    const remoteResult = await window.loadStudyCoreFromFirestore(currentUid);
+    const delta = buildStudyCoreDeltaPayload(itemIds, reviewRecordIds, includeUnlockedDayMax);
+    const payload = resolveStudyCoreDeltaAgainstRemote(remoteResult?.data || {}, delta);
+    if (!payload) {
+      return false;
+    }
+    const saved = await window.saveStudyCoreToFirestore(payload, { targetUid: currentUid, merge: true });
+    if (!saved) {
+      throw new Error("studyCore save failed");
+    }
+    studyCoreSyncRuntime.remoteData = mergeStudyCoreData(remoteResult?.data || {}, payload);
+    updateStudyCoreSyncDebugInfo({ lastDeltaSaveAt: Date.now(), lastDeltaPayload: payload });
+    return true;
+  } catch (error) {
+    itemIds.forEach((questionId) => studyCoreSyncRuntime.pendingItemIds.add(questionId));
+    reviewRecordIds.forEach((questionId) => studyCoreSyncRuntime.pendingReviewRecordIds.add(questionId));
+    if (includeUnlockedDayMax) {
+      studyCoreSyncRuntime.pendingUnlockedDayMax = true;
+    }
+    console.error("Failed to flush study core sync", error);
+    return false;
+  } finally {
+    studyCoreSyncRuntime.isFlushing = false;
+  }
+}
+
+function scheduleStudyCoreSync() {
+  if (studyCoreSyncRuntime.isApplying) return;
+  if (studyCoreSyncRuntime.flushTimer) {
+    clearTimeout(studyCoreSyncRuntime.flushTimer);
+  }
+  studyCoreSyncRuntime.flushTimer = setTimeout(() => {
+    studyCoreSyncRuntime.flushTimer = null;
+    flushPendingStudyCoreSync();
+  }, STUDY_CORE_SYNC_DEBOUNCE_MS);
+}
+
+async function saveCurrentPcStudyCoreToFirestoreFromSettings() {
+  const currentUid = getStudyCoreCurrentUid();
+  if (!currentUid) {
+    alert("先にPC版へログインしてください。");
+    return;
+  }
+  if (typeof window.saveStudyCoreToFirestore !== "function") {
+    alert("Firestore保存機能を利用できません。");
+    return;
+  }
+
+  const confirmed = await openBackupRestoreConfirmModal({
+    title: "Firestoreへ保存",
+    message: "このPCの学習データを基準としてFirestoreへ保存します。実行してよいですか？",
+    confirmText: "保存する"
+  });
+  if (!confirmed) return;
+
+  try {
+    ensureStudyCoreLocalMetaBaseline(currentUid, { now: Date.now() });
+    const payload = buildStudyCoreFullPayload(currentUid);
+    const saved = await window.saveStudyCoreToFirestore(payload, {
+      targetUid: currentUid,
+      merge: false
+    });
+    if (!saved) {
+      throw new Error("Study core save returned false");
+    }
+    studyCoreSyncRuntime.remoteData = payload;
+    recordStudyCoreSyncResolution({
+      uid: currentUid,
+      adopted: "local-manual-save",
+      remoteUpdatedAt: Math.max(0, Number(payload.updatedAt) || 0),
+      localUpdatedAt: Math.max(0, Number(payload.updatedAt) || 0),
+      localInfoSource: "manual"
+    });
+    alert("このPCの学習データをFirestoreへ保存しました。");
+  } catch (error) {
+    console.error("Failed to save study core from settings", error);
+    alert("Firestoreへの保存に失敗しました。時間をおいて再度お試しください。");
+  }
+}
+
+async function syncStudyCoreAfterLogin() {
+  const currentUid = getStudyCoreCurrentUid();
+  if (!currentUid || typeof window.loadStudyCoreFromFirestore !== "function" || typeof window.saveStudyCoreToFirestore !== "function") {
+    return;
+  }
+
+  const localInfo = getStudyCoreLocalUpdateInfo();
+  const remoteResult = await window.loadStudyCoreFromFirestore(currentUid);
+  const remoteData = remoteResult?.data || null;
+  const remoteUpdatedAt = Math.max(0, Number(remoteData?.updatedAt) || 0);
+  let adopted = "local";
+
+  if (!remoteResult?.exists) {
+    const fullPayload = buildStudyCoreFullPayload(currentUid);
+    await window.saveStudyCoreToFirestore(fullPayload, { targetUid: currentUid, merge: false });
+    studyCoreSyncRuntime.remoteData = fullPayload;
+    adopted = "local-initial-upload";
+  } else if (remoteUpdatedAt > Math.max(0, Number(localInfo.updatedAt) || 0)) {
+    applyStudyCoreFromFirestore(remoteData, { replaceAll: true });
+    adopted = "firestore";
+    studyCoreSyncRuntime.remoteData = remoteData;
+  } else {
+    const fullPayload = buildStudyCoreFullPayload(currentUid);
+    await window.saveStudyCoreToFirestore(fullPayload, { targetUid: currentUid, merge: false });
+    studyCoreSyncRuntime.remoteData = fullPayload;
+    adopted = remoteResult?.exists ? "local" : "local-initial-upload";
+  }
+
+  reconcileReviewDueFromReviewRecords();
+  syncDerivedStats();
+  saveState();
+  refreshStudyCoreSyncScreens();
+  studyCoreSyncRuntime.initializedUid = currentUid;
+  recordStudyCoreSyncResolution({
+    uid: currentUid,
+    adopted,
+    remoteUpdatedAt,
+    localUpdatedAt: localInfo.updatedAt,
+    localInfoSource: localInfo.source
+  });
+}
+
+function bindStudyCoreAuthStateListener() {
+  if (document.body?.dataset.studyCoreAuthBound === "true") return;
+  document.addEventListener("pc-firebase-auth-state", (event) => {
+    const user = event?.detail?.user || null;
+    if (!user) {
+      studyCoreSyncRuntime.initializedUid = "";
+      studyCoreSyncRuntime.remoteData = null;
+      return;
+    }
+    syncStudyCoreAfterLogin().catch((error) => {
+      console.error("Failed to synchronize study core after login", error);
+    });
+  });
+  if (document.body) {
+    document.body.dataset.studyCoreAuthBound = "true";
+  }
+}
 
 function createDefaultGameTicketStats() {
   return {
@@ -8873,6 +9550,13 @@ function bindEvents() {
       if (!file) return;
       await tryRestoreLearningDataFromFile(file);
       backupRestoreFileInput.value = "";
+    });
+  }
+
+  const saveStudyCoreToFirestoreBtn = document.getElementById("saveStudyCoreToFirestoreBtn");
+  if (saveStudyCoreToFirestoreBtn) {
+    saveStudyCoreToFirestoreBtn.addEventListener("click", async () => {
+      await saveCurrentPcStudyCoreToFirestoreFromSettings();
     });
   }
 

@@ -11,11 +11,13 @@ import {
   addDoc,
   doc,
   collection,
+  getDoc,
   getDocs,
   getFirestore,
   onSnapshot,
   orderBy,
   query,
+  setDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
@@ -220,6 +222,60 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
   };
 }
 
+function normalizeFirestoreSerializableValue(value) {
+  if (value == null) return value;
+  if (typeof value?.toMillis === "function") {
+    return Number(value.toMillis()) || 0;
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeFirestoreSerializableValue(entry));
+  }
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, normalizeFirestoreSerializableValue(entry)])
+    );
+  }
+  return value;
+}
+
+async function loadStudyCoreFromFirestore(targetUid = null) {
+  const user = auth.currentUser;
+  const resolvedUid = String(targetUid || user?.uid || "").trim();
+  if (!resolvedUid) {
+    return { exists: false, data: null };
+  }
+
+  const snapshot = await getDoc(doc(firestore, "users", resolvedUid, "sync", "studyCore"));
+  if (!snapshot.exists()) {
+    return { exists: false, data: null };
+  }
+
+  return {
+    exists: true,
+    data: normalizeFirestoreSerializableValue(snapshot.data() || {})
+  };
+}
+
+async function saveStudyCoreToFirestore(payload, options = {}) {
+  const user = auth.currentUser;
+  const resolvedUid = String(options?.targetUid || user?.uid || "").trim();
+  if (!resolvedUid || !payload || typeof payload !== "object") {
+    return false;
+  }
+
+  try {
+    await setDoc(
+      doc(firestore, "users", resolvedUid, "sync", "studyCore"),
+      payload,
+      { merge: options?.merge !== false }
+    );
+    return true;
+  } catch (error) {
+    console.error("Failed to save study core to Firestore", error);
+    return false;
+  }
+}
+
 function normalizeFamilyChildren(familyData) {
   const children = familyData && typeof familyData === "object" && familyData.children && typeof familyData.children === "object"
     ? familyData.children
@@ -352,6 +408,8 @@ async function initFirebaseAuthUi() {
 window.saveLearningHistoryToFirestore = saveLearningHistoryToFirestore;
 window.loadLearningHistoryEntriesFromFirestore = loadLearningHistoryEntriesFromFirestore;
 window.watchLearningHistoryEntriesFromFirestore = watchLearningHistoryEntriesFromFirestore;
+window.loadStudyCoreFromFirestore = loadStudyCoreFromFirestore;
+window.saveStudyCoreToFirestore = saveStudyCoreToFirestore;
 window.watchFamilyDocument = watchFamilyDocument;
 window.getFirebaseCurrentUser = () => auth.currentUser;
 window.EnglishTrainerFirebase = Object.freeze({ app, auth, firestore });
