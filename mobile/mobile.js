@@ -20,9 +20,9 @@
   const MOBILE_POINT_STORAGE_KEY = "english-trainer-mobile-points-v1";
   const MOBILE_POINT_CONFIG = Object.freeze({
     homeworkSpeakingDailyMax: 30,
-    reviewSpeakingDailyMax: 200,
+    reviewSpeakingDailyMax: 400,
     wordOrderDailyMax: 50,
-    totalDailyMax: 280,
+    totalDailyMax: 480,
     homeworkCompletionReward: 10,
     wordOrderCorrectReward: 2,
     seasonalNote: "summer-2026"
