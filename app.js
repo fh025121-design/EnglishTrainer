@@ -139,6 +139,24 @@ const STUDY_CORE_SYNC_SCHEMA_VERSION = 1;
 const STUDY_CORE_SYNC_LOCAL_META_KEY = "english-trainer-pc-study-core-sync-v1";
 const STUDY_CORE_SYNC_DEBUG_KEY = "english-trainer-pc-study-core-sync-debug-v1";
 const STUDY_CORE_SYNC_DEBOUNCE_MS = 250;
+function getCurrentPcFirebaseUid() {
+  return String(getCurrentPcFirebaseUser()?.uid || "").trim();
+}
+
+function getScopedLocalStorageKey(baseKey, uid = getCurrentPcFirebaseUid()) {
+  const safeUid = String(uid || "").trim();
+  return safeUid ? `${baseKey}-${safeUid}` : "";
+}
+
+function resetUserScopedStorageCaches() {
+  studyCoreSyncMetaCache = null;
+  pointStateCache = null;
+  pointStateBootstrapPromise = null;
+  studyCoreSyncRuntime.initializedUid = "";
+  studyCoreSyncRuntime.remoteData = null;
+  window.StudyCoreSyncDebugInfo = {};
+}
+
 const studyCoreSyncRuntime = {
   pendingItemIds: new Set(),
   pendingReviewRecordIds: new Set(),
@@ -278,7 +296,12 @@ function sanitizeStudyCoreSyncMeta(value) {
 function loadStudyCoreSyncMeta() {
   if (studyCoreSyncMetaCache) return studyCoreSyncMetaCache;
   try {
-    const raw = localStorage.getItem(STUDY_CORE_SYNC_LOCAL_META_KEY);
+    const storageKey = getScopedLocalStorageKey(STUDY_CORE_SYNC_LOCAL_META_KEY);
+    if (!storageKey) {
+      studyCoreSyncMetaCache = createDefaultStudyCoreSyncMeta();
+      return studyCoreSyncMetaCache;
+    }
+    const raw = localStorage.getItem(storageKey);
     if (!raw) {
       studyCoreSyncMetaCache = createDefaultStudyCoreSyncMeta();
       return studyCoreSyncMetaCache;
@@ -293,7 +316,9 @@ function loadStudyCoreSyncMeta() {
 
 function saveStudyCoreSyncMeta(nextMeta) {
   studyCoreSyncMetaCache = sanitizeStudyCoreSyncMeta(nextMeta);
-  localStorage.setItem(STUDY_CORE_SYNC_LOCAL_META_KEY, JSON.stringify(studyCoreSyncMetaCache));
+  const storageKey = getScopedLocalStorageKey(STUDY_CORE_SYNC_LOCAL_META_KEY);
+  if (!storageKey) return studyCoreSyncMetaCache;
+  localStorage.setItem(storageKey, JSON.stringify(studyCoreSyncMetaCache));
   return studyCoreSyncMetaCache;
 }
 
@@ -303,7 +328,9 @@ function updateStudyCoreSyncDebugInfo(payload) {
     ...(payload && typeof payload === "object" ? payload : {})
   };
   try {
-    localStorage.setItem(STUDY_CORE_SYNC_DEBUG_KEY, JSON.stringify(window.StudyCoreSyncDebugInfo));
+    const storageKey = getScopedLocalStorageKey(STUDY_CORE_SYNC_DEBUG_KEY);
+    if (!storageKey) return;
+    localStorage.setItem(storageKey, JSON.stringify(window.StudyCoreSyncDebugInfo));
   } catch (_error) {
     // Ignore debug cache failures.
   }
@@ -1279,7 +1306,9 @@ function sanitizeLearningHistoryEntry(entry) {
 
 function loadLearningHistoryEntries() {
   try {
-    const raw = localStorage.getItem(LEARNING_HISTORY_STORAGE_KEY);
+    const storageKey = getScopedLocalStorageKey(LEARNING_HISTORY_STORAGE_KEY);
+    if (!storageKey) return [];
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -2336,10 +2365,13 @@ function appendLearningHistoryEntry(entry) {
   }
   const history = loadLearningHistoryEntries();
   history.push(normalizedEntry);
-  localStorage.setItem(
-    LEARNING_HISTORY_STORAGE_KEY,
-    JSON.stringify(history.slice(-LEARNING_HISTORY_MAX_ENTRIES))
-  );
+  const storageKey = getScopedLocalStorageKey(LEARNING_HISTORY_STORAGE_KEY);
+  if (storageKey) {
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify(history.slice(-LEARNING_HISTORY_MAX_ENTRIES))
+    );
+  }
 
   const saveToFirestore = window.saveLearningHistoryToFirestore;
   if (typeof saveToFirestore === "function") {
@@ -4167,7 +4199,9 @@ function sanitizePointState(value) {
 
 function loadPointState() {
   try {
-    const raw = localStorage.getItem(POINT_SYSTEM_STORAGE_KEY);
+    const storageKey = getScopedLocalStorageKey(POINT_SYSTEM_STORAGE_KEY);
+    if (!storageKey) return createDefaultPointState();
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return createDefaultPointState();
     return sanitizePointState(JSON.parse(raw));
   } catch (_error) {
@@ -4177,7 +4211,9 @@ function loadPointState() {
 
 function savePointState(nextState) {
   pointStateCache = hydratePointDaySnapshots(sanitizePointState(nextState));
-  localStorage.setItem(POINT_SYSTEM_STORAGE_KEY, JSON.stringify(pointStateCache));
+  const storageKey = getScopedLocalStorageKey(POINT_SYSTEM_STORAGE_KEY);
+  if (!storageKey) return pointStateCache;
+  localStorage.setItem(storageKey, JSON.stringify(pointStateCache));
   return pointStateCache;
 }
 
@@ -4226,10 +4262,13 @@ function getLearningHistoryEntryDayKeyForPoints(entry) {
 }
 
 function shouldBootstrapPointStateFromFirestore() {
-  const currentUid = String(getCurrentPcFirebaseUser()?.uid || "").trim();
+  const currentUid = getCurrentPcFirebaseUid();
   if (!currentUid) return false;
 
-  const raw = localStorage.getItem(POINT_SYSTEM_STORAGE_KEY);
+  const storageKey = getScopedLocalStorageKey(POINT_SYSTEM_STORAGE_KEY, currentUid);
+  if (!storageKey) return false;
+
+  const raw = localStorage.getItem(storageKey);
   if (!raw) return true;
 
   try {
@@ -4247,12 +4286,13 @@ async function ensurePointStateFromFirestoreIfMissing() {
   if (!shouldBootstrapPointStateFromFirestore()) return false;
   if (pointStateBootstrapPromise) return pointStateBootstrapPromise;
 
-  const currentUid = String(getCurrentPcFirebaseUser()?.uid || "").trim();
+  const currentUid = getCurrentPcFirebaseUid();
   const watchFn = window.watchLearningHistoryEntriesFromFirestore;
   if (!currentUid || typeof watchFn !== "function") return false;
 
   pointStateBootstrapPromise = new Promise((resolve) => {
     let finished = false;
+    const bootstrapUid = currentUid;
     const finish = (didBootstrap) => {
       if (finished) return;
       finished = true;
@@ -4261,6 +4301,16 @@ async function ensurePointStateFromFirestoreIfMissing() {
 
     const unsubscribe = watchFn(currentUid, {
       onUpdate: (entries) => {
+        if (getCurrentPcFirebaseUid() !== bootstrapUid) {
+          try {
+            unsubscribe?.();
+          } catch (_error) {
+            // no-op
+          }
+          finish(false);
+          return;
+        }
+
         if (!shouldBootstrapPointStateFromFirestore()) {
           try {
             unsubscribe?.();
@@ -6153,7 +6203,9 @@ const defaultState = {
 function loadState() {
   const freshState = structuredClone(defaultState);
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const storageKey = getScopedLocalStorageKey(STORAGE_KEY);
+    if (!storageKey) return freshState;
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return freshState;
 
     const parsed = JSON.parse(raw);
@@ -6238,7 +6290,9 @@ function buildPersistedStateSnapshot() {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(buildPersistedStateSnapshot()));
+  const storageKey = getScopedLocalStorageKey(STORAGE_KEY);
+  if (!storageKey) return;
+  localStorage.setItem(storageKey, JSON.stringify(buildPersistedStateSnapshot()));
 }
 
 function createLearningBackupPayload() {
@@ -6246,7 +6300,7 @@ function createLearningBackupPayload() {
     formatVersion: 1,
     backupCreatedAt: new Date().toISOString(),
     appVersion: APP_VERSION,
-    storageKey: STORAGE_KEY,
+    storageKey: getScopedLocalStorageKey(STORAGE_KEY) || STORAGE_KEY,
     state: structuredClone(state)
   };
 }
@@ -6378,7 +6432,10 @@ async function tryRestoreLearningDataFromFile(file) {
       if (!legacyConfirmed) return;
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(backup.state));
+    const storageKey = getScopedLocalStorageKey(STORAGE_KEY);
+    if (storageKey) {
+      localStorage.setItem(storageKey, JSON.stringify(backup.state));
+    }
     alert("学習記録を復元しました。\n\nアプリを再読み込みします。");
     location.reload();
   } catch (error) {
@@ -9511,6 +9568,7 @@ function handleEnterKey(event) {
 }
 
 function bindEvents() {
+  bindUserScopedStorageAuthStateListener();
   bindAdminLearningHistoryAuthStateListener();
   bindHomeHistoryAuthStateListener();
   const typingAudioRepeatSelect = document.getElementById("typingAudioRepeatSelect");
@@ -9715,7 +9773,10 @@ function bindEvents() {
     confirmResetLearningDataBtn.addEventListener("click", () => {
       try {
         isResettingLearningData = true;
-        localStorage.removeItem(STORAGE_KEY);
+        const storageKey = getScopedLocalStorageKey(STORAGE_KEY);
+        if (storageKey) {
+          localStorage.removeItem(storageKey);
+        }
         location.reload();
       } catch (error) {
         isResettingLearningData = false;
@@ -10211,6 +10272,27 @@ function bindEvents() {
   window.addEventListener("resize", () => {
     applyDesktopResponsiveScale();
   });
+}
+
+function bindUserScopedStorageAuthStateListener() {
+  if (document.body?.dataset.userScopedStorageAuthBound === "true") return;
+  document.addEventListener("pc-firebase-auth-state", (event) => {
+    const user = event?.detail?.user || null;
+    resetUserScopedStorageCaches();
+    prepositionTrainingSession = null;
+    responseTrainingSession = null;
+    pendingTrainingCompleteContext = null;
+    state = loadState();
+    if (user) {
+      syncDerivedStats();
+    }
+    renderHome();
+    renderProgress();
+    showScreen("homeScreen", { recordHistory: false });
+  });
+  if (document.body) {
+    document.body.dataset.userScopedStorageAuthBound = "true";
+  }
 }
 
 let state = loadState();
