@@ -105,20 +105,21 @@ const GAME_TICKET_DAY_MS = 24 * 60 * 60 * 1000;
 const POINT_SYSTEM_STORAGE_KEY = "english-trainer-pc-points-v1";
 const POINT_SYSTEM_CONFIG = Object.freeze({
   typingDailyTotalCap: 200,
+  dayAdvanceCompletionBonusPoints: 50,
   dailyLimitModes: Object.freeze({
     normal: 200,
     event: 200
   }),
   defaultDailyLimitMode: "normal",
   rewardByTrainingMode: Object.freeze({
-    challenge: 1,
+    challenge: 2,
     preposition: 1,
     response: 1
   }),
   dailyCapByTrainingMode: Object.freeze({
     preposition: 40,
     response: 60,
-    challenge: 100
+    challenge: 200
   }),
   reservedBonuses: Object.freeze({
     weaknessClear: 0,
@@ -4043,6 +4044,7 @@ function createDefaultPointState() {
     balance: 0,
     dailyEarnedByDate: {},
     dailyEarnedByModeByDate: {},
+    dayAdvanceBonusAwardedByDay: {},
     todayEarned: 0,
     previousDayEarned: 0,
     totalEarned: 0,
@@ -4127,6 +4129,13 @@ function sanitizePointState(value) {
       })
     )
     : {};
+  const dayAdvanceBonusAwardedByDay = source.dayAdvanceBonusAwardedByDay && typeof source.dayAdvanceBonusAwardedByDay === "object"
+    ? Object.fromEntries(
+      Object.entries(source.dayAdvanceBonusAwardedByDay)
+        .filter(([dayKey, awarded]) => Number.isFinite(Number(dayKey)) && Number(dayKey) >= 1 && Boolean(awarded))
+        .map(([dayKey]) => [String(Math.floor(Number(dayKey))), true])
+    )
+    : {};
   const redeemedItemIds = Array.isArray(source.redeemedItemIds)
     ? [...new Set(source.redeemedItemIds.map((id) => String(id)).filter(Boolean))]
     : [];
@@ -4145,6 +4154,7 @@ function sanitizePointState(value) {
     balance: Math.max(0, Math.floor(Number(source.balance) || 0)),
     dailyEarnedByDate,
     dailyEarnedByModeByDate,
+    dayAdvanceBonusAwardedByDay,
     todayEarned: Math.max(0, Math.floor(Number(source.todayEarned) || 0)),
     previousDayEarned: Math.max(0, Math.floor(Number(source.previousDayEarned) || 0)),
     totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0)),
@@ -4401,6 +4411,43 @@ function awardPointsForTrainingMode(mode) {
     renderPointExchangeScreen();
   }
   return earned;
+}
+
+function awardDayAdvanceCompletionBonus(session, reason) {
+  if (!session || reason !== "completed") return 0;
+  if (session.mode !== "normal") return 0;
+  if (session.isDayStudySession) return 0;
+
+  const completedDay = Number(session.studyRangeEnd);
+  if (!Number.isFinite(completedDay) || completedDay < 1) return 0;
+  if (completedDay !== getUnlockedDayMax()) return 0;
+
+  const dayKey = String(Math.floor(completedDay));
+  const pointState = getPointState();
+  const awardedByDay = pointState.dayAdvanceBonusAwardedByDay && typeof pointState.dayAdvanceBonusAwardedByDay === "object"
+    ? pointState.dayAdvanceBonusAwardedByDay
+    : {};
+  if (awardedByDay[dayKey]) return 0;
+
+  const bonus = Math.max(0, Math.floor(Number(POINT_SYSTEM_CONFIG.dayAdvanceCompletionBonusPoints) || 0));
+  if (!bonus) return 0;
+
+  awardedByDay[dayKey] = true;
+  pointState.dayAdvanceBonusAwardedByDay = awardedByDay;
+  pointState.balance = Math.max(0, Number(pointState.balance) || 0) + bonus;
+  pointState.totalEarned = Math.max(0, Number(pointState.totalEarned) || 0) + bonus;
+
+  const todayKey = getPointTodayKey();
+  migratePointDayKeyRow(pointState, todayKey, 0);
+  const todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
+  pointState.dailyEarnedByDate[todayKey] = todayEarned + bonus;
+
+  savePointState(pointState);
+  const exchangeScreen = document.getElementById("exchangeTicketScreen");
+  if (exchangeScreen && exchangeScreen.classList.contains("active")) {
+    renderPointExchangeScreen();
+  }
+  return bonus;
 }
 
 function openPointRewardModal(points) {
@@ -7979,6 +8026,7 @@ function completeCurrentSession(reason = "completed", options = {}) {
     processCompletedTicketTraining({ trainingType: "challenge" });
   }
   processStreakBonusTicket(reason);
+  awardDayAdvanceCompletionBonus(session, reason);
   updateBestAccuracyFromSession(session);
   updateUnlockedDayByNormalCompletion(session, reason);
   const summary = buildResultSummary(session);

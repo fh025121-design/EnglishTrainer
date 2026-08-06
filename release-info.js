@@ -1,6 +1,8 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/06 11:35", note: "PC版のみ: 『過去の間違い』のポイント設定を更新。正解1問あたりの付与を+1Pから+2Pへ変更し、同モードの日次上限を100Pから200Pへ引き上げ。前置詞特訓/応答文特訓/Day進行ボーナス/ゲームチケット/モバイル版は未変更" },
+    { version: "2026/08/06 11:31", note: "PC版のみ: Day学習の進行ボーナスを追加。通常Day学習を完了して新しいDayへ進むタイミングで+50Pを付与し、Day1〜Day40の各Dayで1回のみ獲得可能に調整（最大2000P）。同日の再学習や中断完了では重複付与されないよう、ポイント状態にDay別付与済み記録を保存。既存の特訓ポイント（日次上限）・ゲームチケット・モバイル版は未変更" },
     { version: "2026/08/06 01:58", note: "PC版のみ: 学習コア状態のFirestore同期（第1段階）を追加。同期対象は unlockedDayMax・問題別 levelData・learningStats・review.records・reviewDue に限定し、保存先は `users/{uid}/sync/studyCore` の単一ドキュメントへ統一。初回はローカル状態を正として studyCore を新規作成し、既存 studyCore がある場合は Firestore と local の更新時刻を比較して採用元を決定。reviewDue は補助値として保存しつつ、読込時は review.records を正として再整合する構成へ変更。既存 learningHistory・ポイント・チケット・completedSessions・モバイル版は未変更" },
     { version: "2026/07/31 08:32", note: "PC版のみ: 応答文特訓の回答入力欄placeholderを空欄へ変更。回答例（例: isn't）が表示されないようにし、ヒントにならないよう調整。判定ロジック・問題文・回答データ・他画面は未変更" },
     { version: "2026/07/30 17:34", note: "PC版のみ: Day進行の解放判定を調整。ホームの『次へ進む Day○』導線は通常進行扱いのまま完了時にunlockedDayMaxを更新できるようにし、Day学習（予習・復習）の範囲指定導線とは挙動を分離" },
