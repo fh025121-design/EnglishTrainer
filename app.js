@@ -200,6 +200,7 @@ let activeLevelFilter = 1;
 let activeItemDetailId = null;
 let prepositionTrainingSession = null;
 let responseTrainingSession = null;
+let responseLearningHistoryDebugState = null;
 let currentScreenId = "homeScreen";
 let pendingTrainingCompleteContext = null;
 let deferGameTicketRewardModal = false;
@@ -2341,11 +2342,35 @@ function appendLearningHistoryEntry(entry) {
     endedAt: Number(sanitized?.endedAt),
     createdAt: sanitized?.createdAt ?? null
   });
-  if (!sanitized) return;
+  const isResponseMode = isResponseLearningHistoryEntry(entry) || isResponseLearningHistoryEntry(sanitized);
+  if (!sanitized) {
+    if (isResponseMode) {
+      setResponseLearningHistoryDebugState({
+        visible: true,
+        failureReason: "sanitizeLearningHistoryEntry が null",
+        message: "応答文特訓の履歴を保存できませんでした：sanitizeLearningHistoryEntry が null"
+      });
+    }
+    return;
+  }
   const normalizedEntry = {
     ...sanitized,
     mode: normalizeLearningMode(sanitized.mode)
   };
+  if (isResponseMode && Math.max(0, Number(sanitized.questionCount) || 0) === 0) {
+    setResponseLearningHistoryDebugState({
+      visible: true,
+      failureReason: "questionCount が 0",
+      message: "応答文特訓の履歴を保存できませんでした：questionCount が 0"
+    });
+  }
+  if (isResponseMode && Math.max(0, Number(sanitized.activeStudySeconds) || 0) === 0) {
+    setResponseLearningHistoryDebugState({
+      visible: true,
+      failureReason: "activeStudySeconds が 0",
+      message: "応答文特訓の履歴を保存できませんでした：activeStudySeconds が 0"
+    });
+  }
   if (Math.max(0, Number(sanitized.questionCount) || 0) === 0 || Math.max(0, Number(sanitized.activeStudySeconds) || 0) === 0) {
     console.log("[LearningHistoryDebug] appendLearningHistoryEntry stopped", {
       reason: Math.max(0, Number(sanitized.questionCount) || 0) === 0
@@ -2462,7 +2487,38 @@ function recordResponseLearningHistory(sessionLike, reason) {
     correctCount,
     accuracy: answerCount ? Math.round((correctCount / answerCount) * 100) : 0
   };
-  appendLearningHistoryEntry(buildLearningHistoryEntryFromSession(sessionLike, summary, reason));
+  const beforeCount = loadLearningHistoryEntries().length;
+  const entry = buildLearningHistoryEntryFromSession(sessionLike, summary, reason);
+  setResponseLearningHistoryDebugState({
+    visible: isResponseLearningHistoryEntry(entry),
+    beforeCount,
+    afterCount: beforeCount,
+    entry: {
+      questionCount: Number(entry.questionCount) || 0,
+      correctCount: Number(entry.correctCount) || 0,
+      activeStudySeconds: Number(entry.activeStudySeconds) || 0,
+      mode: String(entry.mode || ""),
+      earnedPoints: Number(entry.earnedPoints) || 0
+    },
+    message: "応答文特訓の履歴を保存中です"
+  });
+  appendLearningHistoryEntry(entry);
+  const afterCount = loadLearningHistoryEntries().length;
+  if (afterCount > beforeCount) {
+    setResponseLearningHistoryDebugState({
+      visible: true,
+      afterCount,
+      message: "応答文特訓の履歴を保存しました",
+      detail: ""
+    });
+    return;
+  }
+  const failureReason = String(responseLearningHistoryDebugState?.failureReason || "その他");
+  setResponseLearningHistoryDebugState({
+    visible: true,
+    afterCount,
+    message: `応答文特訓の履歴を保存できませんでした：${failureReason}`
+  });
 }
 
 function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
@@ -2487,6 +2543,50 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
     completedReason: String(reason || "completed"),
     ticket: computeLearningHistoryTicketDelta(ticketBefore, ticketAfter)
   };
+}
+
+function isResponseLearningHistoryEntry(entry) {
+  const mode = String(entry?.mode || "");
+  return mode === "response" || mode === "response-training" || mode === LEARNING_MODE.RESPONSE;
+}
+
+function setResponseLearningHistoryDebugState(nextState = {}) {
+  responseLearningHistoryDebugState = {
+    ...(responseLearningHistoryDebugState || {}),
+    ...(nextState && typeof nextState === "object" ? nextState : {})
+  };
+  renderResponseLearningHistoryDebugState();
+}
+
+function renderResponseLearningHistoryDebugState() {
+  const wrap = document.getElementById("responseLearningHistoryDebugWrap");
+  const values = document.getElementById("responseLearningHistoryDebugValues");
+  const status = document.getElementById("responseLearningHistoryDebugStatus");
+  if (!wrap || !values || !status) return;
+
+  const debugState = responseLearningHistoryDebugState;
+  const visible = Boolean(debugState && debugState.visible);
+  wrap.classList.toggle("hidden", !visible);
+  if (!visible) {
+    values.textContent = "";
+    status.textContent = "";
+    return;
+  }
+
+  const beforeCount = Number(debugState.beforeCount);
+  const afterCount = Number(debugState.afterCount);
+  const entry = debugState.entry || {};
+  const message = String(debugState.message || "");
+  const detail = String(debugState.detail || "");
+  values.innerHTML = [
+    `questionCount: <strong>${escapeHtml(String(entry.questionCount ?? 0))}</strong>`,
+    `correctCount: <strong>${escapeHtml(String(entry.correctCount ?? 0))}</strong>`,
+    `activeStudySeconds: <strong>${escapeHtml(String(entry.activeStudySeconds ?? 0))}</strong>`,
+    `mode: <strong>${escapeHtml(String(entry.mode || ""))}</strong>`,
+    `earnedPoints: <strong>${escapeHtml(String(entry.earnedPoints ?? 0))}</strong>`,
+    `localStorage件数: <strong>${Number.isFinite(beforeCount) ? escapeHtml(String(beforeCount)) : "-"}</strong> → <strong>${Number.isFinite(afterCount) ? escapeHtml(String(afterCount)) : "-"}</strong>`
+  ].join("<br>");
+  status.innerHTML = [message, detail].filter(Boolean).map((text) => escapeHtml(text)).join("<br>");
 }
 
 function sanitizeGameTicketStats(value) {
@@ -3142,6 +3242,7 @@ function buildResponseQuestionSet() {
 }
 
 function startResponseTraining(scope = "all") {
+  responseLearningHistoryDebugState = null;
   const questions = buildResponseQuestionSet();
   if (!questions.length) {
     alert("出題可能な応答文問題がありません。");
@@ -4001,6 +4102,10 @@ function openTrainingCompleteScreen(options = {}) {
   const modeLabel = getTrainingCompletionModeLabel(options.mode);
   const earnedPoints = Math.max(0, Math.floor(Number(options.earnedPoints) || 0));
   const pointBalance = Math.max(0, Math.floor(Number(options.pointBalance) || 0));
+  const normalizedMode = String(options.mode || "");
+  if (normalizedMode !== "response" && normalizedMode !== "response-training") {
+    responseLearningHistoryDebugState = null;
+  }
 
   titleText.textContent = `🎉 ${modeLabel} おつかれさまでした！`;
   earnedText.textContent = `＋${earnedPoints}P`;
@@ -4031,6 +4136,7 @@ function openTrainingCompleteScreen(options = {}) {
   };
   deferGameTicketRewardModal = true;
   showScreen("trainingCompleteScreen", { recordHistory: false });
+  renderResponseLearningHistoryDebugState();
 }
 
 function closeTrainingCompleteScreenToHome() {
