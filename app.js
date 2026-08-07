@@ -2,6 +2,12 @@ const STORAGE_KEY = "english-trainer-state-v1";
 const LEARNING_HISTORY_STORAGE_KEY = "english-trainer-learning-history-v1";
 const LEARNING_HISTORY_MAX_ENTRIES = 1000;
 const LEARNING_ACTIVE_TIMEOUT_MS = 3 * 60 * 1000;
+const PC_BROWSER_DEVICE_ID_STORAGE_KEY = "english-trainer-pc-device-id-v1";
+const PC_BROWSER_DEVICE_NAME_STORAGE_KEY = "english-trainer-pc-device-name-v1";
+const PC_BROWSER_DEVICE_NAME_FALLBACK = "端末未設定";
+const ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY = "all";
+const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY = "legacy:unidentified";
+const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_LABEL = "端末未識別";
 const ADMIN_LEARNING_HISTORY_PIN = "12345";
 const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
   adminPassword: "12345",
@@ -148,6 +154,103 @@ function getScopedLocalStorageKey(baseKey, uid = getCurrentPcFirebaseUid()) {
   return safeUid ? `${baseKey}-${safeUid}` : "";
 }
 
+function buildPcBrowserDeviceId() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch (_error) {
+    // Fallback below.
+  }
+  const randomPart = Math.random().toString(36).slice(2, 10);
+  return `pc-${Date.now().toString(36)}-${randomPart}`;
+}
+
+function sanitizePcBrowserDeviceName(value) {
+  const text = String(value || "").trim().replace(/\s+/g, " ");
+  if (!text) return "";
+  return text.slice(0, 40);
+}
+
+function getPcBrowserDeviceId() {
+  try {
+    const stored = String(localStorage.getItem(PC_BROWSER_DEVICE_ID_STORAGE_KEY) || "").trim();
+    if (stored) return stored;
+    const created = buildPcBrowserDeviceId();
+    localStorage.setItem(PC_BROWSER_DEVICE_ID_STORAGE_KEY, created);
+    return created;
+  } catch (_error) {
+    return buildPcBrowserDeviceId();
+  }
+}
+
+function getPcBrowserDeviceName() {
+  try {
+    const stored = sanitizePcBrowserDeviceName(localStorage.getItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY));
+    return stored || PC_BROWSER_DEVICE_NAME_FALLBACK;
+  } catch (_error) {
+    return PC_BROWSER_DEVICE_NAME_FALLBACK;
+  }
+}
+
+function setPcBrowserDeviceName(value) {
+  const sanitized = sanitizePcBrowserDeviceName(value) || PC_BROWSER_DEVICE_NAME_FALLBACK;
+  try {
+    localStorage.setItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY, sanitized);
+  } catch (_error) {
+    // Keep runtime value even if persistence fails.
+  }
+  return sanitized;
+}
+
+function ensurePcBrowserDeviceIdentity() {
+  getPcBrowserDeviceId();
+  try {
+    const existingName = sanitizePcBrowserDeviceName(localStorage.getItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY));
+    if (!existingName) {
+      localStorage.setItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY, PC_BROWSER_DEVICE_NAME_FALLBACK);
+    }
+  } catch (_error) {
+    // No-op.
+  }
+}
+
+function normalizeAdminLearningHistoryDeviceFilterKey(deviceId) {
+  const normalized = String(deviceId || "").trim();
+  return normalized || ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY;
+}
+
+function getAdminLearningHistoryDeviceFilterLabel(entry, fallbackKey = "") {
+  const explicitName = sanitizePcBrowserDeviceName(entry?.deviceName);
+  if (explicitName) return explicitName;
+  const deviceType = String(entry?.deviceType || "").trim().toLowerCase();
+  const resolvedKey = normalizeAdminLearningHistoryDeviceFilterKey(entry?.deviceId || fallbackKey);
+  if (resolvedKey === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY) {
+    return ADMIN_HISTORY_LEGACY_DEVICE_FILTER_LABEL;
+  }
+  if (deviceType === "mobile") {
+    return "モバイル端末";
+  }
+  return "PC端末";
+}
+
+function renderPcDeviceIdentitySettings() {
+  const deviceIdText = document.getElementById("pcDeviceIdText");
+  const deviceNameInput = document.getElementById("pcDeviceNameInput");
+  const savedText = document.getElementById("pcDeviceNameSavedText");
+  const deviceId = getPcBrowserDeviceId();
+  const deviceName = getPcBrowserDeviceName();
+  if (deviceIdText) {
+    deviceIdText.textContent = deviceId;
+  }
+  if (deviceNameInput) {
+    deviceNameInput.value = deviceName;
+  }
+  if (savedText) {
+    savedText.textContent = `現在の端末名: ${deviceName}`;
+  }
+}
+
 function resetUserScopedStorageCaches() {
   studyCoreSyncMetaCache = null;
   pointStateCache = null;
@@ -203,7 +306,6 @@ let responseTrainingSession = null;
 let currentScreenId = "homeScreen";
 let pendingTrainingCompleteContext = null;
 let deferGameTicketRewardModal = false;
-let isAdminLearningHistoryUnlocked = false;
 let adminLearningHistorySelectedDayKey = "";
 let adminLearningHistoryFirestoreUnsubscribe = null;
 let adminLearningHistoryFirestoreLoadToken = 0;
@@ -213,7 +315,7 @@ let adminLearningHistoryFamilyChildren = [];
 let adminLearningHistorySelectedChildKey = "parent";
 let adminLearningHistorySelectedChildUid = "";
 let adminLearningHistoryCanSelectFamily = false;
-let adminLearningHistorySelectedDeviceType = "pc";
+let adminLearningHistorySelectedDeviceType = ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY;
 let adminLearningHistorySourceEntries = [];
 let homeHistoryFirestoreUnsubscribe = null;
 let homeHistoryFirestoreEntries = [];
@@ -1281,6 +1383,8 @@ function sanitizeLearningHistoryEntry(entry) {
     accuracy: Math.max(0, Math.min(100, Number(entry.accuracy) || 0)),
     completedReason: typeof entry.completedReason === "string" ? entry.completedReason : "completed",
     deviceType: typeof entry.deviceType === "string" && entry.deviceType.trim().toLowerCase() === "mobile" ? "mobile" : "pc",
+    deviceId: String(entry.deviceId || "").trim(),
+    deviceName: sanitizePcBrowserDeviceName(entry.deviceName),
     ticket: {
       earned: {
         legacyTickets: Math.max(0, Number(entry.ticket?.earned?.legacyTickets) || 0),
@@ -1793,23 +1897,44 @@ function buildAdminLearningHistoryFamilyOptions(family) {
 }
 
 function getAdminLearningHistoryDeviceOptions() {
-  return [
-    { key: "pc", label: "PC版" },
-    { key: "mobile", label: "モバイル版" }
-  ];
+  const source = Array.isArray(adminLearningHistorySourceEntries) ? adminLearningHistorySourceEntries : [];
+  const options = [{ key: ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY, label: "すべて" }];
+  const byKey = new Map();
+  source.forEach((entry) => {
+    if (Math.max(0, Number(entry?.questionCount) || 0) <= 0) return;
+    const key = normalizeAdminLearningHistoryDeviceFilterKey(entry?.deviceId);
+    if (byKey.has(key)) return;
+    byKey.set(key, {
+      key,
+      label: getAdminLearningHistoryDeviceFilterLabel(entry, key)
+    });
+  });
+  const dynamicOptions = [...byKey.values()].sort((left, right) => {
+    if (left.key === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY) return 1;
+    if (right.key === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY) return -1;
+    return String(left.label || "").localeCompare(String(right.label || ""), "ja");
+  });
+  return [...options, ...dynamicOptions];
 }
 
 function normalizeAdminLearningHistoryDeviceType(deviceType) {
-  return String(deviceType || "").trim().toLowerCase() === "mobile" ? "mobile" : "pc";
+  return normalizeAdminLearningHistoryDeviceFilterKey(deviceType);
 }
 
 function getAdminLearningHistoryFilteredEntries(entries) {
   const source = Array.isArray(entries) ? entries : [];
   return source.filter((entry) => {
-    if (normalizeAdminLearningHistoryDeviceType(entry?.deviceType) !== adminLearningHistorySelectedDeviceType) {
+    const selectedFilterKey = normalizeAdminLearningHistoryDeviceType(adminLearningHistorySelectedDeviceType);
+    if (selectedFilterKey !== ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY) {
+      const entryFilterKey = normalizeAdminLearningHistoryDeviceFilterKey(entry?.deviceId);
+      if (entryFilterKey !== selectedFilterKey) {
+        return false;
+      }
+    }
+    if (Math.max(0, Number(entry?.questionCount) || 0) <= 0) {
       return false;
     }
-    return Math.max(0, Number(entry?.questionCount) || 0) > 0;
+    return true;
   });
 }
 
@@ -1866,7 +1991,7 @@ function bindAdminLearningHistoryControls() {
     button.addEventListener("click", () => {
       const nextKey = String(button.getAttribute("data-admin-history-device-key") || "");
       if (!nextKey || nextKey === adminLearningHistorySelectedDeviceType) return;
-      adminLearningHistorySelectedDeviceType = nextKey === "mobile" ? "mobile" : "pc";
+      adminLearningHistorySelectedDeviceType = normalizeAdminLearningHistoryDeviceType(nextKey);
       adminLearningHistorySelectedDayKey = "";
       renderAdminLearningHistoryEntries(adminLearningHistorySourceEntries);
     });
@@ -1883,7 +2008,7 @@ function resetAdminLearningHistorySelectionState() {
   adminLearningHistorySelectedChildKey = "";
   adminLearningHistorySelectedChildUid = "";
   adminLearningHistoryCanSelectFamily = false;
-  adminLearningHistorySelectedDeviceType = "pc";
+  adminLearningHistorySelectedDeviceType = ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY;
   adminLearningHistorySelectedDayKey = "";
   adminLearningHistorySourceEntries = [];
   setAdminLearningHistoryAccessState("", false);
@@ -1902,11 +2027,10 @@ function clearAdminLearningHistoryView() {
 
 function resetAdminLearningHistoryAuthScope() {
   stopAdminLearningHistoryFirestoreListener();
-  isAdminLearningHistoryUnlocked = false;
   resetAdminLearningHistorySelectionState();
   clearAdminLearningHistoryView();
   if (currentScreenId === "adminLearningHistoryScreen") {
-    resetAdminLearningHistoryGate();
+    openAdminLearningHistoryScreen();
   }
 }
 
@@ -2120,6 +2244,10 @@ function renderAdminLearningHistoryEntries(entries) {
   if (!content) return;
   const countText = document.getElementById("adminLearningHistoryCountText");
   const todayDayKey = getLearningHistoryDayKey(Date.now());
+  const availableDeviceFilterKeys = new Set(getAdminLearningHistoryDeviceOptions().map((option) => String(option.key || "")));
+  if (!availableDeviceFilterKeys.has(String(adminLearningHistorySelectedDeviceType || ""))) {
+    adminLearningHistorySelectedDeviceType = ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY;
+  }
 
   const normalizedEntries = getAdminLearningHistoryFilteredEntries((Array.isArray(entries) ? entries : [])
     .slice()
@@ -2296,56 +2424,8 @@ function renderAdminLearningHistoryList() {
   renderAdminLearningHistoryFamilyWatch();
 }
 
-function resetAdminLearningHistoryGate() {
-  const gate = document.getElementById("adminLearningHistoryGate");
-  const content = document.getElementById("adminLearningHistoryContent");
-  const input = document.getElementById("adminLearningHistoryPinInput");
-  const error = document.getElementById("adminLearningHistoryError");
-  if (gate) gate.classList.remove("hidden");
-  if (content) content.classList.add("hidden");
-  if (error) {
-    error.classList.add("hidden");
-    error.textContent = "暗証番号が違います";
-  }
-  if (input) {
-    input.value = "";
-    input.focus();
-  }
-}
-
 function openAdminLearningHistoryScreen() {
   showScreen("adminLearningHistoryScreen");
-  if (isAdminLearningHistoryUnlocked) {
-    const gate = document.getElementById("adminLearningHistoryGate");
-    const content = document.getElementById("adminLearningHistoryContent");
-    if (gate) gate.classList.add("hidden");
-    if (content) content.classList.remove("hidden");
-    renderAdminLearningHistoryList();
-    return;
-  }
-  resetAdminLearningHistoryGate();
-}
-
-function unlockAdminLearningHistory() {
-  const input = document.getElementById("adminLearningHistoryPinInput");
-  const error = document.getElementById("adminLearningHistoryError");
-  const gate = document.getElementById("adminLearningHistoryGate");
-  const content = document.getElementById("adminLearningHistoryContent");
-  if (!input || !error || !gate || !content) return;
-
-  const pin = String(input.value || "").trim();
-  if (pin !== ADMIN_LEARNING_HISTORY_PIN) {
-    error.textContent = "暗証番号が違います";
-    error.classList.remove("hidden");
-    input.focus();
-    input.select();
-    return;
-  }
-
-  isAdminLearningHistoryUnlocked = true;
-  error.classList.add("hidden");
-  gate.classList.add("hidden");
-  content.classList.remove("hidden");
   renderAdminLearningHistoryList();
 }
 
@@ -2502,6 +2582,8 @@ function buildPrepositionLearningHistoryEntry(sessionLike, reason) {
     accuracy,
     completedReason: String(reason || "completed"),
     deviceType: "pc",
+    deviceId: getPcBrowserDeviceId(),
+    deviceName: getPcBrowserDeviceName(),
     ticket: computeLearningHistoryTicketDelta(
       sanitizeLearningHistoryTicketSnapshot(sessionLike?.ticketSnapshot),
       captureLearningHistoryTicketSnapshot()
@@ -2594,6 +2676,8 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
     accuracy: Math.max(0, Math.min(100, Number(answerStats.accuracy) || 0)),
     completedReason: String(reason || "completed"),
     deviceType: "pc",
+    deviceId: getPcBrowserDeviceId(),
+    deviceName: getPcBrowserDeviceName(),
     ticket: computeLearningHistoryTicketDelta(ticketBefore, ticketAfter)
   };
 }
@@ -9752,6 +9836,23 @@ function bindEvents() {
     });
   }
 
+  const pcDeviceNameInput = document.getElementById("pcDeviceNameInput");
+  const pcDeviceNameSaveBtn = document.getElementById("pcDeviceNameSaveBtn");
+  if (pcDeviceNameInput && pcDeviceNameSaveBtn) {
+    const saveDeviceName = () => {
+      const savedName = setPcBrowserDeviceName(pcDeviceNameInput.value);
+      pcDeviceNameInput.value = savedName;
+      renderPcDeviceIdentitySettings();
+      alert(`端末名を保存しました: ${savedName}`);
+    };
+    pcDeviceNameSaveBtn.addEventListener("click", saveDeviceName);
+    pcDeviceNameInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      saveDeviceName();
+    });
+  }
+
   document.addEventListener("keydown", handleEnterKey);
   document.addEventListener("keyup", handleKeyboardNavigationKeyup);
   document.addEventListener("keydown", (event) => {
@@ -10090,22 +10191,6 @@ function bindEvents() {
     });
   }
 
-  const adminLearningHistoryUnlockBtn = document.getElementById("adminLearningHistoryUnlockBtn");
-  if (adminLearningHistoryUnlockBtn) {
-    adminLearningHistoryUnlockBtn.addEventListener("click", () => {
-      unlockAdminLearningHistory();
-    });
-  }
-
-  const adminLearningHistoryPinInput = document.getElementById("adminLearningHistoryPinInput");
-  if (adminLearningHistoryPinInput) {
-    adminLearningHistoryPinInput.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter") return;
-      event.preventDefault();
-      unlockAdminLearningHistory();
-    });
-  }
-
   TRAINING_MENU_ITEMS.forEach((item) => {
     const button = document.getElementById(item.id);
     if (!button) return;
@@ -10401,6 +10486,7 @@ function bindUserScopedStorageAuthStateListener() {
     if (user) {
       syncDerivedStats();
     }
+    renderPcDeviceIdentitySettings();
     renderHome();
     renderProgress();
     showScreen("homeScreen", { recordHistory: false });
@@ -10413,6 +10499,7 @@ function bindUserScopedStorageAuthStateListener() {
 let state = loadState();
 
 function init() {
+  ensurePcBrowserDeviceIdentity();
   applyDesktopResponsiveScale();
   const settingsVersionText = document.getElementById("settingsVersionText");
   if (settingsVersionText) {
@@ -10431,6 +10518,7 @@ function init() {
   }
   renderDayCatalog();
   renderPrepositionScopeSelector();
+  renderPcDeviceIdentitySettings();
   renderHome();
   renderProgress();
   showScreen("homeScreen", { recordHistory: false });
@@ -10443,3 +10531,6 @@ function init() {
 }
 
 init();
+
+window.getPcBrowserDeviceId = getPcBrowserDeviceId;
+window.getPcBrowserDeviceName = getPcBrowserDeviceName;

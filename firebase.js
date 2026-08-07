@@ -176,6 +176,8 @@ async function saveLearningHistoryToFirestore(historyEntry) {
     ticketEarned: Math.max(0, Number(historyEntry?.ticket?.earnedMinutes) || 0),
     ticketUsed: Math.max(0, Number(historyEntry?.ticket?.usedMinutes) || 0),
     deviceType: "pc",
+    deviceId: String(historyEntry.deviceId || "").trim(),
+    deviceName: String(historyEntry.deviceName || "").trim(),
     createdAt: serverTimestamp()
   };
 
@@ -197,6 +199,8 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
   const startedAt = Math.max(0, Number(data.startedAt) || 0);
   const endedAt = Math.max(0, Number(data.endedAt) || 0);
   const normalizedDeviceType = String(data.deviceType || "").trim().toLowerCase() === "mobile" ? "mobile" : (String(data.deviceType || "").trim().toLowerCase() === "pc" ? "pc" : "");
+  const normalizedDeviceId = String(data.deviceId || "").trim();
+  const normalizedDeviceName = String(data.deviceName || "").trim();
   return {
     id: String(docSnapshot?.id || ""),
     uid: String(data.uid || ""),
@@ -220,6 +224,8 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
       usedMinutes: Math.max(0, Number(data.ticketUsed) || 0)
     },
     deviceType: normalizedDeviceType,
+    deviceId: normalizedDeviceId,
+    deviceName: normalizedDeviceName,
     createdAt: createdAtMillis
   };
 }

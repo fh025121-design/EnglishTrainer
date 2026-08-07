@@ -163,6 +163,49 @@ p {
   min-width: 86px;
 }
 
+.learning-history-btn {
+  min-width: 112px;
+  font-size: 1.05em;
+  font-weight: 700;
+}
+
+.home-history-ticket-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.home-history-ticket-stack .learning-history-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  font-size: 1.14em;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(56, 186, 214, 0.28), rgba(88, 224, 174, 0.24));
+  border-color: rgba(164, 244, 255, 0.48);
+  text-shadow:
+    0 1px 0 rgba(8, 27, 44, 0.88),
+    0 0 2px rgba(8, 27, 44, 0.8),
+    0 0 10px rgba(114, 234, 247, 0.35);
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.learning-history-btn-icon {
+  font-size: 1.12em;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(114, 234, 247, 0.45));
+}
+
+.learning-history-btn-label {
+  letter-spacing: 0.02em;
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -3139,6 +3182,10 @@ select {
 
   .recent-three-table {
     table-layout: auto;
+  }
+
+  .home-history-ticket-stack {
+    display: none !important;
   }
 
   .home-ticket-icon-btn {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260807-1654" />
+    <link rel="stylesheet" href="styles.css?v=20260807-2300" />
   </head>
   <body class="auth-pending">
     <div id="loginScreen" class="login-shell" aria-live="polite">
@@ -37,7 +37,6 @@
         <div class="topbar-actions">
           <button id="logoutBtn" class="ghost-btn settings-btn hidden" type="button">ログアウト</button>
           <button id="settingsBtn" class="ghost-btn settings-btn" type="button">設定</button>
-          <button id="openAdminLearningHistoryBtn" class="ghost-btn settings-btn" type="button" aria-label="管理者用 学習履歴">管理者用</button>
         </div>
       </header>
 
@@ -118,15 +117,21 @@
                   </tbody>
                 </table>
               </div>
-              <div class="home-ticket-icon-row">
-                <button id="openGameTicketHubBtn" class="secondary-btn home-ticket-icon-btn hidden" type="button">
-                  <span class="home-ticket-icon-shape" aria-hidden="true">🎫</span>
-                  <span class="home-ticket-icon-label">ゲーム<br>チケット</span>
+              <div class="home-history-ticket-stack">
+                <button id="openAdminLearningHistoryBtn" class="ghost-btn settings-btn learning-history-btn" type="button" aria-label="学習履歴">
+                  <span class="learning-history-btn-icon" aria-hidden="true">📚</span>
+                  <span class="learning-history-btn-label">学習履歴</span>
                 </button>
-                <button id="openExchangeTicketScreenBtn" class="secondary-btn home-ticket-icon-btn home-ticket-icon-btn-exchange hidden" type="button">
-                  <span class="home-ticket-icon-shape" aria-hidden="true">🎁</span>
-                  <span class="home-ticket-icon-label">ポイント<br>交換</span>
-                </button>
+                <div class="home-ticket-icon-row">
+                  <button id="openGameTicketHubBtn" class="secondary-btn home-ticket-icon-btn hidden" type="button">
+                    <span class="home-ticket-icon-shape" aria-hidden="true">🎫</span>
+                    <span class="home-ticket-icon-label">ゲーム<br>チケット</span>
+                  </button>
+                  <button id="openExchangeTicketScreenBtn" class="secondary-btn home-ticket-icon-btn home-ticket-icon-btn-exchange hidden" type="button">
+                    <span class="home-ticket-icon-shape" aria-hidden="true">🎁</span>
+                    <span class="home-ticket-icon-label">ポイント<br>交換</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -205,6 +210,23 @@
               </div>
             </div>
             <div id="adminHistoryPanel" class="settings-update-history hidden"></div>
+            <div class="settings-typing-wrap" aria-label="PC端末設定">
+              <h3 class="settings-section-title">PC端末設定</h3>
+              <div class="settings-typing-grid">
+                <label class="settings-typing-field">
+                  <span>端末ID（このブラウザ固定）</span>
+                  <p id="pcDeviceIdText" class="settings-version-text">-</p>
+                </label>
+                <label class="settings-typing-field">
+                  <span>端末名</span>
+                  <input id="pcDeviceNameInput" class="settings-update-password-input" type="text" maxlength="40" placeholder="例: 私のPC" />
+                </label>
+              </div>
+              <div class="settings-backup-wrap">
+                <button id="pcDeviceNameSaveBtn" class="secondary-btn settings-backup-btn" type="button">端末名を保存</button>
+                <p id="pcDeviceNameSavedText" class="settings-studycore-note">現在の端末名: -</p>
+              </div>
+            </div>
             <div class="settings-typing-wrap" aria-label="タイピング設定">
               <h3 class="settings-section-title">タイピング設定</h3>
               <div class="settings-typing-grid">
@@ -256,32 +278,12 @@
           <div class="screen-header">
             <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
             <div>
-              <p class="eyebrow">管理者用</p>
               <h2>学習履歴</h2>
             </div>
             <div class="header-spacer" aria-hidden="true"></div>
           </div>
           <div class="admin-learning-history-panel">
-            <div id="adminLearningHistoryGate" class="admin-learning-history-gate">
-              <p class="subtext">5桁の管理者暗証番号を入力してください。</p>
-              <div class="admin-learning-history-pin-row">
-                <input
-                  id="adminLearningHistoryPinInput"
-                  class="settings-update-password-input"
-                  type="password"
-                  inputmode="numeric"
-                  autocomplete="off"
-                  minlength="5"
-                  maxlength="5"
-                  pattern="[0-9]{5}"
-                  title="5桁の数字を入力してください"
-                  placeholder="5桁の暗証番号"
-                />
-                <button id="adminLearningHistoryUnlockBtn" class="primary-btn" type="button">表示</button>
-              </div>
-              <p id="adminLearningHistoryError" class="admin-learning-history-error hidden">暗証番号が違います</p>
-            </div>
-            <div id="adminLearningHistoryContent" class="hidden">
+            <div id="adminLearningHistoryContent">
               <div class="panel-title-row">
                 <h3>履歴一覧</h3>
                 <span id="adminLearningHistoryCountText" class="panel-pill">0件</span>
@@ -980,11 +982,11 @@
       </div>
     </div>
 
-    <script src="data.js?v=20260807-1654"></script>
-    <script src="preposition-data.js?v=20260807-1654"></script>
-    <script src="response-data.js?v=20260807-1654"></script>
-    <script src="release-info.js?v=20260807-1654"></script>
-    <script src="app.js?v=20260807-1654"></script>
-    <script type="module" src="firebase.js?v=20260807-1654"></script>
+    <script src="data.js?v=20260807-2300"></script>
+    <script src="preposition-data.js?v=20260807-2300"></script>
+    <script src="response-data.js?v=20260807-2300"></script>
+    <script src="release-info.js?v=20260807-2300"></script>
+    <script src="app.js?v=20260807-2300"></script>
+    <script type="module" src="firebase.js?v=20260807-2300"></script>
   </body>
 </html>
