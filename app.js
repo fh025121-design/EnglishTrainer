@@ -1504,24 +1504,68 @@ function getLearningHistorySelectedDayTitle(dayKey, todayDayKey) {
   return dayKey === todayDayKey ? `今日（${label}）` : label;
 }
 
-function getLearningHistoryModeGroup(mode) {
+function getLearningHistoryModeBucket(mode) {
   const normalized = String(mode || "").trim();
-  if (normalized === "Day" || normalized === "Day学習" || normalized === "normal") return "day";
-  if (normalized === "単語特訓" || normalized === "単語学習" || normalized === "単語・熟語学習") return "word";
-  if (normalized === "熟語特訓" || normalized === "熟語学習") return "phrase";
-  if (normalized === "過去の間違い" || normalized === "review") return "review";
+  if (normalized === "Day" || normalized === "Day学習" || normalized === "normal") {
+    return { key: "day", label: "Day学習" };
+  }
+  if (normalized === "単語特訓" || normalized === "単語学習" || normalized === "単語・熟語学習") {
+    return { key: "word", label: "単語特訓" };
+  }
+  if (normalized === "熟語特訓" || normalized === "熟語学習") {
+    return { key: "phrase", label: "熟語特訓" };
+  }
+  if (normalized === "過去の間違い" || normalized === "review") {
+    return { key: "review", label: "過去の間違い" };
+  }
+  const fallbackLabel = normalized || "-";
+  return { key: `mode:${fallbackLabel}`, label: fallbackLabel };
+}
+
+function getLearningHistoryModeGroup(mode) {
+  const bucket = getLearningHistoryModeBucket(mode);
+  if (bucket.key === "day" || bucket.key === "word" || bucket.key === "phrase" || bucket.key === "review") {
+    return bucket.key;
+  }
   return "other";
 }
 
 function getLearningHistoryModeSummaryOrder() {
-  return ["day", "phrase", "review", "word", "other"];
+  return ["day", "phrase", "review", "word"];
 }
 
 function getLearningHistoryModeSummaryEntries(summary) {
   const modeTotals = summary?.modeTotals && typeof summary.modeTotals === "object" ? summary.modeTotals : {};
-  return getLearningHistoryModeSummaryOrder()
+  const knownOrder = getLearningHistoryModeSummaryOrder();
+  const keys = Object.keys(modeTotals);
+  const dynamicKeys = keys.filter((key) => !knownOrder.includes(key)).sort((left, right) => {
+    const leftLabel = String(modeTotals[left]?.label || "");
+    const rightLabel = String(modeTotals[right]?.label || "");
+    return leftLabel.localeCompare(rightLabel, "ja");
+  });
+  return [...knownOrder, ...dynamicKeys]
     .map((key) => ({ key, ...(modeTotals[key] || {}) }))
     .filter((entry) => Math.max(0, Number(entry.questionCount) || 0) > 0 || Math.max(0, Number(entry.activeStudySeconds) || 0) > 0);
+}
+
+function ensureLearningHistoryModeTotal(modeTotals, bucketInfo) {
+  if (!modeTotals || !bucketInfo?.key) return null;
+  const existing = modeTotals[bucketInfo.key];
+  if (existing && typeof existing === "object") {
+    if (!String(existing.label || "").trim()) {
+      existing.label = bucketInfo.label;
+    }
+    return existing;
+  }
+  const created = {
+    label: bucketInfo.label,
+    activeStudySeconds: 0,
+    questionCount: 0,
+    correctCount: 0,
+    earnedPoints: 0
+  };
+  modeTotals[bucketInfo.key] = created;
+  return created;
 }
 
 function renderLearningHistoryModeSummaryContent(summary, options = {}) {
@@ -1590,8 +1634,7 @@ function createLearningHistoryModeTotals() {
     day: { label: "Day学習", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
     word: { label: "単語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
     phrase: { label: "熟語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
-    review: { label: "過去の間違い", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
-    other: { label: "その他", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 }
+    review: { label: "過去の間違い", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 }
   };
 }
 
@@ -1644,8 +1687,8 @@ function buildLearningHistoryInsights(entries) {
     const bucket = dayMap.get(dayKey);
     bucket.entries.push(entry);
     accumulateLearningHistoryTotals(bucket, entry);
-    const modeGroup = getLearningHistoryModeGroup(entry.mode);
-    accumulateLearningHistoryTotals(bucket.modeTotals[modeGroup] || bucket.modeTotals.other, entry);
+    const modeBucket = getLearningHistoryModeBucket(entry.mode);
+    accumulateLearningHistoryTotals(ensureLearningHistoryModeTotal(bucket.modeTotals, modeBucket), entry);
   });
 
   const daySummaries = [...dayMap.values()].map((bucket) => finalizeLearningHistoryTotals(bucket));
@@ -1675,8 +1718,8 @@ function buildLearningHistoryInsights(entries) {
   });
   todayEntries.forEach((entry) => {
     accumulateLearningHistoryTotals(todaySummary, entry);
-    const modeGroup = getLearningHistoryModeGroup(entry.mode);
-    accumulateLearningHistoryTotals(todaySummary.modeTotals[modeGroup] || todaySummary.modeTotals.other, entry);
+    const modeBucket = getLearningHistoryModeBucket(entry.mode);
+    accumulateLearningHistoryTotals(ensureLearningHistoryModeTotal(todaySummary.modeTotals, modeBucket), entry);
   });
   Object.values(todaySummary.modeTotals).forEach((modeEntry) => {
     modeEntry.accuracy = modeEntry.questionCount ? Math.round((modeEntry.correctCount / modeEntry.questionCount) * 100) : 0;
@@ -2196,17 +2239,24 @@ function renderAdminLearningHistoryEntries(entries) {
               const ticketText = buildLearningHistoryTicketText(entry.ticket);
               const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
               const questionCount = Math.max(0, Number(entry.questionCount) || 0);
+              const modeRaw = String(entry.mode || "").trim() || "-";
+              const dayNumberRaw = String(entry.dayNumber || "").trim();
+              const modeLabel = dayNumberRaw && dayNumberRaw !== "-" ? `${modeRaw} Day${dayNumberRaw}` : modeRaw;
               return `
                 <div class="admin-history-detail-item">
-                  <p class="admin-history-detail-time">セッション　${formatLearningHistoryDateTimeRange(entry.startedAt, entry.endedAt)}</p>
-                  <p class="admin-history-detail-mode">${escapeHtml(String(entry.mode || "").trim() || "-")}</p>
-                  <p class="admin-history-detail-meta">${escapeHtml(entry.dayNumber || "-")}</p>
-                  ${activeStudySeconds >= 60 ? `<p class="admin-history-detail-meta">実学習時間　${formatLearningHistoryDuration(activeStudySeconds)}</p><p class="admin-history-detail-note">3分を超える無操作区間は除外</p>` : ""}
-                  ${questionCount > 0 ? `<p class="admin-history-detail-meta">${questionCount}問</p>` : ""}
-                  <p class="admin-history-detail-meta">特訓ポイント　+${Math.max(0, Number(entry.earnedPoints) || 0)}P</p>
-                  <p class="admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</p>
-                  <p class="admin-history-detail-meta">${completedLabel}</p>
-                  <p class="admin-history-detail-ticket">${escapeHtml(ticketText.earned)} / ${escapeHtml(ticketText.used)}</p>
+                  <p class="admin-history-detail-row admin-history-detail-row-main">
+                    <span class="admin-history-detail-time">${formatLearningHistoryDateTimeRange(entry.startedAt, entry.endedAt)}</span>
+                    <span class="admin-history-detail-mode">${escapeHtml(modeLabel)}</span>
+                    <span class="admin-history-detail-meta">${questionCount}問</span>
+                    <span class="admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</span>
+                    <span class="admin-history-detail-meta">実学習${formatLearningHistoryDuration(activeStudySeconds)}</span>
+                    <span class="admin-history-detail-meta">+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>
+                    <span class="admin-history-detail-meta">${completedLabel}</span>
+                  </p>
+                  <p class="admin-history-detail-row admin-history-detail-row-sub">
+                    ${activeStudySeconds >= 60 ? '<span class="admin-history-detail-note">3分を超える無操作区間は除外</span><span class="admin-history-detail-sub-separator">｜</span>' : ""}
+                    <span class="admin-history-detail-ticket">${escapeHtml(ticketText.earned)} / ${escapeHtml(ticketText.used)}</span>
+                  </p>
                 </div>
               `;
             }).join("<div class=\"admin-history-detail-separator\"></div>") : '<p class="empty-state">この日は学習記録がありません</p>'}
