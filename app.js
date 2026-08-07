@@ -8,6 +8,7 @@ const PC_BROWSER_DEVICE_NAME_MAP_STORAGE_KEY = "english-trainer-pc-device-name-m
 const PC_BROWSER_DEVICE_NAME_FALLBACK = "端末未設定";
 const ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY = "all";
 const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY = "legacy:unidentified";
+const ADMIN_HISTORY_NAMED_DEVICE_FILTER_PREFIX = "name:";
 const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_LABEL = "端末未識別";
 const ADMIN_LEARNING_HISTORY_PIN = "12345";
 const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
@@ -341,6 +342,19 @@ function getAdminLearningHistoryDeviceFilterLabel(entry, fallbackKey = "", devic
     return "端末未設定";
   }
   return PC_BROWSER_DEVICE_NAME_FALLBACK;
+}
+
+function buildAdminLearningHistoryNamedDeviceFilterKey(label) {
+  return `${ADMIN_HISTORY_NAMED_DEVICE_FILTER_PREFIX}${String(label || "").trim()}`;
+}
+
+function getAdminLearningHistoryEntryDeviceFilterKey(entry, deviceNameMap = null) {
+  const resolvedKey = normalizeAdminLearningHistoryDeviceFilterKey(entry?.deviceId);
+  if (resolvedKey === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY) {
+    return ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY;
+  }
+  const label = getAdminLearningHistoryDeviceFilterLabel(entry, resolvedKey, deviceNameMap);
+  return buildAdminLearningHistoryNamedDeviceFilterKey(label);
 }
 
 function renderPcDeviceIdentitySettings() {
@@ -2012,11 +2026,13 @@ function getAdminLearningHistoryDeviceOptions() {
   const byKey = new Map();
   source.forEach((entry) => {
     if (Math.max(0, Number(entry?.questionCount) || 0) <= 0) return;
-    const key = normalizeAdminLearningHistoryDeviceFilterKey(entry?.deviceId);
+    const key = getAdminLearningHistoryEntryDeviceFilterKey(entry, deviceNameMap);
     if (byKey.has(key)) return;
     byKey.set(key, {
       key,
-      label: getAdminLearningHistoryDeviceFilterLabel(entry, key, deviceNameMap)
+      label: key === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY
+        ? ADMIN_HISTORY_LEGACY_DEVICE_FILTER_LABEL
+        : String(key).slice(ADMIN_HISTORY_NAMED_DEVICE_FILTER_PREFIX.length)
     });
   });
   const dynamicOptions = [...byKey.values()].sort((left, right) => {
@@ -2028,15 +2044,21 @@ function getAdminLearningHistoryDeviceOptions() {
 }
 
 function normalizeAdminLearningHistoryDeviceType(deviceType) {
-  return normalizeAdminLearningHistoryDeviceFilterKey(deviceType);
+  const normalized = String(deviceType || "").trim();
+  if (!normalized) return ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY;
+  if (normalized === ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY) return normalized;
+  if (normalized === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY) return normalized;
+  if (normalized.startsWith(ADMIN_HISTORY_NAMED_DEVICE_FILTER_PREFIX)) return normalized;
+  return normalizeAdminLearningHistoryDeviceFilterKey(normalized);
 }
 
 function getAdminLearningHistoryFilteredEntries(entries) {
   const source = Array.isArray(entries) ? entries : [];
+  const deviceNameMap = buildAdminLearningHistoryDeviceNameMap(source);
   return source.filter((entry) => {
     const selectedFilterKey = normalizeAdminLearningHistoryDeviceType(adminLearningHistorySelectedDeviceType);
     if (selectedFilterKey !== ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY) {
-      const entryFilterKey = normalizeAdminLearningHistoryDeviceFilterKey(entry?.deviceId);
+      const entryFilterKey = getAdminLearningHistoryEntryDeviceFilterKey(entry, deviceNameMap);
       if (entryFilterKey !== selectedFilterKey) {
         return false;
       }
