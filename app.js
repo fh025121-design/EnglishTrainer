@@ -148,6 +148,15 @@ const STUDY_CORE_SYNC_LOCAL_META_KEY = "english-trainer-pc-study-core-sync-v1";
 const STUDY_CORE_SYNC_DEBUG_KEY = "english-trainer-pc-study-core-sync-debug-v1";
 const STUDY_CORE_SYNC_DEBOUNCE_MS = 250;
 const STUDY_CORE_SYNC_SKIP_ONCE_SESSION_KEY = "english-trainer-pc-study-core-sync-skip-once";
+const STUDY_CORE_BACKUP_RETENTION_DAYS = 3;
+const STUDY_CORE_DANGEROUS_METRICS = Object.freeze([
+  "unlockedDayMax",
+  "itemCount",
+  "learnedCount",
+  "attempts",
+  "correct",
+  "reviewRecordCount"
+]);
 function getCurrentPcFirebaseUid() {
   return String(getCurrentPcFirebaseUser()?.uid || "").trim();
 }
@@ -597,6 +606,333 @@ function consumeSkipStudyCoreSyncOnce() {
   return false;
 }
 
+function createEmptyStudyCoreSummary() {
+  return {
+    unlockedDayMax: 1,
+    itemCount: 0,
+    learnedCount: 0,
+    attempts: 0,
+    correct: 0,
+    reviewRecordCount: 0,
+    updatedAt: 0
+  };
+}
+
+function summarizeStudyCoreItemsLike(itemEntries, reviewRecords, options = {}) {
+  const summary = createEmptyStudyCoreSummary();
+  summary.unlockedDayMax = Math.max(1, Number(options.unlockedDayMax) || 1);
+  summary.updatedAt = Math.max(0, Number(options.updatedAt) || 0);
+
+  Object.values(itemEntries || {}).forEach((entry) => {
+    const levelData = sanitizeLevelData(entry?.levelData);
+    const learningStats = sanitizeLearningStats(entry?.learningStats);
+    const isMeaningful = Boolean(
+      entry?.hasBeenStudied ||
+      levelData.level > 1 ||
+      levelData.successCount > 0 ||
+      levelData.lv4FailureCount > 0 ||
+      levelData.lv4Celebrated ||
+      learningStats.attempts > 0 ||
+      learningStats.correct > 0 ||
+      learningStats.lastStudiedDate ||
+      learningStats.lastCorrectDate ||
+      entry?.reviewDue
+    );
+    if (isMeaningful) {
+      summary.itemCount += 1;
+      summary.learnedCount += 1;
+    }
+    summary.attempts += Math.max(0, Number(learningStats.attempts) || 0);
+    summary.correct += Math.max(0, Number(learningStats.correct) || 0);
+    summary.updatedAt = Math.max(summary.updatedAt, Math.max(0, Number(entry?.updatedAt) || 0));
+  });
+
+  Object.values(reviewRecords || {}).forEach((entry) => {
+    summary.reviewRecordCount += 1;
+    summary.updatedAt = Math.max(summary.updatedAt, Math.max(0, Number(entry?.updatedAt) || 0));
+  });
+
+  return summary;
+}
+
+function buildStudyCoreSummaryFromRemoteData(remoteData) {
+  if (!remoteData || typeof remoteData !== "object") {
+    return createEmptyStudyCoreSummary();
+  }
+  return summarizeStudyCoreItemsLike(remoteData.items || {}, remoteData.reviewRecords || {}, {
+    unlockedDayMax: remoteData.unlockedDayMax,
+    updatedAt: Math.max(0, Number(remoteData.updatedAt) || 0)
+  });
+}
+
+function buildStudyCoreSummaryFromCurrentState() {
+  const itemEntries = Object.fromEntries(state.items.map((item) => [String(item.id), item]));
+  const summary = summarizeStudyCoreItemsLike(itemEntries, state.review.records || {}, {
+    unlockedDayMax: Math.max(1, Number(state.stats?.unlockedDayMax) || 1),
+    updatedAt: Math.max(0, Number(getStudyCoreLocalUpdateInfo().updatedAt) || 0)
+  });
+  summary.learnedCount = getLearnedItemCount();
+  summary.itemCount = collectStudyCoreTrackedItemIds().length;
+  return summary;
+}
+
+function isMeaningfulStudyCoreSummary(summary) {
+  const safe = summary && typeof summary === "object" ? summary : createEmptyStudyCoreSummary();
+  return Boolean(
+    safe.unlockedDayMax > 1 ||
+    safe.itemCount > 0 ||
+    safe.learnedCount > 0 ||
+    safe.attempts > 0 ||
+    safe.correct > 0 ||
+    safe.reviewRecordCount > 0
+  );
+}
+
+function isClearlyInitialStudyCoreSummary(summary) {
+  return !isMeaningfulStudyCoreSummary(summary);
+}
+
+function getStudyCoreRegressionReasons(candidateSummary, baselineSummary) {
+  const candidate = candidateSummary && typeof candidateSummary === "object" ? candidateSummary : createEmptyStudyCoreSummary();
+  const baseline = baselineSummary && typeof baselineSummary === "object" ? baselineSummary : createEmptyStudyCoreSummary();
+  const reasons = [];
+
+  STUDY_CORE_DANGEROUS_METRICS.forEach((metricKey) => {
+    const candidateValue = Math.max(0, Number(candidate[metricKey]) || 0);
+    const baselineValue = Math.max(0, Number(baseline[metricKey]) || 0);
+    if (candidateValue < baselineValue) {
+      reasons.push(`${metricKey}: ${candidateValue} < ${baselineValue}`);
+    }
+  });
+
+  return reasons;
+}
+
+function queueStudyCoreSyncChange(options = {}) {
+  markStudyCoreLocalChange(options);
+  scheduleStudyCoreSync();
+}
+
+function chooseStudyCoreSyncAdoption(localInfo, localSummary, remoteResult) {
+  const remoteExists = Boolean(remoteResult?.exists && remoteResult?.data && typeof remoteResult.data === "object");
+  const remoteSummary = buildStudyCoreSummaryFromRemoteData(remoteResult?.data || null);
+  const remoteUpdatedAt = Math.max(0, Number(remoteResult?.data?.updatedAt) || 0);
+  const localUpdatedAt = Math.max(0, Number(localInfo?.updatedAt) || 0);
+
+  if (!remoteExists || !isMeaningfulStudyCoreSummary(remoteSummary)) {
+    if (!isMeaningfulStudyCoreSummary(localSummary)) {
+      return { adopted: "none", remoteSummary, remoteUpdatedAt, reason: "both-empty" };
+    }
+    return {
+      adopted: "local-initial-upload",
+      remoteSummary,
+      remoteUpdatedAt,
+      reason: remoteExists ? "remote-not-meaningful" : "remote-missing"
+    };
+  }
+
+  if (isClearlyInitialStudyCoreSummary(localSummary)) {
+    return { adopted: "firestore", remoteSummary, remoteUpdatedAt, reason: "local-initial" };
+  }
+
+  const regressionReasons = getStudyCoreRegressionReasons(localSummary, remoteSummary);
+  if (regressionReasons.length) {
+    return {
+      adopted: "firestore",
+      remoteSummary,
+      remoteUpdatedAt,
+      reason: `local-regression:${regressionReasons.join(", ")}`
+    };
+  }
+
+  if (remoteUpdatedAt > localUpdatedAt) {
+    return { adopted: "firestore", remoteSummary, remoteUpdatedAt, reason: "remote-newer" };
+  }
+
+  if (localUpdatedAt > remoteUpdatedAt) {
+    return { adopted: "local", remoteSummary, remoteUpdatedAt, reason: "local-newer" };
+  }
+
+  return { adopted: "firestore", remoteSummary, remoteUpdatedAt, reason: "timestamps-equal" };
+}
+
+function buildStudyCoreBackupPayload(uid, options = {}) {
+  const safeUid = String(uid || "").trim();
+  const studyCoreData = options.studyCoreData && typeof options.studyCoreData === "object"
+    ? structuredClone(options.studyCoreData)
+    : buildStudyCoreFullPayload(safeUid);
+  return {
+    schemaVersion: STUDY_CORE_SYNC_SCHEMA_VERSION,
+    uid: safeUid,
+    dayKey: String(options.dayKey || getLearningHistoryDayKey(Date.now())),
+    backupUpdatedAt: Math.max(0, Number(options.backupUpdatedAt) || Date.now()),
+    appVersion: APP_VERSION,
+    summary: buildStudyCoreSummaryFromRemoteData(studyCoreData),
+    studyCoreData
+  };
+}
+
+function formatStudyCoreBackupDayLabel(dayKey) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dayKey || ""));
+  if (!match) return String(dayKey || "-");
+  return `${match[1]}/${match[2]}/${match[3]}`;
+}
+
+async function pruneStudyCoreBackupRetention(currentUid) {
+  if (typeof window.loadStudyCoreBackupsFromFirestore !== "function" || typeof window.deleteStudyCoreBackupFromFirestore !== "function") {
+    return;
+  }
+  const backups = await window.loadStudyCoreBackupsFromFirestore(currentUid);
+  const overflow = (Array.isArray(backups) ? backups : []).slice(STUDY_CORE_BACKUP_RETENTION_DAYS);
+  for (const backup of overflow) {
+    const dayKey = String(backup?.dayKey || backup?.id || "").trim();
+    if (!dayKey) continue;
+    await window.deleteStudyCoreBackupFromFirestore(dayKey, { targetUid: currentUid });
+  }
+}
+
+async function saveStudyCoreDailyBackup(options = {}) {
+  const currentUid = String(options?.targetUid || getStudyCoreCurrentUid() || "").trim();
+  if (!currentUid || typeof window.saveStudyCoreBackupToFirestore !== "function") {
+    return false;
+  }
+
+  const payload = buildStudyCoreBackupPayload(currentUid, options);
+  if (!options.force) {
+    if (!isMeaningfulStudyCoreSummary(payload.summary)) {
+      console.warn("[StudyCoreBackup] skipped empty backup", { uid: currentUid, summary: payload.summary });
+      return false;
+    }
+    const remoteSummary = buildStudyCoreSummaryFromRemoteData(studyCoreSyncRuntime.remoteData || null);
+    const regressionReasons = getStudyCoreRegressionReasons(payload.summary, remoteSummary);
+    if (isMeaningfulStudyCoreSummary(remoteSummary) && regressionReasons.length) {
+      console.warn("[StudyCoreBackup] skipped dangerous backup update", {
+        uid: currentUid,
+        summary: payload.summary,
+        remoteSummary,
+        regressionReasons
+      });
+      return false;
+    }
+  }
+
+  const saved = await window.saveStudyCoreBackupToFirestore(payload.dayKey, payload, { targetUid: currentUid });
+  if (!saved) {
+    return false;
+  }
+  await pruneStudyCoreBackupRetention(currentUid);
+  return true;
+}
+
+function renderStudyCoreBackupList(backups, options = {}) {
+  const container = document.getElementById("studyCoreBackupList");
+  if (!container) return;
+  const safeBackups = Array.isArray(backups) ? backups : [];
+  if (options.message) {
+    container.innerHTML = `<p class="settings-studycore-note">${escapeHtml(options.message)}</p>`;
+    return;
+  }
+  if (!safeBackups.length) {
+    container.innerHTML = '<p class="settings-studycore-note">バックアップはまだありません。</p>';
+    return;
+  }
+
+  container.innerHTML = safeBackups.map((backup) => {
+    const summary = backup?.summary && typeof backup.summary === "object" ? backup.summary : createEmptyStudyCoreSummary();
+    const dayKey = String(backup?.dayKey || backup?.id || "");
+    return `
+      <div class="studycore-backup-item">
+        <div class="studycore-backup-meta">
+          <p class="studycore-backup-day">${escapeHtml(formatStudyCoreBackupDayLabel(dayKey))}</p>
+          <p class="studycore-backup-summary">Day${Math.max(1, Number(summary.unlockedDayMax) || 1)} / 学習済み ${Math.max(0, Number(summary.learnedCount) || 0)}語 / 復習記録 ${Math.max(0, Number(summary.reviewRecordCount) || 0)}件</p>
+        </div>
+        <button class="secondary-btn settings-backup-btn studycore-backup-restore-btn" type="button" data-studycore-backup-day-key="${escapeHtml(dayKey)}">この状態に戻す</button>
+      </div>
+    `;
+  }).join("");
+
+  container.querySelectorAll("[data-studycore-backup-day-key]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const dayKey = String(button.getAttribute("data-studycore-backup-day-key") || "").trim();
+      if (!dayKey) return;
+      await restoreStudyCoreBackupFromSettings(dayKey);
+    });
+  });
+}
+
+async function loadStudyCoreBackupsForSettings() {
+  const currentUid = getStudyCoreCurrentUid();
+  const container = document.getElementById("studyCoreBackupList");
+  if (!container) return;
+  if (!currentUid) {
+    renderStudyCoreBackupList([], { message: "ログインすると直近3日分のバックアップを確認できます。" });
+    return;
+  }
+  if (typeof window.loadStudyCoreBackupsFromFirestore !== "function") {
+    renderStudyCoreBackupList([], { message: "バックアップを読み込めません。" });
+    return;
+  }
+
+  renderStudyCoreBackupList([], { message: "読み込み中..." });
+  try {
+    const backups = await window.loadStudyCoreBackupsFromFirestore(currentUid);
+    renderStudyCoreBackupList(backups);
+  } catch (error) {
+    console.error("Failed to load study core backups", error);
+    renderStudyCoreBackupList([], { message: "バックアップの読み込みに失敗しました。" });
+  }
+}
+
+async function restoreStudyCoreBackupFromSettings(dayKey) {
+  const currentUid = getStudyCoreCurrentUid();
+  if (!currentUid) {
+    alert("先にPC版へログインしてください。");
+    return;
+  }
+  if (typeof window.loadStudyCoreBackupsFromFirestore !== "function" || typeof window.saveStudyCoreToFirestore !== "function") {
+    alert("バックアップ復元機能を利用できません。");
+    return;
+  }
+
+  const backups = await window.loadStudyCoreBackupsFromFirestore(currentUid);
+  const targetBackup = (Array.isArray(backups) ? backups : []).find((entry) => String(entry?.dayKey || entry?.id || "") === String(dayKey || ""));
+  if (!targetBackup?.studyCoreData || typeof targetBackup.studyCoreData !== "object") {
+    alert("指定したバックアップが見つかりませんでした。");
+    return;
+  }
+
+  const confirmed = await openBackupRestoreConfirmModal({
+    title: "学習データの自動バックアップ",
+    message: `${formatStudyCoreBackupDayLabel(dayKey)} の学習状態に戻します。\n現在の学習進捗は上書きされます。`,
+    confirmText: "この状態に戻す"
+  });
+  if (!confirmed) return;
+
+  try {
+    await saveStudyCoreDailyBackup({ force: true, dayKey: getLearningHistoryDayKey(Date.now()) });
+    applyStudyCoreFromFirestore(targetBackup.studyCoreData, { replaceAll: true });
+    reconcileReviewDueFromReviewRecords();
+    syncDerivedStats();
+    saveState();
+    studyCoreSyncRuntime.remoteData = structuredClone(targetBackup.studyCoreData);
+    await window.saveStudyCoreToFirestore(targetBackup.studyCoreData, { targetUid: currentUid, merge: false });
+    await saveStudyCoreDailyBackup({ force: true, studyCoreData: targetBackup.studyCoreData, dayKey: getLearningHistoryDayKey(Date.now()) });
+    refreshStudyCoreSyncScreens();
+    recordStudyCoreSyncResolution({
+      uid: currentUid,
+      adopted: "backup-restore",
+      remoteUpdatedAt: Math.max(0, Number(targetBackup.studyCoreData.updatedAt) || 0),
+      localUpdatedAt: Math.max(0, Number(targetBackup.studyCoreData.updatedAt) || 0),
+      localInfoSource: "manual"
+    });
+    await loadStudyCoreBackupsForSettings();
+    alert("バックアップを復元しました。");
+  } catch (error) {
+    console.error("Failed to restore study core backup", error);
+    alert("バックアップの復元に失敗しました。時間をおいて再度お試しください。");
+  }
+}
+
 function getStudyCoreItemDerivedUpdatedAt(item, record) {
   const stats = sanitizeLearningStats(item?.learningStats);
   return Math.max(
@@ -661,6 +997,7 @@ function hasStudyCoreMeaningfulItemState(item, record) {
   const levelData = sanitizeLevelData(item.levelData);
   const learningStats = sanitizeLearningStats(item.learningStats);
   return Boolean(
+    item.hasBeenStudied ||
     levelData.level > 1 ||
     levelData.successCount > 0 ||
     levelData.lv4FailureCount > 0 ||
@@ -700,6 +1037,7 @@ function buildStudyCoreItemSyncEntry(questionId, updatedAt = 0) {
   return {
     levelData: sanitizeLevelData(item.levelData),
     learningStats: sanitizeLearningStats(item.learningStats),
+    hasBeenStudied: Boolean(item.hasBeenStudied),
     reviewDue: Boolean(item.reviewDue),
     updatedAt: Math.max(0, Number(updatedAt) || 0)
   };
@@ -949,6 +1287,7 @@ function applyStudyCoreFromFirestore(remoteData, options = {}) {
     if (!replaceAll && remoteUpdatedAt < localUpdatedAt) return;
     item.levelData = sanitizeLevelData(entry.levelData);
     item.learningStats = sanitizeLearningStats(entry.learningStats);
+    item.hasBeenStudied = Boolean(entry?.hasBeenStudied);
     item.reviewDue = Boolean(entry.reviewDue);
     syncLegacyItemFields(item);
     meta.items[questionId] = { updatedAt: remoteUpdatedAt };
@@ -1039,6 +1378,7 @@ async function flushPendingStudyCoreSync() {
       throw new Error("studyCore save failed");
     }
     studyCoreSyncRuntime.remoteData = mergeStudyCoreData(remoteResult?.data || {}, payload);
+    await saveStudyCoreDailyBackup({ studyCoreData: studyCoreSyncRuntime.remoteData });
     updateStudyCoreSyncDebugInfo({ lastDeltaSaveAt: Date.now(), lastDeltaPayload: payload });
     return true;
   } catch (error) {
@@ -1094,6 +1434,7 @@ async function saveCurrentPcStudyCoreToFirestoreFromSettings() {
       throw new Error("Study core save returned false");
     }
     studyCoreSyncRuntime.remoteData = payload;
+    await saveStudyCoreDailyBackup({ force: true, studyCoreData: payload });
     recordStudyCoreSyncResolution({
       uid: currentUid,
       adopted: "local-manual-save",
@@ -1215,7 +1556,9 @@ async function applyStudyCoreFromFirestoreFromSettings() {
     reconcileReviewDueFromReviewRecords();
     syncDerivedStats();
     saveState();
+    studyCoreSyncRuntime.remoteData = structuredClone(remoteResult.data);
     refreshStudyCoreSyncScreens();
+    await saveStudyCoreDailyBackup({ force: true, studyCoreData: remoteResult.data });
 
     const remoteUpdatedAt = Math.max(0, Number(remoteResult.data.updatedAt) || 0);
     recordStudyCoreSyncResolution({
@@ -1252,25 +1595,23 @@ async function syncStudyCoreAfterLogin() {
   }
 
   const localInfo = getStudyCoreLocalUpdateInfo();
+  const localSummary = buildStudyCoreSummaryFromCurrentState();
   const remoteResult = await window.loadStudyCoreFromFirestore(currentUid);
   const remoteData = remoteResult?.data || null;
-  const remoteUpdatedAt = Math.max(0, Number(remoteData?.updatedAt) || 0);
-  let adopted = "local";
+  const adoption = chooseStudyCoreSyncAdoption(localInfo, localSummary, remoteResult);
+  const remoteUpdatedAt = Math.max(0, Number(adoption.remoteUpdatedAt) || 0);
+  let adopted = adoption.adopted;
 
-  if (!remoteResult?.exists) {
-    const fullPayload = buildStudyCoreFullPayload(currentUid);
-    await window.saveStudyCoreToFirestore(fullPayload, { targetUid: currentUid, merge: false });
-    studyCoreSyncRuntime.remoteData = fullPayload;
-    adopted = "local-initial-upload";
-  } else if (remoteUpdatedAt > Math.max(0, Number(localInfo.updatedAt) || 0)) {
+  if (adoption.adopted === "firestore") {
     applyStudyCoreFromFirestore(remoteData, { replaceAll: true });
-    adopted = "firestore";
     studyCoreSyncRuntime.remoteData = remoteData;
-  } else {
+  } else if (adoption.adopted === "local" || adoption.adopted === "local-initial-upload") {
     const fullPayload = buildStudyCoreFullPayload(currentUid);
     await window.saveStudyCoreToFirestore(fullPayload, { targetUid: currentUid, merge: false });
     studyCoreSyncRuntime.remoteData = fullPayload;
-    adopted = remoteResult?.exists ? "local" : "local-initial-upload";
+    await saveStudyCoreDailyBackup({ force: true, studyCoreData: fullPayload });
+  } else {
+    studyCoreSyncRuntime.remoteData = remoteData;
   }
 
   reconcileReviewDueFromReviewRecords();
@@ -1278,9 +1619,10 @@ async function syncStudyCoreAfterLogin() {
   saveState();
   refreshStudyCoreSyncScreens();
   studyCoreSyncRuntime.initializedUid = currentUid;
+  await saveStudyCoreDailyBackup({ studyCoreData: studyCoreSyncRuntime.remoteData, dayKey: getLearningHistoryDayKey(Date.now()) });
   recordStudyCoreSyncResolution({
     uid: currentUid,
-    adopted,
+    adopted: adoption.reason ? `${adopted}:${adoption.reason}` : adopted,
     remoteUpdatedAt,
     localUpdatedAt: localInfo.updatedAt,
     localInfoSource: localInfo.source
@@ -1302,6 +1644,18 @@ function bindStudyCoreAuthStateListener() {
   });
   if (document.body) {
     document.body.dataset.studyCoreAuthBound = "true";
+  }
+}
+
+function bindStudyCoreBackupAuthStateListener() {
+  if (document.body?.dataset.studyCoreBackupAuthBound === "true") return;
+  document.addEventListener("pc-firebase-auth-state", () => {
+    loadStudyCoreBackupsForSettings().catch((error) => {
+      console.error("Failed to refresh study core backups after auth change", error);
+    });
+  });
+  if (document.body) {
+    document.body.dataset.studyCoreBackupAuthBound = "true";
   }
 }
 
@@ -4170,6 +4524,7 @@ function getItemAccuracyPercent(item) {
 
 function recordItemStudyAttempt(item, isCorrect) {
   const stats = getItemLearningStats(item);
+  item.hasBeenStudied = true;
   stats.attempts += 1;
   const today = todayKey();
   if (isCorrect) {
@@ -4177,6 +4532,7 @@ function recordItemStudyAttempt(item, isCorrect) {
     stats.lastCorrectDate = today;
   }
   stats.lastStudiedDate = today;
+  queueStudyCoreSyncChange({ itemIds: [item.id] });
 }
 
 function getLevelDefinition(level) {
@@ -5187,6 +5543,7 @@ function updateItemLevelProgress(item, isCorrect) {
   }
 
   syncLegacyItemFields(item);
+  queueStudyCoreSyncChange({ itemIds: [item.id] });
   return { leveledUpToFour };
 }
 
@@ -7205,12 +7562,14 @@ function upsertReviewRecord(questionId, updates) {
     ...updates,
     questionId: key
   };
+  queueStudyCoreSyncChange({ itemIds: [key], reviewRecordIds: [key] });
 }
 
 function setItemReviewDue(questionId, visible) {
   const target = getQuestionById(questionId);
   if (target) {
     target.reviewDue = visible;
+    queueStudyCoreSyncChange({ itemIds: [questionId] });
   }
 }
 
@@ -8475,6 +8834,9 @@ function completeCurrentSession(reason = "completed", options = {}) {
   state.session = null;
   setTestScreenActive(false);
   saveState();
+  flushPendingStudyCoreSync().catch((error) => {
+    console.error("Failed to flush study core sync after completing session", error);
+  });
   renderHome();
   if (options.showResult !== false) {
     openTrainingCompleteScreen({
@@ -8558,6 +8920,9 @@ function suspendCurrentSession() {
   state.stats.lastResultSummary = summary;
   state.session = null;
   saveState();
+  flushPendingStudyCoreSync().catch((error) => {
+    console.error("Failed to flush study core sync after suspending session", error);
+  });
   setTestScreenActive(false);
   openTrainingCompleteScreen({
     mode: "normal",
@@ -9955,6 +10320,8 @@ function handleEnterKey(event) {
 
 function bindEvents() {
   bindUserScopedStorageAuthStateListener();
+  bindStudyCoreAuthStateListener();
+  bindStudyCoreBackupAuthStateListener();
   bindAdminLearningHistoryAuthStateListener();
   bindHomeHistoryAuthStateListener();
   const typingAudioRepeatSelect = document.getElementById("typingAudioRepeatSelect");
@@ -10292,6 +10659,9 @@ function bindEvents() {
   const settingsBtn = document.getElementById("settingsBtn");
   if (settingsBtn) {
     settingsBtn.addEventListener("click", () => {
+      loadStudyCoreBackupsForSettings().catch((error) => {
+        console.error("Failed to load study core backups from settings", error);
+      });
       showScreen("settingsScreen");
     });
   }
@@ -10634,6 +11004,7 @@ function bindEvents() {
     if (isResettingLearningData) {
       return;
     }
+    flushPendingStudyCoreSync().catch(() => false);
     if (state.session?.mode === "normal") {
       pauseSessionClock(state.session);
       const summary = buildSuspendedSummary(state.session);
@@ -10694,6 +11065,9 @@ function init() {
   if (shouldUseFirestoreForHomeMetrics()) {
     startHomeHistoryFirestoreSync();
     ensurePointStateFromFirestoreIfMissing();
+    loadStudyCoreBackupsForSettings().catch((error) => {
+      console.error("Failed to load study core backups during init", error);
+    });
   }
   renderDayCatalog();
   renderPrepositionScopeSelector();

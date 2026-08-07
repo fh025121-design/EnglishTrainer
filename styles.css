@@ -348,6 +348,44 @@ p {
   color: #13243d;
 }
 
+.studycore-backup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.studycore-backup-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.studycore-backup-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.studycore-backup-day,
+.studycore-backup-summary {
+  margin: 0;
+}
+
+.studycore-backup-day {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.studycore-backup-summary {
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .settings-reset-btn {
   width: 100%;
   border-color: rgba(255, 109, 109, 0.35);

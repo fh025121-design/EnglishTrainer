@@ -11,6 +11,7 @@ import {
   addDoc,
   doc,
   collection,
+  deleteDoc,
   getDoc,
   getDocs,
   getFirestore,
@@ -284,6 +285,62 @@ async function saveStudyCoreToFirestore(payload, options = {}) {
   }
 }
 
+async function loadStudyCoreBackupsFromFirestore(targetUid = null) {
+  const user = auth.currentUser;
+  const resolvedUid = String(targetUid || user?.uid || "").trim();
+  if (!resolvedUid) {
+    return [];
+  }
+
+  const snapshot = await getDocs(query(
+    collection(firestore, "users", resolvedUid, "sync", "studyCore", "backups"),
+    orderBy("dayKey", "desc")
+  ));
+
+  return snapshot.docs.map((entry) => ({
+    id: String(entry.id || ""),
+    ...normalizeFirestoreSerializableValue(entry.data() || {})
+  }));
+}
+
+async function saveStudyCoreBackupToFirestore(dayKey, payload, options = {}) {
+  const user = auth.currentUser;
+  const resolvedUid = String(options?.targetUid || user?.uid || "").trim();
+  const resolvedDayKey = String(dayKey || "").trim();
+  if (!resolvedUid || !resolvedDayKey || !payload || typeof payload !== "object") {
+    return false;
+  }
+
+  try {
+    await setDoc(
+      doc(firestore, "users", resolvedUid, "sync", "studyCore", "backups", resolvedDayKey),
+      payload,
+      { merge: false }
+    );
+    return true;
+  } catch (error) {
+    console.error("Failed to save study core backup to Firestore", error);
+    return false;
+  }
+}
+
+async function deleteStudyCoreBackupFromFirestore(dayKey, options = {}) {
+  const user = auth.currentUser;
+  const resolvedUid = String(options?.targetUid || user?.uid || "").trim();
+  const resolvedDayKey = String(dayKey || "").trim();
+  if (!resolvedUid || !resolvedDayKey) {
+    return false;
+  }
+
+  try {
+    await deleteDoc(doc(firestore, "users", resolvedUid, "sync", "studyCore", "backups", resolvedDayKey));
+    return true;
+  } catch (error) {
+    console.error("Failed to delete study core backup from Firestore", error);
+    return false;
+  }
+}
+
 function normalizeFamilyChildren(familyData) {
   const children = familyData && typeof familyData === "object" && familyData.children && typeof familyData.children === "object"
     ? familyData.children
@@ -418,6 +475,9 @@ window.loadLearningHistoryEntriesFromFirestore = loadLearningHistoryEntriesFromF
 window.watchLearningHistoryEntriesFromFirestore = watchLearningHistoryEntriesFromFirestore;
 window.loadStudyCoreFromFirestore = loadStudyCoreFromFirestore;
 window.saveStudyCoreToFirestore = saveStudyCoreToFirestore;
+window.loadStudyCoreBackupsFromFirestore = loadStudyCoreBackupsFromFirestore;
+window.saveStudyCoreBackupToFirestore = saveStudyCoreBackupToFirestore;
+window.deleteStudyCoreBackupFromFirestore = deleteStudyCoreBackupFromFirestore;
 window.watchFamilyDocument = watchFamilyDocument;
 window.getFirebaseCurrentUser = () => auth.currentUser;
 window.EnglishTrainerFirebase = Object.freeze({ app, auth, firestore });
