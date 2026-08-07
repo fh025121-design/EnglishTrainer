@@ -2990,7 +2990,7 @@
                 return `
                   <div class="mobile-admin-history-detail-item">
                     <p class="mobile-admin-history-detail-row mobile-admin-history-detail-row-main">
-                      <span class="mobile-admin-history-detail-time">${startClock}</span>
+                      <span class="mobile-admin-history-detail-time">${startClock}～</span>
                       <span class="mobile-admin-history-detail-meta">${escapeHtml(studyLabel.weekDayText)}</span>
                       <span class="mobile-admin-history-detail-mode">${escapeHtml(studyLabel.categoryText)}</span>
                       <span class="mobile-admin-history-detail-meta">実学習 ${formatMobileLearningDurationMinutesSeconds(activeStudySeconds)}</span>
@@ -3032,16 +3032,7 @@
   }
 
   async function unlockMobileAdminLearningHistory() {
-    if (!elements.mobileAdminLearningHistoryPinInput || !elements.mobileAdminLearningHistoryPanel) return;
-    if (elements.mobileAdminLearningHistoryPinInput.value !== MOBILE_ADMIN_LEARNING_HISTORY_PIN) {
-      hideMobileAdminLearningHistory();
-      if (elements.mobileAdminLearningHistoryStatusText) {
-        elements.mobileAdminLearningHistoryStatusText.textContent = "PIN が違います。";
-        elements.mobileAdminLearningHistoryStatusText.classList.remove("hidden");
-      }
-      return;
-    }
-
+    if (!elements.mobileAdminLearningHistoryPanel) return;
     if (elements.mobileAdminLearningHistoryStatusText) {
       elements.mobileAdminLearningHistoryStatusText.textContent = "読み込み中...";
       elements.mobileAdminLearningHistoryStatusText.classList.remove("hidden");
@@ -3087,13 +3078,8 @@
 
   function renderMobileAdminLearningHistoryScreen() {
     hideMobileAdminLearningHistory();
-    if (elements.mobileAdminLearningHistoryPinInput) {
-      elements.mobileAdminLearningHistoryPinInput.value = "";
-    }
     showScreen("mobileAdminLearningHistoryScreen");
-    if (elements.mobileAdminLearningHistoryPinInput) {
-      elements.mobileAdminLearningHistoryPinInput.focus();
-    }
+    unlockMobileAdminLearningHistory();
   }
 
   function getMobileAdminLearningHistoryDeviceOptions() {
@@ -8287,12 +8273,16 @@
     elements.openMobileAdminFromUpdateBtn.addEventListener("click", renderMobileAdminLearningHistoryScreen);
     elements.mobileUpdateHistoryBackBtn.addEventListener("click", () => showScreen("settingsScreen"));
     elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", () => showScreen("mobileUpdateHistoryScreen"));
-    elements.mobileAdminLearningHistoryUnlockBtn.addEventListener("click", unlockMobileAdminLearningHistory);
-    elements.mobileAdminLearningHistoryPinInput.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter") return;
-      event.preventDefault();
-      unlockMobileAdminLearningHistory();
-    });
+    if (elements.mobileAdminLearningHistoryUnlockBtn) {
+      elements.mobileAdminLearningHistoryUnlockBtn.addEventListener("click", unlockMobileAdminLearningHistory);
+    }
+    if (elements.mobileAdminLearningHistoryPinInput) {
+      elements.mobileAdminLearningHistoryPinInput.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        unlockMobileAdminLearningHistory();
+      });
+    }
     document.getElementById("confirmCancelBtn").addEventListener("click", hideConfirm);
     elements.confirmOkBtn.addEventListener("click", () => {
       const action = state.confirmAction;

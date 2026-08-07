@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260807-2037";
+        const defaultToken = "20260807-2053";
         const queryToken = new URLSearchParams(window.location.search).get("v") || "";
         const cacheToken = queryToken || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -553,12 +553,7 @@
         <main class="stack-layout">
           <section class="panel admin-learning-history-shell">
             <h2>管理者用 学習履歴</h2>
-            <div class="field-block">
-              <span>PIN（5桁）</span>
-              <input id="mobileAdminLearningHistoryPinInput" class="typing-input" type="password" inputmode="numeric" autocomplete="off" placeholder="12345" />
-              <button id="mobileAdminLearningHistoryUnlockBtn" class="primary-btn large-btn" type="button">表示する</button>
-              <p id="mobileAdminLearningHistoryStatusText" class="status-text hidden"></p>
-            </div>
+            <p id="mobileAdminLearningHistoryStatusText" class="status-text hidden"></p>
             <div id="mobileAdminLearningHistoryPanel" class="admin-learning-history-panel hidden"></div>
           </section>
         </main>
