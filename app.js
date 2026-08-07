@@ -147,6 +147,7 @@ const STUDY_CORE_SYNC_SCHEMA_VERSION = 1;
 const STUDY_CORE_SYNC_LOCAL_META_KEY = "english-trainer-pc-study-core-sync-v1";
 const STUDY_CORE_SYNC_DEBUG_KEY = "english-trainer-pc-study-core-sync-debug-v1";
 const STUDY_CORE_SYNC_DEBOUNCE_MS = 250;
+const STUDY_CORE_SYNC_SKIP_ONCE_SESSION_KEY = "english-trainer-pc-study-core-sync-skip-once";
 function getCurrentPcFirebaseUid() {
   return String(getCurrentPcFirebaseUser()?.uid || "").trim();
 }
@@ -573,6 +574,27 @@ function parseStudyCoreDateKeyToTimestamp(value) {
 
 function getStudyCoreCurrentUid() {
   return String(getCurrentPcFirebaseUser()?.uid || "").trim();
+}
+
+function markSkipStudyCoreSyncOnce() {
+  try {
+    sessionStorage.setItem(STUDY_CORE_SYNC_SKIP_ONCE_SESSION_KEY, "1");
+  } catch (_error) {
+    // Ignore storage failures.
+  }
+}
+
+function consumeSkipStudyCoreSyncOnce() {
+  try {
+    const shouldSkip = sessionStorage.getItem(STUDY_CORE_SYNC_SKIP_ONCE_SESSION_KEY) === "1";
+    if (shouldSkip) {
+      sessionStorage.removeItem(STUDY_CORE_SYNC_SKIP_ONCE_SESSION_KEY);
+      return true;
+    }
+  } catch (_error) {
+    // Ignore storage failures.
+  }
+  return false;
 }
 
 function getStudyCoreItemDerivedUpdatedAt(item, record) {
@@ -1214,6 +1236,18 @@ async function applyStudyCoreFromFirestoreFromSettings() {
 async function syncStudyCoreAfterLogin() {
   const currentUid = getStudyCoreCurrentUid();
   if (!currentUid || typeof window.loadStudyCoreFromFirestore !== "function" || typeof window.saveStudyCoreToFirestore !== "function") {
+    return;
+  }
+
+  if (consumeSkipStudyCoreSyncOnce()) {
+    studyCoreSyncRuntime.initializedUid = currentUid;
+    recordStudyCoreSyncResolution({
+      uid: currentUid,
+      adopted: "restore-local-only-skip-sync",
+      remoteUpdatedAt: 0,
+      localUpdatedAt: Math.max(0, Number(getStudyCoreLocalUpdateInfo().updatedAt) || 0),
+      localInfoSource: "manual"
+    });
     return;
   }
 
@@ -6744,6 +6778,13 @@ async function tryRestoreLearningDataFromFile(file) {
     const rawText = await file.text();
     const backup = parseLearningBackupPayload(rawText);
 
+    const currentUid = getCurrentPcFirebaseUid();
+    const storageKey = getScopedLocalStorageKey(STORAGE_KEY, currentUid);
+    if (!storageKey) {
+      alert("ログイン状態を確認できないため復元できません");
+      return;
+    }
+
     const overwriteConfirmed = await openBackupRestoreConfirmModal({
       title: "復元の確認",
       message: "現在の学習記録を上書きします。\n元に戻すことはできません。",
@@ -6760,11 +6801,17 @@ async function tryRestoreLearningDataFromFile(file) {
       if (!legacyConfirmed) return;
     }
 
-    const storageKey = getScopedLocalStorageKey(STORAGE_KEY);
-    if (storageKey) {
-      localStorage.setItem(storageKey, JSON.stringify(backup.state));
+    const serializedState = JSON.stringify(backup.state);
+    localStorage.setItem(storageKey, serializedState);
+    const persistedStateRaw = localStorage.getItem(storageKey);
+    if (!persistedStateRaw) {
+      throw new Error("Backup restore verification failed: localStorage key is empty");
     }
-    alert("学習記録を復元しました。\n\nアプリを再読み込みします。");
+
+    markSkipStudyCoreSyncOnce();
+    isResettingLearningData = true;
+
+    alert("学習データを復元しました。\n\nアプリを再読み込みします。");
     location.reload();
   } catch (error) {
     console.error("Could not restore backup file", error);
