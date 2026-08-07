@@ -2527,6 +2527,28 @@ function recordResponseLearningHistory(sessionLike, reason) {
   appendLearningHistoryEntry(buildLearningHistoryEntryFromSession(sessionLike, summary, reason));
 }
 
+function resolveLearningHistoryAnswerStats(sessionLike, summary) {
+  if (String(sessionLike?.mode || "") !== "normal") {
+    const answerCount = Math.max(0, Number(summary?.answerCount) || 0);
+    const correctCount = Math.max(0, Number(summary?.correctCount) || 0);
+    return {
+      questionCount: answerCount,
+      correctCount,
+      accuracy: answerCount ? Math.round((correctCount / answerCount) * 100) : 0
+    };
+  }
+
+  const answerCount = Math.max(0, Number(sessionLike?.answerCount) || 0);
+  const correctCount = Array.isArray(sessionLike?.answerHistory)
+    ? sessionLike.answerHistory.filter((entry) => entry?.isCorrect).length
+    : Math.max(0, Number(summary?.correctCount) || 0);
+  return {
+    questionCount: answerCount,
+    correctCount,
+    accuracy: answerCount ? Math.round((correctCount / answerCount) * 100) : 0
+  };
+}
+
 function completeResponseTrainingSession(reason) {
   const session = responseTrainingSession;
   if (!session) {
@@ -2556,6 +2578,7 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
   const ticketBefore = sanitizeLearningHistoryTicketSnapshot(sessionLike?.ticketSnapshot);
   const ticketAfter = captureLearningHistoryTicketSnapshot();
   const pointSummary = computeSessionEarnedPoints(sessionLike);
+  const answerStats = resolveLearningHistoryAnswerStats(sessionLike, summary);
   return {
     learnedAt: formatTimestampToJstDisplay(endedAt),
     startedAt,
@@ -2565,10 +2588,10 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
     activeStudySeconds: computeSessionActiveStudySeconds(sessionLike, endedAt),
     mode: String(sessionLike?.mode || ""),
     dayNumber: resolveSessionDayNumber(sessionLike),
-    questionCount: Math.max(0, Number(summary?.answerCount) || 0),
-    correctCount: Math.max(0, Number(summary?.correctCount) || 0),
+    questionCount: answerStats.questionCount,
+    correctCount: answerStats.correctCount,
     earnedPoints: pointSummary.earnedPoints,
-    accuracy: Math.max(0, Math.min(100, Number(summary?.accuracy) || 0)),
+    accuracy: Math.max(0, Math.min(100, Number(answerStats.accuracy) || 0)),
     completedReason: String(reason || "completed"),
     deviceType: "pc",
     ticket: computeLearningHistoryTicketDelta(ticketBefore, ticketAfter)
@@ -4060,6 +4083,7 @@ function getTrainingCompletionModeLabel(mode) {
 
 function openTrainingCompleteScreen(options = {}) {
   const titleText = document.getElementById("trainingCompleteTitleText");
+  const unlockText = document.getElementById("trainingCompleteUnlockText");
   const earnedText = document.getElementById("trainingCompleteEarnedText");
   const dailySummaryText = document.getElementById("trainingCompleteDailySummaryText");
   const lifetimeSummaryText = document.getElementById("trainingCompleteLifetimeSummaryText");
@@ -4078,6 +4102,19 @@ function openTrainingCompleteScreen(options = {}) {
   titleText.textContent = interrupted
     ? `⚠️ ${modeLabel} 途中で終了しました`
     : `🎉 ${modeLabel} おつかれさまでした！`;
+
+  if (unlockText) {
+    const unlockedDay = Math.max(0, Number(options.unlockedDayNotice?.day) || 0);
+    if (!interrupted && unlockedDay > 0) {
+      const message = String(options.unlockedDayNotice?.message || `Day${unlockedDay}がオープンしました！`).trim();
+      unlockText.textContent = message;
+      unlockText.classList.remove("hidden");
+    } else {
+      unlockText.textContent = "";
+      unlockText.classList.add("hidden");
+    }
+  }
+
   earnedText.textContent = `＋${earnedPoints}P`;
 
   const pointState = getPointState();
@@ -8160,7 +8197,7 @@ function completeCurrentSession(reason = "completed", options = {}) {
   processStreakBonusTicket(reason);
   awardDayAdvanceCompletionBonus(session, reason);
   updateBestAccuracyFromSession(session);
-  updateUnlockedDayByNormalCompletion(session, reason);
+  const unlockedDayNotice = updateUnlockedDayByNormalCompletion(session, reason);
   const summary = buildResultSummary(session);
   const pointSummary = computeSessionEarnedPoints(session);
   state.stats.lastResultSummary = summary;
@@ -8182,25 +8219,36 @@ function completeCurrentSession(reason = "completed", options = {}) {
       earnedPoints: pointSummary.earnedPoints,
       pointBalance: pointSummary.pointBalance,
       interrupted: reason !== "completed",
+      unlockedDayNotice,
       showTicketAfter: true
     });
   }
 }
 
 function updateUnlockedDayByNormalCompletion(session, reason) {
-  if (!session || reason !== "completed") return;
-  if (session.mode !== "normal") return;
-  if (session.isDayStudySession) return;
+  if (!session || reason !== "completed") return null;
+  if (session.mode !== "normal") return null;
+  if (session.isDayStudySession) return null;
 
   const availableDays = getAvailableDays();
-  if (!availableDays.length) return;
+  if (!availableDays.length) return null;
   const maxDay = availableDays[availableDays.length - 1];
   const unlockedDayMax = getUnlockedDayMax();
   const completedDay = Number(session.studyRangeEnd);
-  if (!Number.isFinite(completedDay)) return;
-  if (completedDay !== unlockedDayMax) return;
+  if (!Number.isFinite(completedDay)) return null;
+  if (completedDay !== unlockedDayMax) return null;
 
-  state.stats.unlockedDayMax = Math.min(maxDay, unlockedDayMax + 1);
+  const nextUnlockedDay = Math.min(maxDay, unlockedDayMax + 1);
+  if (nextUnlockedDay <= unlockedDayMax) return null;
+
+  state.stats.unlockedDayMax = nextUnlockedDay;
+  markStudyCoreLocalChange({ unlockedDayMax: true });
+  scheduleStudyCoreSync();
+
+  return {
+    day: nextUnlockedDay,
+    message: `Day${nextUnlockedDay}がオープンしました！`
+  };
 }
 
 function extractWeakQuestionIdsFromSession(session) {
