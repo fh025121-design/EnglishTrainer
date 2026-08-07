@@ -4,6 +4,7 @@ const LEARNING_HISTORY_MAX_ENTRIES = 1000;
 const LEARNING_ACTIVE_TIMEOUT_MS = 3 * 60 * 1000;
 const PC_BROWSER_DEVICE_ID_STORAGE_KEY = "english-trainer-pc-device-id-v1";
 const PC_BROWSER_DEVICE_NAME_STORAGE_KEY = "english-trainer-pc-device-name-v1";
+const PC_BROWSER_DEVICE_NAME_MAP_STORAGE_KEY = "english-trainer-pc-device-name-map-v1";
 const PC_BROWSER_DEVICE_NAME_FALLBACK = "端末未設定";
 const ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY = "all";
 const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY = "legacy:unidentified";
@@ -172,6 +173,47 @@ function sanitizePcBrowserDeviceName(value) {
   return text.slice(0, 40);
 }
 
+function isReservedUserLabelForDeviceName(value) {
+  const normalized = sanitizePcBrowserDeviceName(value);
+  return normalized === "私" || normalized === "長男";
+}
+
+function normalizeDeviceNameForHistory(value) {
+  const normalized = sanitizePcBrowserDeviceName(value);
+  if (!normalized) return "";
+  if (normalized === PC_BROWSER_DEVICE_NAME_FALLBACK) return "";
+  if (isReservedUserLabelForDeviceName(normalized)) return "";
+  return normalized;
+}
+
+function readPcBrowserDeviceNameMap() {
+  try {
+    const raw = localStorage.getItem(PC_BROWSER_DEVICE_NAME_MAP_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+    const normalizedEntries = Object.entries(parsed)
+      .map(([deviceId, name]) => [String(deviceId || "").trim(), normalizeDeviceNameForHistory(name)])
+      .filter(([deviceId, name]) => deviceId && name);
+    return Object.fromEntries(normalizedEntries);
+  } catch (_error) {
+    return {};
+  }
+}
+
+function writePcBrowserDeviceNameMap(mapLike) {
+  const safeObject = mapLike && typeof mapLike === "object" && !Array.isArray(mapLike) ? mapLike : {};
+  const normalizedEntries = Object.entries(safeObject)
+    .map(([deviceId, name]) => [String(deviceId || "").trim(), normalizeDeviceNameForHistory(name)])
+    .filter(([deviceId, name]) => deviceId && name);
+  try {
+    localStorage.setItem(PC_BROWSER_DEVICE_NAME_MAP_STORAGE_KEY, JSON.stringify(Object.fromEntries(normalizedEntries)));
+  } catch (_error) {
+    // Keep runtime values even if persistence fails.
+  }
+}
+
 function getPcBrowserDeviceId() {
   try {
     const stored = String(localStorage.getItem(PC_BROWSER_DEVICE_ID_STORAGE_KEY) || "").trim();
@@ -184,32 +226,65 @@ function getPcBrowserDeviceId() {
   }
 }
 
-function getPcBrowserDeviceName() {
+function getPcBrowserDeviceNameRaw() {
+  const deviceId = getPcBrowserDeviceId();
   try {
-    const stored = sanitizePcBrowserDeviceName(localStorage.getItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY));
-    return stored || PC_BROWSER_DEVICE_NAME_FALLBACK;
+    const map = readPcBrowserDeviceNameMap();
+    const mapped = normalizeDeviceNameForHistory(map[deviceId]);
+    if (mapped) return mapped;
+    const legacy = normalizeDeviceNameForHistory(localStorage.getItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY));
+    if (!legacy) return "";
+    map[deviceId] = legacy;
+    writePcBrowserDeviceNameMap(map);
+    return legacy;
   } catch (_error) {
-    return PC_BROWSER_DEVICE_NAME_FALLBACK;
+    return "";
   }
+}
+
+function getPcBrowserDeviceName() {
+  return getPcBrowserDeviceNameRaw() || PC_BROWSER_DEVICE_NAME_FALLBACK;
 }
 
 function setPcBrowserDeviceName(value) {
-  const sanitized = sanitizePcBrowserDeviceName(value) || PC_BROWSER_DEVICE_NAME_FALLBACK;
+  const normalized = normalizeDeviceNameForHistory(value);
+  const deviceId = getPcBrowserDeviceId();
+  const nextMap = readPcBrowserDeviceNameMap();
+  if (normalized) {
+    nextMap[deviceId] = normalized;
+  } else {
+    delete nextMap[deviceId];
+  }
+  writePcBrowserDeviceNameMap(nextMap);
   try {
-    localStorage.setItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY, sanitized);
+    if (normalized) {
+      localStorage.setItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY, normalized);
+    } else {
+      localStorage.removeItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY);
+    }
   } catch (_error) {
     // Keep runtime value even if persistence fails.
   }
-  return sanitized;
+  return normalized || PC_BROWSER_DEVICE_NAME_FALLBACK;
 }
 
 function ensurePcBrowserDeviceIdentity() {
-  getPcBrowserDeviceId();
+  const deviceId = getPcBrowserDeviceId();
   try {
-    const existingName = sanitizePcBrowserDeviceName(localStorage.getItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY));
-    if (!existingName) {
-      localStorage.setItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY, PC_BROWSER_DEVICE_NAME_FALLBACK);
+    const map = readPcBrowserDeviceNameMap();
+    const mapped = normalizeDeviceNameForHistory(map[deviceId]);
+    const legacy = normalizeDeviceNameForHistory(localStorage.getItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY));
+    if (mapped) {
+      localStorage.setItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY, mapped);
+      return;
     }
+    if (legacy) {
+      map[deviceId] = legacy;
+      writePcBrowserDeviceNameMap(map);
+      localStorage.setItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY, legacy);
+      return;
+    }
+    localStorage.removeItem(PC_BROWSER_DEVICE_NAME_STORAGE_KEY);
   } catch (_error) {
     // No-op.
   }
@@ -220,18 +295,52 @@ function normalizeAdminLearningHistoryDeviceFilterKey(deviceId) {
   return normalized || ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY;
 }
 
-function getAdminLearningHistoryDeviceFilterLabel(entry, fallbackKey = "") {
-  const explicitName = sanitizePcBrowserDeviceName(entry?.deviceName);
+function buildAdminLearningHistoryDeviceNameMap(entries = adminLearningHistorySourceEntries) {
+  const map = new Map();
+  const source = Array.isArray(entries) ? entries : [];
+  source.forEach((entry) => {
+    const key = normalizeAdminLearningHistoryDeviceFilterKey(entry?.deviceId);
+    if (key === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY || map.has(key)) return;
+    const normalizedName = normalizeDeviceNameForHistory(entry?.deviceName);
+    if (normalizedName) {
+      map.set(key, normalizedName);
+    }
+  });
+
+  const localDeviceNameMap = readPcBrowserDeviceNameMap();
+  Object.entries(localDeviceNameMap).forEach(([deviceId, deviceName]) => {
+    const key = normalizeAdminLearningHistoryDeviceFilterKey(deviceId);
+    if (key === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY || map.has(key)) return;
+    const normalizedName = normalizeDeviceNameForHistory(deviceName);
+    if (normalizedName) {
+      map.set(key, normalizedName);
+    }
+  });
+
+  const currentDeviceId = String(getPcBrowserDeviceId() || "").trim();
+  const currentDeviceName = normalizeDeviceNameForHistory(getPcBrowserDeviceNameRaw());
+  if (currentDeviceId && currentDeviceName) {
+    map.set(currentDeviceId, currentDeviceName);
+  }
+  return map;
+}
+
+function getAdminLearningHistoryDeviceFilterLabel(entry, fallbackKey = "", deviceNameMap = null) {
+  const explicitName = normalizeDeviceNameForHistory(entry?.deviceName);
   if (explicitName) return explicitName;
   const deviceType = String(entry?.deviceType || "").trim().toLowerCase();
   const resolvedKey = normalizeAdminLearningHistoryDeviceFilterKey(entry?.deviceId || fallbackKey);
   if (resolvedKey === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY) {
     return ADMIN_HISTORY_LEGACY_DEVICE_FILTER_LABEL;
   }
-  if (deviceType === "mobile") {
-    return "モバイル端末";
+  const mappedName = normalizeDeviceNameForHistory(deviceNameMap?.get(resolvedKey));
+  if (mappedName) {
+    return mappedName;
   }
-  return "PC端末";
+  if (deviceType === "mobile") {
+    return "端末未設定";
+  }
+  return PC_BROWSER_DEVICE_NAME_FALLBACK;
 }
 
 function renderPcDeviceIdentitySettings() {
@@ -1899,6 +2008,7 @@ function buildAdminLearningHistoryFamilyOptions(family) {
 function getAdminLearningHistoryDeviceOptions() {
   const source = Array.isArray(adminLearningHistorySourceEntries) ? adminLearningHistorySourceEntries : [];
   const options = [{ key: ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY, label: "すべて" }];
+  const deviceNameMap = buildAdminLearningHistoryDeviceNameMap(source);
   const byKey = new Map();
   source.forEach((entry) => {
     if (Math.max(0, Number(entry?.questionCount) || 0) <= 0) return;
@@ -1906,7 +2016,7 @@ function getAdminLearningHistoryDeviceOptions() {
     if (byKey.has(key)) return;
     byKey.set(key, {
       key,
-      label: getAdminLearningHistoryDeviceFilterLabel(entry, key)
+      label: getAdminLearningHistoryDeviceFilterLabel(entry, key, deviceNameMap)
     });
   });
   const dynamicOptions = [...byKey.values()].sort((left, right) => {
@@ -2583,7 +2693,7 @@ function buildPrepositionLearningHistoryEntry(sessionLike, reason) {
     completedReason: String(reason || "completed"),
     deviceType: "pc",
     deviceId: getPcBrowserDeviceId(),
-    deviceName: getPcBrowserDeviceName(),
+    deviceName: getPcBrowserDeviceNameRaw(),
     ticket: computeLearningHistoryTicketDelta(
       sanitizeLearningHistoryTicketSnapshot(sessionLike?.ticketSnapshot),
       captureLearningHistoryTicketSnapshot()
@@ -2677,7 +2787,7 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
     completedReason: String(reason || "completed"),
     deviceType: "pc",
     deviceId: getPcBrowserDeviceId(),
-    deviceName: getPcBrowserDeviceName(),
+    deviceName: getPcBrowserDeviceNameRaw(),
     ticket: computeLearningHistoryTicketDelta(ticketBefore, ticketAfter)
   };
 }
