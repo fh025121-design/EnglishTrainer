@@ -1526,7 +1526,13 @@ function getLearningHistoryModeSummaryEntries(summary) {
 
 function renderLearningHistoryModeSummaryContent(summary, options = {}) {
   const entries = getLearningHistoryModeSummaryEntries(summary);
+  const hasAnyEntries = typeof options.hasEntries === "boolean"
+    ? options.hasEntries
+    : (Math.max(0, Number(summary?.questionCount) || 0) > 0 || Math.max(0, Number(summary?.activeStudySeconds) || 0) > 0);
   if (!entries.length) {
+    if (hasAnyEntries) {
+      return "";
+    }
     return `<p class="empty-state">${escapeHtml(options.emptyMessage || "この期間の学習記録がありません")}</p>`;
   }
 
@@ -1590,14 +1596,7 @@ function createLearningHistoryModeTotals() {
 }
 
 function getLearningHistoryEntryEarnedPoints(entry) {
-  const explicit = Number(entry?.earnedPoints);
-  if (Number.isFinite(explicit) && explicit > 0) {
-    return Math.max(0, Math.floor(explicit));
-  }
-
-  const inferredMode = inferPointModeFromLearningHistoryEntry(entry?.mode);
-  if (!inferredMode) return 0;
-  return Math.max(0, Math.floor(Number(entry?.correctCount) || 0));
+  return Math.max(0, Math.floor(Number(entry?.earnedPoints) || 0));
 }
 
 function accumulateLearningHistoryTotals(target, entry) {
@@ -1722,7 +1721,9 @@ function buildLearningHistoryInsights(entries) {
     todaySummary,
     recentDaySummaries,
     weekSummary,
+    weekEntryCount: withinWeekEntries.length,
     monthSummary,
+    monthEntryCount: withinMonthEntries.length,
     streak,
     dayMap,
     source
@@ -2119,7 +2120,10 @@ function renderAdminLearningHistoryEntries(entries) {
             <p class="admin-history-period-value">${formatLearningHistoryDuration(model.weekSummary.activeStudySeconds)}</p>
             <p class="admin-history-period-meta">${model.weekSummary.questionCount}問 ${model.weekSummary.accuracy}%</p>
             <div class="admin-history-mode-summary-list">
-              ${renderLearningHistoryModeSummaryContent(model.weekSummary, { emptyMessage: "今週の学習記録がありません" })}
+              ${renderLearningHistoryModeSummaryContent(model.weekSummary, {
+                emptyMessage: "今週の学習記録がありません",
+                hasEntries: Number(model.weekEntryCount) > 0
+              })}
             </div>
           </div>
           <div class="admin-history-period-block">
@@ -2127,7 +2131,10 @@ function renderAdminLearningHistoryEntries(entries) {
             <p class="admin-history-period-value">${formatLearningHistoryDuration(model.monthSummary.activeStudySeconds)}</p>
             <p class="admin-history-period-meta">${model.monthSummary.questionCount}問 ${model.monthSummary.accuracy}%</p>
             <div class="admin-history-mode-summary-list">
-              ${renderLearningHistoryModeSummaryContent(model.monthSummary, { emptyMessage: "今月の学習記録がありません" })}
+              ${renderLearningHistoryModeSummaryContent(model.monthSummary, {
+                emptyMessage: "今月の学習記録がありません",
+                hasEntries: Number(model.monthEntryCount) > 0
+              })}
             </div>
           </div>
         </div>
