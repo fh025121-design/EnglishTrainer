@@ -2132,7 +2132,8 @@
     }
     if (normalizedMode === "conversation") return "会話練習";
     if (normalizedMode === "review") return "過去の間違い";
-    return "その他";
+    if (normalizedMode === "word-order" || normalizedMode === "wordorder") return "語順トレーニング";
+    return normalizedMode || "-";
   }
 
   function getMobileLearningDayNumberFromSession(session) {
@@ -2162,13 +2163,13 @@
       startedAtDisplay: typeof raw.startedAtDisplay === "string" && raw.startedAtDisplay ? raw.startedAtDisplay : formatTimestampToJstDisplay(startedAt),
       endedAtDisplay: typeof raw.endedAtDisplay === "string" && raw.endedAtDisplay ? raw.endedAtDisplay : formatTimestampToJstDisplay(endedAt),
       activeStudySeconds: Math.max(0, Number(raw.activeStudySeconds) || 0),
-      mode: typeof raw.mode === "string" ? raw.mode : "その他",
+      mode: typeof raw.mode === "string" ? raw.mode : "-",
       dayNumber: typeof raw.dayNumber === "string" ? raw.dayNumber : "",
       questionCount: Math.max(0, Number(raw.questionCount) || 0),
       correctCount: Math.max(0, Number(raw.correctCount) || 0),
       accuracy: Math.max(0, Math.min(100, Number(raw.accuracy) || 0)),
       completedReason: raw.completedReason === "interrupted" ? "interrupted" : "completed",
-      deviceType: raw.deviceType === "mobile" ? "mobile" : "mobile",
+      deviceType: normalizeMobileAdminLearningHistoryDeviceType(raw.deviceType),
       ticket: {
         earned: {
           count: Math.max(0, Number(raw.ticket?.earned?.count) || 0)
@@ -2210,6 +2211,127 @@
   function getMobileLearningHistoryDayKey(timestamp) {
     const parts = getMobileLearningHistoryJstParts(timestamp);
     return `${parts.year || "0000"}-${parts.month || "00"}-${parts.day || "00"}`;
+  }
+
+  function isIsoDayKey(value) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "").trim());
+  }
+
+  function parseMobileLearningHistoryDayNumberInfo(dayNumber) {
+    const text = String(dayNumber || "").trim();
+    if (!text) {
+      return { weekNumber: null, dayKey: "" };
+    }
+
+    let match = /^W(\d+)\s+(\d{4}-\d{2}-\d{2})$/i.exec(text);
+    if (match) {
+      return {
+        weekNumber: Number(match[1]) || null,
+        dayKey: match[2]
+      };
+    }
+
+    match = /^Week\s*(\d+)\s+(\d{4}-\d{2}-\d{2})$/i.exec(text);
+    if (match) {
+      return {
+        weekNumber: Number(match[1]) || null,
+        dayKey: match[2]
+      };
+    }
+
+    if (isIsoDayKey(text)) {
+      return { weekNumber: null, dayKey: text };
+    }
+
+    return { weekNumber: null, dayKey: "" };
+  }
+
+  function getWeekNumberFromSpeakingDayKey(dayKey) {
+    if (!isIsoDayKey(dayKey)) return null;
+    const week = getSpeakingWeeks().find((entry) => {
+      const start = String(entry?.startDate || "").trim();
+      const end = String(entry?.endDate || "").trim();
+      return isIsoDayKey(start) && isIsoDayKey(end) && start <= dayKey && dayKey <= end;
+    });
+    const directWeekNumber = parseWeekNumber(week?.weekId || "");
+    if (Number.isFinite(directWeekNumber)) {
+      return directWeekNumber;
+    }
+
+    // When dayKey is outside currently defined speaking weeks, keep week labels stable
+    // by extending weeks in 7-day blocks from the first known speaking week.
+    const datedWeeks = getSpeakingWeeks()
+      .map((entry) => {
+        const start = String(entry?.startDate || "").trim();
+        const weekNumber = parseWeekNumber(entry?.weekId || "");
+        if (!isIsoDayKey(start) || !Number.isFinite(weekNumber)) return null;
+        return { start, weekNumber };
+      })
+      .filter(Boolean)
+      .sort((left, right) => (left.start < right.start ? -1 : left.start > right.start ? 1 : 0));
+
+    if (!datedWeeks.length) return null;
+    const anchor = datedWeeks[0];
+    const anchorDate = new Date(`${anchor.start}T00:00:00+09:00`);
+    const targetDate = new Date(`${dayKey}T00:00:00+09:00`);
+    if (!Number.isFinite(anchorDate.getTime()) || !Number.isFinite(targetDate.getTime())) return null;
+    const diffDays = Math.floor((targetDate.getTime() - anchorDate.getTime()) / (24 * 60 * 60 * 1000));
+    const extendedWeek = anchor.weekNumber + Math.floor(diffDays / 7);
+    return extendedWeek >= 1 ? extendedWeek : 1;
+  }
+
+  function getMobileLearningHistoryWeekDayContext(entry) {
+    const parsed = parseMobileLearningHistoryDayNumberInfo(entry?.dayNumber);
+    const fallbackDayKey = getMobileLearningHistoryDayKey(entry?.endedAt || entry?.startedAt || Date.now());
+    const dayKey = isIsoDayKey(parsed.dayKey) ? parsed.dayKey : fallbackDayKey;
+    const weekNumber = Number.isFinite(parsed.weekNumber)
+      ? parsed.weekNumber
+      : getWeekNumberFromSpeakingDayKey(dayKey);
+    const weekdayBase = isIsoDayKey(dayKey) ? getJstWeekdayLabel(dayKey) : "";
+    const weekday = weekdayBase && weekdayBase !== "?" ? `${weekdayBase}曜` : "-";
+    return {
+      weekLabel: Number.isFinite(weekNumber) ? `Week${weekNumber}` : "Week-",
+      weekdayLabel: weekday,
+      dayKey
+    };
+  }
+
+  function resolveMobileLearningHistoryCategory(entry) {
+    const mode = String(entry?.mode || "").trim();
+    const lowerMode = mode.toLowerCase();
+    const deviceType = normalizeMobileAdminLearningHistoryDeviceType(entry?.deviceType);
+    if (deviceType === "pc") {
+      if (!mode) return "-";
+      if (mode === "Day" || mode === "Day学習" || lowerMode === "normal") return "Day学習";
+      if (mode === "過去の間違い" || lowerMode === "review" || lowerMode === "challenge") return "過去の間違い";
+      if (mode === "前置詞特訓" || lowerMode === "preposition" || lowerMode === "preposition-training") return "前置詞特訓";
+      if (mode === "応答文特訓" || lowerMode === "response" || lowerMode === "response-training") return "応答文特訓";
+      if (mode.includes("単語")) return "単語特訓";
+      if (mode.includes("熟語")) return "熟語特訓";
+      return mode;
+    }
+
+    if (mode === "会話練習" || lowerMode === "conversation") return "会話練習";
+    if (mode === "過去の間違い" || mode === "復習" || lowerMode === "review") return "復習";
+    if (mode.includes("語順") || lowerMode.includes("word-order") || lowerMode.includes("wordorder")) return "語順";
+
+    const dayNumber = String(entry?.dayNumber || "").trim();
+    const parsed = parseMobileLearningHistoryDayNumberInfo(dayNumber);
+    if (mode === "スピーキング") {
+      return parsed.dayKey ? "会話練習" : "Vocabulary";
+    }
+    if (mode.includes("単語") || mode.includes("熟語") || lowerMode === "typing" || /^day\d+/i.test(dayNumber)) {
+      return "Vocabulary";
+    }
+    return mode || "-";
+  }
+
+  function buildMobileLearningHistoryStudyLabel(entry) {
+    const weekDay = getMobileLearningHistoryWeekDayContext(entry);
+    return {
+      weekDayText: `${weekDay.weekLabel} ${weekDay.weekdayLabel}`,
+      categoryText: resolveMobileLearningHistoryCategory(entry)
+    };
   }
 
   function formatMobileLearningHistoryDateLabel(dayKey) {
@@ -2287,24 +2409,42 @@
     return dayKey === todayDayKey ? `今日（${label}）` : label;
   }
 
-  function classifyMobileLearningHistoryMode(mode) {
-    const normalized = String(mode || "").trim();
-    if (!normalized) return "other";
-    if (normalized.includes("Day") || normalized === "Day学習" || normalized === "day") return "day";
-    if (normalized.includes("熟語")) return "phrase";
-    if (normalized.includes("単語")) return "word";
-    if (normalized.includes("過去") || normalized === "review") return "review";
-    return "other";
+  function getMobileLearningHistoryModeBucket(entry) {
+    const category = resolveMobileLearningHistoryCategory(entry);
+    if (category === "Vocabulary") return { key: "vocabulary", label: "Vocabulary" };
+    if (category === "会話練習") return { key: "conversation", label: "会話練習" };
+    if (category === "復習") return { key: "review", label: "復習" };
+    if (category === "語順") return { key: "wordOrder", label: "語順" };
+    const fallbackLabel = String(entry?.mode || "").trim() || "-";
+    return { key: `mode:${fallbackLabel}`, label: fallbackLabel };
   }
 
   function createMobileLearningHistoryModeTotals() {
     return {
-      day: { label: "Day学習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
-      word: { label: "単語", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
-      phrase: { label: "熟語", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
-      review: { label: "過去の間違い", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
-      other: { label: "その他", activeStudySeconds: 0, questionCount: 0, correctCount: 0 }
+      vocabulary: { label: "Vocabulary", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      conversation: { label: "会話練習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      review: { label: "復習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      wordOrder: { label: "語順", activeStudySeconds: 0, questionCount: 0, correctCount: 0 }
     };
+  }
+
+  function ensureMobileLearningHistoryModeTotal(modeTotals, bucketInfo) {
+    if (!modeTotals || !bucketInfo?.key) return null;
+    const existing = modeTotals[bucketInfo.key];
+    if (existing && typeof existing === "object") {
+      if (!String(existing.label || "").trim()) {
+        existing.label = bucketInfo.label;
+      }
+      return existing;
+    }
+    const created = {
+      label: String(bucketInfo.label || "-") || "-",
+      activeStudySeconds: 0,
+      questionCount: 0,
+      correctCount: 0
+    };
+    modeTotals[bucketInfo.key] = created;
+    return created;
   }
 
   function addMobileLearningHistoryTotals(target, entry) {
@@ -2347,8 +2487,8 @@
       const bucket = dayMap.get(dayKey);
       bucket.entries.push(entry);
       addMobileLearningHistoryTotals(bucket, entry);
-      const modeGroup = classifyMobileLearningHistoryMode(entry.mode);
-      addMobileLearningHistoryTotals(bucket.modeTotals[modeGroup] || bucket.modeTotals.other, entry);
+      const modeBucket = getMobileLearningHistoryModeBucket(entry);
+      addMobileLearningHistoryTotals(ensureMobileLearningHistoryModeTotal(bucket.modeTotals, modeBucket), entry);
     });
 
     const daySummaries = [...dayMap.values()].map((summary) => finalizeMobileLearningHistoryTotals(summary));
@@ -2371,8 +2511,8 @@
     const todaySummary = finalizeMobileLearningHistoryTotals({ activeStudySeconds: 0, questionCount: 0, correctCount: 0, modeTotals: createMobileLearningHistoryModeTotals() });
     source.filter((entry) => getMobileLearningHistoryDayKey(entry.endedAt) === todayDayKey).forEach((entry) => {
       addMobileLearningHistoryTotals(todaySummary, entry);
-      const modeGroup = classifyMobileLearningHistoryMode(entry.mode);
-      addMobileLearningHistoryTotals(todaySummary.modeTotals[modeGroup] || todaySummary.modeTotals.other, entry);
+      const modeBucket = getMobileLearningHistoryModeBucket(entry);
+      addMobileLearningHistoryTotals(ensureMobileLearningHistoryModeTotal(todaySummary.modeTotals, modeBucket), entry);
     });
     Object.values(todaySummary.modeTotals).forEach((modeEntry) => {
       modeEntry.accuracy = modeEntry.questionCount ? Math.round((modeEntry.correctCount / modeEntry.questionCount) * 100) : 0;
@@ -2554,9 +2694,9 @@
       return {
         mode: "過去の間違い",
         dayNumber: getMobileLearningHistoryDayNumberFromSpeakingProgress(reviewQueue[0] || {}),
-        questionCount: reviewQueue.length,
+        questionCount: completed,
         correctCount: completed,
-        accuracy: reviewQueue.length ? Math.round((completed / reviewQueue.length) * 100) : 0
+        accuracy: completed > 0 ? 100 : 0
       };
     }
 
@@ -2825,19 +2965,22 @@
             <div class="mobile-admin-history-detail-list">
               ${selectedDayHasEntries ? selectedDayEntries.map((entry) => {
                 const completionLabel = entry.completedReason === "interrupted" ? "中断" : "完了";
-                const ticketText = `${Math.max(0, Number(entry.ticket?.earned?.count) || 0)} / ${Math.max(0, Number(entry.ticket?.used?.count) || 0)}`;
                 const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
-                const questionCount = Math.max(0, Number(entry.questionCount) || 0);
+                const rawQuestionCount = Math.max(0, Number(entry.questionCount) || 0);
+                const rawCorrectCount = Math.max(0, Number(entry.correctCount) || 0);
+                const isReviewCategory = resolveMobileLearningHistoryCategory(entry) === "復習";
+                const questionCount = isReviewCategory ? rawCorrectCount : rawQuestionCount;
+                const correctCount = Math.max(0, Math.min(questionCount, rawCorrectCount));
+                const accuracyPercent = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
+                const studyLabel = buildMobileLearningHistoryStudyLabel(entry);
                 return `
                   <div class="mobile-admin-history-detail-item">
                     <p class="mobile-admin-history-detail-time">セッション　${formatMobileLearningHistoryClockRange(entry.startedAt, entry.endedAt)}</p>
-                    <p class="mobile-admin-history-detail-mode">${escapeHtml(entry.mode || "-")}</p>
-                    <p class="mobile-admin-history-detail-meta">${escapeHtml(entry.dayNumber || "-")}</p>
+                    <p class="mobile-admin-history-detail-meta">${escapeHtml(studyLabel.weekDayText)}</p>
+                    <p class="mobile-admin-history-detail-mode">${escapeHtml(studyLabel.categoryText)}</p>
                     ${activeStudySeconds >= 60 ? `<p class="mobile-admin-history-detail-meta">実学習時間　${formatMobileLearningDuration(activeStudySeconds)}</p><p class="mobile-admin-history-detail-note">3分を超える無操作区間は除外</p>` : ""}
-                    ${questionCount > 0 ? `<p class="mobile-admin-history-detail-meta">${questionCount}問</p>` : ""}
-                    <p class="mobile-admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</p>
+                    <p class="mobile-admin-history-detail-meta">正解 ${correctCount}/${questionCount}問（正答率 ${accuracyPercent}%）</p>
                     <p class="mobile-admin-history-detail-meta">${completionLabel}</p>
-                    <p class="mobile-admin-history-detail-ticket">チケット ${ticketText}</p>
                   </div>
                 `;
               }).join('<div class="mobile-admin-history-detail-separator"></div>') : '<p class="status-text">この日は学習記録がありません</p>'}
@@ -5371,6 +5514,40 @@
     })));
   }
 
+  function getWordOrderDayNumberLabel(dayRange) {
+    const startDay = Math.max(1, Math.floor(Number(dayRange?.startDay) || 1));
+    const endDay = Math.max(startDay, Math.floor(Number(dayRange?.endDay) || startDay));
+    return startDay === endDay ? `Day${startDay}` : `Day${startDay}-${endDay}`;
+  }
+
+  function buildWordOrderLearningHistorySummary(training = state.wordOrderTraining) {
+    const correctCount = Math.max(0, Number(training?.correctCount) || 0);
+    const incorrectCount = Math.max(0, Number(training?.incorrectCount) || 0);
+    const questionCount = Math.max(0, correctCount + incorrectCount);
+    return {
+      questionCount,
+      correctCount,
+      accuracy: questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0
+    };
+  }
+
+  function finalizeWordOrderLearningHistorySession(completedReason = "interrupted") {
+    if (!state.learningHistorySession) return;
+    finalizeMobileLearningHistorySession({
+      completedReason,
+      mode: "word-order",
+      dayNumber: getWordOrderDayNumberLabel(state.wordOrderTraining?.dayRange),
+      summary: buildWordOrderLearningHistorySummary(state.wordOrderTraining)
+    });
+  }
+
+  function leaveWordOrderTrainingToHome() {
+    if (state.wordOrderTraining) {
+      finalizeWordOrderLearningHistorySession("interrupted");
+    }
+    renderHome();
+  }
+
   function setupWordOrderQuestionState(training) {
     if (!training || training.completed) return;
     const question = training.questions[training.questionIndex];
@@ -5562,6 +5739,14 @@
       correctAnswer: "",
       completed: false
     };
+    if (!state.learningHistorySession) {
+      startMobileLearningHistorySession({
+        source: "word-order",
+        mode: "word-order",
+        dayNumber: getWordOrderDayNumberLabel(dayRange),
+        startedAt: Date.now()
+      });
+    }
     setupWordOrderQuestionState(state.wordOrderTraining);
     renderWordOrderTraining();
   }
@@ -5602,6 +5787,7 @@
     if (!training) return;
     if (training.questionIndex >= training.questions.length - 1) {
       training.completed = true;
+      finalizeWordOrderLearningHistorySession("completed");
       renderWordOrderTraining();
       return;
     }
@@ -8048,7 +8234,7 @@
     elements.nextConversationLineBtn.addEventListener("click", moveToNextSpeakingLine);
     elements.nextConversationBtn.addEventListener("click", moveToNextSpeakingConversation);
     document.getElementById("settingsBackBtn").addEventListener("click", renderHome);
-    document.getElementById("wordOrderBackBtn").addEventListener("click", renderHome);
+    document.getElementById("wordOrderBackBtn").addEventListener("click", leaveWordOrderTrainingToHome);
     elements.wordOrderDayRangeButtons.forEach((button) => {
       button.addEventListener("click", () => {
         setWordOrderDayRangeValue(button.dataset.rangeValue || "");
@@ -8059,7 +8245,7 @@
     elements.wordOrderResetBtn.addEventListener("click", resetWordOrderSelection);
     elements.wordOrderSubmitBtn.addEventListener("click", submitWordOrderAnswer);
     elements.wordOrderRestartBtn.addEventListener("click", startWordOrderTraining);
-    elements.wordOrderHomeBtn.addEventListener("click", renderHome);
+    elements.wordOrderHomeBtn.addEventListener("click", leaveWordOrderTrainingToHome);
     document.getElementById("comingSoonBackBtn").addEventListener("click", renderHome);
     document.getElementById("studyBackBtn").addEventListener("click", confirmLeaveStudy);
     document.getElementById("retrySessionBtn").addEventListener("click", () => startStudy(state.lastSessionMode || "speaking"));
