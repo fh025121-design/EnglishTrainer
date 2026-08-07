@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/08 03:00", note: "PC版のみ: ポイント状態を studyCore と分離したまま UID 単位で Firestore 自動同期する処理を追加。対象は balance / totalEarned / dailyEarnedByDate / dailyEarnedByModeByDate / dayAdvanceBonusAwardedByDay / redeemedItemCounts / redeemedItemIds など pointState 一式。ログイン時は Firestore の正式 pointState を優先し、未作成時のみ既存ブラウザの localStorage pointState を初回正本として保存。複数ブラウザ間で totalEarned や交換済み情報が減る危険な巻き戻りは自動保存しないよう保護。learningHistory の earnedPoints 集計、studyCore 自動同期、ポイント付与条件/付与量、ゲームチケットは未変更" },
     { version: "2026/08/08 02:24", note: "PC版のみ: 通常学習 studyCore の自動同期と日次自動バックアップを追加。ログイン時は同一UIDの Firestore studyCore を自動判定して初期状態ローカルより安全側を優先し、学習中の item/review/unlockedDay 変更はデバウンス付きで自動保存。空ローカルや件数減少を伴う危険な巻き戻りは自動で Firestore へ反映しない保護を追加。さらに studyCore ドキュメント配下に UID 単位の日次バックアップを最大3日分保持し、設定画面から Day・学習済み語数・復習記録件数を確認して復元できるよう更新。学習履歴 users/{uid}/learningHistory、端末履歴、ポイント処理、通常学習の出題/採点/Day解放条件は未変更" },
     { version: "2026/08/08 01:29", note: "PC版のみ: バックアップ復元後の再読み込み時に beforeunload の saveState が旧メモリ状態を再保存し、復元直後データを上書きしてしまう問題を修正。復元成功後は再読み込み直前に isResettingLearningData フラグを立て、beforeunload 保存を抑止するよう更新。これにより『復元したつもりだが保存されない』挙動を防止。復元形式・データ構造・UID分離・Firestore studyCore/履歴/ポイント/Day進行/復習ロジックは未変更" },
     { version: "2026/08/08 01:26", note: "PC版のみ: バックアップ復元直後に自動同期で内容が戻ることを防ぐため、復元成功時に『次回ログイン後同期を1回だけスキップ』するフラグをセッション保存する処理を追加。再読み込み後の最初の studyCore 同期は読み書きを行わずローカル状態を維持し、その後の通常同期は従来どおり。これにより復元処理中に Firestore 書き込みを呼ばない要件を担保。バックアップ形式・学習データ構造・UID分離・学習履歴・ポイント・Day進行・復習ロジックは未変更" },

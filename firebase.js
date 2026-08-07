@@ -285,6 +285,44 @@ async function saveStudyCoreToFirestore(payload, options = {}) {
   }
 }
 
+async function loadPointStateFromFirestore(targetUid = null) {
+  const user = auth.currentUser;
+  const resolvedUid = String(targetUid || user?.uid || "").trim();
+  if (!resolvedUid) {
+    return { exists: false, data: null };
+  }
+
+  const snapshot = await getDoc(doc(firestore, "users", resolvedUid, "sync", "pointState"));
+  if (!snapshot.exists()) {
+    return { exists: false, data: null };
+  }
+
+  return {
+    exists: true,
+    data: normalizeFirestoreSerializableValue(snapshot.data() || {})
+  };
+}
+
+async function savePointStateToFirestore(payload, options = {}) {
+  const user = auth.currentUser;
+  const resolvedUid = String(options?.targetUid || user?.uid || "").trim();
+  if (!resolvedUid || !payload || typeof payload !== "object") {
+    return false;
+  }
+
+  try {
+    await setDoc(
+      doc(firestore, "users", resolvedUid, "sync", "pointState"),
+      payload,
+      { merge: false }
+    );
+    return true;
+  } catch (error) {
+    console.error("Failed to save point state to Firestore", error);
+    return false;
+  }
+}
+
 async function loadStudyCoreBackupsFromFirestore(targetUid = null) {
   const user = auth.currentUser;
   const resolvedUid = String(targetUid || user?.uid || "").trim();
@@ -475,6 +513,8 @@ window.loadLearningHistoryEntriesFromFirestore = loadLearningHistoryEntriesFromF
 window.watchLearningHistoryEntriesFromFirestore = watchLearningHistoryEntriesFromFirestore;
 window.loadStudyCoreFromFirestore = loadStudyCoreFromFirestore;
 window.saveStudyCoreToFirestore = saveStudyCoreToFirestore;
+window.loadPointStateFromFirestore = loadPointStateFromFirestore;
+window.savePointStateToFirestore = savePointStateToFirestore;
 window.loadStudyCoreBackupsFromFirestore = loadStudyCoreBackupsFromFirestore;
 window.saveStudyCoreBackupToFirestore = saveStudyCoreBackupToFirestore;
 window.deleteStudyCoreBackupFromFirestore = deleteStudyCoreBackupFromFirestore;

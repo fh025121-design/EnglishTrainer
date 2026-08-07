@@ -388,6 +388,8 @@ function resetUserScopedStorageCaches() {
   studyCoreSyncMetaCache = null;
   pointStateCache = null;
   pointStateBootstrapPromise = null;
+  pointStateSyncMetaCache = null;
+  pointStateSyncPromise = null;
   studyCoreSyncRuntime.initializedUid = "";
   studyCoreSyncRuntime.remoteData = null;
   window.StudyCoreSyncDebugInfo = {};
@@ -4784,6 +4786,12 @@ let pointRewardQueue = [];
 let pointRewardTimerId = null;
 let pendingPointExchangeItemId = "";
 let pointStateBootstrapPromise = null;
+let pointStateSyncMetaCache = null;
+let pointStateSyncPromise = null;
+let pointStateSyncFlushTimer = null;
+let pointStateSyncSkipBootstrap = false;
+const POINT_STATE_SYNC_META_KEY = "english-trainer-pc-point-sync-v1";
+const POINT_STATE_SYNC_DEBOUNCE_MS = 250;
 
 function formatPointValue(value) {
   return `${new Intl.NumberFormat("ja-JP").format(Math.max(0, Math.floor(Number(value) || 0)))}P`;
@@ -4915,6 +4923,246 @@ function sanitizePointState(value) {
   };
 }
 
+function createDefaultPointStateSyncMeta() {
+  return {
+    uid: "",
+    updatedAt: 0,
+    lastAppliedRemoteUpdatedAt: 0,
+    lastAdoptedSource: ""
+  };
+}
+
+function sanitizePointStateSyncMeta(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    uid: typeof source.uid === "string" ? source.uid : "",
+    updatedAt: Math.max(0, Number(source.updatedAt) || 0),
+    lastAppliedRemoteUpdatedAt: Math.max(0, Number(source.lastAppliedRemoteUpdatedAt) || 0),
+    lastAdoptedSource: typeof source.lastAdoptedSource === "string" ? source.lastAdoptedSource : ""
+  };
+}
+
+function loadPointStateSyncMeta() {
+  if (pointStateSyncMetaCache) return pointStateSyncMetaCache;
+  try {
+    const storageKey = getScopedLocalStorageKey(POINT_STATE_SYNC_META_KEY);
+    if (!storageKey) {
+      pointStateSyncMetaCache = createDefaultPointStateSyncMeta();
+      return pointStateSyncMetaCache;
+    }
+    const raw = localStorage.getItem(storageKey);
+    pointStateSyncMetaCache = raw
+      ? sanitizePointStateSyncMeta(JSON.parse(raw))
+      : createDefaultPointStateSyncMeta();
+    return pointStateSyncMetaCache;
+  } catch (_error) {
+    pointStateSyncMetaCache = createDefaultPointStateSyncMeta();
+    return pointStateSyncMetaCache;
+  }
+}
+
+function savePointStateSyncMeta(nextMeta) {
+  pointStateSyncMetaCache = sanitizePointStateSyncMeta(nextMeta);
+  const storageKey = getScopedLocalStorageKey(POINT_STATE_SYNC_META_KEY);
+  if (!storageKey) return pointStateSyncMetaCache;
+  localStorage.setItem(storageKey, JSON.stringify(pointStateSyncMetaCache));
+  return pointStateSyncMetaCache;
+}
+
+function createPointStateSummary(pointState, options = {}) {
+  const safe = sanitizePointState(pointState);
+  return {
+    balance: Math.max(0, Number(safe.balance) || 0),
+    totalEarned: Math.max(0, Number(safe.totalEarned) || 0),
+    dayAdvanceBonusCount: Object.keys(safe.dayAdvanceBonusAwardedByDay || {}).length,
+    redeemedItemCount: Object.keys(safe.redeemedItemCounts || {}).reduce((sum, key) => sum + Math.max(0, Number(safe.redeemedItemCounts[key]) || 0), 0),
+    redeemedItemIdCount: Array.isArray(safe.redeemedItemIds) ? safe.redeemedItemIds.length : 0,
+    updatedAt: Math.max(0, Number(options.updatedAt) || 0)
+  };
+}
+
+function buildPointStatePayload(pointState = getPointState(), options = {}) {
+  const meta = loadPointStateSyncMeta();
+  const updatedAt = Math.max(0, Number(options.updatedAt) || Date.now());
+  const payload = {
+    schemaVersion: 1,
+    updatedAt,
+    source: {
+      deviceType: "pc",
+      appVersion: APP_VERSION
+    },
+    pointState: sanitizePointState(pointState)
+  };
+  meta.uid = String(getCurrentPcFirebaseUid() || meta.uid || "");
+  meta.updatedAt = Math.max(meta.updatedAt, updatedAt);
+  savePointStateSyncMeta(meta);
+  return payload;
+}
+
+function applyPointStateFromFirestore(remoteData) {
+  if (!remoteData || typeof remoteData !== "object") return false;
+  const nextPointState = sanitizePointState(remoteData.pointState);
+  savePointState(nextPointState);
+  const meta = loadPointStateSyncMeta();
+  meta.uid = String(getCurrentPcFirebaseUid() || meta.uid || "");
+  meta.updatedAt = Math.max(meta.updatedAt, Math.max(0, Number(remoteData.updatedAt) || 0));
+  meta.lastAppliedRemoteUpdatedAt = Math.max(0, Number(remoteData.updatedAt) || 0);
+  meta.lastAdoptedSource = "firestore";
+  savePointStateSyncMeta(meta);
+  pointStateSyncSkipBootstrap = true;
+  return true;
+}
+
+function getPointStateRegressionReasons(candidateSummary, baselineSummary) {
+  const reasons = [];
+  const candidate = candidateSummary && typeof candidateSummary === "object" ? candidateSummary : createPointStateSummary(createDefaultPointState());
+  const baseline = baselineSummary && typeof baselineSummary === "object" ? baselineSummary : createPointStateSummary(createDefaultPointState());
+  if (candidate.totalEarned < baseline.totalEarned) {
+    reasons.push(`totalEarned: ${candidate.totalEarned} < ${baseline.totalEarned}`);
+  }
+  if (candidate.dayAdvanceBonusCount < baseline.dayAdvanceBonusCount) {
+    reasons.push(`dayAdvanceBonusCount: ${candidate.dayAdvanceBonusCount} < ${baseline.dayAdvanceBonusCount}`);
+  }
+  if (candidate.redeemedItemCount < baseline.redeemedItemCount) {
+    reasons.push(`redeemedItemCount: ${candidate.redeemedItemCount} < ${baseline.redeemedItemCount}`);
+  }
+  if (candidate.redeemedItemIdCount < baseline.redeemedItemIdCount) {
+    reasons.push(`redeemedItemIdCount: ${candidate.redeemedItemIdCount} < ${baseline.redeemedItemIdCount}`);
+  }
+  return reasons;
+}
+
+function shouldBootstrapPointStateFromFirestoreSummary(remotePayload) {
+  if (!remotePayload?.exists || !remotePayload?.data || typeof remotePayload.data !== "object") {
+    return false;
+  }
+  const remoteSummary = createPointStateSummary(remotePayload.data.pointState, {
+    updatedAt: Math.max(0, Number(remotePayload.data.updatedAt) || 0)
+  });
+  return remoteSummary.totalEarned > 0 || remoteSummary.balance > 0 || remoteSummary.dayAdvanceBonusCount > 0 || remoteSummary.redeemedItemCount > 0;
+}
+
+function choosePointStateAdoption(localPointState, remoteResult) {
+  const localMeta = loadPointStateSyncMeta();
+  const localSummary = createPointStateSummary(localPointState, { updatedAt: localMeta.updatedAt });
+  const remoteSummary = createPointStateSummary(remoteResult?.data?.pointState, {
+    updatedAt: Math.max(0, Number(remoteResult?.data?.updatedAt) || 0)
+  });
+  const remoteExists = Boolean(remoteResult?.exists && remoteResult?.data && typeof remoteResult.data === "object");
+
+  if (!remoteExists) {
+    if (localSummary.totalEarned > 0 || localSummary.balance > 0 || localSummary.dayAdvanceBonusCount > 0 || localSummary.redeemedItemCount > 0) {
+      return { adopted: "local-first-upload", remoteSummary, localSummary, reason: "remote-missing" };
+    }
+    return { adopted: "none", remoteSummary, localSummary, reason: "both-empty" };
+  }
+
+  const regressionReasons = getPointStateRegressionReasons(localSummary, remoteSummary);
+  if (regressionReasons.length) {
+    return { adopted: "firestore", remoteSummary, localSummary, reason: `local-regression:${regressionReasons.join(', ')}` };
+  }
+
+  if (remoteSummary.updatedAt > localSummary.updatedAt) {
+    return { adopted: "firestore", remoteSummary, localSummary, reason: "remote-newer" };
+  }
+  if (localSummary.updatedAt > remoteSummary.updatedAt) {
+    return { adopted: "local", remoteSummary, localSummary, reason: "local-newer" };
+  }
+
+  return { adopted: "firestore", remoteSummary, localSummary, reason: "timestamps-equal" };
+}
+
+async function flushPointStateSync() {
+  if (pointStateSyncPromise) return pointStateSyncPromise;
+  const currentUid = getCurrentPcFirebaseUid();
+  if (!currentUid || typeof window.savePointStateToFirestore !== "function") return false;
+
+  const payload = buildPointStatePayload(getPointState());
+  pointStateSyncPromise = (async () => {
+    const remoteResult = typeof window.loadPointStateFromFirestore === "function"
+      ? await window.loadPointStateFromFirestore(currentUid)
+      : { exists: false, data: null };
+    const remoteSummary = createPointStateSummary(remoteResult?.data?.pointState, {
+      updatedAt: Math.max(0, Number(remoteResult?.data?.updatedAt) || 0)
+    });
+    const localSummary = createPointStateSummary(payload.pointState, { updatedAt: payload.updatedAt });
+    const regressionReasons = getPointStateRegressionReasons(localSummary, remoteSummary);
+    if (remoteResult?.exists && regressionReasons.length) {
+      console.warn("[PointSync] skipped dangerous overwrite", {
+        uid: currentUid,
+        localSummary,
+        remoteSummary,
+        regressionReasons
+      });
+      return false;
+    }
+
+    const saved = await window.savePointStateToFirestore(payload, { targetUid: currentUid });
+    if (!saved) {
+      return false;
+    }
+    const meta = loadPointStateSyncMeta();
+    meta.uid = currentUid;
+    meta.updatedAt = Math.max(meta.updatedAt, payload.updatedAt);
+    meta.lastAdoptedSource = "local";
+    savePointStateSyncMeta(meta);
+    return true;
+  })().finally(() => {
+    pointStateSyncPromise = null;
+  });
+
+  return pointStateSyncPromise;
+}
+
+function schedulePointStateSync() {
+  if (pointStateSyncFlushTimer) {
+    clearTimeout(pointStateSyncFlushTimer);
+  }
+  pointStateSyncFlushTimer = setTimeout(() => {
+    pointStateSyncFlushTimer = null;
+    flushPointStateSync().catch((error) => {
+      console.error("Failed to synchronize point state", error);
+    });
+  }, POINT_STATE_SYNC_DEBOUNCE_MS);
+}
+
+async function syncPointStateAfterLogin() {
+  const currentUid = getCurrentPcFirebaseUid();
+  if (!currentUid || typeof window.loadPointStateFromFirestore !== "function" || typeof window.savePointStateToFirestore !== "function") {
+    return;
+  }
+
+  const localPointState = getPointState();
+  const remoteResult = await window.loadPointStateFromFirestore(currentUid);
+  const adoption = choosePointStateAdoption(localPointState, remoteResult);
+
+  if (adoption.adopted === "firestore") {
+    applyPointStateFromFirestore(remoteResult.data);
+    renderPointExchangeScreen();
+    return;
+  }
+
+  if (adoption.adopted === "local" || adoption.adopted === "local-first-upload") {
+    await flushPointStateSync();
+    return;
+  }
+}
+
+function bindPointStateAuthStateListener() {
+  if (document.body?.dataset.pointStateAuthBound === "true") return;
+  document.addEventListener("pc-firebase-auth-state", (event) => {
+    const user = event?.detail?.user || null;
+    if (!user) return;
+    pointStateSyncSkipBootstrap = false;
+    syncPointStateAfterLogin().catch((error) => {
+      console.error("Failed to synchronize point state after login", error);
+    });
+  });
+  if (document.body) {
+    document.body.dataset.pointStateAuthBound = "true";
+  }
+}
+
 function loadPointState() {
   try {
     const storageKey = getScopedLocalStorageKey(POINT_SYSTEM_STORAGE_KEY);
@@ -4930,8 +5178,16 @@ function loadPointState() {
 function savePointState(nextState) {
   pointStateCache = hydratePointDaySnapshots(sanitizePointState(nextState));
   const storageKey = getScopedLocalStorageKey(POINT_SYSTEM_STORAGE_KEY);
-  if (!storageKey) return pointStateCache;
-  localStorage.setItem(storageKey, JSON.stringify(pointStateCache));
+  if (storageKey) {
+    localStorage.setItem(storageKey, JSON.stringify(pointStateCache));
+  }
+  const meta = loadPointStateSyncMeta();
+  meta.uid = String(getCurrentPcFirebaseUid() || meta.uid || "");
+  meta.updatedAt = Date.now();
+  savePointStateSyncMeta(meta);
+  if (getCurrentPcFirebaseUid()) {
+    schedulePointStateSync();
+  }
   return pointStateCache;
 }
 
@@ -5001,6 +5257,14 @@ function shouldBootstrapPointStateFromFirestore() {
 }
 
 async function ensurePointStateFromFirestoreIfMissing() {
+  if (pointStateSyncSkipBootstrap) return false;
+  if (typeof window.loadPointStateFromFirestore === "function") {
+    const remoteResult = await window.loadPointStateFromFirestore(getCurrentPcFirebaseUid());
+    if (shouldBootstrapPointStateFromFirestoreSummary(remoteResult)) {
+      applyPointStateFromFirestore(remoteResult.data);
+      return true;
+    }
+  }
   if (!shouldBootstrapPointStateFromFirestore()) return false;
   if (pointStateBootstrapPromise) return pointStateBootstrapPromise;
 
@@ -10322,6 +10586,7 @@ function bindEvents() {
   bindUserScopedStorageAuthStateListener();
   bindStudyCoreAuthStateListener();
   bindStudyCoreBackupAuthStateListener();
+  bindPointStateAuthStateListener();
   bindAdminLearningHistoryAuthStateListener();
   bindHomeHistoryAuthStateListener();
   const typingAudioRepeatSelect = document.getElementById("typingAudioRepeatSelect");
@@ -11005,6 +11270,7 @@ function bindEvents() {
       return;
     }
     flushPendingStudyCoreSync().catch(() => false);
+    flushPointStateSync().catch(() => false);
     if (state.session?.mode === "normal") {
       pauseSessionClock(state.session);
       const summary = buildSuspendedSummary(state.session);
