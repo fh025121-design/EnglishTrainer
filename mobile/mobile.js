@@ -2361,6 +2361,18 @@
     return `${startClock}〜${endClock}`;
   }
 
+  function formatMobileLearningHistoryStartClock(startedAt) {
+    const parts = getMobileLearningHistoryJstParts(startedAt);
+    return `${parts.hour || "00"}:${parts.minute || "00"}`;
+  }
+
+  function formatMobileLearningDurationMinutesSeconds(seconds) {
+    const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+    const minute = Math.floor(safeSeconds / 60);
+    const remain = safeSeconds % 60;
+    return `${minute}分${remain}秒`;
+  }
+
   function formatMobileLearningHistoryFullDateLabel(dayKey) {
     const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(dayKey || ""));
     if (!match) return String(dayKey || "");
@@ -2972,15 +2984,22 @@
                 const questionCount = isReviewCategory ? rawCorrectCount : rawQuestionCount;
                 const correctCount = Math.max(0, Math.min(questionCount, rawCorrectCount));
                 const accuracyPercent = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
+                const earnedPoints = Math.max(0, Number(entry.earnedPoints) || 0);
                 const studyLabel = buildMobileLearningHistoryStudyLabel(entry);
+                const startClock = formatMobileLearningHistoryStartClock(entry.startedAt);
                 return `
                   <div class="mobile-admin-history-detail-item">
-                    <p class="mobile-admin-history-detail-time">セッション　${formatMobileLearningHistoryClockRange(entry.startedAt, entry.endedAt)}</p>
-                    <p class="mobile-admin-history-detail-meta">${escapeHtml(studyLabel.weekDayText)}</p>
-                    <p class="mobile-admin-history-detail-mode">${escapeHtml(studyLabel.categoryText)}</p>
-                    ${activeStudySeconds >= 60 ? `<p class="mobile-admin-history-detail-meta">実学習時間　${formatMobileLearningDuration(activeStudySeconds)}</p><p class="mobile-admin-history-detail-note">3分を超える無操作区間は除外</p>` : ""}
-                    <p class="mobile-admin-history-detail-meta">正解 ${correctCount}/${questionCount}問（正答率 ${accuracyPercent}%）</p>
-                    <p class="mobile-admin-history-detail-meta">${completionLabel}</p>
+                    <p class="mobile-admin-history-detail-row mobile-admin-history-detail-row-main">
+                      <span class="mobile-admin-history-detail-time">${startClock}</span>
+                      <span class="mobile-admin-history-detail-meta">${escapeHtml(studyLabel.weekDayText)}</span>
+                      <span class="mobile-admin-history-detail-mode">${escapeHtml(studyLabel.categoryText)}</span>
+                      <span class="mobile-admin-history-detail-meta">実学習 ${formatMobileLearningDurationMinutesSeconds(activeStudySeconds)}</span>
+                    </p>
+                    <p class="mobile-admin-history-detail-row mobile-admin-history-detail-row-sub">
+                      <span class="mobile-admin-history-detail-meta">${correctCount}/${questionCount}正解（${accuracyPercent}%）</span>
+                      <span class="mobile-admin-history-detail-meta">+${earnedPoints}P</span>
+                      <span class="mobile-admin-history-detail-meta">${completionLabel}</span>
+                    </p>
                   </div>
                 `;
               }).join('<div class="mobile-admin-history-detail-separator"></div>') : '<p class="status-text">この日は学習記録がありません</p>'}

@@ -1108,7 +1108,7 @@ select,
 .mobile-admin-history-detail-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .mobile-admin-history-mode-summary-row,
@@ -1149,10 +1149,10 @@ select,
 }
 
 .mobile-admin-history-detail-item {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 10px;
-  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
 }
 
 .mobile-admin-history-detail-item:first-child {
@@ -1170,6 +1170,25 @@ select,
   margin: 0;
 }
 
+.mobile-admin-history-detail-row {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.3;
+}
+
+.mobile-admin-history-detail-row-main {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.mobile-admin-history-detail-row-sub {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .mobile-admin-history-detail-time,
 .mobile-admin-history-detail-mode {
   color: var(--text);
@@ -1179,13 +1198,6 @@ select,
 .mobile-admin-history-detail-meta,
 .mobile-admin-history-detail-ticket {
   color: var(--muted);
-}
-
-.mobile-admin-history-detail-note {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.78rem;
-  opacity: 0.85;
 }
 
 .mobile-admin-history-detail-separator {
