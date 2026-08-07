@@ -170,6 +170,7 @@ async function saveLearningHistoryToFirestore(historyEntry) {
     dayNumber: Number(historyEntry.dayNumber) || 0,
     questionCount: Math.max(0, Number(historyEntry.questionCount) || 0),
     correctCount: Math.max(0, Number(historyEntry.correctCount) || 0),
+    earnedPoints: Math.max(0, Number(historyEntry.earnedPoints) || 0),
     accuracy: Math.max(0, Math.min(100, Number(historyEntry.accuracy) || 0)),
     completedReason: String(historyEntry.completedReason || "completed"),
     ticketEarned: Math.max(0, Number(historyEntry?.ticket?.earnedMinutes) || 0),
@@ -211,6 +212,7 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
     dayNumber: Math.max(0, Number(data.dayNumber) || 0),
     questionCount: Math.max(0, Number(data.questionCount) || 0),
     correctCount: Math.max(0, Number(data.correctCount) || 0),
+    earnedPoints: Math.max(0, Number(data.earnedPoints) || 0),
     accuracy: Math.max(0, Math.min(100, Number(data.accuracy) || 0)),
     completedReason: String(data.completedReason || "completed"),
     ticket: {
