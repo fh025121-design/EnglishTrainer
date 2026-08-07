@@ -104,11 +104,11 @@ const GAME_TICKET_CONFIG = {
 const GAME_TICKET_DAY_MS = 24 * 60 * 60 * 1000;
 const POINT_SYSTEM_STORAGE_KEY = "english-trainer-pc-points-v1";
 const POINT_SYSTEM_CONFIG = Object.freeze({
-  typingDailyTotalCap: 200,
+  typingDailyTotalCap: 300,
   dayAdvanceCompletionBonusPoints: 50,
   dailyLimitModes: Object.freeze({
-    normal: 200,
-    event: 200
+    normal: 300,
+    event: 300
   }),
   defaultDailyLimitMode: "normal",
   rewardByTrainingMode: Object.freeze({

@@ -1,6 +1,9 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/07 13:17", note: "PC版のみ: タイピング系ポイントの日次合計上限を200Pから300Pへ変更。前置詞40P・応答文60P・過去の間違い200Pの合計上限に合わせ、total cap と daily limit mode の上限値を300で統一" },
+    { version: "2026/08/07 12:44", note: "モバイル版のみ: 復習発話ポイント配点を調整。1〜10回=5P、11〜15回=10P、16回目以降=15Pへ変更し、日次上限400Pまで到達できるよう修正。復習終了時の次回獲得案内も新配点に合わせて更新" },
+    { version: "2026/08/07 12:04", note: "モバイル版のみ: 復習発話ポイントが200Pで止まっていた不具合を修正。報酬テーブルを見直して1日上限400Pまで到達するよう調整し、復習終了確認文と獲得ポイント表示も400P表記へ統一。既存の宿題30P/語順50P/総日次480Pは維持" },
     { version: "2026/08/07 12:04", note: "PC版のみ: 応答文特訓を途中終了した場合も、回答済み分を localStorage と Firebase の学習履歴へ1件保存するよう修正。questionCount / correctCount / activeStudySeconds / startedAt / endedAt / completedReason（interrupted）/ deviceType（pc）を保存し、0問中断は保存しないよう変更。通常終了の保存先と同じ学習履歴キー・Firestoreコレクションを使用" },
     { version: "2026/08/07 11:49", note: "PC版のみ: 更新履歴を追加してバージョン情報を1つ更新。機能変更なし" },
     { version: "2026/08/07 11:36", note: "PC版のみ: 応答文特訓完了画面の一時デバッグ表示を削除。履歴保存処理やFirestore保存、ポイント処理、ゲームチケット処理は変更なし" },

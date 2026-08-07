@@ -159,8 +159,7 @@
     if (safeCount <= 0) return 0;
     if (safeCount <= 10) return 5;
     if (safeCount <= 15) return 10;
-    if (safeCount <= 20) return 20;
-    return 0;
+    return 15;
   }
 
   function calculateReviewSpeakingBatchReward(pointState, pendingCount) {
@@ -268,7 +267,7 @@
     const pendingEarnedPreview = pendingCount > 0
       ? calculateReviewSpeakingBatchReward(pointState, pendingCount).earned
       : 0;
-    let nextLine = "本日の復習ポイントは最大200Pです。";
+    let nextLine = "本日の復習ポイントは最大400Pです。";
 
     if (reviewCount < 10) {
       const remaining = 10 - reviewCount;
@@ -276,9 +275,15 @@
     } else if (reviewCount < 15) {
       const remaining = 15 - reviewCount;
       nextLine = `あと${remaining}回で＋${remaining * 10}P獲得できます。`;
-    } else if (reviewCount < 20) {
-      const remaining = 20 - reviewCount;
-      nextLine = `あと${remaining}回で＋${remaining * 20}P獲得できます。`;
+    } else {
+      const cap = Math.max(0, Number(MOBILE_POINT_CONFIG.reviewSpeakingDailyMax) || 0);
+      const remainingPoints = Math.max(0, cap - reviewPoints);
+      if (remainingPoints <= 0) {
+        nextLine = "本日の復習ポイントは上限に到達しています。";
+      } else {
+        const remaining = Math.ceil(remainingPoints / 15);
+        nextLine = `あと${remaining}回で＋最大${remainingPoints}P獲得できます。`;
+      }
     }
 
     return [
