@@ -1280,6 +1280,7 @@ function sanitizeLearningHistoryEntry(entry) {
     earnedPoints: Math.max(0, Number(entry.earnedPoints) || 0),
     accuracy: Math.max(0, Math.min(100, Number(entry.accuracy) || 0)),
     completedReason: typeof entry.completedReason === "string" ? entry.completedReason : "completed",
+    deviceType: typeof entry.deviceType === "string" && entry.deviceType.trim().toLowerCase() === "mobile" ? "mobile" : "pc",
     ticket: {
       earned: {
         legacyTickets: Math.max(0, Number(entry.ticket?.earned?.legacyTickets) || 0),
@@ -2443,6 +2444,7 @@ function buildPrepositionLearningHistoryEntry(sessionLike, reason) {
     earnedPoints: pointSummary.earnedPoints,
     accuracy,
     completedReason: String(reason || "completed"),
+    deviceType: "pc",
     ticket: computeLearningHistoryTicketDelta(
       sanitizeLearningHistoryTicketSnapshot(sessionLike?.ticketSnapshot),
       captureLearningHistoryTicketSnapshot()
@@ -2458,6 +2460,7 @@ function recordPrepositionLearningHistory(sessionLike, reason) {
 function recordResponseLearningHistory(sessionLike, reason) {
   if (!sessionLike || typeof sessionLike !== "object") return;
   const answerCount = Math.max(0, Number(sessionLike?.answerCount) || 0);
+  if (answerCount <= 0) return;
   const correctCount = Math.max(0, Number(sessionLike?.correctCount) || 0);
   const summary = {
     answerCount,
@@ -2465,6 +2468,29 @@ function recordResponseLearningHistory(sessionLike, reason) {
     accuracy: answerCount ? Math.round((correctCount / answerCount) * 100) : 0
   };
   appendLearningHistoryEntry(buildLearningHistoryEntryFromSession(sessionLike, summary, reason));
+}
+
+function completeResponseTrainingSession(reason) {
+  const session = responseTrainingSession;
+  if (!session) {
+    if (reason === "completed") {
+      openResponseTrainingSelector();
+    }
+    return;
+  }
+  if (!session.responseHistoryRecorded) {
+    session.responseHistoryRecorded = true;
+    recordResponseLearningHistory(session, reason);
+  }
+  const pointSummary = computeSessionEarnedPoints(session);
+  responseTrainingSession = null;
+  openTrainingCompleteScreen({
+    mode: "response",
+    earnedPoints: pointSummary.earnedPoints,
+    pointBalance: pointSummary.pointBalance,
+    interrupted: reason === "interrupted",
+    showTicketAfter: true
+  });
 }
 
 function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
@@ -2487,6 +2513,7 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
     earnedPoints: pointSummary.earnedPoints,
     accuracy: Math.max(0, Math.min(100, Number(summary?.accuracy) || 0)),
     completedReason: String(reason || "completed"),
+    deviceType: "pc",
     ticket: computeLearningHistoryTicketDelta(ticketBefore, ticketAfter)
   };
 }
@@ -3410,21 +3437,7 @@ function moveToNextResponseTrainingQuestion() {
 }
 
 function showResponseTrainingResult() {
-  const session = responseTrainingSession;
-  if (!session) {
-    openResponseTrainingSelector();
-    return;
-  }
-  recordResponseLearningHistory(session, "completed");
-  const pointSummary = computeSessionEarnedPoints(session);
-  responseTrainingSession = null;
-  openTrainingCompleteScreen({
-    mode: "response",
-    earnedPoints: pointSummary.earnedPoints,
-    pointBalance: pointSummary.pointBalance,
-    interrupted: false,
-    showTicketAfter: true
-  });
+  completeResponseTrainingSession("completed");
 }
 
 function isDesktopGameTicketEnabled() {
@@ -4003,8 +4016,11 @@ function openTrainingCompleteScreen(options = {}) {
   const modeLabel = getTrainingCompletionModeLabel(options.mode);
   const earnedPoints = Math.max(0, Math.floor(Number(options.earnedPoints) || 0));
   const pointBalance = Math.max(0, Math.floor(Number(options.pointBalance) || 0));
+  const interrupted = Boolean(options.interrupted);
 
-  titleText.textContent = `🎉 ${modeLabel} おつかれさまでした！`;
+  titleText.textContent = interrupted
+    ? `⚠️ ${modeLabel} 途中で終了しました`
+    : `🎉 ${modeLabel} おつかれさまでした！`;
   earnedText.textContent = `＋${earnedPoints}P`;
 
   const pointState = getPointState();
@@ -10140,15 +10156,7 @@ function bindEvents() {
         return;
       }
       if (currentScreenId === "responsePracticeScreen" && responseTrainingSession) {
-        const pointSummary = computeSessionEarnedPoints(responseTrainingSession);
-        responseTrainingSession = null;
-        openTrainingCompleteScreen({
-          mode: "response",
-          earnedPoints: pointSummary.earnedPoints,
-          pointBalance: pointSummary.pointBalance,
-          interrupted: true,
-          showTicketAfter: true
-        });
+        completeResponseTrainingSession("interrupted");
         return;
       }
       if (currentScreenId === "resultScreen") {

@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/07 12:04", note: "PC版のみ: 応答文特訓を途中終了した場合も、回答済み分を localStorage と Firebase の学習履歴へ1件保存するよう修正。questionCount / correctCount / activeStudySeconds / startedAt / endedAt / completedReason（interrupted）/ deviceType（pc）を保存し、0問中断は保存しないよう変更。通常終了の保存先と同じ学習履歴キー・Firestoreコレクションを使用" },
     { version: "2026/08/07 11:49", note: "PC版のみ: 更新履歴を追加してバージョン情報を1つ更新。機能変更なし" },
     { version: "2026/08/07 11:36", note: "PC版のみ: 応答文特訓完了画面の一時デバッグ表示を削除。履歴保存処理やFirestore保存、ポイント処理、ゲームチケット処理は変更なし" },
     { version: "2026/08/07 01:28", note: "PC版のみ: 応答文特訓の履歴保存状況を一時表示するデバッグ枠を追加。完了画面に questionCount / correctCount / activeStudySeconds / mode / earnedPoints と保存成否メッセージを表示し、保存条件やFirestore/ポイント/ゲームチケット処理は変更なし" },
