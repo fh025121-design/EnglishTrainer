@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/07 11:49", note: "PC版のみ: 更新履歴を追加してバージョン情報を1つ更新。機能変更なし" },
     { version: "2026/08/07 11:36", note: "PC版のみ: 応答文特訓完了画面の一時デバッグ表示を削除。履歴保存処理やFirestore保存、ポイント処理、ゲームチケット処理は変更なし" },
     { version: "2026/08/07 01:28", note: "PC版のみ: 応答文特訓の履歴保存状況を一時表示するデバッグ枠を追加。完了画面に questionCount / correctCount / activeStudySeconds / mode / earnedPoints と保存成否メッセージを表示し、保存条件やFirestore/ポイント/ゲームチケット処理は変更なし" },
     { version: "2026/08/06 11:35", note: "PC版のみ: 『過去の間違い』のポイント設定を更新。正解1問あたりの付与を+1Pから+2Pへ変更し、同モードの日次上限を100Pから200Pへ引き上げ。前置詞特訓/応答文特訓/Day進行ボーナス/ゲームチケット/モバイル版は未変更" },
