@@ -2007,6 +2007,11 @@ function formatLearningHistoryDateTimeRange(startedAt, endedAt) {
   return `${startClock}〜${endClock}`;
 }
 
+function formatLearningHistoryStartClock(startedAt) {
+  const parts = getLearningHistoryJstParts(startedAt);
+  return `${parts.hour || "00"}:${parts.minute || "00"}`;
+}
+
 function formatLearningHistoryFullDateLabel(dayKey) {
   const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(dayKey || ""));
   if (!match) return String(dayKey || "");
@@ -2121,18 +2126,31 @@ function getLearningHistorySelectedDayTitle(dayKey, todayDayKey) {
   return dayKey === todayDayKey ? `今日（${label}）` : label;
 }
 
+function resolvePcLearningHistoryCategory(modeLike) {
+  const mode = String(modeLike || "").trim();
+  const lowerMode = mode.toLowerCase();
+  if (!mode) return "-";
+  if (mode === "Day" || mode === "Day学習" || lowerMode === "normal") return "Day学習";
+  if (mode === "過去の間違い" || lowerMode === "review" || lowerMode === "challenge") return "過去の間違い";
+  if (mode === "前置詞特訓" || lowerMode === "preposition" || lowerMode === "preposition-training") return "前置詞特訓";
+  if (mode === "応答文特訓" || lowerMode === "response" || lowerMode === "response-training") return "応答文特訓";
+  if (mode.includes("熟語") || lowerMode.includes("phrase") || lowerMode.includes("idiom")) return "熟語特訓";
+  if (mode.includes("単語")) return "単語特訓";
+  return mode;
+}
+
 function getLearningHistoryModeBucket(mode) {
-  const normalized = String(mode || "").trim();
-  if (normalized === "Day" || normalized === "Day学習" || normalized === "normal") {
+  const normalized = resolvePcLearningHistoryCategory(mode);
+  if (normalized === "Day学習") {
     return { key: "day", label: "Day学習" };
   }
-  if (normalized === "単語特訓" || normalized === "単語学習" || normalized === "単語・熟語学習") {
+  if (normalized === "単語特訓") {
     return { key: "word", label: "単語特訓" };
   }
-  if (normalized === "熟語特訓" || normalized === "熟語学習") {
+  if (normalized === "熟語特訓") {
     return { key: "phrase", label: "熟語特訓" };
   }
-  if (normalized === "過去の間違い" || normalized === "review") {
+  if (normalized === "過去の間違い") {
     return { key: "review", label: "過去の間違い" };
   }
   const fallbackLabel = normalized || "-";
@@ -2886,26 +2904,26 @@ function renderAdminLearningHistoryEntries(entries) {
           <div class="admin-history-detail-list">
             ${selectedDayHasEntries ? selectedDayEntries.map((entry) => {
               const completedLabel = entry.completedReason === "interrupted" ? "中断" : "完了";
-              const ticketText = buildLearningHistoryTicketText(entry.ticket);
               const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
+              const modeLabel = resolvePcLearningHistoryCategory(entry.mode);
               const questionCount = Math.max(0, Number(entry.questionCount) || 0);
-              const modeRaw = String(entry.mode || "").trim() || "-";
-              const dayNumberRaw = String(entry.dayNumber || "").trim();
-              const modeLabel = dayNumberRaw && dayNumberRaw !== "-" ? `${modeRaw} Day${dayNumberRaw}` : modeRaw;
+              const correctCount = Math.max(0, Math.min(questionCount, Number(entry.correctCount) || 0));
+              const accuracyPercent = questionCount > 0
+                ? Math.round((correctCount / questionCount) * 100)
+                : Math.max(0, Number(entry.accuracy) || 0);
+              const earnedPoints = Math.max(0, Number(entry.earnedPoints) || 0);
+              const startClock = formatLearningHistoryStartClock(entry.startedAt);
               return `
                 <div class="admin-history-detail-item">
                   <p class="admin-history-detail-row admin-history-detail-row-main">
-                    <span class="admin-history-detail-time">${formatLearningHistoryDateTimeRange(entry.startedAt, entry.endedAt)}</span>
+                    <span class="admin-history-detail-time">${startClock}〜</span>
                     <span class="admin-history-detail-mode">${escapeHtml(modeLabel)}</span>
-                    <span class="admin-history-detail-meta">${questionCount}問</span>
-                    <span class="admin-history-detail-meta">${Math.max(0, Number(entry.accuracy) || 0)}%</span>
                     <span class="admin-history-detail-meta">実学習${formatLearningHistoryDuration(activeStudySeconds)}</span>
-                    <span class="admin-history-detail-meta">+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>
-                    <span class="admin-history-detail-meta">${completedLabel}</span>
                   </p>
                   <p class="admin-history-detail-row admin-history-detail-row-sub">
-                    ${activeStudySeconds >= 60 ? '<span class="admin-history-detail-note">3分を超える無操作区間は除外</span><span class="admin-history-detail-sub-separator">｜</span>' : ""}
-                    <span class="admin-history-detail-ticket">${escapeHtml(ticketText.earned)} / ${escapeHtml(ticketText.used)}</span>
+                    <span class="admin-history-detail-meta">${correctCount}/${questionCount}正解（${accuracyPercent}%）</span>
+                    <span class="admin-history-detail-meta">+${earnedPoints}P</span>
+                    <span class="admin-history-detail-meta">${completedLabel}</span>
                   </p>
                 </div>
               `;
