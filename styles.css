@@ -302,6 +302,58 @@ p {
   outline-offset: 2px;
 }
 
+.settings-chime-sample-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.settings-chime-sample-row .secondary-btn {
+  flex: 1 1 110px;
+}
+
+.training-chime-picker-card {
+  width: min(620px, 100%);
+  max-height: min(78vh, 760px);
+  overflow-y: auto;
+}
+
+.training-chime-current-text {
+  margin: 14px 0 10px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.training-chime-option-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.training-chime-option-btn {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.training-chime-option-title {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.training-chime-option-note {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.training-chime-option-btn.is-selected {
+  border-color: rgba(94, 214, 214, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(94, 214, 214, 0.22);
+}
+
 .settings-danger-wrap {
   margin-top: 14px;
   padding-top: 12px;

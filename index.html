@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260808-2214" />
+    <link rel="stylesheet" href="styles.css?v=20260809-0011" />
   </head>
   <body class="auth-pending">
     <div id="loginScreen" class="login-shell" aria-live="polite">
@@ -254,6 +254,22 @@
                   <span>判定後 → 次の問題表示まで</span>
                   <select id="typingDelayJudgeToNextSelect"></select>
                 </label>
+                <label class="settings-typing-field">
+                  <span>特訓 正解音</span>
+                  <select id="trainingCorrectChimeSelect"></select>
+                </label>
+                <div class="settings-typing-field">
+                  <span>正解音サンプル</span>
+                  <button id="openTrainingChimePickerBtn" class="secondary-btn" type="button">サンプル画面で選ぶ</button>
+                </div>
+                <div class="settings-typing-field">
+                  <span>正解音テスト</span>
+                  <div class="settings-chime-sample-row">
+                    <button id="trainingCorrectChimeTestBtn1" class="secondary-btn" type="button">05-1を再生</button>
+                    <button id="trainingCorrectChimeTestBtn2" class="secondary-btn" type="button">05-2を再生</button>
+                    <button id="trainingCorrectChimeTestBtn3" class="secondary-btn" type="button">05-3を再生</button>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="settings-backup-wrap" aria-label="学習記録バックアップ操作">
@@ -925,6 +941,32 @@
         </div>
       </div>
 
+      <div id="trainingChimePickerModal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop" data-close-modal="trainingChimePickerModal"></div>
+        <div class="modal-card training-chime-picker-card" role="dialog" aria-modal="true" aria-labelledby="trainingChimePickerTitle">
+          <div class="modal-header">
+            <h2 id="trainingChimePickerTitle">🔔 正解音を選ぶ</h2>
+            <button class="ghost-btn modal-close-btn" type="button" data-close-modal="trainingChimePickerModal">閉じる</button>
+          </div>
+          <p id="trainingChimePickerCurrentText" class="training-chime-current-text">現在: -</p>
+          <div class="training-chime-option-grid">
+            <button class="secondary-btn training-chime-option-btn" type="button" data-training-chime-preset="correct-05-1">
+              <span class="training-chime-option-title">05-1</span>
+              <span class="training-chime-option-note">Quiz-Ding_Dong05-1(Fast-Short).mp3</span>
+            </button>
+            <button class="secondary-btn training-chime-option-btn" type="button" data-training-chime-preset="correct-05-2">
+              <span class="training-chime-option-title">05-2</span>
+              <span class="training-chime-option-note">Quiz-Ding_Dong05-2(Fast-Long).mp3</span>
+            </button>
+            <button class="secondary-btn training-chime-option-btn" type="button" data-training-chime-preset="correct-05-3">
+              <span class="training-chime-option-title">05-3</span>
+              <span class="training-chime-option-note">Quiz-Ding_Dong05-3(Fast-Single).mp3</span>
+            </button>
+          </div>
+          <p class="subtext">タップで試聴し、そのまま選択されます。</p>
+        </div>
+      </div>
+
       <div id="gameTicketHubModal" class="modal-shell hidden" aria-hidden="true">
         <div class="modal-backdrop modal-backdrop-soft"></div>
         <div class="modal-card game-ticket-hub-card" role="dialog" aria-modal="true" aria-labelledby="gameTicketHubTitle">
@@ -990,8 +1032,8 @@
     <script src="data.js?v=20260808-0008"></script>
     <script src="preposition-data.js?v=20260808-0008"></script>
     <script src="response-data.js?v=20260808-0008"></script>
-    <script src="release-info.js?v=20260808-2214"></script>
-    <script src="app.js?v=20260808-2214"></script>
-    <script type="module" src="firebase.js?v=20260808-2214"></script>
+    <script src="release-info.js?v=20260809-0011"></script>
+    <script src="app.js?v=20260809-0011"></script>
+    <script type="module" src="firebase.js?v=20260809-0011"></script>
   </body>
 </html>

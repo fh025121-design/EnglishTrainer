@@ -27,6 +27,24 @@ const TYPING_CONFIG_DEFAULTS = Object.freeze({
 });
 const TYPING_AUDIO_REPEAT_OPTIONS = [1, 2, 3];
 const TYPING_AUDIO_RATE_OPTIONS = [0.8, 1.0, 1.2];
+const TRAINING_CORRECT_CHIME_DEFAULT_PRESET = "correct-05-1";
+const TRAINING_CORRECT_CHIME_PRESETS = Object.freeze([
+  Object.freeze({
+    id: "correct-05-1",
+    label: "05-1",
+    audioFile: "correct-05-1.mp3"
+  }),
+  Object.freeze({
+    id: "correct-05-2",
+    label: "05-2",
+    audioFile: "correct-05-2.mp3"
+  }),
+  Object.freeze({
+    id: "correct-05-3",
+    label: "05-3",
+    audioFile: "correct-05-3.mp3"
+  })
+]);
 let currentAudio = null;
 let isResettingLearningData = false;
 const LEVEL_DEFINITIONS = [
@@ -3833,6 +3851,58 @@ function getTypingConfig() {
   return state.settings.typingConfig;
 }
 
+function sanitizeTrainingCorrectChimePreset(value) {
+  const candidate = String(value || "").trim();
+  if (TRAINING_CORRECT_CHIME_PRESETS.some((preset) => preset.id === candidate)) {
+    return candidate;
+  }
+  return TRAINING_CORRECT_CHIME_DEFAULT_PRESET;
+}
+
+function getTrainingCorrectChimePreset() {
+  state.settings.trainingCorrectChimePreset = sanitizeTrainingCorrectChimePreset(state.settings?.trainingCorrectChimePreset);
+  return state.settings.trainingCorrectChimePreset;
+}
+
+function getTrainingCorrectChimePresetById(id) {
+  const safeId = sanitizeTrainingCorrectChimePreset(id);
+  return TRAINING_CORRECT_CHIME_PRESETS.find((preset) => preset.id === safeId) || TRAINING_CORRECT_CHIME_PRESETS[0];
+}
+
+function playTrainingCorrectChime(sampleId = "") {
+  const preset = getTrainingCorrectChimePresetById(sampleId || getTrainingCorrectChimePreset());
+  const audioFile = String(preset.audioFile || "").trim();
+  if (!audioFile || typeof Audio !== "function") return false;
+
+  const audio = new Audio(`assets/sounds/${audioFile}`);
+  audio.preload = "auto";
+  audio.play().catch(() => {
+    // Intentionally do nothing. This stage uses the raw MP3 only.
+  });
+  return true;
+}
+
+function applyTrainingCorrectChimePreset(presetId, options = {}) {
+  const safePreset = sanitizeTrainingCorrectChimePreset(presetId);
+  state.settings.trainingCorrectChimePreset = safePreset;
+  saveState();
+
+  const selectElement = options.selectElement || document.getElementById("trainingCorrectChimeSelect");
+  if (selectElement) {
+    selectElement.value = safePreset;
+  }
+
+  if (options.playSample !== false) {
+    playTrainingCorrectChime(safePreset);
+  }
+
+  return safePreset;
+}
+
+function shouldPlayTrainingCorrectChimeForSession(sessionLike) {
+  return false;
+}
+
 function typingDelaySecToMs(value) {
   return Math.round(toTenthsClamped(value, 0) * 1000);
 }
@@ -4643,6 +4713,7 @@ function submitResponseTrainingAnswer() {
   if (isCorrect) {
     session.correctCount += 1;
     awardPointsForTrainingMode("response");
+    playTrainingCorrectChime();
   } else {
     const categoryKey = String(currentQuestion.category || "other");
     session.wrongCategoryCounts[categoryKey] = (session.wrongCategoryCounts[categoryKey] || 0) + 1;
@@ -6630,6 +6701,28 @@ function getDayUnstudiedLabel(dayNumber) {
   return unstudiedCount > 0 ? `未学習 ${unstudiedCount}問` : "未学習なし";
 }
 
+function getMasteryPercentFromLevel(level) {
+  const safeLevel = Math.max(1, Math.min(4, Math.floor(Number(level) || 1)));
+  if (safeLevel <= 1) return 0;
+  if (safeLevel === 2) return 33;
+  if (safeLevel === 3) return 67;
+  return 100;
+}
+
+function getDayMasteryPercent(dayNumber) {
+  const day = Math.max(1, Math.floor(Number(dayNumber) || 0));
+  const dayItems = state.items.filter((item) => Number(item.day) === day);
+  if (!dayItems.length) return 0;
+
+  const total = dayItems.reduce((sum, item) => {
+    if (!hasItemBeenStudied(item)) return sum;
+    const level = ensureLevelData(item).level;
+    return sum + getMasteryPercentFromLevel(level);
+  }, 0);
+
+  return Math.max(0, Math.min(100, Math.round(total / dayItems.length)));
+}
+
 function getDayStudyPriorityPool(items) {
   const source = Array.isArray(items) ? items.filter(Boolean) : [];
   if (!source.length) return [];
@@ -7385,15 +7478,15 @@ function renderDayCatalog() {
   dayStudyTypeSelect.value = safeType;
 
   dayCatalogGrid.innerHTML = allDays.map((day) => {
-    const accuracy = Math.max(0, Math.min(100, Number(state.stats.dayBestAccuracy?.[String(day)]) || 0));
-    const stars = getStarTextFromAccuracy(accuracy);
+    const masteryPercent = getDayMasteryPercent(day);
+    const stars = getStarTextFromAccuracy(masteryPercent);
     const unstudiedLabel = getDayUnstudiedLabel(day);
-    const perfectClass = accuracy === 100 ? "is-perfect" : "";
+    const perfectClass = masteryPercent === 100 ? "is-perfect" : "";
     const isLocked = day > unlockedDayMax;
     const lockClass = isLocked ? "is-locked" : "";
     const scoreMarkup = isLocked
       ? '<span class="day-card-lock">🔒 未解放</span>'
-      : `<span class="day-card-percent">${Math.round(accuracy)}%</span><span class="day-card-unstudied">${unstudiedLabel}</span>`;
+      : `<span class="day-card-percent">${Math.round(masteryPercent)}%</span><span class="day-card-unstudied">${unstudiedLabel}</span>`;
     return `<button type="button" class="day-card ${perfectClass} ${lockClass}" data-day="${day}" ${isLocked ? "disabled" : ""}><span class="day-card-title">Day${day}</span><span class="day-card-stars">${isLocked ? "-" : stars}</span>${scoreMarkup}</button>`;
   }).join("");
 
@@ -7747,6 +7840,7 @@ function submitPrepositionAnswer() {
   if (isCorrect) {
     session.correctCount += 1;
     awardPointsForTrainingMode("preposition");
+    playTrainingCorrectChime();
   } else {
     session.wrongQuestionIds.push(String(currentQuestion.id));
     session.wrongPrepositionCounts[currentQuestion.preposition] = (session.wrongPrepositionCounts[currentQuestion.preposition] || 0) + 1;
@@ -7828,6 +7922,7 @@ const defaultState = {
     studyRange: { start: 1, end: 1 },
     type: "all",
     typingConfig: sanitizeTypingConfig(),
+    trainingCorrectChimePreset: TRAINING_CORRECT_CHIME_DEFAULT_PRESET,
     dayStudy: {
       day: 1,
       type: "all"
@@ -7880,6 +7975,7 @@ function loadState() {
       ...(parsed.settings || {})
     };
     mergedState.settings.typingConfig = sanitizeTypingConfig(mergedState.settings.typingConfig);
+    mergedState.settings.trainingCorrectChimePreset = sanitizeTrainingCorrectChimePreset(mergedState.settings.trainingCorrectChimePreset);
     mergedState.stats = {
       ...mergedState.stats,
       ...(parsed.stats || {})
@@ -10728,6 +10824,9 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       if (!isTrainingSession) {
         recordDailyPerformance(true);
       }
+      if (shouldPlayTrainingCorrectChimeForSession(session)) {
+        playTrainingCorrectChime();
+      }
       if (session.mode === "challenge") {
         awardPointsForTrainingMode("challenge");
       }
@@ -10848,6 +10947,9 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   const levelChange = isTrainingSession
     ? { leveledUpToFour: false }
     : updateItemLevelProgress(item, true);
+  if (shouldPlayTrainingCorrectChimeForSession(session)) {
+    playTrainingCorrectChime();
+  }
   if (!isTrainingSession) {
     item.lastAnswerWasCorrect = true;
   }
@@ -11349,6 +11451,14 @@ function bindEvents() {
   const typingDelayRepeatGapSelect = document.getElementById("typingDelayRepeatGapSelect");
   const typingDelayAudioToInputSelect = document.getElementById("typingDelayAudioToInputSelect");
   const typingDelayJudgeToNextSelect = document.getElementById("typingDelayJudgeToNextSelect");
+  const trainingCorrectChimeSelect = document.getElementById("trainingCorrectChimeSelect");
+  const openTrainingChimePickerBtn = document.getElementById("openTrainingChimePickerBtn");
+  const trainingCorrectChimeTestBtn1 = document.getElementById("trainingCorrectChimeTestBtn1");
+  const trainingCorrectChimeTestBtn2 = document.getElementById("trainingCorrectChimeTestBtn2");
+  const trainingCorrectChimeTestBtn3 = document.getElementById("trainingCorrectChimeTestBtn3");
+  const trainingChimePickerModal = document.getElementById("trainingChimePickerModal");
+  const trainingChimePickerCurrentText = document.getElementById("trainingChimePickerCurrentText");
+  const trainingChimePresetButtons = [...document.querySelectorAll("[data-training-chime-preset]")];
   const typingControls = [
     typingAudioRepeatSelect,
     typingAudioRateSelect,
@@ -11399,6 +11509,78 @@ function bindEvents() {
     typingControls.forEach((control) => {
       control.addEventListener("change", syncTypingConfigFromControls);
     });
+
+    const playTrainingCorrectChimeTest = (presetId) => {
+      playTrainingCorrectChime(presetId);
+    };
+
+    if (trainingCorrectChimeTestBtn1) {
+      trainingCorrectChimeTestBtn1.addEventListener("click", () => {
+        playTrainingCorrectChimeTest("correct-05-1");
+      });
+    }
+
+    if (trainingCorrectChimeTestBtn2) {
+      trainingCorrectChimeTestBtn2.addEventListener("click", () => {
+        playTrainingCorrectChimeTest("correct-05-2");
+      });
+    }
+
+    if (trainingCorrectChimeTestBtn3) {
+      trainingCorrectChimeTestBtn3.addEventListener("click", () => {
+        playTrainingCorrectChimeTest("correct-05-3");
+      });
+    }
+
+    if (trainingCorrectChimeSelect) {
+      trainingCorrectChimeSelect.innerHTML = TRAINING_CORRECT_CHIME_PRESETS
+        .map((preset) => `<option value="${preset.id}">${preset.label}</option>`)
+        .join("");
+      const syncTrainingChimePickerUi = () => {
+        const currentPresetId = getTrainingCorrectChimePreset();
+        trainingCorrectChimeSelect.value = currentPresetId;
+        const currentPreset = getTrainingCorrectChimePresetById(currentPresetId);
+        if (trainingChimePickerCurrentText) {
+          trainingChimePickerCurrentText.textContent = `現在: ${currentPreset.label}`;
+        }
+        trainingChimePresetButtons.forEach((button) => {
+          const buttonPreset = String(button.getAttribute("data-training-chime-preset") || "");
+          button.classList.toggle("is-selected", buttonPreset === currentPresetId);
+        });
+      };
+
+      syncTrainingChimePickerUi();
+      trainingCorrectChimeSelect.addEventListener("change", () => {
+        applyTrainingCorrectChimePreset(trainingCorrectChimeSelect.value, {
+          selectElement: trainingCorrectChimeSelect,
+          playSample: true
+        });
+        syncTrainingChimePickerUi();
+      });
+
+      if (openTrainingChimePickerBtn && trainingChimePickerModal) {
+        openTrainingChimePickerBtn.addEventListener("click", () => {
+          syncTrainingChimePickerUi();
+          trainingChimePickerModal.classList.remove("hidden");
+          trainingChimePickerModal.setAttribute("aria-hidden", "false");
+        });
+      }
+
+      trainingChimePresetButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const presetId = String(button.getAttribute("data-training-chime-preset") || "");
+          applyTrainingCorrectChimePreset(presetId, {
+            selectElement: trainingCorrectChimeSelect,
+            playSample: true
+          });
+          syncTrainingChimePickerUi();
+          if (trainingChimePickerModal) {
+            trainingChimePickerModal.classList.add("hidden");
+            trainingChimePickerModal.setAttribute("aria-hidden", "true");
+          }
+        });
+      });
+    }
   }
 
   const pcDeviceNameInput = document.getElementById("pcDeviceNameInput");
