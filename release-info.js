@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/08 22:14", note: "PC版のみ: Dayごとの未学習数が0（『未学習なし』）になったタイミングで +25P を付与する処理を追加。同一Dayでの重複加算を防ぐため pointState に dayUnstudiedClearBonusAwardedByDay を導入し、1Dayあたり1回のみ計上。判定は既存の未学習ロジック（hasBeenStudied / learningStats / levelData / review関連）をそのまま使用。星昇格条件、通常Day進行（累計10問）、unlockedDayMax、Day進行ボーナス+50P、studyCore/learningHistory/review.records/normalDayProgressByDay の仕様は未変更" },
     { version: "2026/08/08 22:12", note: "PC版のみ: 予習・復習（Day学習設定）のDay一覧カードに、各Dayの未学習問題数を追加表示。未学習が0問のDayは『未学習 0問』ではなく『未学習なし』と表示するよう変更。未学習判定は既存の学習済み判定（hasBeenStudied / learningStats / levelData / review関連）を再利用し、通常Day学習・過去の間違い・追加特訓で一度回答済みの問題も未学習から除外。あわせて予習・復習の出題順は『未学習→星の少ない問題→その他』を維持。星昇格条件、通常Day進行（累計10問）、unlockedDayMax、Day進行ボーナス+50P、studyCore/learningHistory/pointState/review.records/normalDayProgressByDayの既存データ構造は未変更" },
     { version: "2026/08/08 21:38", note: "PC版のみ: 通常Day学習の終了フローを調整。累計10問到達時に即終了せず、そのDayで間違えた問題がある場合は既存の復習フェーズへ進み、復習完了後にのみ Day進行ボーナス+50P・次Day解放メッセージ・終了画面へ進むよう修正。Day進捗には累計回答済みIDに加えて復習待ちIDも保持し、複数セッション（例: 3問で戻る→残り7問）をまたいだ誤答も復習対象へ引き継ぐ。復習途中で中断した場合は未解放のまま復習待ちを維持し、次回は残り通常問題または復習フェーズから再開。追加特訓の5問=1回/日次10回仕様、既存learningHistory・studyCore・pointStateの推測書換えは未変更" },
     { version: "2026/08/08 21:21", note: "PC版のみ: 旧データ由来のDay進行デッドロック対策を追加。normalDayProgressByDay が未記録でも、既存の studyCore 学習実績から現在解放中Dayで累計10問以上の実回答痕跡を確認できる場合は、そのDayを完了済みとみなして次Dayの解放状態だけを自動補正するよう更新。補正対象は unlockedDayMax のみで、learningHistory新規作成・ポイント再付与・追加特訓回数変更・回答済みIDの推測書換えは行わない。あわせて追加特訓は5問完了時のみ1回消費のまま維持" },

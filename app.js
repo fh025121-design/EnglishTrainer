@@ -116,6 +116,7 @@ const POINT_SYSTEM_STORAGE_KEY = "english-trainer-pc-points-v1";
 const POINT_SYSTEM_CONFIG = Object.freeze({
   typingDailyTotalCap: 300,
   dayAdvanceCompletionBonusPoints: 50,
+  dayUnstudiedClearBonusPoints: 25,
   dailyLimitModes: Object.freeze({
     normal: 300,
     event: 300
@@ -5369,6 +5370,7 @@ function createDefaultPointState() {
     dailyEarnedByDate: {},
     dailyEarnedByModeByDate: {},
     dayAdvanceBonusAwardedByDay: {},
+    dayUnstudiedClearBonusAwardedByDay: {},
     todayEarned: 0,
     previousDayEarned: 0,
     totalEarned: 0,
@@ -5460,6 +5462,13 @@ function sanitizePointState(value) {
         .map(([dayKey]) => [String(Math.floor(Number(dayKey))), true])
     )
     : {};
+  const dayUnstudiedClearBonusAwardedByDay = source.dayUnstudiedClearBonusAwardedByDay && typeof source.dayUnstudiedClearBonusAwardedByDay === "object"
+    ? Object.fromEntries(
+      Object.entries(source.dayUnstudiedClearBonusAwardedByDay)
+        .filter(([dayKey, awarded]) => Number.isFinite(Number(dayKey)) && Number(dayKey) >= 1 && Boolean(awarded))
+        .map(([dayKey]) => [String(Math.floor(Number(dayKey))), true])
+    )
+    : {};
   const redeemedItemIds = Array.isArray(source.redeemedItemIds)
     ? [...new Set(source.redeemedItemIds.map((id) => String(id)).filter(Boolean))]
     : [];
@@ -5479,6 +5488,7 @@ function sanitizePointState(value) {
     dailyEarnedByDate,
     dailyEarnedByModeByDate,
     dayAdvanceBonusAwardedByDay,
+    dayUnstudiedClearBonusAwardedByDay,
     todayEarned: Math.max(0, Math.floor(Number(source.todayEarned) || 0)),
     previousDayEarned: Math.max(0, Math.floor(Number(source.previousDayEarned) || 0)),
     totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0)),
@@ -6045,6 +6055,42 @@ function awardDayAdvanceCompletionBonus(session, reason) {
   if (exchangeScreen && exchangeScreen.classList.contains("active")) {
     renderPointExchangeScreen();
   }
+  return bonus;
+}
+
+function awardDayUnstudiedClearBonus(dayNumber) {
+  const day = Math.max(1, Math.floor(Number(dayNumber) || 0));
+  if (!Number.isFinite(day)) return 0;
+  if (getDayUnstudiedCount(day) > 0) return 0;
+
+  const pointState = getPointState();
+  const awardedByDay = pointState.dayUnstudiedClearBonusAwardedByDay && typeof pointState.dayUnstudiedClearBonusAwardedByDay === "object"
+    ? pointState.dayUnstudiedClearBonusAwardedByDay
+    : {};
+  const dayKey = String(day);
+  if (awardedByDay[dayKey]) return 0;
+
+  const bonus = Math.max(0, Math.floor(Number(POINT_SYSTEM_CONFIG.dayUnstudiedClearBonusPoints) || 0));
+  if (!bonus) return 0;
+
+  awardedByDay[dayKey] = true;
+  pointState.dayUnstudiedClearBonusAwardedByDay = awardedByDay;
+  pointState.balance = Math.max(0, Number(pointState.balance) || 0) + bonus;
+  pointState.totalEarned = Math.max(0, Number(pointState.totalEarned) || 0) + bonus;
+
+  const todayKey = getPointTodayKey();
+  migratePointDayKeyRow(pointState, todayKey, 0);
+  const todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
+  pointState.dailyEarnedByDate[todayKey] = todayEarned + bonus;
+
+  savePointState(pointState);
+
+  const exchangeScreen = document.getElementById("exchangeTicketScreen");
+  if (exchangeScreen && exchangeScreen.classList.contains("active")) {
+    renderPointExchangeScreen();
+  }
+
+  openPointRewardModal(bonus);
   return bonus;
 }
 
@@ -10661,8 +10707,12 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   if (!session.currentQuestionAttempted) {
     session.currentQuestionAttempted = true;
     if (!isTrainingSession) {
+      const hadBeenStudiedBefore = hasItemBeenStudied(item);
       item.hasBeenStudied = true;
       recordItemStudyAttempt(item, isCorrect);
+      if (!hadBeenStudiedBefore) {
+        awardDayUnstudiedClearBonus(question.day);
+      }
     }
     if (isScoredNormalRun || session.mode !== "normal") {
       session.attemptedFirstCount += 1;
