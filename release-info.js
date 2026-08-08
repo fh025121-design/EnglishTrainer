@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/08 21:21", note: "PC版のみ: 旧データ由来のDay進行デッドロック対策を追加。normalDayProgressByDay が未記録でも、既存の studyCore 学習実績から現在解放中Dayで累計10問以上の実回答痕跡を確認できる場合は、そのDayを完了済みとみなして次Dayの解放状態だけを自動補正するよう更新。補正対象は unlockedDayMax のみで、learningHistory新規作成・ポイント再付与・追加特訓回数変更・回答済みIDの推測書換えは行わない。あわせて追加特訓は5問完了時のみ1回消費のまま維持" },
     { version: "2026/08/08 21:08", note: "PC版のみ: Day進行の累計完了モデルを補正。ホームの『次へ進む Day○』で開始する通常学習は、累計10問到達時に追加の復習/苦手克服へ進まずその場で完了扱いとなり、次Day解放判定へ進むよう修正。あわせて追加特訓の日次回数カウントを見直し、1〜4問の途中中断では回数消費せず、1セット5問を完了した時のみ1回消費するよう変更。learningHistory の途中保存、既存ポイント条件、ゲームチケット、モバイル版は未変更" },
     { version: "2026/08/08 20:45", note: "PC版のみ: Day進行の継続方式を変更。通常学習の中断再開セッション持越しを廃止し、離脱時は常にその時点までを中断完了として履歴保存するよう統一。ホームの『次へ進む Day○』は累計10問完了モデルへ更新し、Dayごとの回答済み問題IDを保持して未回答のみを再抽出、累計10問到達で次Dayを解放する方式へ変更（同一Dayの複数回実施で到達可能）。追加特訓は日次上限10回を新設し、ホームボタンに残回数（あとN回）を表示、上限到達時は開始不可。learningHistoryの mode分離/answerDetails保存、point付与条件、モバイル版は未変更" },
     { version: "2026/08/08 20:07", note: "PC版のみ: learningHistoryでDay学習と追加特訓を分離。追加特訓（ホームの『追加特訓（5問）』）は新規に mode=extraTraining で保存し、Day学習（mode=Day）と履歴上で明確に区別できるよう修正。表示側は extraTraining を『追加特訓』として常時表示し、Day学習のみ『Day学習（DayX）』表示を維持。上部日別集計にも『追加特訓』行を追加し、Day学習へ合算しないよう更新。あわせて learningHistory に answerDetails（questionId/day/isCorrect/answer/phase/index/answeredAt）を保存・読込対応し、中断→再開時の履歴分割（№4-18-9）は追加特訓にも適用。ポイント付与条件・studyCore更新ロジック・既存learningHistoryデータ・モバイル版は未変更" },

@@ -1768,6 +1768,63 @@ function getRemainingNormalDayQuestions(dayNumber) {
   return weightedSampleWithoutReplacement(pool, Math.min(remainingCount, pool.length));
 }
 
+function getLegacyTouchedDayQuestionIds(dayNumber) {
+  const day = Math.max(1, Math.floor(Number(dayNumber) || 0));
+  return state.items
+    .filter((item) => Number(item.day) === day)
+    .filter((item) => {
+      const learningStats = sanitizeLearningStats(item?.learningStats);
+      const levelData = sanitizeLevelData(item?.levelData);
+      return Boolean(
+        learningStats.attempts > 0 ||
+        learningStats.correct > 0 ||
+        learningStats.lastStudiedDate ||
+        learningStats.lastCorrectDate ||
+        levelData.level > 1 ||
+        levelData.successCount > 0 ||
+        levelData.lv4FailureCount > 0 ||
+        levelData.lv4Celebrated ||
+        item?.hasBeenStudied ||
+        item?.reviewDue
+      );
+    })
+    .map((item) => String(item.id));
+}
+
+function hasLegacyCompletedNormalDay(dayNumber) {
+  const answeredCount = getNormalDayAnsweredCount(dayNumber);
+  if (answeredCount >= DAY_PROGRESS_TARGET_QUESTION_COUNT) {
+    return true;
+  }
+  if (getNormalDayProgressEntry(dayNumber)) {
+    return false;
+  }
+  return getLegacyTouchedDayQuestionIds(dayNumber).length >= DAY_PROGRESS_TARGET_QUESTION_COUNT;
+}
+
+function ensureUnlockedDayProgressConsistency() {
+  const availableDays = getAvailableDays();
+  if (!availableDays.length) return null;
+
+  const maxDay = availableDays[availableDays.length - 1];
+  const unlockedDayMax = getUnlockedDayMax();
+  if (unlockedDayMax >= maxDay) return null;
+  if (!hasLegacyCompletedNormalDay(unlockedDayMax)) return null;
+
+  const nextUnlockedDay = Math.min(maxDay, unlockedDayMax + 1);
+  if (nextUnlockedDay <= unlockedDayMax) return null;
+
+  state.stats.unlockedDayMax = nextUnlockedDay;
+  markStudyCoreLocalChange({ unlockedDayMax: true });
+  scheduleStudyCoreSync();
+  saveState();
+
+  return {
+    previousDay: unlockedDayMax,
+    unlockedDay: nextUnlockedDay
+  };
+}
+
 function recordNormalDayProgressFromSession(sessionLike) {
   if (!sessionLike || sessionLike.mode !== "normal") {
     return { updated: false, day: 0, beforeCount: 0, afterCount: 0 };
@@ -8981,6 +9038,7 @@ function renderDayProgress() {
 function renderHome() {
   stopAdminLearningHistoryFirestoreListener();
   syncDerivedStats();
+  ensureUnlockedDayProgressConsistency();
   const advanceDayText = document.getElementById("advanceDayText");
   const advanceBtn = document.getElementById("advanceBtn");
   const todayExtraTrainingBtn = document.getElementById("todayExtraTrainingBtn");
@@ -9142,6 +9200,7 @@ function goBackScreen() {
 function startNextDaySession() {
   const availableDays = getAvailableDays();
   if (!availableDays.length) return;
+  ensureUnlockedDayProgressConsistency();
   const nextDay = getNextAdvanceDay();
   state.settings.studyRange = { start: nextDay, end: nextDay };
   saveState();
