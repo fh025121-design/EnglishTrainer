@@ -1786,6 +1786,7 @@ function computeLearningHistoryTicketDelta(before, after) {
 
 const LEARNING_MODE = Object.freeze({
   DAY: "Day",
+  EXTRA_TRAINING: "extraTraining",
   REVIEW: "過去の間違い",
   PREPOSITION: "前置詞特訓",
   RESPONSE: "応答文特訓"
@@ -1795,10 +1796,13 @@ const VALID_LEARNING_MODE_SET = new Set(Object.values(LEARNING_MODE));
 
 function normalizeLearningMode(mode) {
   const rawMode = String(mode || "").trim();
+  const lowerMode = rawMode.toLowerCase();
   let normalizedMode = "";
 
   if (rawMode === "normal" || rawMode === "Day" || rawMode === "Day学習") {
     normalizedMode = LEARNING_MODE.DAY;
+  } else if (rawMode === LEARNING_MODE.EXTRA_TRAINING || lowerMode === "extratraining" || lowerMode === "extra-training" || rawMode === "追加特訓") {
+    normalizedMode = LEARNING_MODE.EXTRA_TRAINING;
   } else if (rawMode === "challenge" || rawMode === "review" || rawMode === LEARNING_MODE.REVIEW) {
     normalizedMode = LEARNING_MODE.REVIEW;
   } else if (rawMode === "preposition" || rawMode === "preposition-training" || rawMode === LEARNING_MODE.PREPOSITION) {
@@ -1814,7 +1818,19 @@ function normalizeLearningMode(mode) {
   return normalizedMode;
 }
 
+function isExtraTrainingSession(sessionLike) {
+  return Boolean(sessionLike?.isExtraTrainingSession);
+}
+
+function resolveLearningHistoryModeForSession(sessionLike) {
+  if (String(sessionLike?.mode || "") === "normal" && isExtraTrainingSession(sessionLike)) {
+    return LEARNING_MODE.EXTRA_TRAINING;
+  }
+  return String(sessionLike?.mode || "");
+}
+
 function resolveSessionDayNumber(sessionLike) {
+  if (isExtraTrainingSession(sessionLike)) return "";
   const mode = String(sessionLike?.mode || "");
   if (mode === "normal") {
     const start = Number(sessionLike?.studyRangeStart);
@@ -1831,6 +1847,7 @@ function resolveSessionDayNumber(sessionLike) {
 }
 
 function resolveCurrentSessionDayNumberForHistorySegment(sessionLike) {
+  if (isExtraTrainingSession(sessionLike)) return "";
   const mode = String(sessionLike?.mode || "");
   if (mode === "normal") {
     const start = Number(sessionLike?.studyRangeStart);
@@ -1861,6 +1878,7 @@ function resolveLearningHistoryQuestionByIdForSession(sessionLike, questionId) {
 }
 
 function resolveLearningHistorySegmentDayNumber(sessionLike) {
+  if (isExtraTrainingSession(sessionLike)) return "";
   const explicit = String(sessionLike?.historySegmentDayNumber || "").trim();
   if (explicit) return explicit;
 
@@ -1946,6 +1964,47 @@ function computeSessionActiveStudySeconds(sessionLike, endedAt, options = {}) {
   return Math.max(0, Math.round(activeMs / 1000));
 }
 
+function sanitizeLearningHistoryAnswerDetails(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry, index) => {
+    const source = entry && typeof entry === "object" ? entry : {};
+    const questionId = String(source.questionId || "").trim();
+    const day = Number(source.day);
+    const indexValue = Number(source.index);
+    const answeredAt = Number(source.answeredAt ?? source.at);
+    return {
+      questionId,
+      day: Number.isFinite(day) && day >= 1 ? Math.floor(day) : 0,
+      isCorrect: Boolean(source.isCorrect),
+      answer: String(source.answer || ""),
+      phase: String(source.phase || ""),
+      index: Number.isFinite(indexValue) ? Math.max(0, Math.floor(indexValue)) : index,
+      answeredAt: Number.isFinite(answeredAt) && answeredAt > 0 ? Math.floor(answeredAt) : 0
+    };
+  }).filter((entry) => entry.questionId);
+}
+
+function buildLearningHistoryAnswerDetails(sessionLike, options = {}) {
+  const answerHistory = Array.isArray(sessionLike?.answerHistory) ? sessionLike.answerHistory : [];
+  const startIndexRaw = Number(options?.answerHistoryStartIndex);
+  const startIndex = Number.isFinite(startIndexRaw) ? Math.max(0, Math.floor(startIndexRaw)) : 0;
+  return sanitizeLearningHistoryAnswerDetails(
+    answerHistory.slice(startIndex).map((entry, offset) => {
+      const questionId = String(entry?.questionId || "").trim();
+      const question = resolveLearningHistoryQuestionByIdForSession(sessionLike, questionId);
+      return {
+        questionId,
+        day: Number(question?.day) || 0,
+        isCorrect: Boolean(entry?.isCorrect),
+        answer: String(entry?.answer || ""),
+        phase: String(entry?.phase || ""),
+        index: Math.max(0, startIndex + offset),
+        answeredAt: Number(entry?.at) || 0
+      };
+    })
+  );
+}
+
 function sanitizeLearningHistoryEntry(entry) {
   console.log("[LearningHistoryDebug] sanitizeLearningHistoryEntry before", {
     entry,
@@ -1996,6 +2055,7 @@ function sanitizeLearningHistoryEntry(entry) {
     deviceType: typeof entry.deviceType === "string" && entry.deviceType.trim().toLowerCase() === "mobile" ? "mobile" : "pc",
     deviceId: String(entry.deviceId || "").trim(),
     deviceName: sanitizePcBrowserDeviceName(entry.deviceName),
+    answerDetails: sanitizeLearningHistoryAnswerDetails(entry.answerDetails),
     ticket: {
       earned: {
         legacyTickets: Math.max(0, Number(entry.ticket?.earned?.legacyTickets) || 0),
@@ -2265,6 +2325,7 @@ function resolvePcLearningHistoryCategory(modeLike, entryLike = null) {
     return isLikelyPhraseLearningHistoryEntry(entryLike) ? "熟語特訓" : "不明";
   }
   if (mode === "Day" || mode === "Day学習" || lowerMode === "normal") return "Day学習";
+  if (mode === LEARNING_MODE.EXTRA_TRAINING || lowerMode === "extratraining" || lowerMode === "extra-training" || mode === "追加特訓") return "追加特訓";
   if (mode === "過去の間違い" || lowerMode === "review" || lowerMode === "challenge") return "過去の間違い";
   if (mode === "前置詞特訓" || lowerMode === "preposition" || lowerMode === "preposition-training") return "前置詞特訓";
   if (mode === "応答文特訓" || lowerMode === "response" || lowerMode === "response-training") return "応答文特訓";
@@ -2317,6 +2378,9 @@ function getLearningHistoryModeBucket(modeOrEntry) {
   if (normalized === "Day学習") {
     return { key: "day", label: "Day学習" };
   }
+  if (normalized === "追加特訓") {
+    return { key: "extra", label: "追加特訓" };
+  }
   if (normalized === "単語特訓") {
     return { key: "word", label: "単語特訓" };
   }
@@ -2332,14 +2396,14 @@ function getLearningHistoryModeBucket(modeOrEntry) {
 
 function getLearningHistoryModeGroup(mode) {
   const bucket = getLearningHistoryModeBucket(mode);
-  if (bucket.key === "day" || bucket.key === "word" || bucket.key === "phrase" || bucket.key === "review") {
+  if (bucket.key === "day" || bucket.key === "extra" || bucket.key === "word" || bucket.key === "phrase" || bucket.key === "review") {
     return bucket.key;
   }
   return "other";
 }
 
 function getLearningHistoryModeSummaryOrder() {
-  return ["day", "phrase", "review", "word"];
+  return ["day", "extra", "phrase", "review", "word"];
 }
 
 function getLearningHistoryModeSummaryEntries(summary) {
@@ -2444,6 +2508,7 @@ function renderLearningHistoryModeSummaryContent(summary, options = {}) {
 function createLearningHistoryModeTotals() {
   return {
     day: { label: "Day学習", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
+    extra: { label: "追加特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
     word: { label: "単語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
     phrase: { label: "熟語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
     review: { label: "過去の間違い", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 }
@@ -3422,6 +3487,7 @@ function completeResponseTrainingSession(reason) {
 
 function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
   const endedAt = Date.now();
+  const learningHistoryMode = normalizeLearningMode(resolveLearningHistoryModeForSession(sessionLike));
   const segmentStartedAt = Number(sessionLike?.historySegmentStartedAt);
   const startedAt = Number.isFinite(segmentStartedAt) && segmentStartedAt > 0
     ? segmentStartedAt
@@ -3437,6 +3503,9 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
     answerHistoryStartIndex,
     correctStartCount
   });
+  const answerDetails = buildLearningHistoryAnswerDetails(sessionLike, {
+    answerHistoryStartIndex
+  });
   return {
     learnedAt: formatTimestampToJstDisplay(endedAt),
     startedAt,
@@ -3447,8 +3516,8 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
       startAt: startedAt,
       answerHistoryStartIndex
     }),
-    mode: String(sessionLike?.mode || ""),
-    dayNumber: resolveLearningHistorySegmentDayNumber(sessionLike),
+    mode: learningHistoryMode,
+    dayNumber: learningHistoryMode === LEARNING_MODE.DAY ? resolveLearningHistorySegmentDayNumber(sessionLike) : "",
     questionCount: answerStats.questionCount,
     correctCount: answerStats.correctCount,
     earnedPoints: pointSummary.earnedPoints,
@@ -3457,6 +3526,7 @@ function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
     deviceType: "pc",
     deviceId: getPcBrowserDeviceId(),
     deviceName: getPcBrowserDeviceNameRaw(),
+    answerDetails,
     ticket: computeLearningHistoryTicketDelta(ticketBefore, ticketAfter)
   };
 }
@@ -7986,6 +8056,7 @@ function sanitizeStoredSession(sessionLike) {
     isFinishingSession: false,
     isSessionCompleted: false,
     ticketSnapshot: sanitizeLearningHistoryTicketSnapshot(sessionLike.ticketSnapshot),
+    isExtraTrainingSession: Boolean(sessionLike.isExtraTrainingSession),
     historySegmentStartedAt: Number.isFinite(historySegmentStartedAt) && historySegmentStartedAt > 0
       ? historySegmentStartedAt
       : (Number.isFinite(startedAt) && startedAt > 0 ? startedAt : Date.now()),
@@ -8832,7 +8903,8 @@ function startTodayExtraTrainingFromHome() {
   prepareSession("normal", {
     customPool: questions,
     forceNewSession: true,
-    startWeakFocusOnly: true
+    startWeakFocusOnly: true,
+    extraTraining: true
   });
 }
 
@@ -8893,7 +8965,7 @@ function restoreSavedNormalSession() {
     answerHistoryStartIndex: resumedAnswerHistoryLength,
     correctStartCount: resumedCorrectCount,
     pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
-    dayNumber: resolveCurrentSessionDayNumberForHistorySegment(restored)
+    dayNumber: restored.isExtraTrainingSession ? "" : resolveCurrentSessionDayNumberForHistorySegment(restored)
   });
   state.session = restored;
   state.stats.savedNormalSession = null;
@@ -9848,6 +9920,7 @@ function prepareSession(mode, options = {}) {
     ticketSnapshot: captureLearningHistoryTicketSnapshot(),
     pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
     isDayStudySession: Boolean(options.dayStudy),
+    isExtraTrainingSession: mode === "normal" && Boolean(options.extraTraining),
     studyRangeStart: Number(state.settings.studyRange?.start) || 1,
     studyRangeEnd: Number(state.settings.studyRange?.end) || 1,
     historySegmentStartedAt: Date.now(),
@@ -9864,7 +9937,7 @@ function prepareSession(mode, options = {}) {
     answerHistoryStartIndex: 0,
     correctStartCount: 0,
     pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
-    dayNumber: resolveCurrentSessionDayNumberForHistorySegment(state.session)
+    dayNumber: state.session.isExtraTrainingSession ? "" : resolveCurrentSessionDayNumberForHistorySegment(state.session)
   });
 
   setTestScreenActive(true);

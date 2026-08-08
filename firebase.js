@@ -177,6 +177,17 @@ async function saveLearningHistoryToFirestore(historyEntry) {
     earnedPoints: Math.max(0, Number(historyEntry.earnedPoints) || 0),
     accuracy: Math.max(0, Math.min(100, Number(historyEntry.accuracy) || 0)),
     completedReason: String(historyEntry.completedReason || "completed"),
+    answerDetails: Array.isArray(historyEntry.answerDetails)
+      ? historyEntry.answerDetails.map((entry, index) => ({
+        questionId: String(entry?.questionId || "").trim(),
+        day: Math.max(0, Number(entry?.day) || 0),
+        isCorrect: Boolean(entry?.isCorrect),
+        answer: String(entry?.answer || ""),
+        phase: String(entry?.phase || ""),
+        index: Number.isFinite(Number(entry?.index)) ? Math.max(0, Math.floor(Number(entry.index))) : index,
+        answeredAt: Math.max(0, Number(entry?.answeredAt ?? entry?.at) || 0)
+      })).filter((entry) => entry.questionId)
+      : [],
     ticketEarned: Math.max(0, Number(historyEntry?.ticket?.earnedMinutes) || 0),
     ticketUsed: Math.max(0, Number(historyEntry?.ticket?.usedMinutes) || 0),
     deviceType: "pc",
@@ -207,6 +218,7 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
   const normalizedDeviceName = String(data.deviceName || "").trim();
   const rawDayNumber = data.dayNumber;
   const normalizedDayNumber = rawDayNumber == null ? "" : String(rawDayNumber).trim();
+  const rawAnswerDetails = Array.isArray(data.answerDetails) ? data.answerDetails : [];
   return {
     id: String(docSnapshot?.id || ""),
     uid: String(data.uid || ""),
@@ -225,6 +237,15 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
     earnedPoints: Math.max(0, Number(data.earnedPoints) || 0),
     accuracy: Math.max(0, Math.min(100, Number(data.accuracy) || 0)),
     completedReason: String(data.completedReason || "completed"),
+    answerDetails: rawAnswerDetails.map((entry, index) => ({
+      questionId: String(entry?.questionId || "").trim(),
+      day: Math.max(0, Number(entry?.day) || 0),
+      isCorrect: Boolean(entry?.isCorrect),
+      answer: String(entry?.answer || ""),
+      phase: String(entry?.phase || ""),
+      index: Number.isFinite(Number(entry?.index)) ? Math.max(0, Math.floor(Number(entry.index))) : index,
+      answeredAt: Math.max(0, Number(entry?.answeredAt ?? entry?.at) || 0)
+    })).filter((entry) => entry.questionId),
     ticket: {
       earnedMinutes: Math.max(0, Number(data.ticketEarned) || 0),
       usedMinutes: Math.max(0, Number(data.ticketUsed) || 0)
