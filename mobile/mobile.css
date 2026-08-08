@@ -883,6 +883,91 @@ select,
   align-items: center;
 }
 
+.acquired-points-history-wrap {
+  align-items: stretch;
+}
+
+.acquired-points-history-title {
+  margin: 0;
+  text-align: left;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.mobile-points-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-points-history-day-card {
+  margin: 0;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mobile-points-history-day-head {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.mobile-points-history-mode-list {
+  margin-top: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-points-history-mode-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.mobile-points-history-mode-label {
+  color: #dfeaff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.mobile-points-history-mode-value {
+  color: #dfeaff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.mobile-points-empty {
+  margin: 0;
+  text-align: left;
+}
+
+.acquired-points-today-total,
+.acquired-points-total-earned {
+  margin: 0;
+  font-size: 1.28rem;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.acquired-points-today-breakdown {
+  margin: 0;
+  color: #dfeaff;
+  font-weight: 700;
+  text-align: center;
+}
+
 .acquired-points-breakdown {
   gap: 6px;
 }

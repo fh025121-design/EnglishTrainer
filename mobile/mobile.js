@@ -27,6 +27,7 @@
     wordOrderCorrectReward: 2,
     seasonalNote: "summer-2026"
   });
+  const MOBILE_POINT_HISTORY_PAGE_SIZE = 3;
   const MOBILE_POINT_REWARD_SCREEN_CONFIG = Object.freeze({
     homework: Object.freeze({
       title: "🎉 宿題の発話お疲れさま！",
@@ -52,6 +53,7 @@
     Object.freeze({ value: "36-40", label: "Day 36 - 40", startDay: 36, endDay: 40 })
   ]);
   let mobilePointStateCache = null;
+  let mobilePointHistoryVisibleCount = MOBILE_POINT_HISTORY_PAGE_SIZE;
 
   function formatPointValue(value) {
     return `${new Intl.NumberFormat("ja-JP").format(Math.max(0, Math.floor(Number(value) || 0)))}P`;
@@ -320,28 +322,163 @@
     return mobilePointStateCache;
   }
 
-  function renderMobilePointSummaryScreen() {
-    const todayText = document.getElementById("mobilePointsTodayText");
-    const homeworkText = document.getElementById("mobilePointsHomeworkText");
-    const homeworkCapText = document.getElementById("mobilePointsHomeworkCapText");
-    const reviewText = document.getElementById("mobilePointsReviewText");
-    const reviewCapText = document.getElementById("mobilePointsReviewCapText");
-    const wordOrderText = document.getElementById("mobilePointsWordOrderText");
-    const wordOrderCapText = document.getElementById("mobilePointsWordOrderCapText");
-    const totalText = document.getElementById("mobilePointsTotalText");
-    if (!homeworkText || !homeworkCapText || !reviewText || !reviewCapText || !wordOrderText || !wordOrderCapText || !totalText) return;
-    const pointState = getMobilePointState();
-    const summary = getMobilePointSummary(pointState);
-    if (todayText) {
-      todayText.textContent = "";
+  function formatMobilePointHistoryDateLabel(dayKey) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dayKey || ""));
+    if (!match) return String(dayKey || "-");
+    return `${Number(match[2])}/${Number(match[3])}`;
+  }
+
+  function mapMobilePointModeLabel(modeKey) {
+    const key = String(modeKey || "").trim().toLowerCase();
+    if (!key) return "";
+    if (key === "day" || key === "normal" || key === "day-study" || key === "daystudy") return "Day学習";
+    if (key.includes("phrase") || key.includes("idiom") || key.includes("熟語")) return "熟語特訓";
+    if (key.includes("preposition") || key.includes("前置詞")) return "前置詞特訓";
+    if (key.includes("response") || key.includes("応答")) return "応答文特訓";
+    if (key === "review" || key === "challenge" || key.includes("過去")) return "過去の間違い";
+    if (key.includes("dayadvance") || key.includes("day-advance") || key.includes("bonus") || key.includes("進行")) return "Day進行ボーナス";
+    if (key === "homework" || key.includes("宿題")) return "宿題";
+    if (key === "speaking" || key.includes("発話")) return "発話";
+    if (key.includes("wordorder") || key.includes("語順")) return "語順";
+    return String(modeKey || "").trim();
+  }
+
+  function buildMobilePointModeBreakdownByDay(pointState, dayKey) {
+    const modeRows = [];
+    const modeMap = pointState?.dailyEarnedByModeByDate?.[dayKey];
+    if (modeMap && typeof modeMap === "object") {
+      Object.entries(modeMap).forEach(([modeKey, value]) => {
+        const points = Math.max(0, Math.floor(Number(value) || 0));
+        if (points <= 0) return;
+        modeRows.push({
+          modeLabel: mapMobilePointModeLabel(modeKey),
+          points
+        });
+      });
+      return modeRows
+        .filter((row) => row.modeLabel)
+        .sort((left, right) => right.points - left.points || left.modeLabel.localeCompare(right.modeLabel, "ja"));
     }
-    homeworkText.textContent = `${Math.max(0, summary.todayHomework)} / ${MOBILE_POINT_CONFIG.homeworkSpeakingDailyMax}P`;
-    reviewText.textContent = `${Math.max(0, summary.todayReview)} / ${MOBILE_POINT_CONFIG.reviewSpeakingDailyMax}P`;
-    wordOrderText.textContent = `${Math.max(0, summary.todayWordOrder)} / ${MOBILE_POINT_CONFIG.wordOrderDailyMax}P`;
-    homeworkCapText.classList.toggle("hidden", summary.todayHomework < MOBILE_POINT_CONFIG.homeworkSpeakingDailyMax);
-    reviewCapText.classList.toggle("hidden", summary.todayReview < MOBILE_POINT_CONFIG.reviewSpeakingDailyMax);
-    wordOrderCapText.classList.toggle("hidden", summary.todayWordOrder < MOBILE_POINT_CONFIG.wordOrderDailyMax);
-    totalText.textContent = `${Math.max(0, summary.todayEarned)} / ${MOBILE_POINT_CONFIG.totalDailyMax}P`;
+
+    const fallbackRows = [
+      { modeLabel: "発話", points: Math.max(0, Math.floor(Number(pointState?.reviewSpeakingPointsByDate?.[dayKey]) || 0)) },
+      { modeLabel: "宿題", points: Math.max(0, Math.floor(Number(pointState?.homeworkSpeakingPointsByDate?.[dayKey]) || 0)) },
+      { modeLabel: "語順", points: Math.max(0, Math.floor(Number(pointState?.wordOrderPointsByDate?.[dayKey]) || 0)) }
+    ].filter((row) => row.points > 0);
+
+    return fallbackRows.sort((left, right) => right.points - left.points || left.modeLabel.localeCompare(right.modeLabel, "ja"));
+  }
+
+  function getMobilePointDayTotal(pointState, dayKey, modeRows = null) {
+    const dailyValue = Math.max(0, Math.floor(Number(pointState?.dailyEarnedByDate?.[dayKey]) || 0));
+    if (dailyValue > 0) return dailyValue;
+    const rows = Array.isArray(modeRows) ? modeRows : buildMobilePointModeBreakdownByDay(pointState, dayKey);
+    return rows.reduce((sum, row) => sum + Math.max(0, Number(row.points) || 0), 0);
+  }
+
+  function collectMobilePointEarnedDayKeys(pointState) {
+    const keySet = new Set();
+    const registerFromMap = (mapLike) => {
+      if (!mapLike || typeof mapLike !== "object") return;
+      Object.entries(mapLike).forEach(([dayKey, value]) => {
+        const points = Math.max(0, Math.floor(Number(value) || 0));
+        if (points > 0) keySet.add(String(dayKey));
+      });
+    };
+
+    registerFromMap(pointState?.dailyEarnedByDate);
+    registerFromMap(pointState?.reviewSpeakingPointsByDate);
+    registerFromMap(pointState?.homeworkSpeakingPointsByDate);
+    registerFromMap(pointState?.wordOrderPointsByDate);
+
+    if (pointState?.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object") {
+      Object.entries(pointState.dailyEarnedByModeByDate).forEach(([dayKey, modeMap]) => {
+        if (!modeMap || typeof modeMap !== "object") return;
+        const hasEarned = Object.values(modeMap).some((value) => Math.max(0, Math.floor(Number(value) || 0)) > 0);
+        if (hasEarned) keySet.add(String(dayKey));
+      });
+    }
+
+    return [...keySet].sort((left, right) => right.localeCompare(left));
+  }
+
+  function buildMobilePointHistoryRows(pointState) {
+    const dayKeys = collectMobilePointEarnedDayKeys(pointState);
+    return dayKeys.map((dayKey) => {
+      const modeRows = buildMobilePointModeBreakdownByDay(pointState, dayKey);
+      const totalPoints = getMobilePointDayTotal(pointState, dayKey, modeRows);
+      return {
+        dayKey,
+        totalPoints,
+        modeRows
+      };
+    }).filter((row) => row.totalPoints > 0);
+  }
+
+  function renderMobilePointHistoryList(pointState) {
+    const historyList = document.getElementById("mobilePointsHistoryList");
+    const moreButton = document.getElementById("mobilePointsHistoryMoreBtn");
+    if (!historyList || !moreButton) return;
+
+    const historyRows = buildMobilePointHistoryRows(pointState);
+    const visibleCount = Math.max(MOBILE_POINT_HISTORY_PAGE_SIZE, Math.floor(Number(mobilePointHistoryVisibleCount) || MOBILE_POINT_HISTORY_PAGE_SIZE));
+    const visibleRows = historyRows.slice(0, visibleCount);
+
+    if (!visibleRows.length) {
+      historyList.innerHTML = '<p class="status-text mobile-points-empty">獲得履歴はまだありません</p>';
+      moreButton.classList.add("hidden");
+      return;
+    }
+
+    historyList.innerHTML = visibleRows.map((row) => {
+      const breakdownMarkup = row.modeRows
+        .filter((modeRow) => Math.max(0, Number(modeRow.points) || 0) > 0)
+        .map((modeRow) => `
+          <p class="mobile-points-history-mode-row">
+            <span class="mobile-points-history-mode-label">${escapeHtml(modeRow.modeLabel)}</span>
+            <span class="mobile-points-history-mode-value">+${Math.max(0, Number(modeRow.points) || 0)}P</span>
+          </p>
+        `)
+        .join("");
+
+      return `
+        <article class="mobile-points-history-day-card">
+          <p class="mobile-points-history-day-head">
+            <span>${escapeHtml(formatMobilePointHistoryDateLabel(row.dayKey))}</span>
+            <span>${Math.max(0, Number(row.totalPoints) || 0)}P</span>
+          </p>
+          <div class="mobile-points-history-mode-list">
+            ${breakdownMarkup || '<p class="status-text mobile-points-empty">内訳なし</p>'}
+          </div>
+        </article>
+      `;
+    }).join("");
+
+    const hasMore = historyRows.length > visibleRows.length;
+    moreButton.classList.toggle("hidden", !hasMore);
+  }
+
+  function renderMobilePointSummaryScreen() {
+    const todayTotalText = document.getElementById("mobilePointsTodayTotalText");
+    const todayBreakdownText = document.getElementById("mobilePointsTodayBreakdownText");
+    const totalEarnedText = document.getElementById("mobilePointsTotalEarnedText");
+    if (!todayTotalText || !todayBreakdownText || !totalEarnedText) return;
+
+    const pointState = getMobilePointState();
+    const todayKey = getMobilePointJstDateKey(0);
+    const todayModeRows = buildMobilePointModeBreakdownByDay(pointState, todayKey);
+    const todayTotal = getMobilePointDayTotal(pointState, todayKey, todayModeRows);
+    const summary = getMobilePointSummary(pointState);
+
+    todayTotalText.textContent = `本日の獲得ポイント ${todayTotal}P`;
+    if (todayModeRows.length) {
+      todayBreakdownText.textContent = `（${todayModeRows.map((row) => `${row.modeLabel} ${Math.max(0, Number(row.points) || 0)}P`).join("・")}）`;
+    } else {
+      todayBreakdownText.textContent = "（本日の獲得はありません）";
+    }
+    totalEarnedText.textContent = `累計獲得 ${Math.max(0, Number(summary.totalEarned) || 0)}P`;
+
+    renderMobilePointHistoryList(pointState);
   }
 
   function createPointRewardScreenState(rewardType, earnedPoints, options = {}) {
@@ -8197,10 +8334,16 @@
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
     document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", () => {
+      mobilePointHistoryVisibleCount = MOBILE_POINT_HISTORY_PAGE_SIZE;
       renderMobilePointSummaryScreen();
       showScreen("acquiredPointsScreen");
     });
+    document.getElementById("openMobileLearningHistoryBtn").addEventListener("click", renderMobileAdminLearningHistoryScreen);
     document.getElementById("acquiredPointsHomeBtn").addEventListener("click", renderHome);
+    document.getElementById("mobilePointsHistoryMoreBtn").addEventListener("click", () => {
+      mobilePointHistoryVisibleCount += MOBILE_POINT_HISTORY_PAGE_SIZE;
+      renderMobilePointSummaryScreen();
+    });
     document.getElementById("openSettingsBtn").addEventListener("click", () => showScreen("settingsScreen"));
     document.getElementById("speakingHomeBackBtn").addEventListener("click", renderHome);
     document.getElementById("openConversationSelectBtn").addEventListener("click", renderConversationSelectScreen);
@@ -8272,7 +8415,7 @@
     });
     elements.openMobileAdminFromUpdateBtn.addEventListener("click", renderMobileAdminLearningHistoryScreen);
     elements.mobileUpdateHistoryBackBtn.addEventListener("click", () => showScreen("settingsScreen"));
-    elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", () => showScreen("mobileUpdateHistoryScreen"));
+    elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", renderHome);
     if (elements.mobileAdminLearningHistoryUnlockBtn) {
       elements.mobileAdminLearningHistoryUnlockBtn.addEventListener("click", unlockMobileAdminLearningHistory);
     }

@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260807-2053";
+        const defaultToken = "20260808-1150";
         const queryToken = new URLSearchParams(window.location.search).get("v") || "";
         const cacheToken = queryToken || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -56,6 +56,7 @@
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
             <button id="refreshCacheBtn" class="secondary-btn large-btn" type="button">♻ キャッシュ更新</button>
             <button id="openAcquiredPointsScreenBtn" class="secondary-btn large-btn" type="button">獲得ポイント</button>
+            <button id="openMobileLearningHistoryBtn" class="secondary-btn large-btn" type="button">学習履歴</button>
             <div class="home-utility-row">
               <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
               <button id="mobileLogoutBtn" class="ghost-btn large-btn hidden" type="button">ログアウト</button>
@@ -67,29 +68,18 @@
       <section id="acquiredPointsScreen" class="screen">
         <main class="stack-layout result-layout">
           <section class="panel result-panel speaking-complete-panel acquired-points-panel">
-            <h2>🎉 本日の獲得ポイント</h2>
+            <h2>ポイント</h2>
             <div class="result-breakdown acquired-points-summary">
-              <p id="mobilePointsTodayLabelText" class="status-text acquired-points-heading">内訳</p>
-              <p id="mobilePointsTodayText" class="result-summary-text acquired-points-today"></p>
-              <div class="acquired-points-line">
-                <span class="acquired-points-line-label">発話</span>
-                <span id="mobilePointsReviewText" class="acquired-points-line-value">0 / 400P</span>
-                <span id="mobilePointsReviewCapText" class="acquired-points-cap hidden">上限達成</span>
-              </div>
-              <div class="acquired-points-line">
-                <span class="acquired-points-line-label">宿題</span>
-                <span id="mobilePointsHomeworkText" class="acquired-points-line-value">0 / 30P</span>
-                <span id="mobilePointsHomeworkCapText" class="acquired-points-cap hidden">上限達成</span>
-              </div>
-              <div class="acquired-points-line">
-                <span class="acquired-points-line-label">語順</span>
-                <span id="mobilePointsWordOrderText" class="acquired-points-line-value">0 / 50P</span>
-                <span id="mobilePointsWordOrderCapText" class="acquired-points-cap hidden">上限達成</span>
-              </div>
+              <p id="mobilePointsTodayTotalText" class="result-summary-text acquired-points-today-total">本日の獲得ポイント 0P</p>
+              <p id="mobilePointsTodayBreakdownText" class="status-text acquired-points-today-breakdown">（本日の獲得はありません）</p>
             </div>
             <div class="result-breakdown acquired-points-balance">
-              <p class="status-text acquired-points-heading">合計</p>
-              <p id="mobilePointsTotalText" class="result-summary-text acquired-points-total">0 / 280P</p>
+              <p id="mobilePointsTotalEarnedText" class="result-summary-text acquired-points-total-earned">累計獲得 0P</p>
+            </div>
+            <div class="result-breakdown acquired-points-history-wrap">
+              <h3 class="acquired-points-history-title">獲得履歴</h3>
+              <div id="mobilePointsHistoryList" class="mobile-points-history-list"></div>
+              <button id="mobilePointsHistoryMoreBtn" class="secondary-btn large-btn hidden" type="button">もっと見る</button>
             </div>
             <div class="action-panel compact-actions">
               <button id="acquiredPointsHomeBtn" class="primary-btn large-btn" type="button">ホームへ戻る</button>
@@ -547,7 +537,7 @@
 
       <section id="mobileAdminLearningHistoryScreen" class="screen">
         <header class="screen-topbar">
-          <button id="mobileAdminLearningHistoryBackBtn" class="back-btn" type="button">← 更新内容</button>
+          <button id="mobileAdminLearningHistoryBackBtn" class="back-btn" type="button">← ホームに戻る</button>
         </header>
 
         <main class="stack-layout">
