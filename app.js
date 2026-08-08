@@ -2649,7 +2649,11 @@ function resetAdminLearningHistoryAuthScope() {
 
 function getCurrentPcFirebaseUser() {
   if (typeof window.getFirebaseCurrentUser === "function") {
-    return window.getFirebaseCurrentUser();
+    const current = window.getFirebaseCurrentUser();
+    if (current) return current;
+  }
+  if (window.PcFirebaseAuthState?.user) {
+    return window.PcFirebaseAuthState.user;
   }
   return window.EnglishTrainerFirebase?.auth?.currentUser || null;
 }

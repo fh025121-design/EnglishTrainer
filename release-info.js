@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/08 16:29", note: "PC版のみ: スマホブラウザでPC版サイトを開いた際、ログイン直後に auth.currentUser の反映タイミング差でUIDが空扱いとなり、studyCore自動同期（№4-16）が開始されず Day1/0語のローカル初期表示が残る場合がある問題を修正。UID取得ロジックに PcFirebaseAuthState.user（pc-firebase-auth-stateイベントで確実に渡されるユーザー）をフォールバック追加し、同一長男UIDなら端末種別に関係なく users/{uid}/sync/studyCore を参照してFirestore優先で反映。既存PC同期・Day進行・学習データ本体・pointState・learningHistory・モバイル専用版・日次バックアップは未変更" },
     { version: "2026/08/08 11:58", note: "PC版のみ: ホーム画面（homeScreen）の縦スクロールを有効化。表示領域に収まらない場合でも下部情報までスクロールして閲覧可能に調整（#homeScreen.active に overflow-y:auto を適用）。他画面の遷移・学習ロジック・ポイント処理・Firestore連携・モバイル版表示は未変更" },
     { version: "2026/08/08 11:50", note: "モバイル版のみ: 学習履歴画面（mobileAdminLearningHistoryScreen）の左上戻るボタンを『← 更新内容』から『← ホームに戻る』へ変更。押下時の遷移先も更新内容画面ではなくホーム画面（homeScreen）へ変更。学習履歴の取得・表示ロジック、設定画面の更新内容導線、ポイント処理、Firestoreデータ構造、PC版は未変更" },
     { version: "2026/08/08 11:49", note: "モバイル版のみ: ホーム画面のボタン配置を調整し、『獲得ポイント』ボタンの直下に『学習履歴』ボタンを追加。押下時は既存のモバイル学習履歴画面（mobileAdminLearningHistoryScreen）へ直接遷移するよう接続。既存の設定画面導線、学習履歴取得ロジック、ポイント付与・同期、Firestoreデータ構造、PC版画面は未変更" },
