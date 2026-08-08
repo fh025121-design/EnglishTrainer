@@ -9556,11 +9556,8 @@ function completeCurrentSession(reason = "completed", options = {}) {
   pauseSessionClock(session);
   session.completedReason = reason;
   const dayProgressUpdate = recordNormalDayProgressFromSession(session);
-  if (session.mode === "normal" && session.isExtraTrainingSession) {
-    const answeredCount = Array.isArray(session.answerHistory) ? session.answerHistory.length : 0;
-    if (answeredCount > 0) {
-      incrementExtraTrainingDailyCounter();
-    }
+  if (reason === "completed" && session.mode === "normal" && session.isExtraTrainingSession) {
+    incrementExtraTrainingDailyCounter();
   }
   if (reason === "completed" && session.mode === "challenge") {
     processCompletedTicketTraining({ trainingType: "challenge" });
@@ -10695,14 +10692,6 @@ function finishSession() {
     const wrongCount = Array.isArray(session.wrongQuestionIds) ? session.wrongQuestionIds.length : 0;
     if (session.phase === "phase1") {
       session.phase1Completed = true;
-      if (session.isProgressiveDaySession) {
-        session.phase2Skipped = true;
-        session.phase2Completed = false;
-        session.phase3Skipped = true;
-        session.phase3Completed = false;
-        completeCurrentSession("completed", { showResult: true });
-        return;
-      }
       if (wrongCount > 0) {
         session.phase2Skipped = false;
         if (startNormalAutoReviewRound(session, 1)) return;
@@ -10735,6 +10724,14 @@ function finishSession() {
 
     if (session.phase === "phase1") {
       session.phase1Completed = true;
+      if (session.isProgressiveDaySession) {
+        session.phase2Skipped = true;
+        session.phase2Completed = false;
+        session.phase3Skipped = true;
+        session.phase3Completed = false;
+        completeCurrentSession("completed", { showResult: true });
+        return;
+      }
       if (wrongCount > 0) {
         session.phase2Skipped = false;
         if (startNormalAutoReviewRound(session, 1)) return;
