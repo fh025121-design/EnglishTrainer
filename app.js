@@ -83,6 +83,8 @@ const LEVEL_FOUR_FAILURES_TO_DOWN = 3;
 const LEVEL_FOCUS_BATCH_SIZE = 5;
 const NORMAL_WEAK_FOCUS_BATCH_SIZE = 5;
 const NORMAL_WEAK_FOCUS_MAX_ROUNDS = 10;
+const DAY_PROGRESS_TARGET_QUESTION_COUNT = 10;
+const EXTRA_TRAINING_DAILY_LIMIT = 10;
 const GAME_TICKET_CONFIG = {
   debugRandomChanceOverride: null,
   eligibleTrainingThreshold: 3,
@@ -1674,6 +1676,133 @@ function createDefaultGameTicketStats() {
     earnedHistory: [],
     usageHistory: [],
     pendingRewards: []
+  };
+}
+
+function createDefaultNormalDayProgressEntry() {
+  return {
+    answeredQuestionIds: [],
+    completedAtDayKey: ""
+  };
+}
+
+function sanitizeNormalDayProgressByDay(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const result = {};
+  Object.entries(source).forEach(([dayKey, raw]) => {
+    const day = Number(dayKey);
+    if (!Number.isFinite(day) || day < 1) return;
+    const row = raw && typeof raw === "object" ? raw : {};
+    const answeredQuestionIds = Array.isArray(row.answeredQuestionIds)
+      ? [...new Set(row.answeredQuestionIds.map((id) => String(id || "").trim()).filter(Boolean))].slice(0, DAY_PROGRESS_TARGET_QUESTION_COUNT)
+      : [];
+    result[String(Math.floor(day))] = {
+      answeredQuestionIds,
+      completedAtDayKey: typeof row.completedAtDayKey === "string" ? row.completedAtDayKey : ""
+    };
+  });
+  return result;
+}
+
+function createDefaultExtraTrainingDailyCounter() {
+  return {
+    dayKey: "",
+    count: 0
+  };
+}
+
+function sanitizeExtraTrainingDailyCounter(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    dayKey: typeof source.dayKey === "string" ? source.dayKey : "",
+    count: Math.max(0, Math.floor(Number(source.count) || 0))
+  };
+}
+
+function ensureExtraTrainingDailyCounter() {
+  const today = todayKey();
+  const counter = sanitizeExtraTrainingDailyCounter(state.stats?.extraTrainingDailyCounter);
+  if (counter.dayKey !== today) {
+    const reset = { dayKey: today, count: 0 };
+    state.stats.extraTrainingDailyCounter = reset;
+    return reset;
+  }
+  state.stats.extraTrainingDailyCounter = counter;
+  return counter;
+}
+
+function getExtraTrainingDailyRemainingCount() {
+  const counter = ensureExtraTrainingDailyCounter();
+  return Math.max(0, EXTRA_TRAINING_DAILY_LIMIT - Math.max(0, Number(counter.count) || 0));
+}
+
+function incrementExtraTrainingDailyCounter() {
+  const counter = ensureExtraTrainingDailyCounter();
+  counter.count = Math.max(0, Math.min(EXTRA_TRAINING_DAILY_LIMIT, Number(counter.count) + 1));
+  state.stats.extraTrainingDailyCounter = counter;
+  return counter;
+}
+
+function getNormalDayProgressEntry(dayNumber, options = {}) {
+  const day = Math.max(1, Math.floor(Number(dayNumber) || 0));
+  const byDay = sanitizeNormalDayProgressByDay(state.stats?.normalDayProgressByDay);
+  state.stats.normalDayProgressByDay = byDay;
+  const key = String(day);
+  if (!byDay[key] && options.create) {
+    byDay[key] = createDefaultNormalDayProgressEntry();
+  }
+  return byDay[key] || null;
+}
+
+function getNormalDayAnsweredCount(dayNumber) {
+  return Math.max(0, Number(getNormalDayProgressEntry(dayNumber)?.answeredQuestionIds?.length) || 0);
+}
+
+function getRemainingNormalDayQuestions(dayNumber) {
+  const day = Math.max(1, Math.floor(Number(dayNumber) || 0));
+  const allDayQuestions = state.items.filter((item) => Number(item.day) === day);
+  const answeredSet = new Set((getNormalDayProgressEntry(day)?.answeredQuestionIds || []).map((id) => String(id)));
+  const remainingCount = Math.max(0, DAY_PROGRESS_TARGET_QUESTION_COUNT - answeredSet.size);
+  if (!remainingCount) return [];
+  const pool = allDayQuestions.filter((item) => !answeredSet.has(String(item.id)));
+  return weightedSampleWithoutReplacement(pool, Math.min(remainingCount, pool.length));
+}
+
+function recordNormalDayProgressFromSession(sessionLike) {
+  if (!sessionLike || sessionLike.mode !== "normal") {
+    return { updated: false, day: 0, beforeCount: 0, afterCount: 0 };
+  }
+  if (sessionLike.isDayStudySession || sessionLike.isExtraTrainingSession || !sessionLike.isProgressiveDaySession) {
+    return { updated: false, day: 0, beforeCount: 0, afterCount: 0 };
+  }
+
+  const day = Math.max(1, Math.floor(Number(sessionLike.dayProgressDay || sessionLike.studyRangeStart) || 0));
+  if (!day) return { updated: false, day: 0, beforeCount: 0, afterCount: 0 };
+
+  const progress = getNormalDayProgressEntry(day, { create: true }) || createDefaultNormalDayProgressEntry();
+  const answeredSet = new Set((progress.answeredQuestionIds || []).map((id) => String(id)));
+  const beforeCount = answeredSet.size;
+
+  const answerHistory = Array.isArray(sessionLike.answerHistory) ? sessionLike.answerHistory : [];
+  answerHistory.forEach((entry) => {
+    const questionId = String(entry?.questionId || "").trim();
+    if (!questionId) return;
+    const question = resolveLearningHistoryQuestionByIdForSession(sessionLike, questionId);
+    if (!question || Number(question.day) !== day) return;
+    answeredSet.add(questionId);
+  });
+
+  progress.answeredQuestionIds = [...answeredSet].slice(0, DAY_PROGRESS_TARGET_QUESTION_COUNT);
+  if (progress.answeredQuestionIds.length >= DAY_PROGRESS_TARGET_QUESTION_COUNT && !progress.completedAtDayKey) {
+    progress.completedAtDayKey = todayKey();
+  }
+  state.stats.normalDayProgressByDay[String(day)] = progress;
+
+  return {
+    updated: true,
+    day,
+    beforeCount,
+    afterCount: progress.answeredQuestionIds.length
   };
 }
 
@@ -5006,6 +5135,7 @@ function showPendingGameTicketModalIfAny() {
 function getTrainingCompletionModeLabel(mode) {
   const normalizedMode = String(mode || "").trim();
   if (normalizedMode === "normal") return "Day学習";
+  if (normalizedMode === LEARNING_MODE.EXTRA_TRAINING || normalizedMode === "extraTraining") return "追加特訓";
   if (normalizedMode === "level-focus") return "単語特訓";
   if (normalizedMode === "phrase-spiral") return "熟語特訓";
   if (normalizedMode === "challenge" || normalizedMode === "review") return "過去の間違い";
@@ -7504,7 +7634,9 @@ const defaultState = {
     gameTickets: createDefaultGameTicketStats(),
     trainingProfiles: createDefaultTrainingProfiles(),
     prepositionTraining: createDefaultPrepositionTrainingStats(),
-    savedNormalSession: null
+    savedNormalSession: null,
+    normalDayProgressByDay: {},
+    extraTrainingDailyCounter: createDefaultExtraTrainingDailyCounter()
   },
   items: buildVocabularyItems(),
   session: null
@@ -7552,11 +7684,11 @@ function loadState() {
     );
     mergedState.stats.gameTickets = sanitizeGameTicketStats(parsed.stats?.gameTickets);
     mergedState.stats.prepositionTraining = sanitizePrepositionTrainingStats(parsed.stats?.prepositionTraining);
+    mergedState.stats.normalDayProgressByDay = sanitizeNormalDayProgressByDay(parsed.stats?.normalDayProgressByDay);
+    mergedState.stats.extraTrainingDailyCounter = sanitizeExtraTrainingDailyCounter(parsed.stats?.extraTrainingDailyCounter);
     delete mergedState.stats.gameTicket;
     delete mergedState.stats.pendingGameTicket;
-    const storedNormalSession = sanitizeStoredSession(parsed.stats?.savedNormalSession);
-    const legacySession = sanitizeStoredSession(parsed.session);
-    mergedState.stats.savedNormalSession = storedNormalSession || (legacySession?.mode === "normal" ? legacySession : null);
+    mergedState.stats.savedNormalSession = null;
     mergedState.review = {
       ...mergedState.review,
       ...(parsed.review || {})
@@ -7594,7 +7726,9 @@ function loadState() {
 
 function buildPersistedStateSnapshot() {
   const snapshot = structuredClone(state);
-  snapshot.stats.savedNormalSession = sanitizeStoredSession(snapshot.stats?.savedNormalSession);
+  snapshot.stats.savedNormalSession = null;
+  snapshot.stats.normalDayProgressByDay = sanitizeNormalDayProgressByDay(snapshot.stats?.normalDayProgressByDay);
+  snapshot.stats.extraTrainingDailyCounter = sanitizeExtraTrainingDailyCounter(snapshot.stats?.extraTrainingDailyCounter);
   snapshot.session = null;
   return snapshot;
 }
@@ -8880,14 +9014,26 @@ function hasCompletedTodayNormalDaySession() {
   });
 }
 
+function formatExtraTrainingButtonLabel(remainingCount) {
+  return `▶ 追加特訓（5問 / あと${Math.max(0, remainingCount)}回）`;
+}
+
 function updateTodayExtraTrainingButtonVisibility() {
   const todayExtraTrainingBtn = document.getElementById("todayExtraTrainingBtn");
   if (!todayExtraTrainingBtn) return;
+  const remainingCount = getExtraTrainingDailyRemainingCount();
+  todayExtraTrainingBtn.textContent = formatExtraTrainingButtonLabel(remainingCount);
+  todayExtraTrainingBtn.disabled = remainingCount <= 0;
   const shouldShow = hasCompletedTodayNormalDaySession();
   todayExtraTrainingBtn.classList.toggle("hidden", !shouldShow);
 }
 
 function startTodayExtraTrainingFromHome() {
+  const remainingCount = getExtraTrainingDailyRemainingCount();
+  if (remainingCount <= 0) {
+    alert("本日の追加特訓は上限10回に達しました。明日また挑戦してください。");
+    return;
+  }
   const virtualWeakFocusSession = {
     baseQuestionIds: [],
     weakFocusAskedQuestionIds: [],
@@ -8917,8 +9063,7 @@ function renderHomeUpdateHistory() {
 }
 
 function hasSavedNormalSession() {
-  const restored = sanitizeStoredSession(state?.stats?.savedNormalSession);
-  return Boolean(restored && restored.mode === "normal");
+  return false;
 }
 
 function hasResumableNormalSession() {
@@ -8930,48 +9075,22 @@ function refreshResumeSessionButton() {
   const advanceBtn = document.getElementById("advanceBtn");
   const todayExtraTrainingBtn = document.getElementById("todayExtraTrainingBtn");
   if (!button) return;
-  const hasResume = hasResumableNormalSession();
-  button.classList.toggle("hidden", !hasResume);
+  button.classList.add("hidden");
   if (advanceBtn) {
-    advanceBtn.classList.toggle("hidden", hasResume);
+    advanceBtn.classList.remove("hidden");
   }
   updateTodayExtraTrainingButtonVisibility();
   if (todayExtraTrainingBtn) {
-    todayExtraTrainingBtn.classList.toggle("hidden", hasResume || !hasCompletedTodayNormalDaySession());
+    todayExtraTrainingBtn.classList.toggle("hidden", !hasCompletedTodayNormalDaySession());
   }
 }
 
 function stashNormalSessionIfNeeded(sessionLike) {
-  if (!sessionLike || sessionLike.mode !== "normal") return;
-  if (sessionLike.isSessionCompleted || sessionLike.isFinishingSession) return;
-  checkpointSessionClock(sessionLike);
-  const snapshot = structuredClone(sessionLike);
-  snapshot.lastResumedAt = null;
-  state.stats.savedNormalSession = snapshot;
-  saveState();
-  refreshResumeSessionButton();
+  state.stats.savedNormalSession = null;
 }
 
 function restoreSavedNormalSession() {
-  const restored = sanitizeStoredSession(state?.stats?.savedNormalSession);
-  if (!restored || restored.mode !== "normal") return false;
-  const resumedAnswerHistoryLength = Array.isArray(restored.answerHistory) ? restored.answerHistory.length : 0;
-  const resumedCorrectCount = Array.isArray(restored.answerHistory)
-    ? restored.answerHistory.filter((entry) => entry?.isCorrect).length
-    : 0;
-  initializeNormalSessionHistorySegment(restored, {
-    startedAt: Date.now(),
-    answerStartCount: restored.answerCount,
-    answerHistoryStartIndex: resumedAnswerHistoryLength,
-    correctStartCount: resumedCorrectCount,
-    pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
-    dayNumber: restored.isExtraTrainingSession ? "" : resolveCurrentSessionDayNumberForHistorySegment(restored)
-  });
-  state.session = restored;
-  state.stats.savedNormalSession = null;
-  saveState();
-  refreshResumeSessionButton();
-  return true;
+  return false;
 }
 
 function clearSavedNormalSession() {
@@ -8981,10 +9100,6 @@ function clearSavedNormalSession() {
 }
 
 function persistSessionProgress(sessionLike = state.session) {
-  if (sessionLike?.mode === "normal") {
-    stashNormalSessionIfNeeded(sessionLike);
-    return;
-  }
   saveState();
 }
 
@@ -9031,7 +9146,8 @@ function startNextDaySession() {
   state.settings.studyRange = { start: nextDay, end: nextDay };
   saveState();
   prepareSession("normal", {
-    forceNewSession: true
+    forceNewSession: true,
+    progressiveDay: true
   });
 }
 
@@ -9439,13 +9555,20 @@ function completeCurrentSession(reason = "completed", options = {}) {
   session.isFinishingSession = true;
   pauseSessionClock(session);
   session.completedReason = reason;
+  const dayProgressUpdate = recordNormalDayProgressFromSession(session);
+  if (session.mode === "normal" && session.isExtraTrainingSession) {
+    const answeredCount = Array.isArray(session.answerHistory) ? session.answerHistory.length : 0;
+    if (answeredCount > 0) {
+      incrementExtraTrainingDailyCounter();
+    }
+  }
   if (reason === "completed" && session.mode === "challenge") {
     processCompletedTicketTraining({ trainingType: "challenge" });
   }
   processStreakBonusTicket(reason);
   awardDayAdvanceCompletionBonus(session, reason);
   updateBestAccuracyFromSession(session);
-  const unlockedDayNotice = updateUnlockedDayByNormalCompletion(session, reason);
+  const unlockedDayNotice = updateUnlockedDayByNormalCompletion(session, reason, dayProgressUpdate);
   const summary = buildResultSummary(session);
   const pointSummary = computeSessionEarnedPoints(session);
   state.stats.lastResultSummary = summary;
@@ -9476,18 +9599,22 @@ function completeCurrentSession(reason = "completed", options = {}) {
   }
 }
 
-function updateUnlockedDayByNormalCompletion(session, reason) {
+function updateUnlockedDayByNormalCompletion(session, reason, dayProgressUpdate = null) {
   if (!session || reason !== "completed") return null;
   if (session.mode !== "normal") return null;
   if (session.isDayStudySession) return null;
+  if (!session.isProgressiveDaySession) return null;
 
   const availableDays = getAvailableDays();
   if (!availableDays.length) return null;
   const maxDay = availableDays[availableDays.length - 1];
   const unlockedDayMax = getUnlockedDayMax();
-  const completedDay = Number(session.studyRangeEnd);
+  const completedDay = Math.max(1, Math.floor(Number(dayProgressUpdate?.day || session.dayProgressDay || session.studyRangeStart) || 0));
   if (!Number.isFinite(completedDay)) return null;
   if (completedDay !== unlockedDayMax) return null;
+
+  const answeredCount = getNormalDayAnsweredCount(completedDay);
+  if (answeredCount < DAY_PROGRESS_TARGET_QUESTION_COUNT) return null;
 
   const nextUnlockedDay = Math.min(maxDay, unlockedDayMax + 1);
   if (nextUnlockedDay <= unlockedDayMax) return null;
@@ -9533,30 +9660,7 @@ function flushPendingSessionNotice() {
 
 function suspendCurrentSession() {
   if (!state.session) return;
-  if (state.session.mode !== "normal") {
-    completeCurrentSession("interrupted", { showResult: true });
-    return;
-  }
-
-  const pointSummary = computeSessionEarnedPoints(state.session);
-  pauseSessionClock(state.session);
-  stashNormalSessionIfNeeded(state.session);
-  const summary = buildSuspendedSummary(state.session);
-  recordInterruptedLearningHistory(state.session, summary);
-  state.stats.lastResultSummary = summary;
-  state.session = null;
-  saveState();
-  flushPendingStudyCoreSync().catch((error) => {
-    console.error("Failed to flush study core sync after suspending session", error);
-  });
-  setTestScreenActive(false);
-  openTrainingCompleteScreen({
-    mode: "normal",
-    earnedPoints: pointSummary.earnedPoints,
-    pointBalance: pointSummary.pointBalance,
-    interrupted: true,
-    showTicketAfter: true
-  });
+  completeCurrentSession("interrupted", { showResult: true });
 }
 
 function returnHomeFromInterruptedResult() {
@@ -9782,17 +9886,8 @@ function prepareSession(mode, options = {}) {
   if (state.session) {
     const switchingToDifferentMode = state.session.mode !== mode;
     if (switchingToDifferentMode) {
-      stashNormalSessionIfNeeded(state.session);
-      state.session = null;
-    } else if (mode === "normal" && !options.forceNewSession) {
-      resumeActiveSession();
-      return;
-    }
-  }
-
-  if (mode === "normal" && !options.customPool && !options.forceNewSession) {
-    if (restoreSavedNormalSession()) {
-      saveState();
+      completeCurrentSession("interrupted", { showResult: false });
+    } else if (mode !== "normal" && !options.forceNewSession) {
       resumeActiveSession();
       return;
     }
@@ -9809,6 +9904,7 @@ function prepareSession(mode, options = {}) {
   let mainQuestions = [];
   let previousReviewQuestions = [];
   const startWeakFocusOnly = mode === "normal" && Boolean(options.startWeakFocusOnly);
+  const isProgressiveDaySession = mode === "normal" && Boolean(options.progressiveDay);
 
   if (mode === "review") {
     questions = getReviewPool();
@@ -9830,6 +9926,11 @@ function prepareSession(mode, options = {}) {
       questions = shuffle(pool).slice(0, Math.min(NORMAL_WEAK_FOCUS_BATCH_SIZE, pool.length));
       mainQuestions = [];
       previousReviewQuestions = [];
+    } else if (isProgressiveDaySession) {
+      const day = Number(state.settings.studyRange?.start) || 1;
+      mainQuestions = getRemainingNormalDayQuestions(day);
+      previousReviewQuestions = [];
+      questions = mainQuestions;
     } else {
       mainQuestions = hasCustomPool
         ? shuffle(pool).slice(0, Math.min(10, pool.length))
@@ -9867,7 +9968,7 @@ function prepareSession(mode, options = {}) {
   state.session = {
     mode,
     phase: mode === "normal"
-      ? (startWeakFocusOnly ? "phase3" : (previousReviewQuestions.length ? "phase0" : "phase1"))
+      ? (startWeakFocusOnly ? "phase3" : "phase1")
       : mode === "review"
         ? "phase2"
         : mode === "phrase-spiral"
@@ -9901,12 +10002,12 @@ function prepareSession(mode, options = {}) {
     }, {}),
     awaitingPhaseStart: false,
     phase0Completed: startWeakFocusOnly,
-    phase0Skipped: mode === "normal" ? (startWeakFocusOnly || previousReviewQuestions.length === 0) : true,
+    phase0Skipped: true,
     phase1Completed: startWeakFocusOnly,
-    phase2Completed: startWeakFocusOnly,
-    phase2Skipped: startWeakFocusOnly,
+    phase2Completed: false,
+    phase2Skipped: true,
     phase3Completed: false,
-    phase3Skipped: mode === "phrase-spiral" ? true : false,
+    phase3Skipped: mode === "normal" ? !startWeakFocusOnly : mode === "phrase-spiral",
     weakFocusRoundCount: startWeakFocusOnly ? 1 : 0,
     weakFocusAskedQuestionIds: startWeakFocusOnly ? questions.map((question) => String(question.id)) : [],
     weakFocusLastRoundCorrectIds: [],
@@ -9921,6 +10022,8 @@ function prepareSession(mode, options = {}) {
     pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
     isDayStudySession: Boolean(options.dayStudy),
     isExtraTrainingSession: mode === "normal" && Boolean(options.extraTraining),
+    isProgressiveDaySession,
+    dayProgressDay: isProgressiveDaySession ? (Number(state.settings.studyRange?.start) || 1) : 0,
     studyRangeStart: Number(state.settings.studyRange?.start) || 1,
     studyRangeEnd: Number(state.settings.studyRange?.end) || 1,
     historySegmentStartedAt: Date.now(),
@@ -9950,8 +10053,6 @@ function prepareSession(mode, options = {}) {
   } else {
     if (startWeakFocusOnly) {
       beginSessionPhase(state.session, "phase3", questions, { showIntro: true });
-    } else if (previousReviewQuestions.length) {
-      beginSessionPhase(state.session, "phase0", previousReviewQuestions, { showIntro: true });
     } else {
       beginSessionPhase(state.session, "phase1", mainQuestions, { showIntro: true });
     }
@@ -10594,6 +10695,14 @@ function finishSession() {
     const wrongCount = Array.isArray(session.wrongQuestionIds) ? session.wrongQuestionIds.length : 0;
     if (session.phase === "phase1") {
       session.phase1Completed = true;
+      if (session.isProgressiveDaySession) {
+        session.phase2Skipped = true;
+        session.phase2Completed = false;
+        session.phase3Skipped = true;
+        session.phase3Completed = false;
+        completeCurrentSession("completed", { showResult: true });
+        return;
+      }
       if (wrongCount > 0) {
         session.phase2Skipped = false;
         if (startNormalAutoReviewRound(session, 1)) return;
@@ -11649,13 +11758,6 @@ function bindEvents() {
     }
     flushPendingStudyCoreSync().catch(() => false);
     flushPointStateSync().catch(() => false);
-    if (state.session?.mode === "normal") {
-      pauseSessionClock(state.session);
-      const summary = buildSuspendedSummary(state.session);
-      recordInterruptedLearningHistory(state.session, summary);
-      stashNormalSessionIfNeeded(state.session);
-      return;
-    }
     if (state.session) {
       completeCurrentSession("interrupted", { showResult: false });
       return;
