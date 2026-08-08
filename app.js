@@ -1682,6 +1682,7 @@ function createDefaultGameTicketStats() {
 function createDefaultNormalDayProgressEntry() {
   return {
     answeredQuestionIds: [],
+    wrongQuestionIds: [],
     completedAtDayKey: ""
   };
 }
@@ -1696,8 +1697,12 @@ function sanitizeNormalDayProgressByDay(value) {
     const answeredQuestionIds = Array.isArray(row.answeredQuestionIds)
       ? [...new Set(row.answeredQuestionIds.map((id) => String(id || "").trim()).filter(Boolean))].slice(0, DAY_PROGRESS_TARGET_QUESTION_COUNT)
       : [];
+    const wrongQuestionIds = Array.isArray(row.wrongQuestionIds)
+      ? [...new Set(row.wrongQuestionIds.map((id) => String(id || "").trim()).filter(Boolean))]
+      : [];
     result[String(Math.floor(day))] = {
       answeredQuestionIds,
+      wrongQuestionIds,
       completedAtDayKey: typeof row.completedAtDayKey === "string" ? row.completedAtDayKey : ""
     };
   });
@@ -1768,6 +1773,26 @@ function getRemainingNormalDayQuestions(dayNumber) {
   return weightedSampleWithoutReplacement(pool, Math.min(remainingCount, pool.length));
 }
 
+function getPendingNormalDayReviewQuestionIds(dayNumber) {
+  const day = Math.max(1, Math.floor(Number(dayNumber) || 0));
+  const progress = getNormalDayProgressEntry(day);
+  if (!progress) return [];
+  const answeredSet = new Set((progress.answeredQuestionIds || []).map((id) => String(id)));
+  const availableSet = new Set(state.items.filter((item) => Number(item.day) === day).map((item) => String(item.id)));
+  return (progress.wrongQuestionIds || []).filter((id) => answeredSet.has(String(id)) && availableSet.has(String(id)));
+}
+
+function getPendingNormalDayReviewQuestions(dayNumber) {
+  return collectQuestionsById(getPendingNormalDayReviewQuestionIds(dayNumber));
+}
+
+function clearNormalDayReviewQuestionIds(dayNumber) {
+  const progress = getNormalDayProgressEntry(dayNumber, { create: true });
+  if (!progress) return;
+  progress.wrongQuestionIds = [];
+  state.stats.normalDayProgressByDay[String(Math.max(1, Math.floor(Number(dayNumber) || 0)))] = progress;
+}
+
 function getLegacyTouchedDayQuestionIds(dayNumber) {
   const day = Math.max(1, Math.floor(Number(dayNumber) || 0));
   return state.items
@@ -1792,6 +1817,9 @@ function getLegacyTouchedDayQuestionIds(dayNumber) {
 }
 
 function hasLegacyCompletedNormalDay(dayNumber) {
+  if (getPendingNormalDayReviewQuestionIds(dayNumber).length > 0) {
+    return false;
+  }
   const answeredCount = getNormalDayAnsweredCount(dayNumber);
   if (answeredCount >= DAY_PROGRESS_TARGET_QUESTION_COUNT) {
     return true;
@@ -1803,6 +1831,7 @@ function hasLegacyCompletedNormalDay(dayNumber) {
 }
 
 function ensureUnlockedDayProgressConsistency() {
+  if (state.session) return null;
   const availableDays = getAvailableDays();
   if (!availableDays.length) return null;
 
@@ -1829,7 +1858,7 @@ function recordNormalDayProgressFromSession(sessionLike) {
   if (!sessionLike || sessionLike.mode !== "normal") {
     return { updated: false, day: 0, beforeCount: 0, afterCount: 0 };
   }
-  if (sessionLike.isDayStudySession || sessionLike.isExtraTrainingSession || !sessionLike.isProgressiveDaySession) {
+  if (sessionLike.isDayStudySession || sessionLike.isExtraTrainingSession || !sessionLike.isProgressiveDaySession || sessionLike.isProgressiveDayReviewSession) {
     return { updated: false, day: 0, beforeCount: 0, afterCount: 0 };
   }
 
@@ -1838,18 +1867,24 @@ function recordNormalDayProgressFromSession(sessionLike) {
 
   const progress = getNormalDayProgressEntry(day, { create: true }) || createDefaultNormalDayProgressEntry();
   const answeredSet = new Set((progress.answeredQuestionIds || []).map((id) => String(id)));
+  const wrongSet = new Set((progress.wrongQuestionIds || []).map((id) => String(id)));
   const beforeCount = answeredSet.size;
 
   const answerHistory = Array.isArray(sessionLike.answerHistory) ? sessionLike.answerHistory : [];
   answerHistory.forEach((entry) => {
+    if (entry?.phase !== "phase1") return;
     const questionId = String(entry?.questionId || "").trim();
     if (!questionId) return;
     const question = resolveLearningHistoryQuestionByIdForSession(sessionLike, questionId);
     if (!question || Number(question.day) !== day) return;
     answeredSet.add(questionId);
+    if (!entry?.isCorrect) {
+      wrongSet.add(questionId);
+    }
   });
 
   progress.answeredQuestionIds = [...answeredSet].slice(0, DAY_PROGRESS_TARGET_QUESTION_COUNT);
+  progress.wrongQuestionIds = [...wrongSet].filter((id) => answeredSet.has(String(id)));
   if (progress.answeredQuestionIds.length >= DAY_PROGRESS_TARGET_QUESTION_COUNT && !progress.completedAtDayKey) {
     progress.completedAtDayKey = todayKey();
   }
@@ -2009,6 +2044,10 @@ function isExtraTrainingSession(sessionLike) {
 }
 
 function resolveLearningHistoryModeForSession(sessionLike) {
+  const historySegmentMode = String(sessionLike?.historySegmentMode || "").trim();
+  if (historySegmentMode) {
+    return historySegmentMode;
+  }
   if (String(sessionLike?.mode || "") === "normal" && isExtraTrainingSession(sessionLike)) {
     return LEARNING_MODE.EXTRA_TRAINING;
   }
@@ -2116,9 +2155,22 @@ function initializeNormalSessionHistorySegment(sessionLike, options = {}) {
   sessionLike.historySegmentPointBalanceBefore = Number.isFinite(pointBalanceBefore)
     ? Math.max(0, Math.floor(pointBalanceBefore))
     : currentPointBalance;
+  sessionLike.historySegmentMode = String(options.mode || "").trim();
 
   const dayNumber = String(options.dayNumber || "").trim();
   sessionLike.historySegmentDayNumber = dayNumber || resolveCurrentSessionDayNumberForHistorySegment(sessionLike);
+}
+
+function appendLearningHistoryEntryForCurrentSegment(sessionLike, reason = "completed") {
+  if (!sessionLike || String(sessionLike.mode || "") !== "normal") return false;
+  const answerStats = resolveLearningHistoryAnswerStats(sessionLike, null, {
+    answerStartCount: sessionLike.historySegmentAnswerStartCount,
+    answerHistoryStartIndex: sessionLike.historySegmentAnswerHistoryStartIndex,
+    correctStartCount: sessionLike.historySegmentCorrectStartCount
+  });
+  if (answerStats.questionCount <= 0) return false;
+  appendLearningHistoryEntry(buildLearningHistoryEntryFromSession(sessionLike, buildResultSummary(sessionLike), reason));
+  return true;
 }
 
 function computeSessionActiveStudySeconds(sessionLike, endedAt, options = {}) {
@@ -9789,6 +9841,32 @@ function startNormalAutoReviewRound(session, round) {
   return beginSessionPhase(session, "phase2", questions, { showIntro: useIntro });
 }
 
+function startProgressiveDayReviewPhase(session) {
+  if (!session || !session.isProgressiveDaySession || session.isProgressiveDayReviewSession) return false;
+  const day = Math.max(1, Math.floor(Number(session.dayProgressDay || session.studyRangeStart) || 0));
+  if (!day) return false;
+
+  const reviewQuestionIds = getPendingNormalDayReviewQuestionIds(day);
+  if (!reviewQuestionIds.length) return false;
+
+  session.wrongQuestionIds = reviewQuestionIds.slice();
+  appendLearningHistoryEntryForCurrentSegment(session, "completed");
+  initializeNormalSessionHistorySegment(session, {
+    startedAt: Date.now(),
+    answerStartCount: session.answerCount,
+    answerHistoryStartIndex: Array.isArray(session.answerHistory) ? session.answerHistory.length : 0,
+    correctStartCount: Array.isArray(session.answerHistory) ? session.answerHistory.filter((entry) => entry?.isCorrect).length : 0,
+    pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
+    dayNumber: "",
+    mode: "review"
+  });
+  session.isProgressiveDayReviewSession = true;
+  session.phase2Skipped = false;
+  session.phase3Skipped = true;
+  session.phase3Completed = false;
+  return startNormalAutoReviewRound(session, 1);
+}
+
 function startNormalMainRound(session) {
   if (!session || session.mode !== "normal") return false;
   const ids = Array.isArray(session.mainQuestionIds) ? session.mainQuestionIds : [];
@@ -9961,6 +10039,7 @@ function prepareSession(mode, options = {}) {
   let previousReviewQuestions = [];
   const startWeakFocusOnly = mode === "normal" && Boolean(options.startWeakFocusOnly);
   const isProgressiveDaySession = mode === "normal" && Boolean(options.progressiveDay);
+  let isProgressiveDayReviewSession = false;
 
   if (mode === "review") {
     questions = getReviewPool();
@@ -9984,9 +10063,18 @@ function prepareSession(mode, options = {}) {
       previousReviewQuestions = [];
     } else if (isProgressiveDaySession) {
       const day = Number(state.settings.studyRange?.start) || 1;
-      mainQuestions = getRemainingNormalDayQuestions(day);
-      previousReviewQuestions = [];
-      questions = mainQuestions;
+      const answeredCount = getNormalDayAnsweredCount(day);
+      const pendingReviewQuestions = getPendingNormalDayReviewQuestions(day);
+      if (answeredCount >= DAY_PROGRESS_TARGET_QUESTION_COUNT && pendingReviewQuestions.length) {
+        isProgressiveDayReviewSession = true;
+        mainQuestions = [];
+        previousReviewQuestions = pendingReviewQuestions;
+        questions = pendingReviewQuestions;
+      } else {
+        mainQuestions = getRemainingNormalDayQuestions(day);
+        previousReviewQuestions = [];
+        questions = mainQuestions;
+      }
     } else {
       mainQuestions = hasCustomPool
         ? shuffle(pool).slice(0, Math.min(10, pool.length))
@@ -10024,7 +10112,7 @@ function prepareSession(mode, options = {}) {
   state.session = {
     mode,
     phase: mode === "normal"
-      ? (startWeakFocusOnly ? "phase3" : "phase1")
+      ? (startWeakFocusOnly ? "phase3" : (isProgressiveDayReviewSession ? "phase2" : "phase1"))
       : mode === "review"
         ? "phase2"
         : mode === "phrase-spiral"
@@ -10037,7 +10125,7 @@ function prepareSession(mode, options = {}) {
     mainQuestionIds: (mode === "normal" || mode === "phrase-spiral" ? mainQuestions : questions).map((question) => String(question.id)),
     previousReviewQuestionIds: previousReviewQuestions.map((question) => String(question.id)),
     questionIds: questions.map((question) => String(question.id)),
-    wrongQuestionIds: [],
+    wrongQuestionIds: isProgressiveDayReviewSession ? previousReviewQuestions.map((question) => String(question.id)) : [],
     currentIndex: 0,
     answered: false,
     currentQuestionAttempted: false,
@@ -10079,6 +10167,7 @@ function prepareSession(mode, options = {}) {
     isDayStudySession: Boolean(options.dayStudy),
     isExtraTrainingSession: mode === "normal" && Boolean(options.extraTraining),
     isProgressiveDaySession,
+    isProgressiveDayReviewSession,
     dayProgressDay: isProgressiveDaySession ? (Number(state.settings.studyRange?.start) || 1) : 0,
     studyRangeStart: Number(state.settings.studyRange?.start) || 1,
     studyRangeEnd: Number(state.settings.studyRange?.end) || 1,
@@ -10087,6 +10176,7 @@ function prepareSession(mode, options = {}) {
     historySegmentAnswerHistoryStartIndex: 0,
     historySegmentCorrectStartCount: 0,
     historySegmentPointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
+    historySegmentMode: isProgressiveDayReviewSession ? "review" : "",
     historySegmentDayNumber: ""
   };
 
@@ -10096,7 +10186,8 @@ function prepareSession(mode, options = {}) {
     answerHistoryStartIndex: 0,
     correctStartCount: 0,
     pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
-    dayNumber: state.session.isExtraTrainingSession ? "" : resolveCurrentSessionDayNumberForHistorySegment(state.session)
+    dayNumber: state.session.isExtraTrainingSession || isProgressiveDayReviewSession ? "" : resolveCurrentSessionDayNumberForHistorySegment(state.session),
+    mode: isProgressiveDayReviewSession ? "review" : ""
   });
 
   setTestScreenActive(true);
@@ -10109,6 +10200,8 @@ function prepareSession(mode, options = {}) {
   } else {
     if (startWeakFocusOnly) {
       beginSessionPhase(state.session, "phase3", questions, { showIntro: true });
+    } else if (isProgressiveDayReviewSession) {
+      beginSessionPhase(state.session, "phase2", previousReviewQuestions, { showIntro: true });
     } else {
       beginSessionPhase(state.session, "phase1", mainQuestions, { showIntro: true });
     }
@@ -10784,6 +10877,11 @@ function finishSession() {
     if (session.phase === "phase1") {
       session.phase1Completed = true;
       if (session.isProgressiveDaySession) {
+        recordNormalDayProgressFromSession(session);
+        if (startProgressiveDayReviewPhase(session)) {
+          return;
+        }
+        clearNormalDayReviewQuestionIds(session.dayProgressDay || session.studyRangeStart);
         session.phase2Skipped = true;
         session.phase2Completed = false;
         session.phase3Skipped = true;
@@ -10808,6 +10906,13 @@ function finishSession() {
 
     if (session.phase === "phase2") {
       session.phase2Completed = true;
+      if (session.isProgressiveDaySession) {
+        clearNormalDayReviewQuestionIds(session.dayProgressDay || session.studyRangeStart);
+        session.phase3Skipped = true;
+        session.phase3Completed = false;
+        completeCurrentSession("completed", { showResult: true });
+        return;
+      }
       if (startNormalWeakFocusRound(session, { showIntro: true })) {
         session.phase3Skipped = false;
         return;
