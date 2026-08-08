@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/08 11:58", note: "PC版のみ: ホーム画面（homeScreen）の縦スクロールを有効化。表示領域に収まらない場合でも下部情報までスクロールして閲覧可能に調整（#homeScreen.active に overflow-y:auto を適用）。他画面の遷移・学習ロジック・ポイント処理・Firestore連携・モバイル版表示は未変更" },
     { version: "2026/08/08 11:50", note: "モバイル版のみ: 学習履歴画面（mobileAdminLearningHistoryScreen）の左上戻るボタンを『← 更新内容』から『← ホームに戻る』へ変更。押下時の遷移先も更新内容画面ではなくホーム画面（homeScreen）へ変更。学習履歴の取得・表示ロジック、設定画面の更新内容導線、ポイント処理、Firestoreデータ構造、PC版は未変更" },
     { version: "2026/08/08 11:49", note: "モバイル版のみ: ホーム画面のボタン配置を調整し、『獲得ポイント』ボタンの直下に『学習履歴』ボタンを追加。押下時は既存のモバイル学習履歴画面（mobileAdminLearningHistoryScreen）へ直接遷移するよう接続。既存の設定画面導線、学習履歴取得ロジック、ポイント付与・同期、Firestoreデータ構造、PC版画面は未変更" },
     { version: "2026/08/08 11:30", note: "モバイル版のみ: 『獲得ポイント』画面の表示を整理し、表示項目を『本日の獲得ポイント』『累計獲得』『獲得履歴』へ更新。履歴は保存済みポイントstate（totalEarned / dailyEarnedByDate / dailyEarnedByModeByDate、または既存のモバイル日次ポイント項目）をそのまま参照し、獲得実績がある日だけを新しい順で表示。初期表示は直近3日分（獲得実績ベース）とし、4日目以降がある場合のみ『もっと見る』で追加表示。0P項目は非表示。ポイント付与条件/付与量・同期処理・Firestoreデータ・learningHistory・PC版表示は未変更" },

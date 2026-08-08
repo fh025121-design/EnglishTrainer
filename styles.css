@@ -723,6 +723,11 @@ p {
   animation: fadeIn 140ms ease-out;
 }
 
+#homeScreen.active {
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 #settingsScreen.active {
   overflow-y: auto;
   padding-right: 6px;
