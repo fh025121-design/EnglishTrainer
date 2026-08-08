@@ -160,6 +160,9 @@ async function saveLearningHistoryToFirestore(historyEntry) {
     return false;
   }
 
+  const rawDayNumber = historyEntry.dayNumber;
+  const normalizedDayNumber = rawDayNumber == null ? "" : String(rawDayNumber).trim();
+
   const payload = {
     uid: String(user.uid || ""),
     email: String(user.email || ""),
@@ -168,7 +171,7 @@ async function saveLearningHistoryToFirestore(historyEntry) {
     endedAt: Number(historyEntry.endedAt) || 0,
     activeStudySeconds: Math.max(0, Number(historyEntry.activeStudySeconds) || 0),
     mode: String(historyEntry.mode || ""),
-    dayNumber: Number(historyEntry.dayNumber) || 0,
+    dayNumber: normalizedDayNumber,
     questionCount: Math.max(0, Number(historyEntry.questionCount) || 0),
     correctCount: Math.max(0, Number(historyEntry.correctCount) || 0),
     earnedPoints: Math.max(0, Number(historyEntry.earnedPoints) || 0),
@@ -202,6 +205,8 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
   const normalizedDeviceType = String(data.deviceType || "").trim().toLowerCase() === "mobile" ? "mobile" : (String(data.deviceType || "").trim().toLowerCase() === "pc" ? "pc" : "");
   const normalizedDeviceId = String(data.deviceId || "").trim();
   const normalizedDeviceName = String(data.deviceName || "").trim();
+  const rawDayNumber = data.dayNumber;
+  const normalizedDayNumber = rawDayNumber == null ? "" : String(rawDayNumber).trim();
   return {
     id: String(docSnapshot?.id || ""),
     uid: String(data.uid || ""),
@@ -214,7 +219,7 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
     endedAtDisplay: String(data.endedAtDisplay || ""),
     activeStudySeconds: Math.max(0, Number(data.activeStudySeconds) || 0),
     mode: String(data.mode || ""),
-    dayNumber: Math.max(0, Number(data.dayNumber) || 0),
+    dayNumber: normalizedDayNumber,
     questionCount: Math.max(0, Number(data.questionCount) || 0),
     correctCount: Math.max(0, Number(data.correctCount) || 0),
     earnedPoints: Math.max(0, Number(data.earnedPoints) || 0),

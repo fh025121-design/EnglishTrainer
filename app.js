@@ -1830,13 +1830,109 @@ function resolveSessionDayNumber(sessionLike) {
   return `${days[0]}-${days[days.length - 1]}`;
 }
 
-function computeSessionActiveStudySeconds(sessionLike, endedAt) {
-  const start = Number(sessionLike?.startedAt);
+function resolveCurrentSessionDayNumberForHistorySegment(sessionLike) {
+  const mode = String(sessionLike?.mode || "");
+  if (mode === "normal") {
+    const start = Number(sessionLike?.studyRangeStart);
+    const end = Number(sessionLike?.studyRangeEnd);
+    if (Number.isFinite(start) && Number.isFinite(end)) {
+      if (start === end) return String(start);
+      return `${start}-${end}`;
+    }
+    const currentIndex = Number(sessionLike?.currentIndex);
+    if (Array.isArray(sessionLike?.questions) && Number.isInteger(currentIndex) && currentIndex >= 0 && currentIndex < sessionLike.questions.length) {
+      const currentDay = Number(sessionLike.questions[currentIndex]?.day);
+      if (Number.isFinite(currentDay) && currentDay >= 1) {
+        return String(Math.floor(currentDay));
+      }
+    }
+  }
+  return resolveSessionDayNumber(sessionLike);
+}
+
+function resolveLearningHistoryQuestionByIdForSession(sessionLike, questionId) {
+  const key = String(questionId || "");
+  if (!key) return null;
+  const sessionQuestion = Array.isArray(sessionLike?.questions)
+    ? sessionLike.questions.find((question) => String(question?.id || "") === key)
+    : null;
+  if (sessionQuestion) return sessionQuestion;
+  return getQuestionById(key);
+}
+
+function resolveLearningHistorySegmentDayNumber(sessionLike) {
+  const explicit = String(sessionLike?.historySegmentDayNumber || "").trim();
+  if (explicit) return explicit;
+
+  if (String(sessionLike?.mode || "") !== "normal") {
+    return resolveSessionDayNumber(sessionLike);
+  }
+
+  const startIndex = Math.max(0, Math.floor(Number(sessionLike?.historySegmentAnswerHistoryStartIndex) || 0));
+  const answerHistory = Array.isArray(sessionLike?.answerHistory) ? sessionLike.answerHistory : [];
+  const daySet = new Set();
+  answerHistory.slice(startIndex).forEach((entry) => {
+    const question = resolveLearningHistoryQuestionByIdForSession(sessionLike, entry?.questionId);
+    const day = Number(question?.day);
+    if (Number.isFinite(day) && day >= 1) {
+      daySet.add(Math.floor(day));
+    }
+  });
+
+  const days = [...daySet].sort((left, right) => left - right);
+  if (days.length === 1) return String(days[0]);
+  if (days.length > 1) return `${days[0]}-${days[days.length - 1]}`;
+  return resolveCurrentSessionDayNumberForHistorySegment(sessionLike);
+}
+
+function initializeNormalSessionHistorySegment(sessionLike, options = {}) {
+  if (!sessionLike || String(sessionLike.mode || "") !== "normal") return;
+  const fallbackStartedAt = Number(sessionLike.startedAt);
+  const defaultStartedAt = Number.isFinite(fallbackStartedAt) && fallbackStartedAt > 0 ? fallbackStartedAt : Date.now();
+  const answerCount = Math.max(0, Number(sessionLike.answerCount) || 0);
+  const answerHistoryLength = Array.isArray(sessionLike.answerHistory) ? sessionLike.answerHistory.length : 0;
+  const currentPointBalance = Math.max(0, Math.floor(Number(getPointState().balance) || 0));
+
+  const startedAt = Number(options.startedAt);
+  const answerStartCount = Number(options.answerStartCount);
+  const answerHistoryStartIndex = Number(options.answerHistoryStartIndex);
+  const pointBalanceBefore = Number(options.pointBalanceBefore);
+  const correctStartCount = Number(options.correctStartCount);
+
+  sessionLike.historySegmentStartedAt = Number.isFinite(startedAt) && startedAt > 0 ? startedAt : defaultStartedAt;
+  sessionLike.historySegmentAnswerStartCount = Number.isFinite(answerStartCount)
+    ? Math.max(0, Math.floor(answerStartCount))
+    : answerCount;
+  sessionLike.historySegmentAnswerHistoryStartIndex = Number.isFinite(answerHistoryStartIndex)
+    ? Math.max(0, Math.floor(answerHistoryStartIndex))
+    : answerHistoryLength;
+  sessionLike.historySegmentCorrectStartCount = Number.isFinite(correctStartCount)
+    ? Math.max(0, Math.floor(correctStartCount))
+    : answerHistory.slice(0, sessionLike.historySegmentAnswerHistoryStartIndex).filter((entry) => entry?.isCorrect).length;
+  sessionLike.historySegmentPointBalanceBefore = Number.isFinite(pointBalanceBefore)
+    ? Math.max(0, Math.floor(pointBalanceBefore))
+    : currentPointBalance;
+
+  const dayNumber = String(options.dayNumber || "").trim();
+  sessionLike.historySegmentDayNumber = dayNumber || resolveCurrentSessionDayNumberForHistorySegment(sessionLike);
+}
+
+function computeSessionActiveStudySeconds(sessionLike, endedAt, options = {}) {
+  const explicitStart = Number(options?.startAt);
+  const start = Number.isFinite(explicitStart) && explicitStart > 0
+    ? explicitStart
+    : Number(sessionLike?.startedAt);
   const end = Number(endedAt);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
-  const interactionTimestamps = Array.isArray(sessionLike?.answerHistory)
-    ? sessionLike.answerHistory.map((entry) => Number(entry?.at)).filter((value) => Number.isFinite(value) && value >= start && value <= end)
-    : [];
+  const answerHistory = Array.isArray(sessionLike?.answerHistory) ? sessionLike.answerHistory : [];
+  const explicitStartIndex = Number(options?.answerHistoryStartIndex);
+  const startIndex = Number.isFinite(explicitStartIndex) && explicitStartIndex >= 0
+    ? Math.floor(explicitStartIndex)
+    : 0;
+  const interactionTimestamps = answerHistory
+    .slice(startIndex)
+    .map((entry) => Number(entry?.at))
+    .filter((value) => Number.isFinite(value) && value >= start && value <= end);
   const points = [start, ...interactionTimestamps.sort((a, b) => a - b), end];
   let activeMs = 0;
   for (let index = 1; index < points.length; index += 1) {
@@ -1863,6 +1959,8 @@ function sanitizeLearningHistoryEntry(entry) {
   if (!entry || typeof entry !== "object") return null;
   const endedAt = Number(entry.endedAt);
   const startedAt = Number(entry.startedAt);
+  const rawDayNumber = entry.dayNumber;
+  const normalizedDayNumber = rawDayNumber == null ? "" : String(rawDayNumber).trim();
   if (!Number.isFinite(startedAt) || !Number.isFinite(endedAt)) {
     const reason = !Number.isFinite(startedAt) && !Number.isFinite(endedAt)
       ? "startedAtが不正 / endedAtが不正"
@@ -1889,7 +1987,7 @@ function sanitizeLearningHistoryEntry(entry) {
     endedAtDisplay: typeof entry.endedAtDisplay === "string" && entry.endedAtDisplay ? entry.endedAtDisplay : formatTimestampToJstDisplay(endedAt),
     activeStudySeconds: Math.max(0, Number(entry.activeStudySeconds) || 0),
     mode: typeof entry.mode === "string" ? entry.mode : "",
-    dayNumber: typeof entry.dayNumber === "string" ? entry.dayNumber : "",
+    dayNumber: normalizedDayNumber,
     questionCount: Math.max(0, Number(entry.questionCount) || 0),
     correctCount: Math.max(0, Number(entry.correctCount) || 0),
     earnedPoints: Math.max(0, Number(entry.earnedPoints) || 0),
@@ -2162,7 +2260,9 @@ function resolvePcLearningHistoryCategory(modeLike, entryLike = null) {
   const mode = String(modeLike || "").trim();
   const lowerMode = mode.toLowerCase();
   if (!mode) {
-    return isLikelyPhraseLearningHistoryEntry(entryLike) ? "熟語特訓" : "-";
+    const dayNumber = resolveLearningHistoryDayNumberForDisplay(entryLike);
+    if (dayNumber >= 1) return "Day学習";
+    return isLikelyPhraseLearningHistoryEntry(entryLike) ? "熟語特訓" : "不明";
   }
   if (mode === "Day" || mode === "Day学習" || lowerMode === "normal") return "Day学習";
   if (mode === "過去の間違い" || lowerMode === "review" || lowerMode === "challenge") return "過去の間違い";
@@ -2170,7 +2270,7 @@ function resolvePcLearningHistoryCategory(modeLike, entryLike = null) {
   if (mode === "応答文特訓" || lowerMode === "response" || lowerMode === "response-training") return "応答文特訓";
   if (mode.includes("熟語") || lowerMode.includes("phrase") || lowerMode.includes("idiom")) return "熟語特訓";
   if (mode.includes("単語")) return "単語特訓";
-  return mode;
+  return mode || "不明";
 }
 
 function resolvePcLearningHistoryModeLabel(entryLike, options = {}) {
@@ -2179,8 +2279,12 @@ function resolvePcLearningHistoryModeLabel(entryLike, options = {}) {
   if (normalized !== "Day学習") return normalized;
   if (!options?.withDayNumber) return normalized;
   const dayNumber = resolveLearningHistoryDayNumberForDisplay(entry);
-  if (dayNumber < 1) return normalized;
-  return `Day学習（Day${dayNumber}）`;
+  const fallbackDayNumber = Number(options?.fallbackDayNumber);
+  const effectiveDayNumber = dayNumber >= 1
+    ? dayNumber
+    : (Number.isFinite(fallbackDayNumber) && fallbackDayNumber >= 1 ? Math.floor(fallbackDayNumber) : 0);
+  if (effectiveDayNumber < 1) return normalized;
+  return `Day学習（Day${effectiveDayNumber}）`;
 }
 
 function resolvePcLearningHistoryDaySummaryLabel(dayEntries) {
@@ -2200,8 +2304,8 @@ function resolvePcLearningHistoryDaySummaryLabel(dayEntries) {
 
 function getPcLearningHistorySummaryRowLabel(entry, options = {}) {
   const source = entry && typeof entry === "object" ? entry : {};
-  const rawLabel = String(source.label || "").trim() || "-";
-  if (rawLabel === "-") return "熟語特訓";
+  const rawLabel = String(source.label || "").trim() || "不明";
+  if (rawLabel === "-") return "不明";
   if (rawLabel === "Day学習" && options?.dayLabel) return String(options.dayLabel);
   return rawLabel;
 }
@@ -2222,7 +2326,7 @@ function getLearningHistoryModeBucket(modeOrEntry) {
   if (normalized === "過去の間違い") {
     return { key: "review", label: "過去の間違い" };
   }
-  const fallbackLabel = normalized || "-";
+  const fallbackLabel = normalized || "不明";
   return { key: `mode:${fallbackLabel}`, label: fallbackLabel };
 }
 
@@ -2983,10 +3087,23 @@ function renderAdminLearningHistoryEntries(entries) {
         </div>
         <article class="admin-history-card">
           <div class="admin-history-detail-list">
-            ${selectedDayHasEntries ? selectedDayEntries.map((entry) => {
+            ${selectedDayHasEntries ? (() => {
+              const dayDetailFallbackCandidates = [...new Set(
+                selectedDayEntries
+                  .filter((row) => resolvePcLearningHistoryCategory(row?.mode, row) === "Day学習")
+                  .map((row) => resolveLearningHistoryDayNumberForDisplay(row))
+                  .filter((value) => value >= 1)
+              )];
+              const dayDetailFallbackDayNumber = dayDetailFallbackCandidates.length === 1
+                ? dayDetailFallbackCandidates[0]
+                : 0;
+              return selectedDayEntries.map((entry) => {
               const completedLabel = entry.completedReason === "interrupted" ? "中断" : "完了";
               const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
-              const modeLabel = resolvePcLearningHistoryModeLabel(entry, { withDayNumber: true });
+              const modeLabel = resolvePcLearningHistoryModeLabel(entry, {
+                withDayNumber: true,
+                fallbackDayNumber: dayDetailFallbackDayNumber
+              });
               const questionCount = Math.max(0, Number(entry.questionCount) || 0);
               const correctCount = Math.max(0, Math.min(questionCount, Number(entry.correctCount) || 0));
               const accuracyPercent = questionCount > 0
@@ -3008,7 +3125,8 @@ function renderAdminLearningHistoryEntries(entries) {
                   </p>
                 </div>
               `;
-            }).join("<div class=\"admin-history-detail-separator\"></div>") : '<p class="empty-state">この日は学習記録がありません</p>'}
+              }).join("<div class=\"admin-history-detail-separator\"></div>");
+            })() : '<p class="empty-state">この日は学習記録がありません</p>'}
           </div>
         </article>
       </section>
@@ -3230,7 +3348,19 @@ function recordResponseLearningHistory(sessionLike, reason) {
   appendLearningHistoryEntry(buildLearningHistoryEntryFromSession(sessionLike, summary, reason));
 }
 
-function resolveLearningHistoryAnswerStats(sessionLike, summary) {
+function computeSessionEarnedPointsForLearningHistory(sessionLike) {
+  const beforeRaw = String(sessionLike?.mode || "") === "normal"
+    ? sessionLike?.historySegmentPointBalanceBefore
+    : sessionLike?.pointBalanceBefore;
+  const beforeBalance = Math.max(0, Math.floor(Number(beforeRaw) || 0));
+  const currentBalance = Math.max(0, Math.floor(Number(getPointState().balance) || 0));
+  return {
+    earnedPoints: Math.max(0, currentBalance - beforeBalance),
+    pointBalance: currentBalance
+  };
+}
+
+function resolveLearningHistoryAnswerStats(sessionLike, summary, options = {}) {
   if (String(sessionLike?.mode || "") !== "normal") {
     const answerCount = Math.max(0, Number(summary?.answerCount) || 0);
     const correctCount = Math.max(0, Number(summary?.correctCount) || 0);
@@ -3241,10 +3371,25 @@ function resolveLearningHistoryAnswerStats(sessionLike, summary) {
     };
   }
 
-  const answerCount = Math.max(0, Number(sessionLike?.answerCount) || 0);
-  const correctCount = Array.isArray(sessionLike?.answerHistory)
-    ? sessionLike.answerHistory.filter((entry) => entry?.isCorrect).length
-    : Math.max(0, Number(summary?.correctCount) || 0);
+  const totalAnswerCount = Math.max(0, Number(sessionLike?.answerCount) || 0);
+  const answerStartCount = Math.max(0, Number(options?.answerStartCount) || 0);
+  const answerCount = Math.max(0, totalAnswerCount - answerStartCount);
+
+  const answerHistory = Array.isArray(sessionLike?.answerHistory) ? sessionLike.answerHistory : [];
+  const historyStartIndexRaw = Number(options?.answerHistoryStartIndex);
+  const historyStartIndex = Number.isFinite(historyStartIndexRaw)
+    ? Math.max(0, Math.floor(historyStartIndexRaw))
+    : Math.max(0, answerStartCount);
+  const correctCountFromHistory = answerHistory
+    .slice(historyStartIndex)
+    .filter((entry) => entry?.isCorrect)
+    .length;
+  const totalCorrectCount = answerHistory.filter((entry) => entry?.isCorrect).length;
+  const correctStartCount = Math.max(0, Number(options?.correctStartCount) || 0);
+  const correctCount = answerHistory.length
+    ? Math.max(0, correctCountFromHistory)
+    : Math.max(0, totalCorrectCount - correctStartCount);
+
   return {
     questionCount: answerCount,
     correctCount,
@@ -3277,20 +3422,33 @@ function completeResponseTrainingSession(reason) {
 
 function buildLearningHistoryEntryFromSession(sessionLike, summary, reason) {
   const endedAt = Date.now();
-  const startedAt = Number(sessionLike?.startedAt) || endedAt;
+  const segmentStartedAt = Number(sessionLike?.historySegmentStartedAt);
+  const startedAt = Number.isFinite(segmentStartedAt) && segmentStartedAt > 0
+    ? segmentStartedAt
+    : Number(sessionLike?.startedAt) || endedAt;
+  const answerStartCount = Math.max(0, Number(sessionLike?.historySegmentAnswerStartCount) || 0);
+  const answerHistoryStartIndex = Math.max(0, Number(sessionLike?.historySegmentAnswerHistoryStartIndex) || 0);
+  const correctStartCount = Math.max(0, Number(sessionLike?.historySegmentCorrectStartCount) || 0);
   const ticketBefore = sanitizeLearningHistoryTicketSnapshot(sessionLike?.ticketSnapshot);
   const ticketAfter = captureLearningHistoryTicketSnapshot();
-  const pointSummary = computeSessionEarnedPoints(sessionLike);
-  const answerStats = resolveLearningHistoryAnswerStats(sessionLike, summary);
+  const pointSummary = computeSessionEarnedPointsForLearningHistory(sessionLike);
+  const answerStats = resolveLearningHistoryAnswerStats(sessionLike, summary, {
+    answerStartCount,
+    answerHistoryStartIndex,
+    correctStartCount
+  });
   return {
     learnedAt: formatTimestampToJstDisplay(endedAt),
     startedAt,
     endedAt,
     startedAtDisplay: formatTimestampToJstDisplay(startedAt),
     endedAtDisplay: formatTimestampToJstDisplay(endedAt),
-    activeStudySeconds: computeSessionActiveStudySeconds(sessionLike, endedAt),
+    activeStudySeconds: computeSessionActiveStudySeconds(sessionLike, endedAt, {
+      startAt: startedAt,
+      answerHistoryStartIndex
+    }),
     mode: String(sessionLike?.mode || ""),
-    dayNumber: resolveSessionDayNumber(sessionLike),
+    dayNumber: resolveLearningHistorySegmentDayNumber(sessionLike),
     questionCount: answerStats.questionCount,
     correctCount: answerStats.correctCount,
     earnedPoints: pointSummary.earnedPoints,
@@ -7749,6 +7907,11 @@ function sanitizeStoredSession(sessionLike) {
   const currentIndex = Number(sessionLike.currentIndex);
   const startedAt = Number(sessionLike.startedAt);
   const accumulatedMs = Number(sessionLike.accumulatedMs);
+  const historySegmentStartedAt = Number(sessionLike.historySegmentStartedAt);
+  const historySegmentAnswerStartCount = Number(sessionLike.historySegmentAnswerStartCount);
+  const historySegmentAnswerHistoryStartIndex = Number(sessionLike.historySegmentAnswerHistoryStartIndex);
+  const historySegmentCorrectStartCount = Number(sessionLike.historySegmentCorrectStartCount);
+  const historySegmentPointBalanceBefore = Number(sessionLike.historySegmentPointBalanceBefore);
   return {
     mode: typeof sessionLike.mode === "string" ? sessionLike.mode : "normal",
     phase: typeof sessionLike.phase === "string" ? sessionLike.phase : "phase1",
@@ -7822,7 +7985,23 @@ function sanitizeStoredSession(sessionLike) {
     awaitingWeakFocusDecision: Boolean(sessionLike.awaitingWeakFocusDecision),
     isFinishingSession: false,
     isSessionCompleted: false,
-    ticketSnapshot: sanitizeLearningHistoryTicketSnapshot(sessionLike.ticketSnapshot)
+    ticketSnapshot: sanitizeLearningHistoryTicketSnapshot(sessionLike.ticketSnapshot),
+    historySegmentStartedAt: Number.isFinite(historySegmentStartedAt) && historySegmentStartedAt > 0
+      ? historySegmentStartedAt
+      : (Number.isFinite(startedAt) && startedAt > 0 ? startedAt : Date.now()),
+    historySegmentAnswerStartCount: Number.isFinite(historySegmentAnswerStartCount)
+      ? Math.max(0, Math.floor(historySegmentAnswerStartCount))
+      : 0,
+    historySegmentAnswerHistoryStartIndex: Number.isFinite(historySegmentAnswerHistoryStartIndex)
+      ? Math.max(0, Math.floor(historySegmentAnswerHistoryStartIndex))
+      : 0,
+    historySegmentCorrectStartCount: Number.isFinite(historySegmentCorrectStartCount)
+      ? Math.max(0, Math.floor(historySegmentCorrectStartCount))
+      : 0,
+    historySegmentPointBalanceBefore: Number.isFinite(historySegmentPointBalanceBefore)
+      ? Math.max(0, Math.floor(historySegmentPointBalanceBefore))
+      : Math.max(0, Math.floor(Number(sessionLike.pointBalanceBefore) || 0)),
+    historySegmentDayNumber: typeof sessionLike.historySegmentDayNumber === "string" ? sessionLike.historySegmentDayNumber : ""
   };
 }
 
@@ -8704,6 +8883,18 @@ function stashNormalSessionIfNeeded(sessionLike) {
 function restoreSavedNormalSession() {
   const restored = sanitizeStoredSession(state?.stats?.savedNormalSession);
   if (!restored || restored.mode !== "normal") return false;
+  const resumedAnswerHistoryLength = Array.isArray(restored.answerHistory) ? restored.answerHistory.length : 0;
+  const resumedCorrectCount = Array.isArray(restored.answerHistory)
+    ? restored.answerHistory.filter((entry) => entry?.isCorrect).length
+    : 0;
+  initializeNormalSessionHistorySegment(restored, {
+    startedAt: Date.now(),
+    answerStartCount: restored.answerCount,
+    answerHistoryStartIndex: resumedAnswerHistoryLength,
+    correctStartCount: resumedCorrectCount,
+    pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
+    dayNumber: resolveCurrentSessionDayNumberForHistorySegment(restored)
+  });
   state.session = restored;
   state.stats.savedNormalSession = null;
   saveState();
@@ -9658,8 +9849,23 @@ function prepareSession(mode, options = {}) {
     pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
     isDayStudySession: Boolean(options.dayStudy),
     studyRangeStart: Number(state.settings.studyRange?.start) || 1,
-    studyRangeEnd: Number(state.settings.studyRange?.end) || 1
+    studyRangeEnd: Number(state.settings.studyRange?.end) || 1,
+    historySegmentStartedAt: Date.now(),
+    historySegmentAnswerStartCount: 0,
+    historySegmentAnswerHistoryStartIndex: 0,
+    historySegmentCorrectStartCount: 0,
+    historySegmentPointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
+    historySegmentDayNumber: ""
   };
+
+  initializeNormalSessionHistorySegment(state.session, {
+    startedAt: Number(state.session.startedAt) || Date.now(),
+    answerStartCount: 0,
+    answerHistoryStartIndex: 0,
+    correctStartCount: 0,
+    pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0)),
+    dayNumber: resolveCurrentSessionDayNumberForHistorySegment(state.session)
+  });
 
   setTestScreenActive(true);
   if (mode === "review") {
