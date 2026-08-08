@@ -2126,10 +2126,44 @@ function getLearningHistorySelectedDayTitle(dayKey, todayDayKey) {
   return dayKey === todayDayKey ? `今日（${label}）` : label;
 }
 
-function resolvePcLearningHistoryCategory(modeLike) {
+function resolveLearningHistoryDayNumberForDisplay(entryLike) {
+  const source = entryLike && typeof entryLike === "object" ? entryLike : {};
+  const candidates = [source.dayNumber, source.day, source.studyDay];
+  for (const candidate of candidates) {
+    if (typeof candidate === "number" && Number.isFinite(candidate) && candidate >= 1) {
+      return Math.floor(candidate);
+    }
+    const text = String(candidate || "").trim();
+    if (!text) continue;
+    if (/^\d+$/.test(text)) {
+      const parsed = Number(text);
+      if (Number.isFinite(parsed) && parsed >= 1) {
+        return Math.floor(parsed);
+      }
+    }
+  }
+  return 0;
+}
+
+function isLikelyPhraseLearningHistoryEntry(entryLike) {
+  const entry = entryLike && typeof entryLike === "object" ? entryLike : {};
+  const rawMode = String(entry.mode || "").trim().toLowerCase();
+  if (rawMode) {
+    return rawMode.includes("phrase") || rawMode.includes("idiom") || rawMode.includes("熟語");
+  }
+  const dayNumber = resolveLearningHistoryDayNumberForDisplay(entry);
+  if (dayNumber >= 1) return false;
+  const questionCount = Math.max(0, Number(entry.questionCount) || 0);
+  const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
+  return questionCount > 0 || activeStudySeconds > 0;
+}
+
+function resolvePcLearningHistoryCategory(modeLike, entryLike = null) {
   const mode = String(modeLike || "").trim();
   const lowerMode = mode.toLowerCase();
-  if (!mode) return "-";
+  if (!mode) {
+    return isLikelyPhraseLearningHistoryEntry(entryLike) ? "熟語特訓" : "-";
+  }
   if (mode === "Day" || mode === "Day学習" || lowerMode === "normal") return "Day学習";
   if (mode === "過去の間違い" || lowerMode === "review" || lowerMode === "challenge") return "過去の間違い";
   if (mode === "前置詞特訓" || lowerMode === "preposition" || lowerMode === "preposition-training") return "前置詞特訓";
@@ -2139,8 +2173,43 @@ function resolvePcLearningHistoryCategory(modeLike) {
   return mode;
 }
 
-function getLearningHistoryModeBucket(mode) {
-  const normalized = resolvePcLearningHistoryCategory(mode);
+function resolvePcLearningHistoryModeLabel(entryLike, options = {}) {
+  const entry = entryLike && typeof entryLike === "object" ? entryLike : {};
+  const normalized = resolvePcLearningHistoryCategory(entry.mode, entry);
+  if (normalized !== "Day学習") return normalized;
+  if (!options?.withDayNumber) return normalized;
+  const dayNumber = resolveLearningHistoryDayNumberForDisplay(entry);
+  if (dayNumber < 1) return normalized;
+  return `Day学習（Day${dayNumber}）`;
+}
+
+function resolvePcLearningHistoryDaySummaryLabel(dayEntries) {
+  const source = Array.isArray(dayEntries) ? dayEntries : [];
+  const dayNumberSet = new Set(
+    source
+      .filter((entry) => resolvePcLearningHistoryCategory(entry?.mode, entry) === "Day学習")
+      .map((entry) => resolveLearningHistoryDayNumberForDisplay(entry))
+      .filter((value) => value >= 1)
+  );
+  if (dayNumberSet.size === 1) {
+    const [dayNumber] = [...dayNumberSet];
+    return `Day学習（Day${dayNumber}）`;
+  }
+  return "Day学習";
+}
+
+function getPcLearningHistorySummaryRowLabel(entry, options = {}) {
+  const source = entry && typeof entry === "object" ? entry : {};
+  const rawLabel = String(source.label || "").trim() || "-";
+  if (rawLabel === "-") return "熟語特訓";
+  if (rawLabel === "Day学習" && options?.dayLabel) return String(options.dayLabel);
+  return rawLabel;
+}
+
+function getLearningHistoryModeBucket(modeOrEntry) {
+  const entryLike = modeOrEntry && typeof modeOrEntry === "object" ? modeOrEntry : null;
+  const mode = entryLike ? entryLike.mode : modeOrEntry;
+  const normalized = resolvePcLearningHistoryCategory(mode, entryLike);
   if (normalized === "Day学習") {
     return { key: "day", label: "Day学習" };
   }
@@ -2205,6 +2274,9 @@ function ensureLearningHistoryModeTotal(modeTotals, bucketInfo) {
 
 function renderLearningHistoryModeSummaryContent(summary, options = {}) {
   const entries = getLearningHistoryModeSummaryEntries(summary);
+  const dayLabel = Array.isArray(options.dayEntries)
+    ? resolvePcLearningHistoryDaySummaryLabel(options.dayEntries)
+    : "";
   const hasAnyEntries = typeof options.hasEntries === "boolean"
     ? options.hasEntries
     : (Math.max(0, Number(summary?.questionCount) || 0) > 0 || Math.max(0, Number(summary?.activeStudySeconds) || 0) > 0);
@@ -2220,12 +2292,13 @@ function renderLearningHistoryModeSummaryContent(summary, options = {}) {
   const totalEarnedPoints = Math.max(0, Number(summary?.earnedPoints) || 0);
   const totalAccuracy = Math.max(0, Number(summary?.accuracy) || 0);
   const modeRows = entries.map((entry) => {
+    const rowLabel = getPcLearningHistorySummaryRowLabel(entry, { dayLabel });
     const questionCount = Math.max(0, Number(entry.questionCount) || 0);
     const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
     if (options.layout === "today") {
       return `
         <div class="admin-history-mode-summary-row">
-          <span>${escapeHtml(entry.label)}</span>
+          <span>${escapeHtml(rowLabel)}</span>
           <span>${questionCount}問</span>
           <span>+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>
           <span>${escapeHtml(formatLearningHistoryDuration(activeStudySeconds))}</span>
@@ -2235,7 +2308,7 @@ function renderLearningHistoryModeSummaryContent(summary, options = {}) {
 
     return `
       <div class="admin-history-mode-summary-row">
-        <span>${escapeHtml(entry.label)}</span>
+        <span>${escapeHtml(rowLabel)}</span>
         <span>${escapeHtml(formatLearningHistoryDuration(activeStudySeconds))}</span>
         <span>${questionCount}問</span>
         <span>+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>
@@ -2322,7 +2395,7 @@ function buildLearningHistoryInsights(entries) {
     const bucket = dayMap.get(dayKey);
     bucket.entries.push(entry);
     accumulateLearningHistoryTotals(bucket, entry);
-    const modeBucket = getLearningHistoryModeBucket(entry.mode);
+    const modeBucket = getLearningHistoryModeBucket(entry);
     accumulateLearningHistoryTotals(ensureLearningHistoryModeTotal(bucket.modeTotals, modeBucket), entry);
   });
 
@@ -2353,7 +2426,7 @@ function buildLearningHistoryInsights(entries) {
   });
   todayEntries.forEach((entry) => {
     accumulateLearningHistoryTotals(todaySummary, entry);
-    const modeBucket = getLearningHistoryModeBucket(entry.mode);
+    const modeBucket = getLearningHistoryModeBucket(entry);
     accumulateLearningHistoryTotals(ensureLearningHistoryModeTotal(todaySummary.modeTotals, modeBucket), entry);
   });
   Object.values(todaySummary.modeTotals).forEach((modeEntry) => {
@@ -2857,7 +2930,11 @@ function renderAdminLearningHistoryEntries(entries) {
         </div>
         <div class="admin-history-selected-summary">
           <div class="admin-history-mode-summary-list">
-            ${renderLearningHistoryModeSummaryContent(model.todaySummary, { layout: "today", emptyMessage: "今日の学習記録がありません" })}
+            ${renderLearningHistoryModeSummaryContent(model.todaySummary, {
+              layout: "today",
+              emptyMessage: "今日の学習記録がありません",
+              dayEntries: model.todaySummary?.entries || []
+            })}
           </div>
         </div>
       </section>
@@ -2881,15 +2958,10 @@ function renderAdminLearningHistoryEntries(entries) {
               <span>${selectedDaySummary.accuracy}%</span>
             </div>
             <div class="admin-history-mode-summary-list">
-              ${Object.values(selectedDaySummary.modeTotals).filter((entry) => entry.questionCount > 0 || entry.activeStudySeconds > 0).map((entry) => `
-                <div class="admin-history-mode-summary-row">
-                  <span>${escapeHtml(entry.label)}</span>
-                  <span>${escapeHtml(formatLearningHistoryDuration(entry.activeStudySeconds))}</span>
-                  <span>${entry.questionCount}問</span>
-                  <span>+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>
-                  <span>${entry.accuracy}%</span>
-                </div>
-              `).join("")}
+              ${renderLearningHistoryModeSummaryContent(selectedDaySummary, {
+                hasEntries: selectedDayHasEntries,
+                dayEntries: selectedDaySummary?.entries || []
+              })}
             </div>
           ` : '<p class="empty-state">この日は学習記録がありません</p>'}
         </div>
@@ -2905,7 +2977,7 @@ function renderAdminLearningHistoryEntries(entries) {
             ${selectedDayHasEntries ? selectedDayEntries.map((entry) => {
               const completedLabel = entry.completedReason === "interrupted" ? "中断" : "完了";
               const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
-              const modeLabel = resolvePcLearningHistoryCategory(entry.mode);
+              const modeLabel = resolvePcLearningHistoryModeLabel(entry, { withDayNumber: true });
               const questionCount = Math.max(0, Number(entry.questionCount) || 0);
               const correctCount = Math.max(0, Math.min(questionCount, Number(entry.correctCount) || 0));
               const accuracyPercent = questionCount > 0
