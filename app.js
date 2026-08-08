@@ -6553,8 +6553,13 @@ function renderRecentProgressTop5() {
 function hasItemBeenStudied(item) {
   if (!item) return false;
   if (item.hasBeenStudied) return true;
+  const learningStats = sanitizeLearningStats(item.learningStats);
   const levelData = ensureLevelData(item);
   return Boolean(
+    learningStats.attempts > 0 ||
+    learningStats.correct > 0 ||
+    learningStats.lastStudiedDate ||
+    learningStats.lastCorrectDate ||
     item.mastered ||
     item.reviewDue ||
     item.lastAnswerWasCorrect ||
@@ -6562,8 +6567,70 @@ function hasItemBeenStudied(item) {
     (item.reviewTodayCount || 0) > 0 ||
     levelData.level > 1 ||
     levelData.successCount > 0 ||
-    levelData.lv4FailureCount > 0
+    levelData.lv4FailureCount > 0 ||
+    levelData.lv4Celebrated
   );
+}
+
+function getDayUnstudiedCount(dayNumber) {
+  const day = Math.max(1, Math.floor(Number(dayNumber) || 0));
+  const dayItems = state.items.filter((item) => Number(item.day) === day);
+  if (!dayItems.length) return 0;
+  return dayItems.reduce((count, item) => count + (hasItemBeenStudied(item) ? 0 : 1), 0);
+}
+
+function getDayUnstudiedLabel(dayNumber) {
+  const unstudiedCount = getDayUnstudiedCount(dayNumber);
+  return unstudiedCount > 0 ? `未学習 ${unstudiedCount}問` : "未学習なし";
+}
+
+function getDayStudyPriorityPool(items) {
+  const source = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!source.length) return [];
+
+  const unstudied = [];
+  const weak = [];
+  const other = [];
+
+  source.forEach((item) => {
+    if (!hasItemBeenStudied(item)) {
+      unstudied.push(item);
+      return;
+    }
+    if (getEffectiveLevelForItem(item) <= 2) {
+      weak.push(item);
+      return;
+    }
+    other.push(item);
+  });
+
+  const sortWeak = (pool) => pool
+    .slice()
+    .sort((left, right) => {
+      const leftLevel = getEffectiveLevelForItem(left);
+      const rightLevel = getEffectiveLevelForItem(right);
+      if (leftLevel !== rightLevel) return leftLevel - rightLevel;
+
+      const leftLevelData = ensureLevelData(left);
+      const rightLevelData = ensureLevelData(right);
+      if (leftLevelData.successCount !== rightLevelData.successCount) {
+        return leftLevelData.successCount - rightLevelData.successCount;
+      }
+
+      const leftAccuracy = getItemAccuracyPercent(left);
+      const rightAccuracy = getItemAccuracyPercent(right);
+      const leftAccuracyValue = Number.isFinite(leftAccuracy) ? leftAccuracy : 101;
+      const rightAccuracyValue = Number.isFinite(rightAccuracy) ? rightAccuracy : 101;
+      if (leftAccuracyValue !== rightAccuracyValue) return leftAccuracyValue - rightAccuracyValue;
+
+      return String(left.id).localeCompare(String(right.id));
+    });
+
+  return [
+    ...shuffle(unstudied),
+    ...sortWeak(weak),
+    ...shuffle(other)
+  ];
 }
 
 function getLearnedItemCount() {
@@ -7274,12 +7341,13 @@ function renderDayCatalog() {
   dayCatalogGrid.innerHTML = allDays.map((day) => {
     const accuracy = Math.max(0, Math.min(100, Number(state.stats.dayBestAccuracy?.[String(day)]) || 0));
     const stars = getStarTextFromAccuracy(accuracy);
+    const unstudiedLabel = getDayUnstudiedLabel(day);
     const perfectClass = accuracy === 100 ? "is-perfect" : "";
     const isLocked = day > unlockedDayMax;
     const lockClass = isLocked ? "is-locked" : "";
     const scoreMarkup = isLocked
       ? '<span class="day-card-lock">🔒 未解放</span>'
-      : `<span class="day-card-percent">${Math.round(accuracy)}%</span>`;
+      : `<span class="day-card-percent">${Math.round(accuracy)}%</span><span class="day-card-unstudied">${unstudiedLabel}</span>`;
     return `<button type="button" class="day-card ${perfectClass} ${lockClass}" data-day="${day}" ${isLocked ? "disabled" : ""}><span class="day-card-title">Day${day}</span><span class="day-card-stars">${isLocked ? "-" : stars}</span>${scoreMarkup}</button>`;
   }).join("");
 
@@ -9290,23 +9358,11 @@ function getDayStudyPool(day, type) {
   const normalizedType = type === "word" || type === "phrase" || type === "all" ? type : "all";
   const dayItems = state.items.filter((item) => Number(item.day) >= safeStart && Number(item.day) <= safeEnd);
   const typedItems = normalizedType === "all" ? dayItems : dayItems.filter((item) => item.type === normalizedType);
+  const prioritizedItems = getDayStudyPriorityPool(typedItems);
   if (normalizedType === "phrase") {
-    return shuffle(typedItems);
+    return prioritizedItems;
   }
-  if (normalizedType === "all") {
-    const targetCount = Math.min(10, typedItems.length);
-    const shuffledWords = shuffle(dayItems.filter((item) => item.type === "word"));
-    const shuffledPhrases = shuffle(dayItems.filter((item) => item.type === "phrase"));
-    if (targetCount <= 0) return [];
-    if (!shuffledWords.length || !shuffledPhrases.length) {
-      return shuffle(typedItems).slice(0, targetCount);
-    }
-    const guaranteed = [shuffledWords.shift(), shuffledPhrases.shift()];
-    const rest = shuffle([...shuffledWords, ...shuffledPhrases]);
-    return [...guaranteed, ...rest].slice(0, targetCount);
-  }
-  const targetCount = Math.min(10, typedItems.length);
-  return shuffle(typedItems).slice(0, targetCount);
+  return prioritizedItems.slice(0, Math.min(10, prioritizedItems.length));
 }
 
 function startDayStudySession(startDay, endDay, type) {

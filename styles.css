@@ -1899,6 +1899,12 @@ p {
   font-weight: 700;
 }
 
+.day-card-unstudied {
+  color: rgba(244, 248, 255, 0.92);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
 .day-card.is-perfect {
   border-color: rgba(94, 214, 214, 0.7);
   box-shadow: 0 0 0 1px rgba(94, 214, 214, 0.4), 0 0 24px rgba(94, 214, 214, 0.25);
