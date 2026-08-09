@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/09 19:54", note: "PC版のみ: 学習履歴の端末フィルターを長男表示向けに整理。長男選択時は『すべて / 長男PC / 長男モバイル / その他』の4ボタン固定とし、『すべて』にモバイル履歴も含めるよう調整。長男PC/長男モバイルは deviceType と deviceName の組み合わせで分類し、それ以外の旧端末名・未設定・未識別は『その他』へ集約。ユーザー切替は維持し、親表示時の既存フィルター動作・保存処理・過去履歴データは未変更。" },
     { version: "2026/08/09 19:40", note: "モバイル版のみ: Speaking内 Vocabulary（Week/曜日の単語練習）を learningHistory 保存経路へ接続。開始時に履歴セッションを開始し、戻る時は interrupted、完了時は completed で finalize→append を通して保存。回答済み件数を questionCount/correctCount に反映し、既存の端末判定・pendingキュー・Firestore保存を共通経路で利用。語順/会話/復習/typing系の既存保存経路と過去履歴データは未変更。" },
     { version: "2026/08/09 19:12", note: "モバイル版のみ: learningHistory 保存前に長男判定を必須化。長男UID未確定の間は履歴を永続キューへ待機し、判定確定後に deviceType=mobile / deviceName=長男モバイル(長男時) / deviceId固定 で1回だけ保存するよう修正。未確定状態を『その他』として保存しないようにし、二重保存防止と未保存防止を両立。PC版・既存過去履歴は未変更。" },
     { version: "2026/08/09 19:07", note: "PC版・モバイル版共通: 今後新規保存する learningHistory の端末情報を統一。deviceType/deviceId/deviceName を両版で保存し、長男ログイン時は PC を『長男PC』、モバイルを『長男モバイル』で記録。端末IDは端末ごとに固定再利用し、既存の過去履歴データは未変更。学習履歴フィルターUIは未変更。" },

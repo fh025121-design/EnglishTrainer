@@ -12,6 +12,9 @@ const ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY = "all";
 const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY = "legacy:unidentified";
 const ADMIN_HISTORY_NAMED_DEVICE_FILTER_PREFIX = "name:";
 const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_LABEL = "端末未識別";
+const ADMIN_HISTORY_SON_PC_FILTER_KEY = "son:pc";
+const ADMIN_HISTORY_SON_MOBILE_FILTER_KEY = "son:mobile";
+const ADMIN_HISTORY_SON_OTHER_FILTER_KEY = "son:other";
 const ADMIN_LEARNING_HISTORY_PIN = "12345";
 const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
   adminPassword: "12345",
@@ -521,6 +524,22 @@ function ensurePcBrowserDeviceIdentity() {
 function normalizeAdminLearningHistoryDeviceFilterKey(deviceId) {
   const normalized = String(deviceId || "").trim();
   return normalized || ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY;
+}
+
+function isAdminLearningHistorySonSelected() {
+  return adminLearningHistoryCanSelectFamily && String(adminLearningHistorySelectedChildKey || "") === "son";
+}
+
+function resolveAdminLearningHistorySonDeviceFilterKey(entry) {
+  const deviceType = String(entry?.deviceType || "").trim().toLowerCase();
+  const deviceName = normalizeDeviceNameForHistory(entry?.deviceName);
+  if (deviceType === "pc" && deviceName === "長男PC") {
+    return ADMIN_HISTORY_SON_PC_FILTER_KEY;
+  }
+  if (deviceType === "mobile" && deviceName === "長男モバイル") {
+    return ADMIN_HISTORY_SON_MOBILE_FILTER_KEY;
+  }
+  return ADMIN_HISTORY_SON_OTHER_FILTER_KEY;
 }
 
 function buildAdminLearningHistoryDeviceNameMap(entries = adminLearningHistorySourceEntries) {
@@ -3133,6 +3152,15 @@ function buildAdminLearningHistoryFamilyOptions(family) {
 }
 
 function getAdminLearningHistoryDeviceOptions() {
+  if (isAdminLearningHistorySonSelected()) {
+    return [
+      { key: ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY, label: "すべて" },
+      { key: ADMIN_HISTORY_SON_PC_FILTER_KEY, label: "長男PC" },
+      { key: ADMIN_HISTORY_SON_MOBILE_FILTER_KEY, label: "長男モバイル" },
+      { key: ADMIN_HISTORY_SON_OTHER_FILTER_KEY, label: "その他" }
+    ];
+  }
+
   const source = Array.isArray(adminLearningHistorySourceEntries) ? adminLearningHistorySourceEntries : [];
   const options = [{ key: ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY, label: "すべて" }];
   const deviceNameMap = buildAdminLearningHistoryDeviceNameMap(source);
@@ -3160,6 +3188,9 @@ function normalizeAdminLearningHistoryDeviceType(deviceType) {
   const normalized = String(deviceType || "").trim();
   if (!normalized) return ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY;
   if (normalized === ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY) return normalized;
+  if (normalized === ADMIN_HISTORY_SON_PC_FILTER_KEY) return normalized;
+  if (normalized === ADMIN_HISTORY_SON_MOBILE_FILTER_KEY) return normalized;
+  if (normalized === ADMIN_HISTORY_SON_OTHER_FILTER_KEY) return normalized;
   if (normalized === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY) return normalized;
   if (normalized.startsWith(ADMIN_HISTORY_NAMED_DEVICE_FILTER_PREFIX)) return normalized;
   return normalizeAdminLearningHistoryDeviceFilterKey(normalized);
@@ -3168,17 +3199,25 @@ function normalizeAdminLearningHistoryDeviceType(deviceType) {
 function getAdminLearningHistoryFilteredEntries(entries) {
   const source = Array.isArray(entries) ? entries : [];
   const deviceNameMap = buildAdminLearningHistoryDeviceNameMap(source);
+  const sonSelected = isAdminLearningHistorySonSelected();
   return source.filter((entry) => {
     const selectedFilterKey = normalizeAdminLearningHistoryDeviceType(adminLearningHistorySelectedDeviceType);
-    const deviceType = String(entry?.deviceType || "").trim().toLowerCase();
-    // Default PC history view should not mix mobile sessions.
-    if (selectedFilterKey === ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY && deviceType === "mobile") {
-      return false;
-    }
-    if (selectedFilterKey !== ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY) {
-      const entryFilterKey = getAdminLearningHistoryEntryDeviceFilterKey(entry, deviceNameMap);
-      if (entryFilterKey !== selectedFilterKey) {
+    if (sonSelected) {
+      const sonFilterKey = resolveAdminLearningHistorySonDeviceFilterKey(entry);
+      if (selectedFilterKey !== ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY && selectedFilterKey !== sonFilterKey) {
         return false;
+      }
+    } else {
+      const deviceType = String(entry?.deviceType || "").trim().toLowerCase();
+      // Default PC history view should not mix mobile sessions.
+      if (selectedFilterKey === ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY && deviceType === "mobile") {
+        return false;
+      }
+      if (selectedFilterKey !== ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY) {
+        const entryFilterKey = getAdminLearningHistoryEntryDeviceFilterKey(entry, deviceNameMap);
+        if (entryFilterKey !== selectedFilterKey) {
+          return false;
+        }
       }
     }
     if (Math.max(0, Number(entry?.questionCount) || 0) <= 0) {
@@ -3199,7 +3238,7 @@ function renderAdminLearningHistoryControls() {
         : '<p class="empty-state">表示できるユーザーがありません</p>';
       return `
         <div class="admin-learning-history-user-row">
-          <label class="subtext">表示するユーザー</label>
+          <label class="subtext">ユーザー</label>
           <div class="admin-history-toggle-group" role="group" aria-label="表示するユーザー">${userButtons}</div>
         </div>
       `;
@@ -3213,7 +3252,7 @@ function renderAdminLearningHistoryControls() {
     <div class="admin-learning-history-controls">
       ${userControls}
       <div class="admin-learning-history-device-row">
-        <label class="subtext">表示する端末</label>
+        <label class="subtext">端末</label>
         <div class="admin-history-toggle-group" role="group" aria-label="表示する端末">${deviceButtons}</div>
       </div>
     </div>
@@ -3469,7 +3508,10 @@ function renderAdminLearningHistoryFamilyWatch() {
           renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
           return;
         }
-        const selectedChild = children.find((child) => child.key === adminLearningHistorySelectedChildKey) || children.find((child) => child.key === "parent") || children[0];
+        const selectedChild = children.find((child) => child.key === adminLearningHistorySelectedChildKey)
+          || children.find((child) => child.key === "son")
+          || children.find((child) => child.key === "parent")
+          || children[0];
         adminLearningHistorySelectedChildKey = selectedChild.key;
         adminLearningHistorySelectedChildUid = selectedChild.uid;
         console.log("[AdminLearningHistory] adminLearningHistorySelectedChildUid", adminLearningHistorySelectedChildUid);

@@ -1539,9 +1539,10 @@ p {
 }
 
 #adminLearningHistoryScreen .admin-learning-history-user-row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px 12px;
   min-width: 0;
 }
 
@@ -1549,20 +1550,33 @@ p {
 #adminLearningHistoryScreen .admin-learning-history-device-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
+}
+
+#adminLearningHistoryScreen .admin-learning-history-device-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+#adminLearningHistoryScreen .admin-learning-history-user-row > .subtext,
+#adminLearningHistoryScreen .admin-learning-history-device-row > .subtext {
+  margin: 0;
+  white-space: nowrap;
 }
 
 #adminLearningHistoryScreen .admin-history-toggle-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
 #adminLearningHistoryScreen .admin-history-toggle-btn {
-  min-height: 40px;
-  padding: 9px 14px;
+  min-height: 34px;
+  padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.05);
@@ -3596,10 +3610,16 @@ select {
   #adminLearningHistoryScreen .admin-history-period-block,
   #adminLearningHistoryScreen .admin-history-card,
   #adminLearningHistoryScreen .admin-history-mode-summary-row,
-  #adminLearningHistoryScreen .admin-history-detail-item,
-  #adminLearningHistoryScreen .admin-history-toggle-btn {
+  #adminLearningHistoryScreen .admin-history-detail-item {
     width: 100%;
     min-width: 0;
+  }
+
+  #adminLearningHistoryScreen .admin-learning-history-user-row,
+  #adminLearningHistoryScreen .admin-learning-history-device-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 6px;
   }
 
   #adminLearningHistoryScreen .admin-history-section-header,
