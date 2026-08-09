@@ -4656,7 +4656,9 @@ function startIrregularVerbTraining(form = "past", mode = irregularVerbSelectedM
 function speakIrregularVerbText(text, options = {}) {
   if (typeof window === "undefined" || !window.speechSynthesis || !text) return false;
   try {
-    window.speechSynthesis.cancel();
+    if (options.cancelPrevious !== false) {
+      window.speechSynthesis.cancel();
+    }
     const utterance = new SpeechSynthesisUtterance(String(text));
     utterance.lang = "en-US";
     utterance.rate = 0.95;
@@ -4672,6 +4674,35 @@ function speakIrregularVerbText(text, options = {}) {
   }
 }
 
+function speakIrregularVerbTextSequence(texts, options = {}) {
+  const queue = (Array.isArray(texts) ? texts : []).map((text) => String(text || "").trim()).filter(Boolean);
+  if (!queue.length) return false;
+
+  let index = 0;
+  const speakNext = () => {
+    if (index >= queue.length) {
+      if (typeof options.onEnd === "function") {
+        options.onEnd();
+      }
+      return;
+    }
+
+    const currentText = queue[index];
+    index += 1;
+    const isFirst = index === 1;
+    const spoke = speakIrregularVerbText(currentText, {
+      cancelPrevious: isFirst,
+      onEnd: speakNext
+    });
+    if (!spoke) {
+      speakNext();
+    }
+  };
+
+  speakNext();
+  return true;
+}
+
 function speakIrregularVerbQuestionSequence(question) {
   const base = String(question?.base || "").trim();
   if (!base) return;
@@ -4682,9 +4713,7 @@ function speakIrregularVerbAnswerSequence(question, pastText, participleText, op
   const base = String(question?.base || "").trim();
   const past = String(pastText || "").trim();
   const participle = String(participleText || "").trim();
-  const sequence = [base, past, participle].filter(Boolean).join(", ");
-  if (!sequence) return;
-  speakIrregularVerbText(sequence, options);
+  return speakIrregularVerbTextSequence([base, past, participle], options);
 }
 
 function renderIrregularVerbQuestion() {
