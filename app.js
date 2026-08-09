@@ -80,6 +80,68 @@ const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingIrregularVerbBtn", mode: "irregular-verb-training", isReady: true },
   { id: "trainingInstantCompositionBtn", mode: null, isReady: false }
 ]);
+
+function getTrainingMenuCardsForUi() {
+  const menuConfig = typeof window !== "undefined" ? window.TrainingMenuConfig : null;
+  if (menuConfig && typeof menuConfig.getTrainingMenuCards === "function") {
+    return menuConfig.getTrainingMenuCards(POINT_SYSTEM_CONFIG);
+  }
+  return TRAINING_MENU_ITEMS.map((item) => ({
+    ...item,
+    title: item.id === "trainingIdiomBtn" ? "熟語特訓" : item.id === "trainingPrepositionBtn" ? "前置詞特訓" : item.id === "trainingResponseBtn" ? "応答文特訓" : item.id === "trainingIrregularVerbBtn" ? "不規則動詞特訓" : "瞬間英作文",
+    description: item.isReady ? "特訓を開始します" : "準備中です",
+    mode: item.mode,
+    isReady: item.isReady,
+    pointLabel: item.isReady ? "ポイント付与なし" : "準備中"
+  }));
+}
+
+function bindTrainingMenuCardHandlers() {
+  const cards = getTrainingMenuCardsForUi();
+  cards.forEach((item) => {
+    const button = document.getElementById(item.id);
+    if (!button) return;
+    button.onclick = null;
+    button.addEventListener("click", () => {
+      if (item.isReady && item.mode) {
+        if (item.mode === "preposition-training") {
+          openPrepositionTrainingSelector();
+          return;
+        }
+        if (item.mode === "response-training") {
+          startResponseTraining("all");
+          return;
+        }
+        if (item.mode === "irregular-verb-training") {
+          openIrregularVerbTrainingSelector();
+          return;
+        }
+        prepareSession(item.mode);
+        return;
+      }
+      showTrainingComingSoonNotice();
+    });
+  });
+}
+
+function renderTrainingMenuCards() {
+  const container = document.getElementById("trainingMenuCards");
+  if (!container) return;
+  const cards = getTrainingMenuCardsForUi();
+  container.innerHTML = cards.map((item) => {
+    const isReady = item.isReady !== false;
+    const stateLabel = isReady ? "開く" : "準備中";
+    return `<button id="${item.id}" class="secondary-btn training-menu-card-btn${isReady ? "" : " is-disabled"}" type="button" data-training-mode="${item.mode || ""}">
+      <span class="training-menu-card-top">
+        <span class="training-menu-card-title">${escapeHtml(item.title || "特訓")}</span>
+        <span class="training-menu-card-state">${escapeHtml(stateLabel)}</span>
+      </span>
+      <span class="training-menu-card-description">${escapeHtml(item.description || "")}</span>
+      <span class="training-menu-card-point">${escapeHtml(item.pointLabel || "ポイント付与なし")}</span>
+    </button>`;
+  }).join("");
+  bindTrainingMenuCardHandlers();
+}
 const TRAINING_MODE_KIND_MAP = Object.freeze({
   "phrase-spiral": "idiom",
   "preposition-training": "preposition",
@@ -146,12 +208,14 @@ const POINT_SYSTEM_CONFIG = Object.freeze({
   rewardByTrainingMode: Object.freeze({
     challenge: 2,
     preposition: 1,
-    response: 1
+    response: 1,
+    "irregular-verb": 1
   }),
   dailyCapByTrainingMode: Object.freeze({
     preposition: 40,
     response: 60,
-    challenge: 200
+    challenge: 200,
+    "irregular-verb": 60
   }),
   reservedBonuses: Object.freeze({
     weaknessClear: 0,
@@ -5736,13 +5800,14 @@ function openTrainingCompleteScreen(options = {}) {
   const todayTotal = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
   const todayModeRow = pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
     ? pointState.dailyEarnedByModeByDate[todayKey]
-    : { preposition: 0, response: 0, challenge: 0 };
+    : { preposition: 0, response: 0, challenge: 0, "irregular-verb": 0 };
   const prepositionEarned = Math.max(0, Number(todayModeRow.preposition) || 0);
   const responseEarned = Math.max(0, Number(todayModeRow.response) || 0);
   const challengeEarned = Math.max(0, Number(todayModeRow.challenge) || 0);
+  const irregularVerbEarned = Math.max(0, Number(todayModeRow["irregular-verb"]) || 0);
   const totalEarned = Math.max(0, Number(pointState.totalEarned) || 0);
 
-  dailySummaryText.textContent = `本日の累計${formatPointValue(todayTotal)}（前置詞${formatPointValue(prepositionEarned)}　応答文${formatPointValue(responseEarned)}　過去問${formatPointValue(challengeEarned)}）`;
+  dailySummaryText.textContent = `本日の累計${formatPointValue(todayTotal)}（前置詞${formatPointValue(prepositionEarned)}　応答文${formatPointValue(responseEarned)}　不規則動詞${formatPointValue(irregularVerbEarned)}　過去問${formatPointValue(challengeEarned)}）`;
   lifetimeSummaryText.textContent = `通算累計${formatPointValue(totalEarned)}`;
   const hasEarnedPointsNow = earnedPoints > 0;
   dailySummaryText.classList.toggle("hidden", !hasEarnedPointsNow);
@@ -5848,10 +5913,11 @@ function migratePointDayKeyRow(pointState, jstDayKey, offsetDays) {
   if (legacyModeRow && typeof legacyModeRow === "object") {
     const targetModeRow = pointState.dailyEarnedByModeByDate?.[jstDayKey] && typeof pointState.dailyEarnedByModeByDate[jstDayKey] === "object"
       ? pointState.dailyEarnedByModeByDate[jstDayKey]
-      : { preposition: 0, response: 0, challenge: 0 };
+      : { preposition: 0, response: 0, challenge: 0, "irregular-verb": 0 };
     targetModeRow.preposition = Math.max(0, Number(targetModeRow.preposition) || 0) + Math.max(0, Number(legacyModeRow.preposition) || 0);
     targetModeRow.response = Math.max(0, Number(targetModeRow.response) || 0) + Math.max(0, Number(legacyModeRow.response) || 0);
     targetModeRow.challenge = Math.max(0, Number(targetModeRow.challenge) || 0) + Math.max(0, Number(legacyModeRow.challenge) || 0);
+    targetModeRow["irregular-verb"] = Math.max(0, Number(targetModeRow["irregular-verb"]) || 0) + Math.max(0, Number(legacyModeRow["irregular-verb"]) || 0);
 
     pointState.dailyEarnedByModeByDate = pointState.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object"
       ? pointState.dailyEarnedByModeByDate
@@ -5888,7 +5954,8 @@ function sanitizePointState(value) {
         return [String(dayKey), {
           preposition: Math.max(0, Math.floor(Number(safeRow.preposition) || 0)),
           response: Math.max(0, Math.floor(Number(safeRow.response) || 0)),
-          challenge: Math.max(0, Math.floor(Number(safeRow.challenge) || 0))
+          challenge: Math.max(0, Math.floor(Number(safeRow.challenge) || 0)),
+          "irregular-verb": Math.max(0, Math.floor(Number(safeRow["irregular-verb"]) || 0))
         }];
       })
     )
@@ -6230,7 +6297,7 @@ function inferPointModeFromLearningHistoryEntry(mode) {
     return "response";
   }
   if (normalized === "irregular-verb" || normalized === "irregular-verb-training" || normalized === "不規則動詞特訓") {
-    return "response";
+    return "irregular-verb";
   }
   if (normalized === "challenge" || normalized === "review" || normalized === "過去の間違い") {
     return "challenge";
@@ -6448,7 +6515,7 @@ function awardPointsForTrainingMode(mode) {
   pointState.dailyEarnedByDate[todayKey] = todayEarned + earned;
   const todayModeRow = pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
     ? pointState.dailyEarnedByModeByDate[todayKey]
-    : { preposition: 0, response: 0, challenge: 0 };
+    : { preposition: 0, response: 0, challenge: 0, "irregular-verb": 0 };
   todayModeRow[modeKey] = modeDailyEarned + earned;
   pointState.dailyEarnedByModeByDate = pointState.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object"
     ? pointState.dailyEarnedByModeByDate
@@ -12400,29 +12467,7 @@ function bindEvents() {
     });
   }
 
-  TRAINING_MENU_ITEMS.forEach((item) => {
-    const button = document.getElementById(item.id);
-    if (!button) return;
-    button.addEventListener("click", () => {
-      if (item.isReady && item.mode) {
-        if (item.mode === "preposition-training") {
-          openPrepositionTrainingSelector();
-          return;
-        }
-        if (item.mode === "response-training") {
-          startResponseTraining("all");
-          return;
-        }
-        if (item.mode === "irregular-verb-training") {
-          openIrregularVerbTrainingSelector();
-          return;
-        }
-        prepareSession(item.mode);
-        return;
-      }
-      showTrainingComingSoonNotice();
-    });
-  });
+  renderTrainingMenuCards();
 
   const prepositionAnswerForm = document.getElementById("prepositionAnswerForm");
   if (prepositionAnswerForm) {

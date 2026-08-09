@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260809-1257" />
+    <link rel="stylesheet" href="styles.css?v=20260809-1303" />
   </head>
   <body class="auth-pending">
     <div id="loginScreen" class="login-shell" aria-live="polite">
@@ -31,7 +31,7 @@
     <div class="app-shell">
       <header class="topbar">
         <div class="topbar-title">
-          <h1>English Typing Trainer for PC <span class="title-family-tag">Self Support PJR</span><span class="title-version-tag">Ver 2026/08/09 13:02</span></h1>
+          <h1>English Typing Trainer for PC <span class="title-family-tag">Self Support PJR</span><span class="title-version-tag">Ver 2026/08/09 13:03</span></h1>
           <p class="subtext">タイピングで単語・熟語を定着させよう</p>
         </div>
         <div class="topbar-actions">
@@ -421,13 +421,7 @@
             <div class="header-spacer" aria-hidden="true"></div>
           </div>
           <div class="panel day-catalog-panel">
-            <div class="study-actions-grid">
-              <button id="trainingIdiomBtn" class="secondary-btn" type="button">💬 熟語特訓</button>
-              <button id="trainingPrepositionBtn" class="secondary-btn" type="button">🧭 前置詞特訓</button>
-              <button id="trainingResponseBtn" class="secondary-btn" type="button">🗣️ 応答文特訓</button>
-              <button id="trainingIrregularVerbBtn" class="secondary-btn" type="button">🔀 不規則動詞特訓</button>
-              <button id="trainingInstantCompositionBtn" class="secondary-btn" type="button">⚡ 瞬間英作文（準備中）</button>
-            </div>
+            <div id="trainingMenuCards" class="training-menu-grid"></div>
             <p class="subtext">未実装の特訓を押すと「準備中です」と表示されます。</p>
           </div>
         </section>
@@ -1153,12 +1147,13 @@
       </div>
     </div>
 
-    <script src="data.js?v=20260809-1257"></script>
-    <script src="preposition-data.js?v=20260809-1257"></script>
-    <script src="response-data.js?v=20260809-1257"></script>
-    <script src="irregular-verbs.js?v=20260809-1257"></script>
-    <script src="release-info.js?v=20260809-1257"></script>
-    <script src="app.js?v=20260809-1257"></script>
-    <script type="module" src="firebase.js?v=20260809-1257"></script>
+    <script src="data.js?v=20260809-1303"></script>
+    <script src="preposition-data.js?v=20260809-1303"></script>
+    <script src="response-data.js?v=20260809-1303"></script>
+    <script src="irregular-verbs.js?v=20260809-1303"></script>
+    <script src="release-info.js?v=20260809-1303"></script>
+    <script src="training-menu-config.js?v=20260809-1303"></script>
+    <script src="app.js?v=20260809-1303"></script>
+    <script type="module" src="firebase.js?v=20260809-1303"></script>
   </body>
 </html>

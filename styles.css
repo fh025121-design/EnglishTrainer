@@ -1716,6 +1716,66 @@ p {
   overflow: auto;
 }
 
+.training-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.training-menu-card-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 142px;
+  text-align: left;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.training-menu-card-btn.is-disabled {
+  opacity: 0.72;
+}
+
+.training-menu-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.training-menu-card-title {
+  font-size: 1.04rem;
+  font-weight: 800;
+}
+
+.training-menu-card-state {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(94, 214, 214, 0.16);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.training-menu-card-description {
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.training-menu-card-point {
+  margin-top: auto;
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
 .day-range-form {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
