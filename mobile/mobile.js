@@ -2885,6 +2885,23 @@
     }
   }
 
+  function parseMobileLearningHistoryEarnedPoints(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return Math.max(0, Math.floor(value));
+    }
+    const text = String(value ?? "").trim();
+    if (!text) return 0;
+    const numeric = Number(text);
+    if (Number.isFinite(numeric)) {
+      return Math.max(0, Math.floor(numeric));
+    }
+    const ascii = text.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 0xFEE0));
+    const match = ascii.match(/[+-]?\d+(?:\.\d+)?/);
+    if (!match) return 0;
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
+  }
+
   function sanitizeMobileLearningHistoryEntry(raw) {
     if (!raw || typeof raw !== "object") return null;
     const startedAt = Number(raw.startedAt);
@@ -2901,6 +2918,7 @@
       dayNumber: typeof raw.dayNumber === "string" ? raw.dayNumber : "",
       questionCount: Math.max(0, Number(raw.questionCount) || 0),
       correctCount: Math.max(0, Number(raw.correctCount) || 0),
+      earnedPoints: parseMobileLearningHistoryEarnedPoints(raw.earnedPoints),
       accuracy: Math.max(0, Math.min(100, Number(raw.accuracy) || 0)),
       completedReason: raw.completedReason === "interrupted" ? "interrupted" : "completed",
       deviceType: normalizeMobileAdminLearningHistoryDeviceType(raw.deviceType),
@@ -3340,6 +3358,7 @@
   }
 
   function startMobileLearningHistorySession(meta = {}) {
+    const pointSummary = getMobilePointSummary();
     state.learningHistorySession = {
       source: String(meta.source || "other"),
       mode: String(meta.mode || "other"),
@@ -3349,6 +3368,7 @@
       activeStudyMs: 0,
       isPaused: false,
       pausedAt: null,
+      pointTotalEarnedAtStart: Math.max(0, Number(pointSummary?.totalEarned) || 0),
       ticketSnapshot: getMobileLearningTicketSnapshot(),
       meta: { ...meta }
     };
@@ -3398,6 +3418,13 @@
     }
 
     const summary = options.summary || {};
+    const currentPointSummary = getMobilePointSummary();
+    const pointTotalAtStart = Math.max(0, Number(session.pointTotalEarnedAtStart) || 0);
+    const currentTotalEarned = Math.max(0, Number(currentPointSummary?.totalEarned) || 0);
+    const earnedPointsDelta = Math.max(0, currentTotalEarned - pointTotalAtStart);
+    const summaryEarnedPoints = Object.prototype.hasOwnProperty.call(summary, "earnedPoints")
+      ? parseMobileLearningHistoryEarnedPoints(summary.earnedPoints)
+      : earnedPointsDelta;
     const entry = sanitizeMobileLearningHistoryEntry({
       learnedAt: formatTimestampToJstDisplay(now),
       startedAt: session.startedAt,
@@ -3409,6 +3436,7 @@
       dayNumber: String(options.dayNumber || session.dayNumber || ""),
       questionCount: Math.max(0, Number(summary.questionCount) || 0),
       correctCount: Math.max(0, Number(summary.correctCount) || 0),
+      earnedPoints: summaryEarnedPoints,
       accuracy: Math.max(0, Math.min(100, Number(summary.accuracy) || 0)),
       completedReason: options.completedReason === "interrupted" ? "interrupted" : "completed",
       deviceType: "mobile",
@@ -3727,7 +3755,7 @@
                 const questionCount = isReviewCategory ? rawCorrectCount : rawQuestionCount;
                 const correctCount = Math.max(0, Math.min(questionCount, rawCorrectCount));
                 const accuracyPercent = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
-                const earnedPoints = Math.max(0, Number(entry.earnedPoints) || 0);
+                const earnedPoints = parseMobileLearningHistoryEarnedPoints(entry.earnedPoints);
                 const studyLabel = buildMobileLearningHistoryStudyLabel(entry);
                 const startClock = formatMobileLearningHistoryStartClock(entry.startedAt);
                 return `
@@ -3969,6 +3997,7 @@
       dayNumber: String(data.dayNumber || ""),
       questionCount: Math.max(0, Number(data.questionCount) || 0),
       correctCount: Math.max(0, Number(data.correctCount) || 0),
+      earnedPoints: parseMobileLearningHistoryEarnedPoints(data.earnedPoints),
       accuracy: Math.max(0, Math.min(100, Number(data.accuracy) || 0)),
       completedReason: String(data.completedReason || "completed"),
       ticket: {
@@ -4300,6 +4329,15 @@
   function finishSpeakingReviewSession(completedCount) {
     const safeCompletedCount = Math.max(0, Number(completedCount) || 0);
     const earnedPoints = applyPendingReviewSpeakingPoints(state.speakingReviewSession, { persistSession: false });
+    if (state.learningHistorySession) {
+      const reviewSummary = getCurrentMobileLearningHistorySummary() || {};
+      reviewSummary.earnedPoints = earnedPoints;
+      finalizeMobileLearningHistorySession({
+        completedReason: "completed",
+        mode: "review",
+        summary: reviewSummary
+      });
+    }
     clearSpeakingReviewSession();
     resetSpeakingHintState();
     state.speakingTranslationVisible = false;
@@ -8341,15 +8379,17 @@
         buildReviewExitConfirmMessage(),
         "終了する",
         () => {
+          const earnedPoints = applyPendingReviewSpeakingPoints(state.speakingReviewSession, { persistSession: true });
           if (state.learningHistorySession) {
+            const reviewSummary = getCurrentMobileLearningHistorySummary() || {};
+            reviewSummary.earnedPoints = earnedPoints;
             finalizeMobileLearningHistorySession({
               completedReason: "interrupted",
               mode: "review",
-              summary: getCurrentMobileLearningHistorySummary() || {}
+              summary: reviewSummary
             });
           }
           saveSpeakingReviewSession();
-          const earnedPoints = applyPendingReviewSpeakingPoints(state.speakingReviewSession, { persistSession: true });
           if (earnedPoints > 0) {
             openPointRewardScreen("review", earnedPoints, {
               onClose: renderSpeakingReviewTopScreen

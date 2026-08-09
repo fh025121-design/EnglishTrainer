@@ -157,6 +157,23 @@ async function saveMobileLearningHistoryToFirestore(historyEntry) {
   const normalizedDeviceType = String(historyEntry.deviceType || "").trim().toLowerCase() === "pc" ? "pc" : "mobile";
   const normalizedDeviceId = String(historyEntry.deviceId || "").trim();
   const normalizedDeviceName = String(historyEntry.deviceName || "").trim();
+  const normalizedEarnedPoints = (() => {
+    const raw = historyEntry.earnedPoints;
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      return Math.max(0, Math.floor(raw));
+    }
+    const text = String(raw ?? "").trim();
+    if (!text) return 0;
+    const numeric = Number(text);
+    if (Number.isFinite(numeric)) {
+      return Math.max(0, Math.floor(numeric));
+    }
+    const ascii = text.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 0xFEE0));
+    const match = ascii.match(/[+-]?\d+(?:\.\d+)?/);
+    if (!match) return 0;
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
+  })();
 
   const payload = {
     uid: String(user.uid || ""),
@@ -169,6 +186,7 @@ async function saveMobileLearningHistoryToFirestore(historyEntry) {
     dayNumber: String(historyEntry.dayNumber || ""),
     questionCount: Math.max(0, Number(historyEntry.questionCount) || 0),
     correctCount: Math.max(0, Number(historyEntry.correctCount) || 0),
+    earnedPoints: normalizedEarnedPoints,
     accuracy: Math.max(0, Math.min(100, Number(historyEntry.accuracy) || 0)),
     completedReason: String(historyEntry.completedReason || "completed"),
     ticketEarned: Math.max(0, Number(historyEntry?.ticket?.earned?.count) || 0),
