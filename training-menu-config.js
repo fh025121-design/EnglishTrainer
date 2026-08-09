@@ -58,6 +58,15 @@
         pointLabel: formatPointSummary("idiom", pointConfig, pointSummaryMap)
       },
       {
+        id: "trainingChallengeBtn",
+        key: "challenge",
+        title: "過去の間違いに挑戦",
+        icon: "🎯",
+        mode: "challenge",
+        isReady: true,
+        pointLabel: formatPointSummary("challenge", pointConfig, pointSummaryMap)
+      },
+      {
         id: "trainingPrepositionBtn",
         key: "preposition",
         title: "前置詞特訓",

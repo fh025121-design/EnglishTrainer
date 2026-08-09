@@ -45,11 +45,44 @@ const sanitized = context.sanitizePointState({
 });
 
 assert.strictEqual(sanitized.dailyEarnedByModeByDate["2026-08-09"].idiom, 3, "idiom points should be preserved");
+assert.strictEqual(sanitized.dailyEarnedByModeByDate["2026-08-09"]["irregular-verb"], 2, "irregular-verb points should be preserved");
 assert.strictEqual(context.inferPointModeFromLearningHistoryEntry("phrase-spiral"), "idiom", "phrase-spiral should map to the idiom point mode");
 assert.strictEqual(context.normalizeLearningMode("irregular-verb-training"), "不規則動詞特訓", "irregular-verb should normalize to a learning-history mode");
 const irregularBucket = context.getLearningHistoryModeBucket({ mode: "不規則動詞特訓" });
 assert.strictEqual(irregularBucket.key, "irregularVerb", "irregular-verb should have its own history bucket key");
 assert.strictEqual(irregularBucket.label, "不規則動詞特訓", "irregular-verb should have its own history bucket label");
+assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: true, isCorrect: true, isReviewSession: false }), true, "first-attempt correct answers should award training points");
+assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: false, isCorrect: true, isReviewSession: false }), false, "corrected retry answers should not award training points");
+assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: true, isCorrect: true, isReviewSession: true }), false, "review answers should not award training points");
+const originalPointState = JSON.parse(JSON.stringify(context.getPointState()));
+const todayKey = context.getPointTodayKey();
+const freshPointState = JSON.parse(JSON.stringify(originalPointState));
+freshPointState.balance = 0;
+freshPointState.totalEarned = 0;
+freshPointState.dailyEarnedByDate[todayKey] = 0;
+freshPointState.dailyEarnedByModeByDate[todayKey] = {
+  preposition: 0,
+  response: 0,
+  challenge: 0,
+  "irregular-verb": 0,
+  idiom: 0
+};
+context.savePointState(freshPointState);
+assert.strictEqual(context.awardPointsForTrainingMode("challenge"), 3, "challenge should award 3P");
+context.savePointState(freshPointState);
+assert.strictEqual(context.awardPointsForTrainingMode("irregular-verb"), 2, "irregular-verb should award 2P");
+assert.strictEqual(context.formatPointValue(freshPointState.dailyEarnedByModeByDate[todayKey].challenge), "0P", "challenge point formatting should stay mode-specific");
+const cappedPointState = JSON.parse(JSON.stringify(freshPointState));
+cappedPointState.dailyEarnedByDate[todayKey] = 299;
+cappedPointState.dailyEarnedByModeByDate[todayKey].challenge = 299;
+context.savePointState(cappedPointState);
+assert.strictEqual(context.awardPointsForTrainingMode("challenge"), 1, "challenge should still award the last point before its cap");
+context.savePointState(cappedPointState);
+cappedPointState.dailyEarnedByDate[todayKey] = 100;
+cappedPointState.dailyEarnedByModeByDate[todayKey]["irregular-verb"] = 100;
+context.savePointState(cappedPointState);
+assert.strictEqual(context.awardPointsForTrainingMode("irregular-verb"), 0, "irregular-verb should stop at 100P");
+context.savePointState(originalPointState);
 assert.strictEqual(
   context.formatTrainingDailyPointSummary(11, {
     preposition: 2,

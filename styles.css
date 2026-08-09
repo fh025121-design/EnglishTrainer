@@ -1790,6 +1790,14 @@ p {
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
 }
 
+.training-menu-card-detail {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.92rem;
+  line-height: 1.2;
+  font-weight: 600;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.28);
+}
+
 .training-menu-card-point:has(span) {
   color: var(--text-color);
 }

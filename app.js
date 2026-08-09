@@ -75,6 +75,7 @@ const PHRASE_SPIRAL_LEVEL_TARGETS = {
 };
 const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingIdiomBtn", mode: "phrase-spiral", isReady: true },
+  { id: "trainingChallengeBtn", mode: "challenge", isReady: true },
   { id: "trainingPrepositionBtn", mode: "preposition-training", isReady: true },
   { id: "trainingResponseBtn", mode: "response-training", isReady: true },
   { id: "trainingIrregularVerbBtn", mode: "irregular-verb-training", isReady: true },
@@ -89,11 +90,16 @@ function getTrainingMenuCardsForUi() {
   }
   return TRAINING_MENU_ITEMS.map((item) => ({
     ...item,
-    title: item.id === "trainingIdiomBtn" ? "熟語特訓" : item.id === "trainingPrepositionBtn" ? "前置詞特訓" : item.id === "trainingResponseBtn" ? "応答文特訓" : item.id === "trainingIrregularVerbBtn" ? "不規則動詞特訓" : "瞬間英作文",
+    title: item.id === "trainingIdiomBtn" ? "熟語特訓" : item.id === "trainingChallengeBtn" ? "過去の間違いに挑戦" : item.id === "trainingPrepositionBtn" ? "前置詞特訓" : item.id === "trainingResponseBtn" ? "応答文特訓" : item.id === "trainingIrregularVerbBtn" ? "不規則動詞特訓" : "瞬間英作文",
+    icon: item.id === "trainingIdiomBtn" ? "📖" : item.id === "trainingChallengeBtn" ? "🎯" : item.id === "trainingPrepositionBtn" ? "🧭" : item.id === "trainingResponseBtn" ? "🗣️" : item.id === "trainingIrregularVerbBtn" ? "🔄" : "⚡",
     mode: item.mode,
     isReady: item.isReady,
     pointLabel: item.isReady ? "ポイントなし" : "準備中"
   }));
+}
+
+function shouldAwardTrainingPointForAnswerAttempt(options = {}) {
+  return Boolean(options.isFirstAttempt && options.isCorrect && !options.isReviewSession);
 }
 
 function getTrainingMenuPointSummaryMap() {
@@ -103,6 +109,7 @@ function getTrainingMenuPointSummaryMap() {
     ? pointState.dailyEarnedByModeByDate[todayKey]
     : {};
   return {
+    todayTotal: Math.max(0, Number(pointState?.dailyEarnedByDate?.[todayKey]) || 0),
     preposition: {
       earned: Math.max(0, Number(modeRow.preposition) || 0),
       cap: Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode.preposition) || 0)
@@ -110,6 +117,10 @@ function getTrainingMenuPointSummaryMap() {
     response: {
       earned: Math.max(0, Number(modeRow.response) || 0),
       cap: Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode.response) || 0)
+    },
+    challenge: {
+      earned: Math.max(0, Number(modeRow.challenge) || 0),
+      cap: Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode.challenge) || 0)
     },
     "irregular-verb": {
       earned: Math.max(0, Number(modeRow["irregular-verb"]) || 0),
@@ -162,9 +173,15 @@ function renderTrainingMenuCards() {
         <span class="training-menu-card-chevron">›</span>
       </span>
       <span class="training-menu-card-point">${escapeHtml(item.pointLabel || "ポイントなし")}</span>
+      ${item.pointDetail ? `<span class="training-menu-card-detail">${escapeHtml(item.pointDetail)}</span>` : ""}
     </button>`;
   }).join("");
   bindTrainingMenuCardHandlers();
+}
+
+function openTrainingMenuScreen() {
+  renderTrainingMenuCards();
+  showScreen("trainingMenuScreen");
 }
 const TRAINING_MODE_KIND_MAP = Object.freeze({
   "phrase-spiral": "idiom",
@@ -221,7 +238,6 @@ const GAME_TICKET_CONFIG = {
 const GAME_TICKET_DAY_MS = 24 * 60 * 60 * 1000;
 const POINT_SYSTEM_STORAGE_KEY = "english-trainer-pc-points-v1";
 const POINT_SYSTEM_CONFIG = Object.freeze({
-  typingDailyTotalCap: 300,
   dayAdvanceCompletionBonusPoints: 50,
   dayUnstudiedClearBonusPoints: 25,
   dailyLimitModes: Object.freeze({
@@ -230,17 +246,17 @@ const POINT_SYSTEM_CONFIG = Object.freeze({
   }),
   defaultDailyLimitMode: "normal",
   rewardByTrainingMode: Object.freeze({
-    challenge: 2,
+    challenge: 3,
     preposition: 1,
     response: 1,
-    "irregular-verb": 1,
+    "irregular-verb": 2,
     idiom: 1
   }),
   dailyCapByTrainingMode: Object.freeze({
     preposition: 30,
     response: 40,
-    challenge: 200,
-    "irregular-verb": 40,
+    challenge: 300,
+    "irregular-verb": 100,
     idiom: 30
   }),
   reservedBonuses: Object.freeze({
@@ -6495,12 +6511,11 @@ async function ensurePointStateFromFirestoreIfMissing() {
           const dayTotal = Math.max(0, Number(restored.dailyEarnedByDate?.[dayKey]) || 0);
           const dayModeRow = restored.dailyEarnedByModeByDate?.[dayKey] && typeof restored.dailyEarnedByModeByDate[dayKey] === "object"
             ? restored.dailyEarnedByModeByDate[dayKey]
-            : { preposition: 0, response: 0, challenge: 0 };
+            : { preposition: 0, response: 0, challenge: 0, "irregular-verb": 0, idiom: 0 };
           const modeEarned = Math.max(0, Number(dayModeRow[pointMode]) || 0);
 
           const modeCap = Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode[pointMode]) || 0);
-          const totalCap = Math.max(0, Number(POINT_SYSTEM_CONFIG.typingDailyTotalCap) || 0);
-          if (modeEarned >= modeCap || dayTotal >= totalCap) return;
+          if (modeEarned >= modeCap) return;
 
           dayModeRow[pointMode] = modeEarned + 1;
           restored.dailyEarnedByModeByDate[dayKey] = dayModeRow;
@@ -6579,7 +6594,7 @@ function awardPointsForTrainingMode(mode) {
   const rewardBase = Math.max(0, Number(POINT_SYSTEM_CONFIG.rewardByTrainingMode[modeKey]) || 0);
   if (!rewardBase) return 0;
 
-  if (modeKey === "challenge" || modeKey === "review") {
+  if (modeKey === "review") {
     return 0;
   }
 
@@ -6589,10 +6604,8 @@ function awardPointsForTrainingMode(mode) {
   const todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate[todayKey]) || 0);
   const modeDailyCap = Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode[modeKey]) || 0);
   const modeDailyEarned = Math.max(0, Number(pointState.dailyEarnedByModeByDate?.[todayKey]?.[modeKey]) || 0);
-  const totalDailyCap = Math.max(0, Number(POINT_SYSTEM_CONFIG.typingDailyTotalCap) || 0);
   const remainingMode = Math.max(0, modeDailyCap - modeDailyEarned);
-  const remainingTotal = Math.max(0, totalDailyCap - todayEarned);
-  const earned = Math.max(0, Math.min(rewardBase, remainingMode, remainingTotal));
+  const earned = Math.max(0, Math.min(rewardBase, remainingMode));
   if (!earned) return 0;
 
   pointState.balance += earned;
@@ -11402,6 +11415,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   const isPhraseSpiralMainRun = session.mode === "phrase-spiral" && session.phase === "phase1";
   const isScoredNormalRun = session.mode === "normal" && (session.phase === "phase0" || session.phase === "phase1");
   const isNormalWeakFocusRun = session.mode === "normal" && session.phase === "phase3";
+  const isFirstAttempt = !session.currentQuestionAttempted;
   session.answerHistory.push({
     questionId: String(question.id),
     isCorrect,
@@ -11411,7 +11425,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     at: Date.now()
   });
 
-  if (!session.currentQuestionAttempted) {
+  if (isFirstAttempt) {
     session.currentQuestionAttempted = true;
     if (!isTrainingSession) {
       const hadBeenStudiedBefore = hasItemBeenStudied(item);
@@ -11435,17 +11449,19 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       if (!isTrainingSession) {
         recordDailyPerformance(true);
       }
-      if (isTrainingSession && !isReviewSession) {
-        const trainingModeKey = trainingKind === "phrase-spiral" ? "idiom" : trainingKind;
-        if (trainingModeKey) {
-          awardPointsForTrainingMode(trainingModeKey);
+      if (shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt, isCorrect, isReviewSession })) {
+        if (isTrainingSession) {
+          const trainingModeKey = trainingKind === "phrase-spiral" ? "idiom" : trainingKind;
+          if (trainingModeKey) {
+            awardPointsForTrainingMode(trainingModeKey);
+          }
+        }
+        if (session.mode === "challenge") {
+          awardPointsForTrainingMode("challenge");
         }
       }
       if (shouldPlayTrainingCorrectChimeForSession(session)) {
         playTrainingCorrectChime();
-      }
-      if (session.mode === "challenge") {
-        awardPointsForTrainingMode("challenge");
       }
       if (isNormalWeakFocusRun) {
         const weakFocusCorrectIds = new Set((session.weakFocusCurrentRoundCorrectIds || []).map((id) => String(id)));
@@ -11564,20 +11580,11 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   const levelChange = isTrainingSession
     ? { leveledUpToFour: false }
     : updateItemLevelProgress(item, true);
-  if (isTrainingSession && !isReviewSession) {
-    const trainingModeKey = trainingKind === "phrase-spiral" ? "idiom" : trainingKind;
-    if (trainingModeKey) {
-      awardPointsForTrainingMode(trainingModeKey);
-    }
-  }
   if (shouldPlayTrainingCorrectChimeForSession(session)) {
     playTrainingCorrectChime();
   }
   if (!isTrainingSession) {
     item.lastAnswerWasCorrect = true;
-  }
-  if (session.mode === "challenge") {
-    awardPointsForTrainingMode("challenge");
   }
   session.answered = false;
   session.answerLocked = false;
@@ -12560,7 +12567,7 @@ function bindEvents() {
   const daySelectPhraseBtn = document.getElementById("daySelectPhraseBtn");
   if (daySelectPhraseBtn) {
     daySelectPhraseBtn.addEventListener("click", () => {
-      showScreen("trainingMenuScreen");
+      openTrainingMenuScreen();
     });
   }
 
@@ -12619,7 +12626,7 @@ function bindEvents() {
   const prepositionBackToMenuBtn = document.getElementById("prepositionBackToMenuBtn");
   if (prepositionBackToMenuBtn) {
     prepositionBackToMenuBtn.addEventListener("click", () => {
-      showScreen("trainingMenuScreen");
+      openTrainingMenuScreen();
     });
   }
 
@@ -12663,7 +12670,7 @@ function bindEvents() {
   const irregularVerbBackToMenuBtn = document.getElementById("irregularVerbBackToMenuBtn");
   if (irregularVerbBackToMenuBtn) {
     irregularVerbBackToMenuBtn.addEventListener("click", () => {
-      showScreen("trainingMenuScreen");
+      openTrainingMenuScreen();
     });
   }
 
@@ -12721,7 +12728,7 @@ function bindEvents() {
   const responseBackToMenuBtn = document.getElementById("responseBackToMenuBtn");
   if (responseBackToMenuBtn) {
     responseBackToMenuBtn.addEventListener("click", () => {
-      showScreen("trainingMenuScreen");
+      openTrainingMenuScreen();
     });
   }
 
