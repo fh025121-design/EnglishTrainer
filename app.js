@@ -2793,8 +2793,15 @@ function isLikelyPhraseLearningHistoryEntry(entryLike) {
   return questionCount > 0 || activeStudySeconds > 0;
 }
 
-function resolvePcLearningHistoryCategory(modeLike, entryLike = null) {
+function stripPcLearningHistoryWeekDayPrefix(modeLike) {
   const mode = String(modeLike || "").trim();
+  if (!mode) return "";
+  // Mobile-derived labels may prefix mode with "Week7 日曜". PC history should show mode only.
+  return mode.replace(/^Week\s*\d+\s+[^\s]+(?:曜|曜日)?\s+/i, "").trim();
+}
+
+function resolvePcLearningHistoryCategory(modeLike, entryLike = null) {
+  const mode = stripPcLearningHistoryWeekDayPrefix(modeLike);
   const lowerMode = mode.toLowerCase();
   if (!mode) {
     const dayNumber = resolveLearningHistoryDayNumberForDisplay(entryLike);
