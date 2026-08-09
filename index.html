@@ -603,19 +603,23 @@
             <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
             <div>
               <p class="eyebrow">不規則動詞特訓</p>
-              <h2>出題フォームを選択</h2>
+              <h2>不規則動詞特訓</h2>
             </div>
             <div class="header-spacer" aria-hidden="true"></div>
           </div>
-          <div class="panel day-catalog-panel">
-            <div class="preposition-select-wrap">
-              <button id="irregularVerbModeTrainingBtn" class="primary-btn" type="button">特訓（10問）</button>
-              <button id="irregularVerbModeTestBtn" class="secondary-btn" type="button">テスト（20問）</button>
-            </div>
-            <div class="preposition-select-wrap" style="margin-top: 1rem;">
-              <button id="irregularVerbFormBaseBtn" class="primary-btn" type="button">基本形</button>
-              <button id="irregularVerbFormPastBtn" class="secondary-btn" type="button">過去形</button>
-              <button id="irregularVerbFormPastParticipleBtn" class="secondary-btn" type="button">過去分詞</button>
+          <div class="panel irregular-verb-mode-panel">
+            <p class="irregular-verb-mode-description">原形を見て「過去形 過去分詞」を入力</p>
+            <div class="irregular-verb-mode-grid">
+              <button id="irregularVerbModeTrainingBtn" class="irregular-verb-mode-card irregular-verb-mode-card-training" type="button">
+                <span class="irregular-verb-mode-card-title">特訓</span>
+                <span class="irregular-verb-mode-card-count">10問</span>
+                <span class="irregular-verb-mode-card-hint">未学習・苦手な動詞を優先して練習</span>
+              </button>
+              <button id="irregularVerbModeTestBtn" class="irregular-verb-mode-card irregular-verb-mode-card-test" type="button">
+                <span class="irregular-verb-mode-card-title">テスト</span>
+                <span class="irregular-verb-mode-card-count">20問</span>
+                <span class="irregular-verb-mode-card-hint">20問で実力チェック</span>
+              </button>
             </div>
           </div>
         </section>
