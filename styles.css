@@ -1719,61 +1719,69 @@ p {
 .training-menu-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
+  align-items: start;
 }
 
 .training-menu-card-btn {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: flex-start;
-  justify-content: flex-start;
-  gap: 8px;
-  min-height: 142px;
+  gap: 6px;
+  min-height: 99px;
   text-align: left;
-  padding: 16px 18px;
+  padding: 14px 16px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
   border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: none;
 }
 
 .training-menu-card-btn.is-disabled {
-  opacity: 0.72;
+  opacity: 0.78;
 }
 
 .training-menu-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
 }
 
 .training-menu-card-title {
-  font-size: 1.04rem;
+  font-size: 1.5rem;
   font-weight: 800;
+  color: var(--text-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1.2;
 }
 
-.training-menu-card-state {
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(94, 214, 214, 0.16);
+.training-menu-card-icon {
+  font-size: 1.08em;
+  line-height: 1;
+}
+
+.training-menu-card-chevron {
   color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.training-menu-card-description {
-  color: var(--muted);
-  font-size: 0.94rem;
-  line-height: 1.45;
+  font-size: 1.12rem;
+  line-height: 1;
+  font-weight: 700;
+  margin-left: auto;
 }
 
 .training-menu-card-point {
-  margin-top: auto;
-  color: var(--accent);
-  font-size: 0.86rem;
-  font-weight: 700;
+  color: #ffffff;
+  font-size: 1.2rem;
+  line-height: 1.25;
+  font-weight: 300 !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+.training-menu-card-point:has(span) {
+  color: var(--text-color);
 }
 
 .day-range-form {

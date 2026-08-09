@@ -32,59 +32,63 @@
     }) || normalized;
   }
 
-  function formatPointSummary(mode, pointConfig = {}) {
+  function formatPointSummary(mode, pointConfig = {}, pointSummaryMap = {}) {
     const pointKey = getTrainingPointKey(mode, pointConfig);
-    const reward = Number(pointConfig?.rewardByTrainingMode?.[pointKey] || 0);
-    const cap = Number(pointConfig?.dailyCapByTrainingMode?.[pointKey] || 0);
-    if (!reward || !cap) {
-      return "ポイント付与なし";
+    const summary = pointSummaryMap?.[pointKey] || pointSummaryMap?.[mode] || null;
+    const earned = Number(summary?.earned || 0);
+    const cap = Number(summary?.cap || pointConfig?.dailyCapByTrainingMode?.[pointKey] || 0);
+    if (!cap) {
+      return "ポイントなし";
     }
-    return `＋${reward}P / 1日${cap}P`;
+    if (earned >= cap) {
+      return `本日 ${earned}P / ${cap}P ✓ 上限`;
+    }
+    return `本日 ${earned}P / ${cap}P`;
   }
 
-  function getTrainingMenuCards(pointConfig = {}) {
+  function getTrainingMenuCards(pointConfig = {}, pointSummaryMap = {}) {
     return [
       {
         id: "trainingIdiomBtn",
         key: "idiom",
         title: "熟語特訓",
-        description: "熟語の意味と使い方を整理して反復",
+        icon: "📖",
         mode: "phrase-spiral",
         isReady: true,
-        pointLabel: "ポイント付与なし"
+        pointLabel: formatPointSummary("idiom", pointConfig, pointSummaryMap)
       },
       {
         id: "trainingPrepositionBtn",
         key: "preposition",
         title: "前置詞特訓",
-        description: "前置詞の使い分けを集中して確認",
+        icon: "🧭",
         mode: "preposition-training",
         isReady: true,
-        pointLabel: formatPointSummary("preposition", pointConfig)
+        pointLabel: formatPointSummary("preposition", pointConfig, pointSummaryMap)
       },
       {
         id: "trainingResponseBtn",
         key: "response",
         title: "応答文特訓",
-        description: "英語の返し方を自然に身につける",
+        icon: "🗣️",
         mode: "response-training",
         isReady: true,
-        pointLabel: formatPointSummary("response", pointConfig)
+        pointLabel: formatPointSummary("response", pointConfig, pointSummaryMap)
       },
       {
         id: "trainingIrregularVerbBtn",
         key: "irregular-verb",
         title: "不規則動詞特訓",
-        description: "原形を見て過去形と過去分詞を入力",
+        icon: "🔄",
         mode: "irregular-verb-training",
         isReady: true,
-        pointLabel: formatPointSummary("irregular-verb", pointConfig)
+        pointLabel: formatPointSummary("irregular-verb", pointConfig, pointSummaryMap)
       },
       {
         id: "trainingInstantCompositionBtn",
         key: "instant-composition",
         title: "瞬間英作文",
-        description: "準備中です",
+        icon: "⚡",
         mode: null,
         isReady: false,
         pointLabel: "準備中"

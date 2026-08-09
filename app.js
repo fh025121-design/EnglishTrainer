@@ -83,17 +83,43 @@ const TRAINING_MENU_ITEMS = Object.freeze([
 
 function getTrainingMenuCardsForUi() {
   const menuConfig = typeof window !== "undefined" ? window.TrainingMenuConfig : null;
+  const pointSummaryMap = getTrainingMenuPointSummaryMap();
   if (menuConfig && typeof menuConfig.getTrainingMenuCards === "function") {
-    return menuConfig.getTrainingMenuCards(POINT_SYSTEM_CONFIG);
+    return menuConfig.getTrainingMenuCards(POINT_SYSTEM_CONFIG, pointSummaryMap);
   }
   return TRAINING_MENU_ITEMS.map((item) => ({
     ...item,
     title: item.id === "trainingIdiomBtn" ? "熟語特訓" : item.id === "trainingPrepositionBtn" ? "前置詞特訓" : item.id === "trainingResponseBtn" ? "応答文特訓" : item.id === "trainingIrregularVerbBtn" ? "不規則動詞特訓" : "瞬間英作文",
-    description: item.isReady ? "特訓を開始します" : "準備中です",
     mode: item.mode,
     isReady: item.isReady,
-    pointLabel: item.isReady ? "ポイント付与なし" : "準備中"
+    pointLabel: item.isReady ? "ポイントなし" : "準備中"
   }));
+}
+
+function getTrainingMenuPointSummaryMap() {
+  const pointState = getPointState();
+  const todayKey = getPointTodayKey();
+  const modeRow = pointState?.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
+    ? pointState.dailyEarnedByModeByDate[todayKey]
+    : {};
+  return {
+    preposition: {
+      earned: Math.max(0, Number(modeRow.preposition) || 0),
+      cap: Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode.preposition) || 0)
+    },
+    response: {
+      earned: Math.max(0, Number(modeRow.response) || 0),
+      cap: Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode.response) || 0)
+    },
+    "irregular-verb": {
+      earned: Math.max(0, Number(modeRow["irregular-verb"]) || 0),
+      cap: Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode["irregular-verb"]) || 0)
+    },
+    idiom: {
+      earned: Math.max(0, Number(modeRow.idiom) || 0),
+      cap: Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode.idiom) || 0)
+    }
+  };
 }
 
 function bindTrainingMenuCardHandlers() {
@@ -130,14 +156,12 @@ function renderTrainingMenuCards() {
   const cards = getTrainingMenuCardsForUi();
   container.innerHTML = cards.map((item) => {
     const isReady = item.isReady !== false;
-    const stateLabel = isReady ? "開く" : "準備中";
     return `<button id="${item.id}" class="secondary-btn training-menu-card-btn${isReady ? "" : " is-disabled"}" type="button" data-training-mode="${item.mode || ""}">
       <span class="training-menu-card-top">
-        <span class="training-menu-card-title">${escapeHtml(item.title || "特訓")}</span>
-        <span class="training-menu-card-state">${escapeHtml(stateLabel)}</span>
+        <span class="training-menu-card-title"><span class="training-menu-card-icon">${escapeHtml(item.icon || "✦")}</span>${escapeHtml(item.title || "特訓")}</span>
+        <span class="training-menu-card-chevron">›</span>
       </span>
-      <span class="training-menu-card-description">${escapeHtml(item.description || "")}</span>
-      <span class="training-menu-card-point">${escapeHtml(item.pointLabel || "ポイント付与なし")}</span>
+      <span class="training-menu-card-point">${escapeHtml(item.pointLabel || "ポイントなし")}</span>
     </button>`;
   }).join("");
   bindTrainingMenuCardHandlers();
@@ -209,13 +233,15 @@ const POINT_SYSTEM_CONFIG = Object.freeze({
     challenge: 2,
     preposition: 1,
     response: 1,
-    "irregular-verb": 1
+    "irregular-verb": 1,
+    idiom: 1
   }),
   dailyCapByTrainingMode: Object.freeze({
-    preposition: 40,
-    response: 60,
+    preposition: 30,
+    response: 40,
     challenge: 200,
-    "irregular-verb": 60
+    "irregular-verb": 40,
+    idiom: 30
   }),
   reservedBonuses: Object.freeze({
     weaknessClear: 0,
@@ -4716,6 +4742,9 @@ function submitIrregularVerbAnswer() {
   session.answered = true;
   if (isCorrect) {
     session.correctCount += 1;
+    if (!session.reviewMode) {
+      awardPointsForTrainingMode("irregular-verb");
+    }
     playTrainingCorrectChime();
   } else {
     session.wrongQuestionIds.push(String(currentQuestion.id));
@@ -5142,7 +5171,9 @@ function submitResponseTrainingAnswer() {
   session.answerHistory.push({ at: answeredAt, isCorrect });
   if (isCorrect) {
     session.correctCount += 1;
-    awardPointsForTrainingMode("response");
+    if (!session.reviewMode) {
+      awardPointsForTrainingMode("response");
+    }
     playTrainingCorrectChime();
   } else {
     const categoryKey = String(currentQuestion.category || "other");
@@ -5918,6 +5949,7 @@ function migratePointDayKeyRow(pointState, jstDayKey, offsetDays) {
     targetModeRow.response = Math.max(0, Number(targetModeRow.response) || 0) + Math.max(0, Number(legacyModeRow.response) || 0);
     targetModeRow.challenge = Math.max(0, Number(targetModeRow.challenge) || 0) + Math.max(0, Number(legacyModeRow.challenge) || 0);
     targetModeRow["irregular-verb"] = Math.max(0, Number(targetModeRow["irregular-verb"]) || 0) + Math.max(0, Number(legacyModeRow["irregular-verb"]) || 0);
+    targetModeRow.idiom = Math.max(0, Number(targetModeRow.idiom) || 0) + Math.max(0, Number(legacyModeRow.idiom) || 0);
 
     pointState.dailyEarnedByModeByDate = pointState.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object"
       ? pointState.dailyEarnedByModeByDate
@@ -5955,7 +5987,8 @@ function sanitizePointState(value) {
           preposition: Math.max(0, Math.floor(Number(safeRow.preposition) || 0)),
           response: Math.max(0, Math.floor(Number(safeRow.response) || 0)),
           challenge: Math.max(0, Math.floor(Number(safeRow.challenge) || 0)),
-          "irregular-verb": Math.max(0, Math.floor(Number(safeRow["irregular-verb"]) || 0))
+          "irregular-verb": Math.max(0, Math.floor(Number(safeRow["irregular-verb"]) || 0)),
+          idiom: Math.max(0, Math.floor(Number(safeRow.idiom) || 0))
         }];
       })
     )
@@ -6290,6 +6323,7 @@ function getPointTodayKey() {
 function inferPointModeFromLearningHistoryEntry(mode) {
   const normalized = String(mode || "").trim();
   if (!normalized) return "";
+  const lowerMode = normalized.toLowerCase();
   if (normalized === "preposition" || normalized === "preposition-training" || normalized === "前置詞特訓") {
     return "preposition";
   }
@@ -6301,6 +6335,9 @@ function inferPointModeFromLearningHistoryEntry(mode) {
   }
   if (normalized === "challenge" || normalized === "review" || normalized === "過去の間違い") {
     return "challenge";
+  }
+  if (lowerMode.includes("phrase") || lowerMode.includes("idiom") || normalized.includes("熟語")) {
+    return "idiom";
   }
   return "";
 }
@@ -6497,6 +6534,10 @@ function awardPointsForTrainingMode(mode) {
   const modeKey = String(mode || "").trim();
   const rewardBase = Math.max(0, Number(POINT_SYSTEM_CONFIG.rewardByTrainingMode[modeKey]) || 0);
   if (!rewardBase) return 0;
+
+  if (modeKey === "challenge" || modeKey === "review") {
+    return 0;
+  }
 
   const pointState = getPointState();
   const todayKey = getPointTodayKey();
@@ -8336,7 +8377,9 @@ function submitPrepositionAnswer() {
   session.answered = true;
   if (isCorrect) {
     session.correctCount += 1;
-    awardPointsForTrainingMode("preposition");
+    if (!session.reviewMode) {
+      awardPointsForTrainingMode("preposition");
+    }
     playTrainingCorrectChime();
   } else {
     session.wrongQuestionIds.push(String(currentQuestion.id));
@@ -11269,6 +11312,7 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
 
   const trainingKind = getTrainingKindByMode(session.mode);
   const isTrainingSession = Boolean(trainingKind);
+  const isReviewSession = Boolean(session?.mode === "review" || session?.reviewMode);
   const practiceCategory = isTrainingSession ? "training" : "day";
 
   const trimmedAnswer = rawAnswer.trim();
@@ -11342,6 +11386,12 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     if (isCorrect) {
       if (!isTrainingSession) {
         recordDailyPerformance(true);
+      }
+      if (isTrainingSession && !isReviewSession) {
+        const trainingModeKey = trainingKind === "phrase-spiral" ? "idiom" : trainingKind;
+        if (trainingModeKey) {
+          awardPointsForTrainingMode(trainingModeKey);
+        }
       }
       if (shouldPlayTrainingCorrectChimeForSession(session)) {
         playTrainingCorrectChime();
@@ -11466,6 +11516,12 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   const levelChange = isTrainingSession
     ? { leveledUpToFour: false }
     : updateItemLevelProgress(item, true);
+  if (isTrainingSession && !isReviewSession) {
+    const trainingModeKey = trainingKind === "phrase-spiral" ? "idiom" : trainingKind;
+    if (trainingModeKey) {
+      awardPointsForTrainingMode(trainingModeKey);
+    }
+  }
   if (shouldPlayTrainingCorrectChimeForSession(session)) {
     playTrainingCorrectChime();
   }
