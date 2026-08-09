@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/09 22:13", note: "PC版のみ: スマホブラウザでPC版サイトを表示した際、学習履歴の日別詳細で earnedPoints が文字列形式（例: '+12P'）でも数値として解釈して表示できるよう補正。表示時は保存済み earnedPoints を優先し、数値/数値文字列/全角数字混在を安全に正規化して '+xP' 表示へ統一。earnedPoints 未保存の旧履歴のみ +0P 扱い。learningHistory保存処理・Firestoreデータ・ポイント付与ルール・モバイル版サイトUIは未変更。№4-18-51 の『Week+曜日をPCで非表示』仕様は維持。" },
     { version: "2026/08/09 21:29", note: "PC版のみ: 学習履歴（日別詳細）の表示を統一。モバイル由来履歴で mode 文字列に含まれる先頭の『Week○ 曜日』表記（例: Week7 日曜）をPC表示時のみ除去し、開始時刻の後ろは学習種別（過去の間違い/不規則動詞特訓/Day学習 など）のみを表示するよう調整。learningHistory保存値（dayNumber/mode/source/device情報）、Firestore既存履歴、ポイント処理、学習種別判定ロジック本体、モバイル版履歴UIは未変更。" },
     { version: "2026/08/09 20:56", note: "PC版のみ: 苦手特訓（level-focus）の同一語句重複を解消。answer+japanese+type を共通キーとして苦手一覧と出題候補をグループ化し、同一キーの複数Day・別IDは一覧1件/セッション1出題に統一。回答結果は代表IDのみでなくグループ内の全IDへ既存ロジックを1回ずつ適用（正解/不正解時の level・successCount・learningStats・review関連更新を踏襲）し、同一IDへの二重更新を防止。通常Day学習・他特訓・モバイル版・既存データ構造・learningHistory保存仕様は未変更。" },
     { version: "2026/08/09 20:28", note: "PC版・モバイル版共通: 学習履歴のVocabulary表示不一致を修正。PC側の表示分類で mode=『単語・熟語学習』を熟語特訓へ寄せず『Vocabulary』として明示処理し、モバイル由来の既存履歴（過去データ）は書換えなしでVocabulary表示へ統一。あわせてモバイル版のtyping系Vocabulary新規保存modeを『Vocabulary』へ統一し、Speaking内Vocabularyの既存保存（mode=Vocabulary）を維持。dayNumber/時刻/問題数/端末情報/他モード分類・保存仕様は未変更。" },

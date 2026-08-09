@@ -2461,6 +2461,23 @@ function sanitizeLearningHistoryAnswerDetails(value) {
   }).filter((entry) => entry.questionId);
 }
 
+function parseLearningHistoryEarnedPoints(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+  const text = String(value ?? "").trim();
+  if (!text) return 0;
+  const numeric = Number(text);
+  if (Number.isFinite(numeric)) {
+    return Math.max(0, Math.floor(numeric));
+  }
+  const ascii = text.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 0xFEE0));
+  const match = ascii.match(/[+-]?\d+(?:\.\d+)?/);
+  if (!match) return 0;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
+}
+
 function buildLearningHistoryAnswerDetails(sessionLike, options = {}) {
   const answerHistory = Array.isArray(sessionLike?.answerHistory) ? sessionLike.answerHistory : [];
   const startIndexRaw = Number(options?.answerHistoryStartIndex);
@@ -2526,7 +2543,7 @@ function sanitizeLearningHistoryEntry(entry) {
     dayNumber: normalizedDayNumber,
     questionCount: Math.max(0, Number(entry.questionCount) || 0),
     correctCount: Math.max(0, Number(entry.correctCount) || 0),
-    earnedPoints: Math.max(0, Number(entry.earnedPoints) || 0),
+    earnedPoints: parseLearningHistoryEarnedPoints(entry.earnedPoints),
     accuracy: Math.max(0, Math.min(100, Number(entry.accuracy) || 0)),
     completedReason: typeof entry.completedReason === "string" ? entry.completedReason : "completed",
     deviceType: typeof entry.deviceType === "string" && entry.deviceType.trim().toLowerCase() === "mobile" ? "mobile" : "pc",
@@ -2957,7 +2974,7 @@ function renderLearningHistoryModeSummaryContent(summary, options = {}) {
         <div class="admin-history-mode-summary-row">
           <span>${escapeHtml(rowLabel)}</span>
           <span>${questionCount}問</span>
-          <span>+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>
+          <span>+${parseLearningHistoryEarnedPoints(entry.earnedPoints)}P</span>
           <span>${escapeHtml(formatLearningHistoryDuration(activeStudySeconds))}</span>
         </div>
       `;
@@ -2968,7 +2985,7 @@ function renderLearningHistoryModeSummaryContent(summary, options = {}) {
         <span>${escapeHtml(rowLabel)}</span>
         <span>${escapeHtml(formatLearningHistoryDuration(activeStudySeconds))}</span>
         <span>${questionCount}問</span>
-        <span>+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>
+        <span>+${parseLearningHistoryEarnedPoints(entry.earnedPoints)}P</span>
         <span>${Math.max(0, Number(entry.accuracy) || 0)}%</span>
       </div>
     `;
@@ -3006,7 +3023,7 @@ function createLearningHistoryModeTotals() {
 }
 
 function getLearningHistoryEntryEarnedPoints(entry) {
-  return Math.max(0, Math.floor(Number(entry?.earnedPoints) || 0));
+  return parseLearningHistoryEarnedPoints(entry?.earnedPoints);
 }
 
 function accumulateLearningHistoryTotals(target, entry) {
@@ -3020,7 +3037,7 @@ function accumulateLearningHistoryTotals(target, entry) {
 function finalizeLearningHistoryTotals(entry) {
   const questionCount = Math.max(0, Number(entry.questionCount) || 0);
   const correctCount = Math.max(0, Number(entry.correctCount) || 0);
-  const earnedPoints = Math.max(0, Number(entry.earnedPoints) || 0);
+  const earnedPoints = parseLearningHistoryEarnedPoints(entry.earnedPoints);
   return {
     ...entry,
     accuracy: questionCount ? Math.round((correctCount / questionCount) * 100) : 0,
@@ -3687,7 +3704,7 @@ function renderAdminLearningHistoryEntries(entries) {
               const accuracyPercent = questionCount > 0
                 ? Math.round((correctCount / questionCount) * 100)
                 : Math.max(0, Number(entry.accuracy) || 0);
-              const earnedPoints = Math.max(0, Number(entry.earnedPoints) || 0);
+              const earnedPoints = parseLearningHistoryEarnedPoints(entry.earnedPoints);
               const startClock = formatLearningHistoryStartClock(entry.startedAt);
               return `
                 <div class="admin-history-detail-item">

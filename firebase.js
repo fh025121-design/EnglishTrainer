@@ -219,6 +219,23 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
   const rawDayNumber = data.dayNumber;
   const normalizedDayNumber = rawDayNumber == null ? "" : String(rawDayNumber).trim();
   const rawAnswerDetails = Array.isArray(data.answerDetails) ? data.answerDetails : [];
+  const rawEarnedPoints = data.earnedPoints;
+  const normalizedEarnedPoints = (() => {
+    if (typeof rawEarnedPoints === "number" && Number.isFinite(rawEarnedPoints)) {
+      return Math.max(0, Math.floor(rawEarnedPoints));
+    }
+    const text = String(rawEarnedPoints ?? "").trim();
+    if (!text) return 0;
+    const numeric = Number(text);
+    if (Number.isFinite(numeric)) {
+      return Math.max(0, Math.floor(numeric));
+    }
+    const ascii = text.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 0xFEE0));
+    const match = ascii.match(/[+-]?\d+(?:\.\d+)?/);
+    if (!match) return 0;
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
+  })();
   return {
     id: String(docSnapshot?.id || ""),
     uid: String(data.uid || ""),
@@ -234,7 +251,7 @@ function normalizeLearningHistoryFirestoreEntry(docSnapshot) {
     dayNumber: normalizedDayNumber,
     questionCount: Math.max(0, Number(data.questionCount) || 0),
     correctCount: Math.max(0, Number(data.correctCount) || 0),
-    earnedPoints: Math.max(0, Number(data.earnedPoints) || 0),
+    earnedPoints: normalizedEarnedPoints,
     accuracy: Math.max(0, Math.min(100, Number(data.accuracy) || 0)),
     completedReason: String(data.completedReason || "completed"),
     answerDetails: rawAnswerDetails.map((entry, index) => ({
