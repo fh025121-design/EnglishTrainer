@@ -4642,6 +4642,7 @@ function startIrregularVerbTraining(form = "past", mode = irregularVerbSelectedM
     questions,
     currentIndex: 0,
     answered: false,
+    awaitingCorrectionRetry: false,
     wrongQuestionIds: [],
     reviewMode: false,
     reviewQuestionIds: [],
@@ -4652,16 +4653,22 @@ function startIrregularVerbTraining(form = "past", mode = irregularVerbSelectedM
   showScreen("irregularVerbPracticeScreen");
 }
 
-function speakIrregularVerbText(text) {
-  if (typeof window === "undefined" || !window.speechSynthesis || !text) return;
+function speakIrregularVerbText(text, options = {}) {
+  if (typeof window === "undefined" || !window.speechSynthesis || !text) return false;
   try {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(String(text));
     utterance.lang = "en-US";
     utterance.rate = 0.95;
+    if (typeof options.onEnd === "function") {
+      utterance.onend = () => options.onEnd();
+      utterance.onerror = () => options.onEnd();
+    }
     window.speechSynthesis.speak(utterance);
+    return true;
   } catch (error) {
     console.warn("Irregular verb speech failed", error);
+    return false;
   }
 }
 
@@ -4671,13 +4678,13 @@ function speakIrregularVerbQuestionSequence(question) {
   speakIrregularVerbText(base);
 }
 
-function speakIrregularVerbAnswerSequence(question, pastText, participleText) {
+function speakIrregularVerbAnswerSequence(question, pastText, participleText, options = {}) {
   const base = String(question?.base || "").trim();
   const past = String(pastText || "").trim();
   const participle = String(participleText || "").trim();
   const sequence = [base, past, participle].filter(Boolean).join(", ");
   if (!sequence) return;
-  speakIrregularVerbText(sequence);
+  speakIrregularVerbText(sequence, options);
 }
 
 function renderIrregularVerbQuestion() {
@@ -4718,6 +4725,7 @@ function renderIrregularVerbQuestion() {
   nextBtn.disabled = false;
   nextBtn.classList.add("hidden");
   session.answered = false;
+  session.awaitingCorrectionRetry = false;
   session.questionStartedAt = Date.now();
   window.setTimeout(() => {
     answerInput.focus();
@@ -4793,12 +4801,59 @@ function submitIrregularVerbAnswer() {
   const alternateFormHint = correctPastText && correctParticipleText && (correctPastText.includes(" / ") || correctParticipleText.includes(" / "))
     ? `<div class="hint">もう1つの形：${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>`
     : "";
+
+  if (session.awaitingCorrectionRetry) {
+    if (!isCorrect) {
+      feedbackBox.className = "feedback-box error";
+      feedbackBox.innerHTML = `<strong>❌ もう一度入力してください</strong><div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div><div class="hint">正しい形を入力すると音声が流れて次の問題へ進みます</div>`;
+      answerInput.focus();
+      answerInput.select();
+      return;
+    }
+
+    session.awaitingCorrectionRetry = false;
+    session.answered = true;
+    feedbackBox.className = "feedback-box success";
+    feedbackBox.innerHTML = `<strong>✅ 入力できました</strong><div class="answer-line">${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>${alternateFormHint}`;
+    answerInput.disabled = true;
+    answerBtn.disabled = true;
+    nextBtn.classList.add("hidden");
+
+    const typingConfig = getTypingConfig();
+    const fallbackDelayMs = Math.max(typingDelaySecToMs(typingConfig.judgementToNextDelaySec), 900);
+    let advanced = false;
+    const advanceOnce = () => {
+      if (advanced) return;
+      advanced = true;
+      moveToNextIrregularVerbQuestion();
+    };
+
+    const spoke = speakIrregularVerbAnswerSequence(currentQuestion, correctPastText, correctParticipleText, {
+      onEnd: advanceOnce
+    });
+    if (!spoke) {
+      setTimeout(advanceOnce, fallbackDelayMs);
+    }
+    return;
+  }
+
   feedbackBox.className = `feedback-box ${isCorrect ? "success" : "error"}`;
   feedbackBox.innerHTML = isCorrect
     ? `<strong>✅ 正解</strong><div class="answer-line">${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>${alternateFormHint}`
     : `<strong>❌ 不正解</strong><div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div>`;
   if (isCorrect) {
     speakIrregularVerbAnswerSequence(currentQuestion, correctPastText, correctParticipleText);
+  } else {
+    session.awaitingCorrectionRetry = true;
+    session.answered = false;
+    answerInput.value = "";
+    answerInput.disabled = false;
+    answerBtn.disabled = false;
+    feedbackBox.innerHTML = `<strong>❌ 不正解</strong><div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div><div class="hint">正しい形を入力すると音声が流れて次の問題へ進みます</div>`;
+    answerInput.focus();
+    nextBtn.classList.add("hidden");
+    saveState();
+    return;
   }
   nextBtn.classList.remove("hidden");
   nextBtn.disabled = false;
