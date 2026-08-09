@@ -583,6 +583,16 @@ p {
   line-height: 1.1;
 }
 
+.point-exchange-stat-detail {
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: clamp(11px, 0.8rem, 14px);
+  font-weight: 700;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
 .point-exchange-goal-title {
   font-size: 1.04rem;
   font-weight: 800;

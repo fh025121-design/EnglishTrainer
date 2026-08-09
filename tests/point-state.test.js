@@ -46,5 +46,31 @@ const sanitized = context.sanitizePointState({
 
 assert.strictEqual(sanitized.dailyEarnedByModeByDate["2026-08-09"].idiom, 3, "idiom points should be preserved");
 assert.strictEqual(context.inferPointModeFromLearningHistoryEntry("phrase-spiral"), "idiom", "phrase-spiral should map to the idiom point mode");
+assert.strictEqual(context.normalizeLearningMode("irregular-verb-training"), "不規則動詞特訓", "irregular-verb should normalize to a learning-history mode");
+const irregularBucket = context.getLearningHistoryModeBucket({ mode: "不規則動詞特訓" });
+assert.strictEqual(irregularBucket.key, "irregularVerb", "irregular-verb should have its own history bucket key");
+assert.strictEqual(irregularBucket.label, "不規則動詞特訓", "irregular-verb should have its own history bucket label");
+assert.strictEqual(
+  context.formatTrainingDailyPointSummary(11, {
+    preposition: 2,
+    response: 1,
+    idiom: 3,
+    challenge: 4,
+    "irregular-verb": 1
+  }),
+  "本日の累計11P（前置詞2P　応答文1P　熟語3P　不規則動詞1P　過去問4P）",
+  "daily point summary should show each item separately"
+);
+assert.strictEqual(
+  context.formatTrainingDailyPointBreakdown({
+    preposition: 2,
+    response: 1,
+    idiom: 3,
+    challenge: 4,
+    "irregular-verb": 1
+  }),
+  "前置詞2P　応答文1P　熟語3P　不規則動詞1P　過去問4P",
+  "exchange page breakdown should show each training item separately"
+);
 
 console.log("point-state tests passed");

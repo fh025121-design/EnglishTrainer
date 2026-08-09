@@ -2122,7 +2122,8 @@ const LEARNING_MODE = Object.freeze({
   EXTRA_TRAINING: "extraTraining",
   REVIEW: "過去の間違い",
   PREPOSITION: "前置詞特訓",
-  RESPONSE: "応答文特訓"
+  RESPONSE: "応答文特訓",
+  IRREGULAR_VERB: "不規則動詞特訓"
 });
 
 const VALID_LEARNING_MODE_SET = new Set(Object.values(LEARNING_MODE));
@@ -2142,6 +2143,8 @@ function normalizeLearningMode(mode) {
     normalizedMode = LEARNING_MODE.PREPOSITION;
   } else if (rawMode === "response" || rawMode === "response-training" || rawMode === LEARNING_MODE.RESPONSE) {
     normalizedMode = LEARNING_MODE.RESPONSE;
+  } else if (rawMode === "irregular-verb" || rawMode === "irregular-verb-training" || rawMode === LEARNING_MODE.IRREGULAR_VERB) {
+    normalizedMode = LEARNING_MODE.IRREGULAR_VERB;
   }
 
   if (!VALID_LEARNING_MODE_SET.has(normalizedMode)) {
@@ -2679,6 +2682,7 @@ function resolvePcLearningHistoryCategory(modeLike, entryLike = null) {
   if (mode === "過去の間違い" || lowerMode === "review" || lowerMode === "challenge") return "過去の間違い";
   if (mode === "前置詞特訓" || lowerMode === "preposition" || lowerMode === "preposition-training") return "前置詞特訓";
   if (mode === "応答文特訓" || lowerMode === "response" || lowerMode === "response-training") return "応答文特訓";
+  if (mode === "不規則動詞特訓" || lowerMode === "irregular-verb" || lowerMode === "irregular-verb-training") return "不規則動詞特訓";
   if (mode.includes("熟語") || lowerMode.includes("phrase") || lowerMode.includes("idiom")) return "熟語特訓";
   if (mode.includes("単語")) return "単語特訓";
   return mode || "不明";
@@ -2737,6 +2741,9 @@ function getLearningHistoryModeBucket(modeOrEntry) {
   if (normalized === "熟語特訓") {
     return { key: "phrase", label: "熟語特訓" };
   }
+  if (normalized === "不規則動詞特訓") {
+    return { key: "irregularVerb", label: "不規則動詞特訓" };
+  }
   if (normalized === "過去の間違い") {
     return { key: "review", label: "過去の間違い" };
   }
@@ -2746,14 +2753,14 @@ function getLearningHistoryModeBucket(modeOrEntry) {
 
 function getLearningHistoryModeGroup(mode) {
   const bucket = getLearningHistoryModeBucket(mode);
-  if (bucket.key === "day" || bucket.key === "extra" || bucket.key === "word" || bucket.key === "phrase" || bucket.key === "review") {
+  if (bucket.key === "day" || bucket.key === "extra" || bucket.key === "word" || bucket.key === "phrase" || bucket.key === "irregularVerb" || bucket.key === "review") {
     return bucket.key;
   }
   return "other";
 }
 
 function getLearningHistoryModeSummaryOrder() {
-  return ["day", "extra", "phrase", "review", "word"];
+  return ["day", "extra", "phrase", "irregularVerb", "review", "word"];
 }
 
 function getLearningHistoryModeSummaryEntries(summary) {
@@ -2861,6 +2868,7 @@ function createLearningHistoryModeTotals() {
     extra: { label: "追加特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
     word: { label: "単語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
     phrase: { label: "熟語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
+    irregularVerb: { label: "不規則動詞特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 },
     review: { label: "過去の間違い", activeStudySeconds: 0, questionCount: 0, correctCount: 0, earnedPoints: 0 }
   };
 }
@@ -5789,6 +5797,37 @@ function getTrainingCompletionModeLabel(mode) {
   return "特訓";
 }
 
+function getTrainingDailyPointModeRow(pointState, todayKey) {
+  return pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
+    ? pointState.dailyEarnedByModeByDate[todayKey]
+    : { preposition: 0, response: 0, idiom: 0, challenge: 0, "irregular-verb": 0 };
+}
+
+function formatTrainingDailyPointSummary(todayTotal, todayModeRow) {
+  const breakdown = [
+    ["前置詞", todayModeRow.preposition],
+    ["応答文", todayModeRow.response],
+    ["熟語", todayModeRow.idiom],
+    ["不規則動詞", todayModeRow["irregular-verb"]],
+    ["過去問", todayModeRow.challenge]
+  ]
+    .map(([label, value]) => `${label}${formatPointValue(value)}`)
+    .join("　");
+  return `本日の累計${formatPointValue(todayTotal)}（${breakdown}）`;
+}
+
+function formatTrainingDailyPointBreakdown(todayModeRow) {
+  return [
+    ["前置詞", todayModeRow.preposition],
+    ["応答文", todayModeRow.response],
+    ["熟語", todayModeRow.idiom],
+    ["不規則動詞", todayModeRow["irregular-verb"]],
+    ["過去問", todayModeRow.challenge]
+  ]
+    .map(([label, value]) => `${label}${formatPointValue(value)}`)
+    .join("　");
+}
+
 function openTrainingCompleteScreen(options = {}) {
   const titleText = document.getElementById("trainingCompleteTitleText");
   const unlockText = document.getElementById("trainingCompleteUnlockText");
@@ -5829,16 +5868,21 @@ function openTrainingCompleteScreen(options = {}) {
   hydratePointDaySnapshots(pointState);
   const todayKey = getPointTodayKey();
   const todayTotal = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
-  const todayModeRow = pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
-    ? pointState.dailyEarnedByModeByDate[todayKey]
-    : { preposition: 0, response: 0, challenge: 0, "irregular-verb": 0 };
+  const todayModeRow = getTrainingDailyPointModeRow(pointState, todayKey);
   const prepositionEarned = Math.max(0, Number(todayModeRow.preposition) || 0);
   const responseEarned = Math.max(0, Number(todayModeRow.response) || 0);
   const challengeEarned = Math.max(0, Number(todayModeRow.challenge) || 0);
   const irregularVerbEarned = Math.max(0, Number(todayModeRow["irregular-verb"]) || 0);
+  const idiomEarned = Math.max(0, Number(todayModeRow.idiom) || 0);
   const totalEarned = Math.max(0, Number(pointState.totalEarned) || 0);
 
-  dailySummaryText.textContent = `本日の累計${formatPointValue(todayTotal)}（前置詞${formatPointValue(prepositionEarned)}　応答文${formatPointValue(responseEarned)}　不規則動詞${formatPointValue(irregularVerbEarned)}　過去問${formatPointValue(challengeEarned)}）`;
+  dailySummaryText.textContent = formatTrainingDailyPointSummary(todayTotal, {
+    preposition: prepositionEarned,
+    response: responseEarned,
+    idiom: idiomEarned,
+    challenge: challengeEarned,
+    "irregular-verb": irregularVerbEarned
+  });
   lifetimeSummaryText.textContent = `通算累計${formatPointValue(totalEarned)}`;
   const hasEarnedPointsNow = earnedPoints > 0;
   dailySummaryText.classList.toggle("hidden", !hasEarnedPointsNow);
@@ -5944,7 +5988,7 @@ function migratePointDayKeyRow(pointState, jstDayKey, offsetDays) {
   if (legacyModeRow && typeof legacyModeRow === "object") {
     const targetModeRow = pointState.dailyEarnedByModeByDate?.[jstDayKey] && typeof pointState.dailyEarnedByModeByDate[jstDayKey] === "object"
       ? pointState.dailyEarnedByModeByDate[jstDayKey]
-      : { preposition: 0, response: 0, challenge: 0, "irregular-verb": 0 };
+      : { preposition: 0, response: 0, idiom: 0, challenge: 0, "irregular-verb": 0 };
     targetModeRow.preposition = Math.max(0, Number(targetModeRow.preposition) || 0) + Math.max(0, Number(legacyModeRow.preposition) || 0);
     targetModeRow.response = Math.max(0, Number(targetModeRow.response) || 0) + Math.max(0, Number(legacyModeRow.response) || 0);
     targetModeRow.challenge = Math.max(0, Number(targetModeRow.challenge) || 0) + Math.max(0, Number(legacyModeRow.challenge) || 0);
@@ -6556,7 +6600,7 @@ function awardPointsForTrainingMode(mode) {
   pointState.dailyEarnedByDate[todayKey] = todayEarned + earned;
   const todayModeRow = pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
     ? pointState.dailyEarnedByModeByDate[todayKey]
-    : { preposition: 0, response: 0, challenge: 0, "irregular-verb": 0 };
+    : { preposition: 0, response: 0, idiom: 0, challenge: 0, "irregular-verb": 0 };
   todayModeRow[modeKey] = modeDailyEarned + earned;
   pointState.dailyEarnedByModeByDate = pointState.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object"
     ? pointState.dailyEarnedByModeByDate
@@ -6775,10 +6819,11 @@ function renderPointExchangeGoal(pointState) {
 function renderPointExchangeScreen() {
   const balanceText = document.getElementById("pointExchangeBalanceText");
   const todayEarnedText = document.getElementById("pointExchangeTodayEarnedText");
+  const todayBreakdownText = document.getElementById("pointExchangeTodayBreakdownText");
   const previousEarnedText = document.getElementById("pointExchangePreviousEarnedText");
   const totalEarnedText = document.getElementById("pointExchangeTotalEarnedText");
   const itemList = document.getElementById("pointExchangeItemList");
-  if (!balanceText || !todayEarnedText || !previousEarnedText || !totalEarnedText || !itemList) return;
+  if (!balanceText || !todayEarnedText || !todayBreakdownText || !previousEarnedText || !totalEarnedText || !itemList) return;
 
   ensurePointStateFromFirestoreIfMissing().then((didBootstrap) => {
     if (didBootstrap) {
@@ -6788,8 +6833,11 @@ function renderPointExchangeScreen() {
 
   const pointState = getPointState();
   hydratePointDaySnapshots(pointState);
+  const todayKey = getPointTodayKey();
+  const todayModeRow = getTrainingDailyPointModeRow(pointState, todayKey);
   balanceText.textContent = formatPointValue(pointState.balance);
   todayEarnedText.textContent = formatPointValue(pointState.todayEarned);
+  todayBreakdownText.textContent = formatTrainingDailyPointBreakdown(todayModeRow);
   previousEarnedText.textContent = formatPointValue(pointState.previousDayEarned);
   totalEarnedText.textContent = formatPointValue(pointState.totalEarned);
   renderPointExchangeGoal(pointState);
