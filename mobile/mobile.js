@@ -5356,6 +5356,98 @@
     saveSpeakingReviewStats();
   }
 
+  function resolveSpeakingConversationRefForReviewProgress(conversationId, context = null) {
+    const normalizedConversationId = String(conversationId || "").trim();
+    if (!normalizedConversationId) return null;
+
+    const contextWeekId = String(context?.weekId || "").trim();
+    const contextDayKey = String(context?.dayKey || "").trim();
+    if (contextWeekId && contextDayKey) {
+      const contextWeek = getSpeakingWeek(contextWeekId);
+      const contextConversation = getSpeakingConversationById(contextWeek, normalizedConversationId);
+      if (contextWeek && contextConversation && String(contextConversation?.date || "").trim() === contextDayKey) {
+        return {
+          weekId: contextWeekId,
+          dayKey: contextDayKey,
+          conversationId: normalizedConversationId
+        };
+      }
+    }
+
+    const allRefs = getAllSpeakingConversationRefs();
+    return allRefs.find((ref) => ref.conversationId === normalizedConversationId) || null;
+  }
+
+  function reflectReviewConversationInSpeakingDayProgress(conversationId, context = null) {
+    const ref = resolveSpeakingConversationRefForReviewProgress(conversationId, context);
+    if (!ref) return;
+
+    const week = getSpeakingWeek(ref.weekId);
+    if (!week) return;
+    const conversation = getSpeakingConversationById(week, ref.conversationId);
+    if (!conversation) return;
+    const dayKey = String(conversation?.date || "").trim();
+    if (!dayKey || dayKey !== String(ref.dayKey || "").trim()) return;
+
+    const storageId = buildSpeakingDayProgressId(ref.weekId, dayKey);
+    if (!storageId) return;
+
+    const existingProgress = getStoredSpeakingDayProgress(ref.weekId, dayKey);
+    const baseProgress = existingProgress
+      ? sanitizeSpeakingProgress(existingProgress)
+      : createSpeakingProgress(ref.weekId, [dayKey]);
+    if (!baseProgress) return;
+
+    baseProgress.dayKey = dayKey;
+    const currentSpokenCount = getSpeakingConversationSpokenCount(baseProgress, ref.conversationId);
+    const targetRounds = getSpeakingTargetRounds(baseProgress);
+    if (currentSpokenCount >= targetRounds) return;
+
+    const ensureRoundProgress = () => {
+      if (!Array.isArray(baseProgress.completedConversationIds)) {
+        baseProgress.completedConversationIds = [];
+      }
+
+      if (!baseProgress.completedConversationIds.includes(ref.conversationId)) {
+        baseProgress.completedConversationIds.push(ref.conversationId);
+        return true;
+      }
+
+      const dayConversationIds = getSpeakingPracticeConversationIds(week, [dayKey]);
+      const requiredConversationIds = dayConversationIds.length
+        ? dayConversationIds
+        : [ref.conversationId];
+      const isCurrentRoundComplete = requiredConversationIds.every(
+        (conversationIdInRound) => baseProgress.completedConversationIds.includes(conversationIdInRound)
+      );
+      if (!isCurrentRoundComplete) return false;
+
+      baseProgress.completedRounds = Math.min(
+        targetRounds,
+        Math.max(0, Number(baseProgress.completedRounds) || 0) + 1
+      );
+      if (baseProgress.completedRounds >= targetRounds) {
+        baseProgress.completedConversationIds = [];
+        return true;
+      }
+
+      baseProgress.completedConversationIds = [ref.conversationId];
+      return true;
+    };
+
+    const didReflect = ensureRoundProgress();
+    if (!didReflect) return;
+
+    baseProgress.updatedAt = Date.now();
+    state.speakingDayProgressMap[storageId] = sanitizeSpeakingProgress(baseProgress);
+    persistSpeakingProgressStore();
+  }
+
+  function recordSpeakingReviewConversationCompletion(conversationId, context = null) {
+    recordSpeakingReviewConversationSpoken(conversationId);
+    reflectReviewConversationInSpeakingDayProgress(conversationId, context);
+  }
+
   function resetSpeakingHintState() {
     state.speakingHintVisible = false;
     state.speakingHintStep = 0;
@@ -7991,7 +8083,7 @@
       const item = getCurrentReviewQueueItem();
       if (!session || !item) return;
 
-      recordSpeakingReviewConversationSpoken(item.conversationId);
+      recordSpeakingReviewConversationCompletion(item.conversationId, item);
       incrementReviewSessionPendingPointCount(session);
       continueAfterReviewConversationAdvance(
         session,
@@ -8568,7 +8660,7 @@
         return;
       }
 
-      recordSpeakingReviewConversationSpoken(item.conversationId);
+      recordSpeakingReviewConversationCompletion(item.conversationId, item);
       incrementReviewSessionPendingPointCount(session);
       continueAfterReviewConversationAdvance(
         session,

@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/10 02:48", note: "モバイル版のみ: Speaking『復習』で会話を最後まで完了した際、既存の復習実績（speakingReviewStatsMap）更新に加えて、同じ conversationId の所属 Week/曜日 を既存会話データから特定し、Week側進捗（speakingDayProgressMap / englishTrainerSpeakingProgress）にも1会話分を反映する接続を追加。『○周目』表示計算式・表示文言・復習選出ロジック・20組上限・ポイント処理・教材データ・PC版は未変更。過去復習実績の遡及移行は行わず、修正後の新規完了分のみ反映。" },
     { version: "2026/08/09 22:19", note: "モバイル版のみ: 学習履歴の earnedPoints 表示不整合を修正。履歴エントリの sanitize/finalize/表示/Firestore読込で earnedPoints を保持し、数値・数値文字列・'+12P'・全角数字を安全に正規化して +xP 表示できるよう統一。さらに Firestore 保存ペイロードへ earnedPoints を追加し、復習セッションはポイント確定後の値を履歴へ反映するよう調整。ポイント付与ルール・日次上限・残高同期・deviceType/deviceId/deviceName・Vocabulary/語順の履歴保存導線は未変更。" },
     { version: "2026/08/09 22:13", note: "PC版のみ: スマホブラウザでPC版サイトを表示した際、学習履歴の日別詳細で earnedPoints が文字列形式（例: '+12P'）でも数値として解釈して表示できるよう補正。表示時は保存済み earnedPoints を優先し、数値/数値文字列/全角数字混在を安全に正規化して '+xP' 表示へ統一。earnedPoints 未保存の旧履歴のみ +0P 扱い。learningHistory保存処理・Firestoreデータ・ポイント付与ルール・モバイル版サイトUIは未変更。№4-18-51 の『Week+曜日をPCで非表示』仕様は維持。" },
     { version: "2026/08/09 21:29", note: "PC版のみ: 学習履歴（日別詳細）の表示を統一。モバイル由来履歴で mode 文字列に含まれる先頭の『Week○ 曜日』表記（例: Week7 日曜）をPC表示時のみ除去し、開始時刻の後ろは学習種別（過去の間違い/不規則動詞特訓/Day学習 など）のみを表示するよう調整。learningHistory保存値（dayNumber/mode/source/device情報）、Firestore既存履歴、ポイント処理、学習種別判定ロジック本体、モバイル版履歴UIは未変更。" },
