@@ -6,6 +6,8 @@ const PC_BROWSER_DEVICE_ID_STORAGE_KEY = "english-trainer-pc-device-id-v1";
 const PC_BROWSER_DEVICE_NAME_STORAGE_KEY = "english-trainer-pc-device-name-v1";
 const PC_BROWSER_DEVICE_NAME_MAP_STORAGE_KEY = "english-trainer-pc-device-name-map-v1";
 const PC_BROWSER_DEVICE_NAME_FALLBACK = "端末未設定";
+const LEARNING_HISTORY_FAMILY_ID = "inoue";
+const LEARNING_HISTORY_SON_UID_CACHE_KEY = "english-trainer-history-son-uid-v1";
 const ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY = "all";
 const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY = "legacy:unidentified";
 const ADMIN_HISTORY_NAMED_DEVICE_FILTER_PREFIX = "name:";
@@ -387,6 +389,91 @@ function getPcBrowserDeviceName() {
   return getPcBrowserDeviceNameRaw() || PC_BROWSER_DEVICE_NAME_FALLBACK;
 }
 
+function readLearningHistoryCachedSonUid() {
+  try {
+    return String(localStorage.getItem(LEARNING_HISTORY_SON_UID_CACHE_KEY) || "").trim();
+  } catch (_error) {
+    return "";
+  }
+}
+
+function writeLearningHistoryCachedSonUid(value) {
+  const normalized = String(value || "").trim();
+  learningHistoryCachedSonUid = normalized;
+  try {
+    if (normalized) {
+      localStorage.setItem(LEARNING_HISTORY_SON_UID_CACHE_KEY, normalized);
+    } else {
+      localStorage.removeItem(LEARNING_HISTORY_SON_UID_CACHE_KEY);
+    }
+  } catch (_error) {
+    // Ignore persistence failures.
+  }
+}
+
+function stopLearningHistoryFamilyWatch() {
+  if (typeof learningHistoryFamilyUnsubscribe === "function") {
+    learningHistoryFamilyUnsubscribe();
+  }
+  learningHistoryFamilyUnsubscribe = null;
+}
+
+function startLearningHistoryFamilyWatch() {
+  const watchFn = window.watchFamilyDocument;
+  const currentUid = String(getCurrentPcFirebaseUser()?.uid || "").trim();
+  stopLearningHistoryFamilyWatch();
+  if (!currentUid || typeof watchFn !== "function") {
+    return;
+  }
+  learningHistoryFamilyUnsubscribe = watchFn(LEARNING_HISTORY_FAMILY_ID, {
+    onUpdate: (family) => {
+      const sonUid = String(family?.children?.son?.uid || "").trim();
+      writeLearningHistoryCachedSonUid(sonUid);
+    },
+    onError: () => {
+      // Keep existing cache when watch fails.
+    }
+  });
+}
+
+function bindLearningHistoryFamilyWatchAuthStateListener() {
+  if (document.body?.dataset.learningHistoryFamilyWatchBound === "true") return;
+  document.addEventListener("pc-firebase-auth-state", () => {
+    startLearningHistoryFamilyWatch();
+  });
+  if (document.body) {
+    document.body.dataset.learningHistoryFamilyWatchBound = "true";
+  }
+}
+
+function isCurrentSonLoginForLearningHistory() {
+  const currentUid = String(getCurrentPcFirebaseUser()?.uid || "").trim();
+  if (!currentUid) return false;
+  if (!learningHistoryCachedSonUid) {
+    learningHistoryCachedSonUid = readLearningHistoryCachedSonUid();
+  }
+  return Boolean(learningHistoryCachedSonUid && currentUid === learningHistoryCachedSonUid);
+}
+
+function getPcLearningHistoryDeviceName() {
+  if (isCurrentSonLoginForLearningHistory()) {
+    return "長男PC";
+  }
+  const normalized = normalizeDeviceNameForHistory(getPcBrowserDeviceNameRaw());
+  if (normalized && normalized !== "スマホPC版") {
+    return normalized;
+  }
+  return "その他";
+}
+
+function buildPcLearningHistoryDeviceInfo() {
+  return {
+    deviceType: "pc",
+    deviceId: String(getPcBrowserDeviceId() || "").trim(),
+    deviceName: sanitizePcBrowserDeviceName(getPcLearningHistoryDeviceName())
+  };
+}
+
 function setPcBrowserDeviceName(value) {
   const normalized = normalizeDeviceNameForHistory(value);
   const deviceId = getPcBrowserDeviceId();
@@ -586,6 +673,8 @@ let homeHistoryFirestoreUnsubscribe = null;
 let homeHistoryFirestoreEntries = [];
 let homeHistoryFirestoreLoaded = false;
 let homeHistoryFirestoreLoading = false;
+let learningHistoryFamilyUnsubscribe = null;
+let learningHistoryCachedSonUid = "";
 window.AdminLearningHistoryAccessState = window.AdminLearningHistoryAccessState || {
   canSelectFamily: false,
   currentUid: ""
@@ -3660,9 +3749,13 @@ function appendLearningHistoryEntry(entry) {
   if (!sanitized) {
     return;
   }
+  const deviceInfo = buildPcLearningHistoryDeviceInfo();
   const normalizedEntry = {
     ...sanitized,
-    mode: normalizeLearningMode(sanitized.mode)
+    mode: normalizeLearningMode(sanitized.mode),
+    deviceType: deviceInfo.deviceType,
+    deviceId: String(deviceInfo.deviceId || "").trim(),
+    deviceName: sanitizePcBrowserDeviceName(deviceInfo.deviceName)
   };
   if (Math.max(0, Number(sanitized.questionCount) || 0) === 0 || Math.max(0, Number(sanitized.activeStudySeconds) || 0) === 0) {
     console.log("[LearningHistoryDebug] appendLearningHistoryEntry stopped", {
@@ -13101,6 +13194,9 @@ let state = loadState();
 
 function init() {
   ensurePcBrowserDeviceIdentity();
+  learningHistoryCachedSonUid = readLearningHistoryCachedSonUid();
+  bindLearningHistoryFamilyWatchAuthStateListener();
+  startLearningHistoryFamilyWatch();
   applyDesktopResponsiveScale();
   const settingsVersionText = document.getElementById("settingsVersionText");
   if (settingsVersionText) {

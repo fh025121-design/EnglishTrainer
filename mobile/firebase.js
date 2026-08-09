@@ -147,6 +147,10 @@ async function saveMobileLearningHistoryToFirestore(historyEntry) {
     return false;
   }
 
+  const normalizedDeviceType = String(historyEntry.deviceType || "").trim().toLowerCase() === "pc" ? "pc" : "mobile";
+  const normalizedDeviceId = String(historyEntry.deviceId || "").trim();
+  const normalizedDeviceName = String(historyEntry.deviceName || "").trim();
+
   const payload = {
     uid: String(user.uid || ""),
     email: String(user.email || ""),
@@ -162,7 +166,9 @@ async function saveMobileLearningHistoryToFirestore(historyEntry) {
     completedReason: String(historyEntry.completedReason || "completed"),
     ticketEarned: Math.max(0, Number(historyEntry?.ticket?.earned?.count) || 0),
     ticketUsed: Math.max(0, Number(historyEntry?.ticket?.used?.count) || 0),
-    deviceType: "mobile",
+    deviceType: normalizedDeviceType,
+    deviceId: normalizedDeviceId,
+    deviceName: normalizedDeviceName,
     createdAt: serverTimestamp()
   };
 

@@ -3,6 +3,11 @@
   const MOBILE_LEARNING_HISTORY_MAX_ENTRIES = 1000;
   const MOBILE_ADMIN_LEARNING_HISTORY_PIN = "12345";
   const MOBILE_ADMIN_FAMILY_ID = "inoue";
+  const MOBILE_DEVICE_ID_STORAGE_KEY = "english-trainer-mobile-device-id-v1";
+  const MOBILE_FAMILY_SON_UID_CACHE_KEY = "english-trainer-mobile-son-uid-v1";
+  const MOBILE_PENDING_LEARNING_HISTORY_STORAGE_KEY = "english-trainer-mobile-pending-learning-history-v1";
+  const MOBILE_LEARNING_HISTORY_DEVICE_NAME_SON = "長男モバイル";
+  const MOBILE_LEARNING_HISTORY_DEVICE_NAME_OTHER = "その他";
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
   const MOBILE_WORD_ORDER_STATS_STORAGE_KEY = "englishTrainerMobileWordOrderStats_v1";
   const SPEAKING_PROGRESS_KEY = "englishTrainerSpeakingProgress";
@@ -2155,6 +2160,11 @@
   let mobileAdminLearningHistorySelectedChildUid = "";
   let mobileAdminLearningHistorySelectedDeviceType = "pc";
   let mobileAdminLearningHistorySourceEntries = [];
+  let mobileRuntimeDeviceId = "";
+  let mobileCachedSonUid = "";
+  let mobileFamilyIdentityRefreshPromise = null;
+  let mobilePendingLearningHistoryEntries = [];
+  let mobileLearningHistoryFlushPromise = null;
   let mobileFirestoreSdkPromise = null;
   let mobileAuthLastStatus = "pending";
   let mobileAuthListenerBound = false;
@@ -2288,6 +2298,297 @@
     return weekId ? `${weekId} ${dayKey}` : dayKey;
   }
 
+  function buildMobileBrowserDeviceId() {
+    try {
+      if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+      }
+    } catch (_error) {
+      // Fallback below.
+    }
+    const randomPart = Math.random().toString(36).slice(2, 10);
+    return `mobile-${Date.now().toString(36)}-${randomPart}`;
+  }
+
+  function getMobileBrowserDeviceId() {
+    try {
+      const stored = String(window.localStorage.getItem(MOBILE_DEVICE_ID_STORAGE_KEY) || "").trim();
+      if (stored) {
+        mobileRuntimeDeviceId = stored;
+        return stored;
+      }
+      const created = buildMobileBrowserDeviceId();
+      mobileRuntimeDeviceId = created;
+      window.localStorage.setItem(MOBILE_DEVICE_ID_STORAGE_KEY, created);
+      return created;
+    } catch (_error) {
+      if (!mobileRuntimeDeviceId) {
+        mobileRuntimeDeviceId = buildMobileBrowserDeviceId();
+      }
+      return mobileRuntimeDeviceId;
+    }
+  }
+
+  function sanitizeMobileLearningHistoryDeviceName(value) {
+    const text = String(value || "").trim().replace(/\s+/g, " ");
+    if (!text) return "";
+    return text.slice(0, 40);
+  }
+
+  function readMobileCachedSonUid() {
+    try {
+      return String(window.localStorage.getItem(MOBILE_FAMILY_SON_UID_CACHE_KEY) || "").trim();
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function writeMobileCachedSonUid(value) {
+    const normalized = String(value || "").trim();
+    mobileCachedSonUid = normalized;
+    try {
+      if (normalized) {
+        window.localStorage.setItem(MOBILE_FAMILY_SON_UID_CACHE_KEY, normalized);
+      } else {
+        window.localStorage.removeItem(MOBILE_FAMILY_SON_UID_CACHE_KEY);
+      }
+    } catch (_error) {
+      // Ignore persistence failures.
+    }
+  }
+
+  async function refreshMobileFamilyIdentityCache() {
+    if (mobileFamilyIdentityRefreshPromise) {
+      return mobileFamilyIdentityRefreshPromise;
+    }
+    mobileFamilyIdentityRefreshPromise = (async () => {
+      const currentUser = typeof window.getMobileFirebaseCurrentUser === "function"
+        ? window.getMobileFirebaseCurrentUser()
+        : (window.MobileFirebase?.auth?.currentUser || null);
+      const currentUid = String(currentUser?.uid || "").trim();
+      const firestore = window.MobileFirebase?.firestore || null;
+      if (!currentUid || !firestore) {
+        return false;
+      }
+      try {
+        const sdk = await getMobileFirestoreSdk();
+        const familyDoc = await sdk.getDoc(sdk.doc(firestore, "families", MOBILE_ADMIN_FAMILY_ID));
+        const sonUid = familyDoc.exists() ? String(familyDoc.data()?.children?.son?.uid || "").trim() : "";
+        writeMobileCachedSonUid(sonUid);
+        return true;
+      } catch (_error) {
+        return false;
+      }
+    })();
+    try {
+      return await mobileFamilyIdentityRefreshPromise;
+    } finally {
+      mobileFamilyIdentityRefreshPromise = null;
+    }
+  }
+
+  function isCurrentSonLoginForMobileLearningHistory() {
+    const currentUser = typeof window.getMobileFirebaseCurrentUser === "function"
+      ? window.getMobileFirebaseCurrentUser()
+      : (window.MobileFirebase?.auth?.currentUser || null);
+    const currentUid = String(currentUser?.uid || "").trim();
+    if (!currentUid) return false;
+    if (!mobileCachedSonUid) {
+      mobileCachedSonUid = readMobileCachedSonUid();
+    }
+    return Boolean(mobileCachedSonUid && currentUid === mobileCachedSonUid);
+  }
+
+  function getMobileLearningHistoryDeviceName() {
+    if (isCurrentSonLoginForMobileLearningHistory()) {
+      return MOBILE_LEARNING_HISTORY_DEVICE_NAME_SON;
+    }
+    return MOBILE_LEARNING_HISTORY_DEVICE_NAME_OTHER;
+  }
+
+  function buildMobileLearningHistoryDeviceInfo() {
+    return {
+      deviceType: "mobile",
+      deviceId: String(getMobileBrowserDeviceId() || "").trim(),
+      deviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+    };
+  }
+
+  function buildMobileLearningHistoryEntryIdentity(entry) {
+    const source = {
+      startedAt: Number(entry?.startedAt) || 0,
+      endedAt: Number(entry?.endedAt) || 0,
+      mode: String(entry?.mode || ""),
+      dayNumber: String(entry?.dayNumber || ""),
+      questionCount: Math.max(0, Number(entry?.questionCount) || 0),
+      correctCount: Math.max(0, Number(entry?.correctCount) || 0),
+      completedReason: String(entry?.completedReason || "completed")
+    };
+    return JSON.stringify(source);
+  }
+
+  function loadMobilePendingLearningHistoryEntries() {
+    try {
+      const raw = window.localStorage.getItem(MOBILE_PENDING_LEARNING_HISTORY_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map(sanitizeMobileLearningHistoryEntry).filter((entry) => {
+        if (!entry) return false;
+        return Math.max(0, Number(entry.questionCount) || 0) > 0;
+      });
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function saveMobilePendingLearningHistoryEntries(entries) {
+    const sanitized = Array.isArray(entries)
+      ? entries.map(sanitizeMobileLearningHistoryEntry).filter((entry) => {
+        if (!entry) return false;
+        return Math.max(0, Number(entry.questionCount) || 0) > 0;
+      })
+      : [];
+    if (!sanitized.length) {
+      mobilePendingLearningHistoryEntries = [];
+      window.localStorage.removeItem(MOBILE_PENDING_LEARNING_HISTORY_STORAGE_KEY);
+      return;
+    }
+    mobilePendingLearningHistoryEntries = sanitized.slice(-MOBILE_LEARNING_HISTORY_MAX_ENTRIES);
+    window.localStorage.setItem(
+      MOBILE_PENDING_LEARNING_HISTORY_STORAGE_KEY,
+      JSON.stringify(mobilePendingLearningHistoryEntries)
+    );
+  }
+
+  function enqueueMobilePendingLearningHistoryEntry(entry) {
+    const sanitized = sanitizeMobileLearningHistoryEntry(entry);
+    if (!sanitized) return;
+    if (Math.max(0, Number(sanitized.questionCount) || 0) === 0) {
+      return;
+    }
+    const next = Array.isArray(mobilePendingLearningHistoryEntries)
+      ? mobilePendingLearningHistoryEntries.slice()
+      : [];
+    const targetIdentity = buildMobileLearningHistoryEntryIdentity(sanitized);
+    const exists = next.some((item) => buildMobileLearningHistoryEntryIdentity(item) === targetIdentity);
+    if (!exists) {
+      next.push(sanitized);
+    }
+    saveMobilePendingLearningHistoryEntries(next);
+  }
+
+  async function resolveMobileLearningHistoryDeviceInfoForSave() {
+    const currentUser = typeof window.getMobileFirebaseCurrentUser === "function"
+      ? window.getMobileFirebaseCurrentUser()
+      : (window.MobileFirebase?.auth?.currentUser || null);
+    const currentUid = String(currentUser?.uid || "").trim();
+    const baseInfo = {
+      deviceType: "mobile",
+      deviceId: String(getMobileBrowserDeviceId() || "").trim(),
+      deviceName: ""
+    };
+    if (!currentUid) {
+      return { resolved: false, deviceInfo: baseInfo };
+    }
+
+    if (!mobileCachedSonUid) {
+      mobileCachedSonUid = readMobileCachedSonUid();
+    }
+    if (!mobileCachedSonUid) {
+      await refreshMobileFamilyIdentityCache().catch(() => false);
+      if (!mobileCachedSonUid) {
+        mobileCachedSonUid = readMobileCachedSonUid();
+      }
+    }
+    if (!mobileCachedSonUid) {
+      return { resolved: false, deviceInfo: baseInfo };
+    }
+
+    const isSon = currentUid === mobileCachedSonUid;
+    return {
+      resolved: true,
+      deviceInfo: {
+        ...baseInfo,
+        deviceName: sanitizeMobileLearningHistoryDeviceName(
+          isSon ? MOBILE_LEARNING_HISTORY_DEVICE_NAME_SON : MOBILE_LEARNING_HISTORY_DEVICE_NAME_OTHER
+        )
+      }
+    };
+  }
+
+  function normalizeMobileLearningHistoryEntryForSave(entry, deviceInfo) {
+    const sanitized = sanitizeMobileLearningHistoryEntry(entry);
+    if (!sanitized) return null;
+    return {
+      ...sanitized,
+      deviceType: "mobile",
+      deviceId: String(deviceInfo?.deviceId || getMobileBrowserDeviceId() || "").trim(),
+      deviceName: sanitizeMobileLearningHistoryDeviceName(deviceInfo?.deviceName)
+    };
+  }
+
+  function saveResolvedMobileLearningHistoryEntry(entry) {
+    const normalizedEntry = sanitizeMobileLearningHistoryEntry(entry);
+    if (!normalizedEntry) return;
+    const identity = buildMobileLearningHistoryEntryIdentity(normalizedEntry);
+    const current = loadMobileLearningHistoryEntries();
+    const exists = current.some((item) => buildMobileLearningHistoryEntryIdentity(item) === identity);
+    if (!exists) {
+      current.push(normalizedEntry);
+      saveMobileLearningHistoryEntries(current);
+    }
+
+    const saveToFirestore = window.saveMobileLearningHistoryToFirestore;
+    if (typeof saveToFirestore === "function") {
+      Promise.resolve(saveToFirestore(normalizedEntry)).catch((error) => {
+        console.error("Failed to save mobile learning history to Firestore", error);
+      });
+    }
+  }
+
+  async function flushMobilePendingLearningHistoryEntries() {
+    if (mobileLearningHistoryFlushPromise) {
+      return mobileLearningHistoryFlushPromise;
+    }
+
+    mobileLearningHistoryFlushPromise = (async () => {
+      if (!Array.isArray(mobilePendingLearningHistoryEntries) || !mobilePendingLearningHistoryEntries.length) {
+        mobilePendingLearningHistoryEntries = loadMobilePendingLearningHistoryEntries();
+      }
+      if (!mobilePendingLearningHistoryEntries.length) {
+        saveMobilePendingLearningHistoryEntries([]);
+        return 0;
+      }
+
+      const pending = mobilePendingLearningHistoryEntries.slice();
+      const remaining = [];
+      let savedCount = 0;
+      for (const entry of pending) {
+        const resolved = await resolveMobileLearningHistoryDeviceInfoForSave();
+        if (!resolved?.resolved) {
+          remaining.push(entry);
+          continue;
+        }
+        const normalized = normalizeMobileLearningHistoryEntryForSave(entry, resolved.deviceInfo);
+        if (!normalized) {
+          continue;
+        }
+        saveResolvedMobileLearningHistoryEntry(normalized);
+        savedCount += 1;
+      }
+
+      saveMobilePendingLearningHistoryEntries(remaining);
+      return savedCount;
+    })();
+
+    try {
+      return await mobileLearningHistoryFlushPromise;
+    } finally {
+      mobileLearningHistoryFlushPromise = null;
+    }
+  }
+
   function sanitizeMobileLearningHistoryEntry(raw) {
     if (!raw || typeof raw !== "object") return null;
     const startedAt = Number(raw.startedAt);
@@ -2307,6 +2608,8 @@
       accuracy: Math.max(0, Math.min(100, Number(raw.accuracy) || 0)),
       completedReason: raw.completedReason === "interrupted" ? "interrupted" : "completed",
       deviceType: normalizeMobileAdminLearningHistoryDeviceType(raw.deviceType),
+      deviceId: String(raw.deviceId || "").trim(),
+      deviceName: sanitizeMobileLearningHistoryDeviceName(raw.deviceName),
       ticket: {
         earned: {
           count: Math.max(0, Number(raw.ticket?.earned?.count) || 0)
@@ -2716,23 +3019,28 @@
     );
   }
 
-  function appendMobileLearningHistoryEntry(entry) {
+  async function appendMobileLearningHistoryEntry(entry) {
     const sanitized = sanitizeMobileLearningHistoryEntry(entry);
     if (!sanitized) return;
     if (Math.max(0, Number(sanitized.questionCount) || 0) === 0) {
       return;
     }
 
-    const current = loadMobileLearningHistoryEntries();
-    current.push(sanitized);
-    saveMobileLearningHistoryEntries(current);
-
-    const saveToFirestore = window.saveMobileLearningHistoryToFirestore;
-    if (typeof saveToFirestore === "function") {
-      Promise.resolve(saveToFirestore(sanitized)).catch((error) => {
-        console.error("Failed to save mobile learning history to Firestore", error);
-      });
+    const resolved = await resolveMobileLearningHistoryDeviceInfoForSave();
+    if (!resolved?.resolved) {
+      enqueueMobilePendingLearningHistoryEntry(sanitized);
+      refreshMobileFamilyIdentityCache()
+        .catch(() => false)
+        .finally(() => {
+          flushMobilePendingLearningHistoryEntries().catch(() => 0);
+        });
+      return;
     }
+
+    const normalizedEntry = normalizeMobileLearningHistoryEntryForSave(sanitized, resolved.deviceInfo);
+    if (!normalizedEntry) return;
+    saveResolvedMobileLearningHistoryEntry(normalizedEntry);
+    flushMobilePendingLearningHistoryEntries().catch(() => 0);
   }
 
   function startMobileLearningHistorySession(meta = {}) {
@@ -2808,13 +3116,15 @@
       accuracy: Math.max(0, Math.min(100, Number(summary.accuracy) || 0)),
       completedReason: options.completedReason === "interrupted" ? "interrupted" : "completed",
       deviceType: "mobile",
+      deviceId: String(getMobileBrowserDeviceId() || "").trim(),
+      deviceName: "",
       ticket: {
         earned: { count: 0 },
         used: { count: 0 }
       }
     });
     if (entry) {
-      appendMobileLearningHistoryEntry(entry);
+      void appendMobileLearningHistoryEntry(entry);
     }
     state.learningHistorySession = null;
   }
@@ -3338,6 +3648,8 @@
         uid: String(value?.uid || "")
       }))
     } : null;
+    const sonUid = familyDoc.exists() ? String(familyDoc.data()?.children?.son?.uid || "").trim() : "";
+    writeMobileCachedSonUid(sonUid);
     return buildMobileAdminFamilyOptions(familyData, user);
   }
 
@@ -3368,6 +3680,8 @@
         used: { count: Math.max(0, Number(data.ticketUsed) || 0) }
       },
       deviceType: normalizedDeviceType,
+      deviceId: String(data.deviceId || "").trim(),
+      deviceName: sanitizeMobileLearningHistoryDeviceName(data.deviceName),
       createdAt: createdAtMillis
     };
   }
@@ -5993,8 +6307,15 @@
     if (nextStatus === mobileAuthLastStatus) return;
     mobileAuthLastStatus = nextStatus;
     if (user) {
+      refreshMobileFamilyIdentityCache()
+        .catch(() => false)
+        .finally(() => {
+          flushMobilePendingLearningHistoryEntries().catch(() => 0);
+        });
       renderHome();
+      return;
     }
+    flushMobilePendingLearningHistoryEntries().catch(() => 0);
   }
 
   function bindMobileAuthState() {
@@ -6011,6 +6332,11 @@
       : (authState.user || null);
     if (authState.status === "logged-in" || currentUser) {
       mobileAuthLastStatus = "logged-in";
+      refreshMobileFamilyIdentityCache()
+        .catch(() => false)
+        .finally(() => {
+          flushMobilePendingLearningHistoryEntries().catch(() => 0);
+        });
       renderHome();
       return;
     }
@@ -8462,6 +8788,7 @@
 
   function initialize() {
     loadState();
+    mobilePendingLearningHistoryEntries = loadMobilePendingLearningHistoryEntries();
     loadSpeakingProgress();
     loadSpeakingReviewStats();
     loadSpeakingWordDayCompletionMap();
@@ -8472,6 +8799,7 @@
     syncFormFromState();
     bindEvents();
     bindMobileAuthState();
+    flushMobilePendingLearningHistoryEntries().catch(() => 0);
   }
 
   if (document.readyState === "loading") {
