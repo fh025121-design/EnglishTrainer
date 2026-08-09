@@ -6576,6 +6576,118 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W7-D1-QR01",
+          "date": "2026-08-03",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Why did Ren review the basic rules?",
+              "japanese": "レンはなぜ基本ルールを復習しましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "rules"
+              ],
+              "lineId": "W7-D1-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Because he restarted his English practice after a short break.",
+              "japanese": "短い休みのあと、英語の練習を再開したからです。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "practice"
+              ],
+              "lineId": "W7-D1-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D1-QR02",
+          "date": "2026-08-03",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "How many basic rules did he review?",
+              "japanese": "彼はいくつ基本ルールを復習しましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "rules"
+              ],
+              "lineId": "W7-D1-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He reviewed three basic rules.",
+              "japanese": "彼は3つの基本ルールを復習しました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "three"
+              ],
+              "lineId": "W7-D1-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D1-QR03",
+          "date": "2026-08-03",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Did he make any mistakes at first?",
+              "japanese": "彼は最初、何か間違いをしましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "mistakes"
+              ],
+              "lineId": "W7-D1-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Yes, he did.",
+              "japanese": "はい、しました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "yes"
+              ],
+              "lineId": "W7-D1-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D1-QR04",
+          "date": "2026-08-03",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What could he do after ten minutes?",
+              "japanese": "10分後、彼は何ができるようになりましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "minutes"
+              ],
+              "lineId": "W7-D1-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He could answer the questions more quickly.",
+              "japanese": "彼はより素早く問題に答えられるようになりました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "answer"
+              ],
+              "lineId": "W7-D1-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W7-D2-SC01",
           "date": "2026-08-04",
           "lines": [
@@ -6622,6 +6734,118 @@ window.speakingData = {
                 "yes"
               ],
               "lineId": "W7-D2-SC01-04"
+            }
+          ]
+        },
+        {
+          "id": "W7-D2-QR01",
+          "date": "2026-08-04",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "When does Mina usually study English?",
+              "japanese": "ミナは普段いつ英語を勉強しますか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "study"
+              ],
+              "lineId": "W7-D2-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "She usually studies before dinner.",
+              "japanese": "彼女はたいてい夕食前に勉強します。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "dinner"
+              ],
+              "lineId": "W7-D2-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D2-QR02",
+          "date": "2026-08-04",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "How long does she usually study?",
+              "japanese": "彼女は普段どれくらい長く勉強しますか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "study"
+              ],
+              "lineId": "W7-D2-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "She usually studies for fifteen minutes.",
+              "japanese": "彼女はたいてい15分間勉強します。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "minutes"
+              ],
+              "lineId": "W7-D2-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D2-QR03",
+          "date": "2026-08-04",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What does she read?",
+              "japanese": "彼女は何を読みますか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "read"
+              ],
+              "lineId": "W7-D2-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "She reads one short passage.",
+              "japanese": "彼女は1つの短い文章を読みます。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "short"
+              ],
+              "lineId": "W7-D2-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D2-QR04",
+          "date": "2026-08-04",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Does she always study for fifteen minutes?",
+              "japanese": "彼女はいつも15分間勉強しますか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "study"
+              ],
+              "lineId": "W7-D2-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "No, she doesn't.",
+              "japanese": "いいえ、そうではありません。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "no"
+              ],
+              "lineId": "W7-D2-QR04-02"
             }
           ]
         },
@@ -6676,6 +6900,118 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W7-D3-QR01",
+          "date": "2026-08-05",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "When did Koki go to the library?",
+              "japanese": "コーキはいつ図書館に行きましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "library"
+              ],
+              "lineId": "W7-D3-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He went there on Wednesday after club practice.",
+              "japanese": "彼は水曜日の部活の後に行きました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "practice"
+              ],
+              "lineId": "W7-D3-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D3-QR02",
+          "date": "2026-08-05",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Who helped Koki?",
+              "japanese": "誰がコーキを助けましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "helped"
+              ],
+              "lineId": "W7-D3-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Ms. Ito helped him.",
+              "japanese": "伊藤先生が彼を助けました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "helped"
+              ],
+              "lineId": "W7-D3-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D3-QR03",
+          "date": "2026-08-05",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Why did he choose the shorter book?",
+              "japanese": "なぜ彼はより短い（薄い）方の本を選びましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "book"
+              ],
+              "lineId": "W7-D3-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Because it had many pictures.",
+              "japanese": "写真が多かったからです。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "pictures"
+              ],
+              "lineId": "W7-D3-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D3-QR04",
+          "date": "2026-08-05",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "How long did Koki and Sota read together?",
+              "japanese": "コーキとソウタはどれくらいの間一緒に読みましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "read"
+              ],
+              "lineId": "W7-D3-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "They read together for twenty minutes.",
+              "japanese": "彼らは20分間一緒に読みました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "minutes"
+              ],
+              "lineId": "W7-D3-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W7-D4-SC01",
           "date": "2026-08-06",
           "lines": [
@@ -6722,6 +7058,118 @@ window.speakingData = {
                 "classroom"
               ],
               "lineId": "W7-D4-SC01-04"
+            }
+          ]
+        },
+        {
+          "id": "W7-D4-QR01",
+          "date": "2026-08-06",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What could Yuta not find?",
+              "japanese": "ユウタは何を見つけられませんでしたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "find"
+              ],
+              "lineId": "W7-D4-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He could not find his English notebook.",
+              "japanese": "彼は英語のノートを見つけられませんでした。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "notebook"
+              ],
+              "lineId": "W7-D4-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D4-QR02",
+          "date": "2026-08-06",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Where did he look first?",
+              "japanese": "彼は最初にどこを探しましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "look"
+              ],
+              "lineId": "W7-D4-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He looked at his desk first.",
+              "japanese": "彼は最初に自分の机を探しました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "desk"
+              ],
+              "lineId": "W7-D4-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D4-QR03",
+          "date": "2026-08-06",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Who found the notebook?",
+              "japanese": "誰がノートを見つけましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "notebook"
+              ],
+              "lineId": "W7-D4-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Haru found it.",
+              "japanese": "ハルが見つけました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "found"
+              ],
+              "lineId": "W7-D4-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D4-QR04",
+          "date": "2026-08-06",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "How did Yuta feel at the end?",
+              "japanese": "ユウタは最後にどのように感じましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "feel"
+              ],
+              "lineId": "W7-D4-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "He felt relieved.",
+              "japanese": "彼は安心しました［ほっとしました］。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "felt"
+              ],
+              "lineId": "W7-D4-QR04-02"
             }
           ]
         },
@@ -6776,6 +7224,118 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W7-D5-QR01",
+          "date": "2026-08-07",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What does Aya find first?",
+              "japanese": "アヤは最初に何を見つけますか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "find"
+              ],
+              "lineId": "W7-D5-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "She finds the subject first.",
+              "japanese": "彼女は最初に主語を見つけます。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "subject"
+              ],
+              "lineId": "W7-D5-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D5-QR02",
+          "date": "2026-08-07",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What words does she look for next?",
+              "japanese": "彼女は次にどんな単語を探しますか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "words"
+              ],
+              "lineId": "W7-D5-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "She looks for can, does, or did.",
+              "japanese": "彼女は can, does, did を探します。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "can"
+              ],
+              "lineId": "W7-D5-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D5-QR03",
+          "date": "2026-08-07",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What does she check after that?",
+              "japanese": "そのあと、彼女は何を確認しますか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "check"
+              ],
+              "lineId": "W7-D5-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "She checks the verb form.",
+              "japanese": "彼女は動詞の形を確認します。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "verb"
+              ],
+              "lineId": "W7-D5-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D5-QR04",
+          "date": "2026-08-07",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Why is this order useful?",
+              "japanese": "なぜこの順番が役立つのですか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "order"
+              ],
+              "lineId": "W7-D5-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Because it helps her find mistakes.",
+              "japanese": "間違いを見つけるのに役立つからです。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "mistakes"
+              ],
+              "lineId": "W7-D5-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W7-D6-SC01",
           "date": "2026-08-08",
           "lines": [
@@ -6826,6 +7386,118 @@ window.speakingData = {
           ]
         },
         {
+          "id": "W7-D6-QR01",
+          "date": "2026-08-08",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "When will English Reading Day be?",
+              "japanese": "イングリッシュ・リーディング・デーはいつありますか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "day"
+              ],
+              "lineId": "W7-D6-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "It will be on Saturday, August 15.",
+              "japanese": "8月15日土曜日にあります。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "Saturday"
+              ],
+              "lineId": "W7-D6-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D6-QR02",
+          "date": "2026-08-08",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Where will students meet?",
+              "japanese": "生徒たちはどこに集まりますか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "students"
+              ],
+              "lineId": "W7-D6-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "They will meet in Room 4.",
+              "japanese": "彼らは4番教室に集まります。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "meet"
+              ],
+              "lineId": "W7-D6-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D6-QR03",
+          "date": "2026-08-08",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What should students bring?",
+              "japanese": "生徒たちは何を持ってくるべきですか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "bring"
+              ],
+              "lineId": "W7-D6-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "They should bring a pencil, an English notebook, and one book.",
+              "japanese": "鉛筆、英語のノート、そして好きな本1冊を持ってくるべきです。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "pencil"
+              ],
+              "lineId": "W7-D6-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D6-QR04",
+          "date": "2026-08-08",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What should students do if they want to join?",
+              "japanese": "参加したい場合、生徒たちは何をすべきですか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "join"
+              ],
+              "lineId": "W7-D6-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "They should tell their English teacher by Wednesday.",
+              "japanese": "水曜日までに英語の先生に伝えるべきです。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "teacher"
+              ],
+              "lineId": "W7-D6-QR04-02"
+            }
+          ]
+        },
+        {
           "id": "W7-D7-SC01",
           "date": "2026-08-09",
           "lines": [
@@ -6872,6 +7544,118 @@ window.speakingData = {
                 "answer"
               ],
               "lineId": "W7-D7-SC01-04"
+            }
+          ]
+        },
+        {
+          "id": "W7-D7-QR01",
+          "date": "2026-08-09",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "Why did the writer review old sentences?",
+              "japanese": "筆者はなぜ昔の文を復習しましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "review"
+              ],
+              "lineId": "W7-D7-QR01-01"
+            },
+            {
+              "speaker": "B",
+              "english": "Because the writer forgot some grammar rules.",
+              "japanese": "文法ルールをいくつか忘れてしまったからです。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "rules"
+              ],
+              "lineId": "W7-D7-QR01-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D7-QR02",
+          "date": "2026-08-09",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What kinds of questions did the writer answer?",
+              "japanese": "筆者はどんな種類の質問に答えましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "questions"
+              ],
+              "lineId": "W7-D7-QR02-01"
+            },
+            {
+              "speaker": "B",
+              "english": "The writer answered what, where, when, and why questions.",
+              "japanese": "筆者は what, where, when, why の質問に答えました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "answered"
+              ],
+              "lineId": "W7-D7-QR02-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D7-QR03",
+          "date": "2026-08-09",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What did the writer do yesterday?",
+              "japanese": "筆者は昨日何をしましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "yesterday"
+              ],
+              "lineId": "W7-D7-QR03-01"
+            },
+            {
+              "speaker": "B",
+              "english": "The writer checked the mistakes again.",
+              "japanese": "筆者はもう一度間違いを確認しました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "mistakes"
+              ],
+              "lineId": "W7-D7-QR03-02"
+            }
+          ]
+        },
+        {
+          "id": "W7-D7-QR04",
+          "date": "2026-08-09",
+          "lines": [
+            {
+              "speaker": "A",
+              "english": "What can the writer do more quickly now?",
+              "japanese": "筆者は今、何がより素早くできるようになりましたか？",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "quickly"
+              ],
+              "lineId": "W7-D7-QR04-01"
+            },
+            {
+              "speaker": "B",
+              "english": "The writer can understand the main idea more quickly.",
+              "japanese": "筆者は要点をより素早く理解できるようになりました。",
+              "hintType": "none",
+              "hints": [],
+              "keywords": [
+                "understand"
+              ],
+              "lineId": "W7-D7-QR04-02"
             }
           ]
         }
@@ -7251,7 +8035,7 @@ window.speakingData = {
     "W7": {
       "2026-08-03": {
         "sc": 2,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2
@@ -7259,7 +8043,7 @@ window.speakingData = {
       },
       "2026-08-04": {
         "sc": 2,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2
@@ -7267,7 +8051,7 @@ window.speakingData = {
       },
       "2026-08-05": {
         "sc": 2,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2
@@ -7275,7 +8059,7 @@ window.speakingData = {
       },
       "2026-08-06": {
         "sc": 2,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2
@@ -7283,7 +8067,7 @@ window.speakingData = {
       },
       "2026-08-07": {
         "sc": 2,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2
@@ -7291,7 +8075,7 @@ window.speakingData = {
       },
       "2026-08-08": {
         "sc": 2,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2
@@ -7299,7 +8083,7 @@ window.speakingData = {
       },
       "2026-08-09": {
         "sc": 2,
-        "qr": 0,
+        "qr": 4,
         "scLineStarts": [
           0,
           2
