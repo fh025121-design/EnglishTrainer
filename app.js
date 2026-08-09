@@ -2807,6 +2807,7 @@ function resolvePcLearningHistoryCategory(modeLike, entryLike = null) {
   if (mode === "前置詞特訓" || lowerMode === "preposition" || lowerMode === "preposition-training") return "前置詞特訓";
   if (mode === "応答文特訓" || lowerMode === "response" || lowerMode === "response-training") return "応答文特訓";
   if (mode === "不規則動詞特訓" || lowerMode === "irregular-verb" || lowerMode === "irregular-verb-training") return "不規則動詞特訓";
+  if (mode === "単語・熟語学習") return "Vocabulary";
   if (mode.includes("熟語") || lowerMode.includes("phrase") || lowerMode.includes("idiom")) return "熟語特訓";
   if (mode.includes("単語")) return "単語特訓";
   return mode || "不明";
@@ -5738,6 +5739,52 @@ function buildQuestionSignature(item) {
   return `${item.day}|${item.type}|${normalizeIdentityText(item.answer || item.english)}`;
 }
 
+function buildLevelFocusGroupKey(itemLike) {
+  const answer = normalizeIdentityText(itemLike?.answer || itemLike?.english || "");
+  const japanese = String(itemLike?.japanese || "").trim();
+  const type = normalizeIdentityText(itemLike?.type || "");
+  return `${answer}|||${japanese}|||${type}`;
+}
+
+function buildLevelFocusGroups(items) {
+  const groups = new Map();
+  (Array.isArray(items) ? items : []).forEach((item) => {
+    if (!item) return;
+    const id = String(item.id || "").trim();
+    if (!id) return;
+    const key = buildLevelFocusGroupKey(item);
+    if (!key) return;
+    const current = groups.get(key);
+    if (!current) {
+      groups.set(key, {
+        key,
+        representative: item,
+        itemIds: new Set([id]),
+        items: [item]
+      });
+      return;
+    }
+    if (current.itemIds.has(id)) return;
+    current.itemIds.add(id);
+    current.items.push(item);
+  });
+  return [...groups.values()];
+}
+
+function getLevelFocusGroupItemsByQuestion(questionLike) {
+  const key = buildLevelFocusGroupKey(questionLike);
+  if (!key) return [];
+  const byId = new Map();
+  state.items.forEach((item) => {
+    if (!item) return;
+    if (buildLevelFocusGroupKey(item) !== key) return;
+    const id = String(item.id || "").trim();
+    if (!id || byId.has(id)) return;
+    byId.set(id, item);
+  });
+  return [...byId.values()];
+}
+
 function buildQuestionLookups(items) {
   const byId = new Map();
   const byLegacyNumericId = new Map();
@@ -7340,7 +7387,7 @@ function renderLevelWordList(level) {
   if (!listTitle || !list) return;
 
   const buckets = buildLevelBuckets();
-  const target = buckets[level] || [];
+  const target = buildLevelFocusGroups(buckets[level] || []).map((group) => group.representative);
   listTitle.textContent = `Lv${level} ${levelName(level)} 一覧`;
   if (listSubtitle) {
     listSubtitle.textContent = `${target.length}語をアルファベット順で表示しています`;
@@ -11068,7 +11115,7 @@ function setTestScreenActive(active) {
 function getLevelFocusCandidates(level) {
   const focusLevel = Number(level) || activeLevelFilter || 1;
   const buckets = buildLevelBuckets();
-  return (buckets[focusLevel] || []).slice();
+  return buildLevelFocusGroups((buckets[focusLevel] || []).slice()).map((group) => group.representative);
 }
 
 function getLevelFocusBatch(level, count = LEVEL_FOCUS_BATCH_SIZE) {
@@ -11685,6 +11732,13 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   session.answerCount = (session.answerCount || 0) + 1;
 
   const item = state.items.find((entry) => entry.id === question.id);
+  const levelFocusGroupItems = session.mode === "level-focus"
+    ? getLevelFocusGroupItemsByQuestion(question)
+    : [];
+  const affectedItems = session.mode === "level-focus" && levelFocusGroupItems.length
+    ? levelFocusGroupItems
+    : (item ? [item] : []);
+  const affectedQuestionIds = [...new Set(affectedItems.map((entry) => String(entry?.id || "")).filter(Boolean))];
   const questionId = getQuestionId(question);
   const normalizedAnswer = normalizeAnswer(trimmedAnswer);
   const isCorrect = isCorrectAnswerForQuestion(question, normalizedAnswer);
@@ -11714,12 +11768,14 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   if (isFirstAttempt) {
     session.currentQuestionAttempted = true;
     if (!isTrainingSession) {
-      const hadBeenStudiedBefore = hasItemBeenStudied(item);
-      item.hasBeenStudied = true;
-      recordItemStudyAttempt(item, isCorrect);
-      if (!hadBeenStudiedBefore) {
-        awardDayUnstudiedClearBonus(question.day);
-      }
+      affectedItems.forEach((targetItem) => {
+        const hadBeenStudiedBefore = hasItemBeenStudied(targetItem);
+        targetItem.hasBeenStudied = true;
+        recordItemStudyAttempt(targetItem, isCorrect);
+        if (!hadBeenStudiedBefore) {
+          awardDayUnstudiedClearBonus(targetItem.day);
+        }
+      });
     }
     if (isScoredNormalRun || session.mode !== "normal") {
       session.attemptedFirstCount += 1;
@@ -11754,9 +11810,12 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
         weakFocusCorrectIds.add(questionId);
         session.weakFocusCurrentRoundCorrectIds = [...weakFocusCorrectIds];
       }
-      const levelChange = isTrainingSession
-        ? { leveledUpToFour: false }
-        : updateItemLevelProgress(item, true);
+      const levelChanges = isTrainingSession
+        ? []
+        : affectedItems.map((targetItem) => ({
+          item: targetItem,
+          result: updateItemLevelProgress(targetItem, true)
+        }));
       if (isScoredNormalRun || session.mode !== "normal") {
         session.correctFirstAttempt += 1;
       }
@@ -11767,8 +11826,10 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
         advanceReviewSchedule(questionId);
       }
       if (!isTrainingSession) {
-        item.reviewDue = false;
-        item.lastAnswerWasCorrect = true;
+        affectedItems.forEach((targetItem) => {
+          targetItem.reviewDue = false;
+          targetItem.lastAnswerWasCorrect = true;
+        });
         state.stats.tickets += 1;
         updateStreak();
       }
@@ -11813,8 +11874,9 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       persistSessionProgress(session);
       renderHome();
       renderProgress();
-      if (levelChange.leveledUpToFour) {
-        showLevelUpModal(item);
+      const leveledUpEntry = levelChanges.find((entry) => entry?.result?.leveledUpToFour && entry.item);
+      if (leveledUpEntry?.item) {
+        showLevelUpModal(leveledUpEntry.item);
       }
       return;
     }
@@ -11834,11 +11896,17 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       session.weakFocusCurrentRoundWrongIds = [...weakFocusWrongIds];
     }
     if (!isTrainingSession) {
-      updateItemLevelProgress(item, false);
-      resetReviewSchedule(questionId);
-      item.reviewDue = true;
-      item.reviewTodayCount += 1;
-      item.lastAnswerWasCorrect = false;
+      affectedItems.forEach((targetItem) => {
+        updateItemLevelProgress(targetItem, false);
+      });
+      affectedQuestionIds.forEach((targetQuestionId) => {
+        resetReviewSchedule(targetQuestionId);
+      });
+      affectedItems.forEach((targetItem) => {
+        targetItem.reviewDue = true;
+        targetItem.reviewTodayCount += 1;
+        targetItem.lastAnswerWasCorrect = false;
+      });
       updateStreak();
     }
     session.currentQuestionState = "retrying";
@@ -11863,14 +11931,19 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
     return;
   }
 
-  const levelChange = isTrainingSession
-    ? { leveledUpToFour: false }
-    : updateItemLevelProgress(item, true);
+  const levelChanges = isTrainingSession
+    ? []
+    : affectedItems.map((targetItem) => ({
+      item: targetItem,
+      result: updateItemLevelProgress(targetItem, true)
+    }));
   if (shouldPlayTrainingCorrectChimeForSession(session)) {
     playTrainingCorrectChime();
   }
   if (!isTrainingSession) {
-    item.lastAnswerWasCorrect = true;
+    affectedItems.forEach((targetItem) => {
+      targetItem.lastAnswerWasCorrect = true;
+    });
   }
   session.answered = false;
   session.answerLocked = false;
@@ -11920,8 +11993,9 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
   persistSessionProgress(session);
   renderHome();
   renderProgress();
-  if (levelChange.leveledUpToFour) {
-    showLevelUpModal(item);
+  const leveledUpEntry = levelChanges.find((entry) => entry?.result?.leveledUpToFour && entry.item);
+  if (leveledUpEntry?.item) {
+    showLevelUpModal(leveledUpEntry.item);
   }
 }
 

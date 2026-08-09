@@ -2571,14 +2571,7 @@
     const normalizedMode = String(mode || "").trim();
     if (normalizedMode === "speaking") return "スピーキング";
     if (normalizedMode === "typing") {
-      const questionTypes = Array.isArray(session?.questions)
-        ? [...new Set(session.questions.map((item) => String(item?.type || "").trim()).filter(Boolean))]
-        : [];
-      if (questionTypes.length === 1) {
-        if (questionTypes[0] === "word") return "単語学習";
-        if (questionTypes[0] === "phrase") return "熟語学習";
-      }
-      return "単語・熟語学習";
+      return "Vocabulary";
     }
     if (normalizedMode === "conversation") return "会話練習";
     if (normalizedMode === "review") return "過去の間違い";

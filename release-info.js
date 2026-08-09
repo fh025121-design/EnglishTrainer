@@ -1,6 +1,8 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/09 20:56", note: "PC版のみ: 苦手特訓（level-focus）の同一語句重複を解消。answer+japanese+type を共通キーとして苦手一覧と出題候補をグループ化し、同一キーの複数Day・別IDは一覧1件/セッション1出題に統一。回答結果は代表IDのみでなくグループ内の全IDへ既存ロジックを1回ずつ適用（正解/不正解時の level・successCount・learningStats・review関連更新を踏襲）し、同一IDへの二重更新を防止。通常Day学習・他特訓・モバイル版・既存データ構造・learningHistory保存仕様は未変更。" },
+    { version: "2026/08/09 20:28", note: "PC版・モバイル版共通: 学習履歴のVocabulary表示不一致を修正。PC側の表示分類で mode=『単語・熟語学習』を熟語特訓へ寄せず『Vocabulary』として明示処理し、モバイル由来の既存履歴（過去データ）は書換えなしでVocabulary表示へ統一。あわせてモバイル版のtyping系Vocabulary新規保存modeを『Vocabulary』へ統一し、Speaking内Vocabularyの既存保存（mode=Vocabulary）を維持。dayNumber/時刻/問題数/端末情報/他モード分類・保存仕様は未変更。" },
     { version: "2026/08/09 20:10", note: "モバイル版のみ: ポイントの正本を端末localStorageから長男UID共通のFirestoreへ変更。ログイン中は共通pointStateを優先読込し、localStorageはキャッシュ/オフライン退避として扱うよう更新。初回共通化は長男ログイン端末の現在値のみで作成し、他端末の古い値は採用しない。以後は端末ごとの更新をFirestoreへ統合（maxマージ）して古い値への巻き戻りと二重加算を防止。オンライン復帰時の再送・購読反映で表示を自動更新。learningHistory保存経路と長男モバイル端末識別仕様、PC版ポイント仕様は未変更。" },
     { version: "2026/08/09 19:54", note: "PC版のみ: 学習履歴の端末フィルターを長男表示向けに整理。長男選択時は『すべて / 長男PC / 長男モバイル / その他』の4ボタン固定とし、『すべて』にモバイル履歴も含めるよう調整。長男PC/長男モバイルは deviceType と deviceName の組み合わせで分類し、それ以外の旧端末名・未設定・未識別は『その他』へ集約。ユーザー切替は維持し、親表示時の既存フィルター動作・保存処理・過去履歴データは未変更。" },
     { version: "2026/08/09 19:40", note: "モバイル版のみ: Speaking内 Vocabulary（Week/曜日の単語練習）を learningHistory 保存経路へ接続。開始時に履歴セッションを開始し、戻る時は interrupted、完了時は completed で finalize→append を通して保存。回答済み件数を questionCount/correctCount に反映し、既存の端末判定・pendingキュー・Firestore保存を共通経路で利用。語順/会話/復習/typing系の既存保存経路と過去履歴データは未変更。" },
