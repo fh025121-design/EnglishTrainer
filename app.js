@@ -4726,7 +4726,7 @@ function speakIrregularVerbAnswerSequence(question, pastText, participleText, op
   if (!sequence.length) return false;
   return speakIrregularVerbTextSequence(sequence, {
     ...options,
-    gapMs: 10
+    gapMs: 5
   });
 }
 
