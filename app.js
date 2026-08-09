@@ -4713,7 +4713,10 @@ function speakIrregularVerbAnswerSequence(question, pastText, participleText, op
   const base = String(question?.base || "").trim();
   const past = String(pastText || "").trim();
   const participle = String(participleText || "").trim();
-  return speakIrregularVerbTextSequence([base, past, participle], options);
+  const merged = [base, past, participle].filter(Boolean).join(" ");
+  if (!merged) return false;
+  const speechText = merged.replace(/\s*\/\s*/g, " or ").replace(/\s+/g, " ").trim();
+  return speakIrregularVerbText(speechText, options);
 }
 
 function renderIrregularVerbQuestion() {
@@ -4827,6 +4830,7 @@ function submitIrregularVerbAnswer() {
   const correctPastText = correctPastValues.filter(Boolean).map((value) => String(value || "").trim()).filter(Boolean).join(" / ");
   const correctParticipleText = correctParticipleValues.filter(Boolean).map((value) => String(value || "").trim()).filter(Boolean).join(" / ");
   const expectedAnswerText = `${correctPastText || ""} ${correctParticipleText || ""}`.trim();
+  const userAnswerDiffMarkup = `<div class="answer-line">あなたの答え：${buildAnswerDiffMarkup(trimmed, expectedAnswerText)}</div>`;
   const alternateFormHint = correctPastText && correctParticipleText && (correctPastText.includes(" / ") || correctParticipleText.includes(" / "))
     ? `<div class="hint">もう1つの形：${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>`
     : "";
@@ -4834,7 +4838,7 @@ function submitIrregularVerbAnswer() {
   if (session.awaitingCorrectionRetry) {
     if (!isCorrect) {
       feedbackBox.className = "feedback-box error";
-      feedbackBox.innerHTML = `<strong>❌ もう一度入力してください</strong><div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div><div class="hint">正しい形を入力すると音声が流れて次の問題へ進みます</div>`;
+      feedbackBox.innerHTML = `<strong>❌ もう一度入力してください</strong>${userAnswerDiffMarkup}<div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div><div class="hint">正しい形を入力すると音声が流れて次の問題へ進みます</div>`;
       answerInput.focus();
       answerInput.select();
       return;
@@ -4869,7 +4873,7 @@ function submitIrregularVerbAnswer() {
   feedbackBox.className = `feedback-box ${isCorrect ? "success" : "error"}`;
   feedbackBox.innerHTML = isCorrect
     ? `<strong>✅ 正解</strong><div class="answer-line">${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>${alternateFormHint}`
-    : `<strong>❌ 不正解</strong><div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div>`;
+    : `<strong>❌ 不正解</strong>${userAnswerDiffMarkup}<div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div>`;
   if (isCorrect) {
     speakIrregularVerbAnswerSequence(currentQuestion, correctPastText, correctParticipleText);
   } else {
@@ -4878,7 +4882,7 @@ function submitIrregularVerbAnswer() {
     answerInput.value = "";
     answerInput.disabled = false;
     answerBtn.disabled = false;
-    feedbackBox.innerHTML = `<strong>❌ 不正解</strong><div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div><div class="hint">正しい形を入力すると音声が流れて次の問題へ進みます</div>`;
+    feedbackBox.innerHTML = `<strong>❌ 不正解</strong>${userAnswerDiffMarkup}<div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div><div class="hint">正しい形を入力すると音声が流れて次の問題へ進みます</div>`;
     answerInput.focus();
     nextBtn.classList.add("hidden");
     saveState();
