@@ -54,6 +54,9 @@ assert.strictEqual(irregularBucket.label, "不規則動詞特訓", "irregular-ve
 assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: true, isCorrect: true, isReviewSession: false }), true, "first-attempt correct answers should award training points");
 assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: false, isCorrect: true, isReviewSession: false }), false, "corrected retry answers should not award training points");
 assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: true, isCorrect: true, isReviewSession: true }), false, "review answers should not award training points");
+assert.strictEqual(context.shouldPlayTrainingCorrectChimeForSession({ mode: "challenge" }), true, "challenge should play the training correct chime");
+assert.strictEqual(context.shouldPlayTrainingCorrectChimeForSession({ mode: "phrase-spiral" }), true, "phrase training should play the training correct chime");
+assert.strictEqual(context.shouldPlayTrainingCorrectChimeForSession({ mode: "review" }), false, "review should not play the training correct chime");
 const originalPointState = JSON.parse(JSON.stringify(context.getPointState()));
 const todayKey = context.getPointTodayKey();
 const freshPointState = JSON.parse(JSON.stringify(originalPointState));
