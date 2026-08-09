@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260809-0011" />
+    <link rel="stylesheet" href="styles.css?v=20260809-1257" />
   </head>
   <body class="auth-pending">
     <div id="loginScreen" class="login-shell" aria-live="polite">
@@ -31,7 +31,7 @@
     <div class="app-shell">
       <header class="topbar">
         <div class="topbar-title">
-          <h1>English Typing Trainer for PC <span class="title-family-tag">PJR</span></h1>
+          <h1>English Typing Trainer for PC <span class="title-family-tag">Self Support PJR</span><span class="title-version-tag">Ver 2026/08/09 13:01</span></h1>
           <p class="subtext">タイピングで単語・熟語を定着させよう</p>
         </div>
         <div class="topbar-actions">
@@ -425,6 +425,7 @@
               <button id="trainingIdiomBtn" class="secondary-btn" type="button">💬 熟語特訓</button>
               <button id="trainingPrepositionBtn" class="secondary-btn" type="button">🧭 前置詞特訓</button>
               <button id="trainingResponseBtn" class="secondary-btn" type="button">🗣️ 応答文特訓</button>
+              <button id="trainingIrregularVerbBtn" class="secondary-btn" type="button">🔀 不規則動詞特訓</button>
               <button id="trainingInstantCompositionBtn" class="secondary-btn" type="button">⚡ 瞬間英作文（準備中）</button>
             </div>
             <p class="subtext">未実装の特訓を押すと「準備中です」と表示されます。</p>
@@ -597,6 +598,97 @@
           </div>
         </section>
 
+        <section id="irregularVerbSelectScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">不規則動詞特訓</p>
+              <h2>出題フォームを選択</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel day-catalog-panel">
+            <div class="preposition-select-wrap">
+              <button id="irregularVerbModeTrainingBtn" class="primary-btn" type="button">特訓（10問）</button>
+              <button id="irregularVerbModeTestBtn" class="secondary-btn" type="button">テスト（20問）</button>
+            </div>
+            <div class="preposition-select-wrap" style="margin-top: 1rem;">
+              <button id="irregularVerbFormBaseBtn" class="primary-btn" type="button">基本形</button>
+              <button id="irregularVerbFormPastBtn" class="secondary-btn" type="button">過去形</button>
+              <button id="irregularVerbFormPastParticipleBtn" class="secondary-btn" type="button">過去分詞</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="irregularVerbPracticeScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">不規則動詞特訓</p>
+              <h2 id="irregularVerbPracticeTitle">不規則動詞特訓</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="question-stage">
+            <div class="panel question-card" id="irregularVerbQuestionCard">
+              <div class="question-meta">
+                <span id="irregularVerbPromptText" class="phase-progress-text">不規則動詞特訓</span>
+                <span id="irregularVerbCounterText">1 / 10</span>
+              </div>
+              <div class="question-copy">
+                <p id="irregularVerbQuestionText" class="meaning-text"></p>
+                <p id="irregularVerbHintText" class="response-question-translation"></p>
+              </div>
+              <div id="irregularVerbAnswerPanel" class="answer-panel">
+                <div class="type-badge word">動詞形を入力</div>
+                <h3 class="input-label">英語を入力してください</h3>
+                <form id="irregularVerbAnswerForm" class="answer-form">
+                  <input id="irregularVerbAnswerInput" class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="例: went" />
+                  <button id="irregularVerbAnswerBtn" class="primary-btn mobile-answer-btn" type="submit">答える</button>
+                </form>
+              </div>
+              <div id="irregularVerbFeedbackBox" class="feedback-box hidden"></div>
+              <button id="irregularVerbNextBtn" class="primary-btn hidden" type="button">次へ</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="irregularVerbResultScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">不規則動詞特訓</p>
+              <h2>結果</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="result-shell">
+            <div class="panel result-card result-dashboard-card">
+              <h2 id="irregularVerbResultTitle">不規則動詞特訓 結果</h2>
+              <p id="irregularVerbResultScore" class="result-summary">0 / 0問 正解</p>
+              <div class="result-metric-list">
+                <div class="result-metric-row">
+                  <span class="result-metric-label">正答率</span>
+                  <span id="irregularVerbResultAccuracy" class="result-metric-value">0%</span>
+                </div>
+                <div class="result-metric-row">
+                  <span class="result-metric-label">獲得ポイント</span>
+                  <span id="irregularVerbPointSummaryText" class="result-metric-value">0P</span>
+                </div>
+              </div>
+              <div id="irregularVerbWrongSummaryWrap" class="progress-list-wrap hidden">
+                <h3>今回間違えた動詞</h3>
+                <ul id="irregularVerbWrongSummaryList" class="review-list"></ul>
+              </div>
+              <div class="result-actions preposition-result-actions">
+                <button id="irregularVerbContinueBtn" class="secondary-btn hidden" type="button">間違えた問題をもう一度</button>
+                <button id="irregularVerbRetryBtn" class="primary-btn" type="button">もう一度</button>
+                <button id="irregularVerbBackToMenuBtn" class="secondary-btn" type="button">特訓メニューへ戻る</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="testScreen" class="screen">
           <div class="screen-header">
             <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
@@ -709,6 +801,34 @@
                 <button id="weakFocusFinishBtn" class="secondary-btn" type="button">✓ 特訓を終了</button>
               </div>
               <p id="weakFocusKeyboardHint" class="helper-text weak-focus-keyboard-hint hidden">← → で選択　Enterで決定</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="extraTrainingScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">追加特訓</p>
+              <h2 id="extraTrainingScreenTitle">追加特訓</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="result-shell">
+            <div class="panel training-complete-card extra-training-screen-card">
+              <p id="extraTrainingScreenDescription" class="training-complete-label">未学習・弱点・その他を優先して、今日の追加特訓を始めます。</p>
+              <div class="result-metric-list">
+                <div class="result-metric-row">
+                  <span class="result-metric-label">出題数</span>
+                  <span id="extraTrainingScreenCount" class="result-metric-value">5問</span>
+                </div>
+                <div class="result-metric-row">
+                  <span class="result-metric-label">本日の残り</span>
+                  <span id="extraTrainingScreenRemaining" class="result-metric-value">あと10回</span>
+                </div>
+              </div>
+              <p class="phase-intro-description">未学習・弱点・その他の順で、短時間で取り組みやすい5問にまとめて出題します。</p>
+              <button id="extraTrainingStartBtn" class="primary-btn large-btn" type="button">▶ 追加特訓を始める</button>
             </div>
           </div>
         </section>
@@ -1029,11 +1149,12 @@
       </div>
     </div>
 
-    <script src="data.js?v=20260808-0008"></script>
-    <script src="preposition-data.js?v=20260808-0008"></script>
-    <script src="response-data.js?v=20260808-0008"></script>
-    <script src="release-info.js?v=20260809-0011"></script>
-    <script src="app.js?v=20260809-0011"></script>
-    <script type="module" src="firebase.js?v=20260809-0011"></script>
+    <script src="data.js?v=20260809-1257"></script>
+    <script src="preposition-data.js?v=20260809-1257"></script>
+    <script src="response-data.js?v=20260809-1257"></script>
+    <script src="irregular-verbs.js?v=20260809-1257"></script>
+    <script src="release-info.js?v=20260809-1257"></script>
+    <script src="app.js?v=20260809-1257"></script>
+    <script type="module" src="firebase.js?v=20260809-1257"></script>
   </body>
 </html>

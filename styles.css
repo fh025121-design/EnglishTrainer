@@ -139,6 +139,20 @@ body.auth-logged-in .login-shell {
   vertical-align: middle;
 }
 
+.title-version-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--muted);
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: var(--accent);
@@ -2713,6 +2727,25 @@ select {
   display: grid;
   gap: 10px;
   padding: 28px 24px;
+}
+
+.extra-training-screen-card {
+  width: min(620px, 100%);
+  gap: 12px;
+}
+
+.extra-training-screen-card .result-metric-list {
+  width: min(360px, 100%);
+  margin: 0 auto;
+}
+
+.extra-training-screen-card .result-metric-row {
+  justify-content: space-between;
+}
+
+.extra-training-screen-card .phase-intro-description {
+  margin: 0;
+  font-size: 1rem;
 }
 
 .training-complete-title {

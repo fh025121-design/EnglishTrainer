@@ -46,6 +46,7 @@ const TRAINING_CORRECT_CHIME_PRESETS = Object.freeze([
   })
 ]);
 let currentAudio = null;
+let irregularVerbSelectedMode = "training";
 let isResettingLearningData = false;
 const LEVEL_DEFINITIONS = [
   { level: 1, label: "要特訓", icon: "🔥" },
@@ -76,12 +77,14 @@ const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingIdiomBtn", mode: "phrase-spiral", isReady: true },
   { id: "trainingPrepositionBtn", mode: "preposition-training", isReady: true },
   { id: "trainingResponseBtn", mode: "response-training", isReady: true },
+  { id: "trainingIrregularVerbBtn", mode: "irregular-verb-training", isReady: true },
   { id: "trainingInstantCompositionBtn", mode: null, isReady: false }
 ]);
 const TRAINING_MODE_KIND_MAP = Object.freeze({
   "phrase-spiral": "idiom",
   "preposition-training": "preposition",
-  "response-training": "response"
+  "response-training": "response",
+  "irregular-verb-training": "irregular-verb"
 });
 const PREPOSITION_TRAINING_QUESTION_LIMIT = 10;
 const RESPONSE_TRAINING_QUESTION_LIMIT = 10;
@@ -4455,6 +4458,328 @@ function openResponseTrainingSelector() {
   startResponseTraining("all");
 }
 
+function openIrregularVerbTrainingSelector() {
+  irregularVerbSelectedMode = "training";
+  showScreen("irregularVerbSelectScreen");
+}
+
+function buildIrregularVerbReviewQuestions(bank, reviewQuestionIds, stats) {
+  const reviewPool = Array.isArray(reviewQuestionIds)
+    ? reviewQuestionIds.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+  if (!reviewPool.length) return [];
+  const filteredBank = bank.filter((question) => reviewPool.includes(String(question.id)));
+  return irregularVerbs.buildIrregularVerbQuestionSet(filteredBank, Math.min(filteredBank.length, 10), {
+    stats,
+    preferredQuestionIds: reviewPool
+  });
+}
+
+function getIrregularVerbQuestionBank() {
+  const source = Array.isArray(window.irregularVerbTrainingBank) ? window.irregularVerbTrainingBank : [];
+  const seenIds = new Set();
+  return source
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const id = String(row.id || row.base || "").trim();
+      if (!id || seenIds.has(id)) return null;
+      seenIds.add(id);
+      const base = String(row.base || "").trim();
+      const past = String(row.past || "").trim();
+      const pastParticiple = String(row.pastParticiple || "").trim();
+      const japanese = String(row.japanese || row.meaning || "").trim();
+      if (!base || !past || !pastParticiple || !japanese) return null;
+      return {
+        id,
+        base,
+        past,
+        pastParticiple,
+        japanese
+      };
+    })
+    .filter(Boolean);
+}
+
+function startIrregularVerbTraining(form = "past", mode = irregularVerbSelectedMode || "training") {
+  const bank = getIrregularVerbQuestionBank();
+  const plan = irregularVerbs.getIrregularVerbSessionPlan(mode, form);
+  const stats = state?.stats?.trainingProfiles?.["irregular-verb"]?.questions || {};
+  const questions = irregularVerbs.buildIrregularVerbQuestionSet(bank, plan.questionCount, {
+    stats
+  });
+  if (!questions.length) {
+    alert("出題可能な不規則動詞問題がありません。");
+    return;
+  }
+  const startedAt = Date.now();
+  irregularVerbTrainingSession = {
+    mode: plan.mode,
+    form: plan.form,
+    planLabel: plan.label,
+    questionCount: plan.questionCount,
+    startedAt,
+    answerHistory: [],
+    answerCount: 0,
+    correctCount: 0,
+    questions,
+    currentIndex: 0,
+    answered: false,
+    wrongQuestionIds: [],
+    reviewMode: false,
+    reviewQuestionIds: [],
+    ticketSnapshot: captureLearningHistoryTicketSnapshot(),
+    pointBalanceBefore: Math.max(0, Math.floor(Number(getPointState().balance) || 0))
+  };
+  renderIrregularVerbQuestion();
+  showScreen("irregularVerbPracticeScreen");
+}
+
+function renderIrregularVerbQuestion() {
+  const session = irregularVerbTrainingSession;
+  if (!session) {
+    showScreen("irregularVerbSelectScreen");
+    return;
+  }
+  if (session.currentIndex >= session.questions.length) {
+    showIrregularVerbTrainingResult();
+    return;
+  }
+
+  const title = document.getElementById("irregularVerbPracticeTitle");
+  const promptText = document.getElementById("irregularVerbPromptText");
+  const counterText = document.getElementById("irregularVerbCounterText");
+  const questionText = document.getElementById("irregularVerbQuestionText");
+  const hintText = document.getElementById("irregularVerbHintText");
+  const answerInput = document.getElementById("irregularVerbAnswerInput");
+  const answerBtn = document.getElementById("irregularVerbAnswerBtn");
+  const feedbackBox = document.getElementById("irregularVerbFeedbackBox");
+  const nextBtn = document.getElementById("irregularVerbNextBtn");
+  if (!title || !promptText || !counterText || !questionText || !hintText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
+
+  const currentQuestion = session.questions[session.currentIndex];
+  const promptLabel = irregularVerbs.getIrregularVerbPromptLabel(currentQuestion, session.form);
+  const modeLabel = session.reviewMode ? "復習" : session.mode === "test" ? "テスト" : "特訓";
+  title.textContent = `不規則動詞特訓 ${modeLabel} ${promptLabel}`;
+  promptText.textContent = `不規則動詞特訓 ${modeLabel} ${promptLabel}`;
+  counterText.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
+  questionText.textContent = `${currentQuestion.japanese}（${currentQuestion.base}）`;
+  hintText.textContent = `${currentQuestion.base} → ${session.form === "pastparticiple" || session.form === "past participle" || session.form === "pp" ? "過去分詞" : session.form === "past" ? "過去形" : "基本形"}`;
+  answerInput.value = "";
+  answerInput.disabled = false;
+  answerBtn.disabled = false;
+  feedbackBox.className = "feedback-box hidden";
+  feedbackBox.innerHTML = "";
+  nextBtn.disabled = false;
+  nextBtn.classList.add("hidden");
+  session.answered = false;
+  session.questionStartedAt = Date.now();
+  window.setTimeout(() => answerInput.focus(), 30);
+}
+
+function submitIrregularVerbAnswer() {
+  const session = irregularVerbTrainingSession;
+  if (!session || session.answered) return;
+  const currentQuestion = session.questions[session.currentIndex];
+  if (!currentQuestion) return;
+
+  const answerInput = document.getElementById("irregularVerbAnswerInput");
+  const answerBtn = document.getElementById("irregularVerbAnswerBtn");
+  const feedbackBox = document.getElementById("irregularVerbFeedbackBox");
+  const nextBtn = document.getElementById("irregularVerbNextBtn");
+  if (!answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
+
+  const raw = String(answerInput.value || "");
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    feedbackBox.className = "feedback-box error";
+    feedbackBox.innerHTML = "<strong>入力してください</strong><span class=\"hint\">英語で入力してください</span>";
+    answerInput.focus();
+    return;
+  }
+
+  recordCommonAnswerEvent({
+    dayKey: todayKey(),
+    category: "training",
+    trainingKind: "irregular-verb",
+    typingCount: 1
+  });
+
+  const startedAt = Number(session.questionStartedAt);
+  if (Number.isFinite(startedAt) && Date.now() > startedAt) {
+    const elapsedMs = Date.now() - startedAt;
+    const elapsedSeconds = elapsedMs > 0 ? Math.max(1, Math.ceil(elapsedMs / 1000)) : 0;
+    recordCommonStudySeconds(todayKey(), elapsedSeconds, {
+      category: "training",
+      trainingKind: "irregular-verb"
+    });
+  }
+
+  const isCorrect = irregularVerbs.evaluateIrregularVerbAnswer(currentQuestion, session.form, trimmed);
+  const answeredAt = Date.now();
+  session.answerHistory.push({ at: answeredAt, isCorrect, questionId: currentQuestion.id });
+  session.answerCount += 1;
+  session.answered = true;
+  if (isCorrect) {
+    session.correctCount += 1;
+    awardPointsForTrainingMode("response");
+    playTrainingCorrectChime();
+  } else {
+    session.wrongQuestionIds.push(String(currentQuestion.id));
+  }
+
+  recordTrainingProfileAttempt("irregular-verb", {
+    questionId: currentQuestion.id,
+    category: session.form,
+    isCorrect
+  });
+  saveState();
+
+  feedbackBox.className = `feedback-box ${isCorrect ? "success" : "error"}`;
+  feedbackBox.innerHTML = isCorrect
+    ? `<strong>✅ 正解</strong><div class=\"answer-line\">${escapeHtml(trimmed)}</div>`
+    : `<strong>❌ 不正解</strong><div class=\"answer-line\">正解：${escapeHtml(String(currentQuestion[session.form === "pastparticiple" || session.form === "past participle" || session.form === "pp" ? "pastParticiple" : session.form === "past" ? "past" : "base"] || ""))}</div>`;
+  nextBtn.classList.remove("hidden");
+  nextBtn.disabled = false;
+  answerInput.disabled = true;
+  answerBtn.disabled = true;
+  nextBtn.focus();
+}
+
+function moveToNextIrregularVerbQuestion() {
+  if (!irregularVerbTrainingSession) return;
+  const nextBtn = document.getElementById("irregularVerbNextBtn");
+  if (nextBtn) nextBtn.disabled = true;
+  const typingConfig = getTypingConfig();
+  setTimeout(() => {
+    if (!irregularVerbTrainingSession) return;
+    irregularVerbTrainingSession.currentIndex += 1;
+    if (irregularVerbTrainingSession.currentIndex >= irregularVerbTrainingSession.questions.length) {
+      showIrregularVerbTrainingResult();
+      return;
+    }
+    renderIrregularVerbQuestion();
+  }, typingDelaySecToMs(typingConfig.judgementToNextDelaySec));
+}
+
+function buildIrregularVerbLearningHistoryEntry(sessionLike, reason) {
+  const endedAt = Date.now();
+  const startedAt = Number(sessionLike?.startedAt) || endedAt;
+  const answerCount = Math.max(0, Number(sessionLike?.answerCount) || 0);
+  const correctCount = Math.max(0, Number(sessionLike?.correctCount) || 0);
+  const accuracy = answerCount ? Math.round((correctCount / answerCount) * 100) : 0;
+  const pointSummary = computeSessionEarnedPoints(sessionLike);
+  return {
+    learnedAt: formatTimestampToJstDisplay(endedAt),
+    startedAt,
+    endedAt,
+    startedAtDisplay: formatTimestampToJstDisplay(startedAt),
+    endedAtDisplay: formatTimestampToJstDisplay(endedAt),
+    activeStudySeconds: computeSessionActiveStudySeconds(sessionLike, endedAt),
+    mode: "irregular-verb-training",
+    dayNumber: "",
+    questionCount: answerCount,
+    correctCount,
+    earnedPoints: pointSummary.earnedPoints,
+    accuracy,
+    completedReason: String(reason || "completed"),
+    deviceType: "pc",
+    deviceId: getPcBrowserDeviceId(),
+    deviceName: getPcBrowserDeviceNameRaw(),
+    ticket: computeLearningHistoryTicketDelta(
+      sanitizeLearningHistoryTicketSnapshot(sessionLike?.ticketSnapshot),
+      captureLearningHistoryTicketSnapshot()
+    )
+  };
+}
+
+function recordIrregularVerbLearningHistory(sessionLike, reason) {
+  if (!sessionLike || typeof sessionLike !== "object") return;
+  appendLearningHistoryEntry(buildIrregularVerbLearningHistoryEntry(sessionLike, reason));
+}
+
+function renderIrregularVerbResultScreen(session, pointSummary) {
+  const title = document.getElementById("irregularVerbResultTitle");
+  const scoreText = document.getElementById("irregularVerbResultScore");
+  const accuracyText = document.getElementById("irregularVerbResultAccuracy");
+  const wrongSummaryWrap = document.getElementById("irregularVerbWrongSummaryWrap");
+  const wrongSummaryList = document.getElementById("irregularVerbWrongSummaryList");
+  const continueBtn = document.getElementById("irregularVerbContinueBtn");
+  if (!title || !scoreText || !accuracyText) return;
+
+  const accuracy = session?.answerCount ? Math.round(((session?.correctCount || 0) / session.answerCount) * 100) : 0;
+  const wrongIds = Array.from(new Set((Array.isArray(session?.wrongQuestionIds) ? session.wrongQuestionIds : []).map((value) => String(value || "").trim()).filter(Boolean)));
+  title.textContent = `${session?.mode === "test" ? "テスト" : "特訓"} 結果`;
+  scoreText.textContent = `${session?.correctCount || 0} / ${session?.answerCount || 0}問 正解`;
+  accuracyText.textContent = `${accuracy}%`;
+  if (wrongSummaryWrap && wrongSummaryList) {
+    if (wrongIds.length) {
+      wrongSummaryWrap.classList.remove("hidden");
+      wrongSummaryList.innerHTML = wrongIds.map((id) => `<li>${escapeHtml(id)}</li>`).join("");
+    } else {
+      wrongSummaryWrap.classList.add("hidden");
+      wrongSummaryList.innerHTML = "";
+    }
+  }
+  if (continueBtn) {
+    const shouldShowContinue = session?.mode === "training" && !session?.reviewMode && wrongIds.length > 0;
+    continueBtn.classList.toggle("hidden", !shouldShowContinue);
+  }
+  if (pointSummary) {
+    const pointSummaryText = document.getElementById("irregularVerbPointSummaryText");
+    if (pointSummaryText) {
+      pointSummaryText.textContent = `獲得ポイント：${pointSummary.earnedPoints}P / 残高：${pointSummary.pointBalance}P`;
+    }
+  }
+  showScreen("irregularVerbResultScreen");
+}
+
+function continueIrregularVerbTrainingReview() {
+  const session = irregularVerbTrainingSession;
+  if (!session || !session.mode || session.mode !== "training" || session.reviewMode) return;
+  const stats = state?.stats?.trainingProfiles?.["irregular-verb"]?.questions || {};
+  const reviewQuestionIds = Array.from(new Set((Array.isArray(session.wrongQuestionIds) ? session.wrongQuestionIds : []).map((value) => String(value || "").trim()).filter(Boolean)));
+  const reviewQuestions = buildIrregularVerbReviewQuestions(getIrregularVerbQuestionBank(), reviewQuestionIds, stats);
+  if (!reviewQuestions.length) {
+    renderIrregularVerbResultScreen(session, computeSessionEarnedPoints(session));
+    return;
+  }
+  session.reviewMode = true;
+  session.reviewQuestionIds = reviewQuestionIds;
+  session.questions = reviewQuestions;
+  session.currentIndex = 0;
+  session.answered = false;
+  session.questionStartedAt = Date.now();
+  renderIrregularVerbQuestion();
+  showScreen("irregularVerbPracticeScreen");
+}
+
+function showIrregularVerbTrainingResult() {
+  const session = irregularVerbTrainingSession;
+  if (!session) {
+    showScreen("irregularVerbSelectScreen");
+    return;
+  }
+  if (session.mode === "training" && !session.reviewMode && session.wrongQuestionIds.length > 0) {
+    const stats = state?.stats?.trainingProfiles?.["irregular-verb"]?.questions || {};
+    const reviewQuestionIds = Array.from(new Set(session.wrongQuestionIds.map((value) => String(value || "").trim()).filter(Boolean)));
+    const reviewQuestions = buildIrregularVerbReviewQuestions(getIrregularVerbQuestionBank(), reviewQuestionIds, stats);
+    if (reviewQuestions.length) {
+      session.reviewMode = true;
+      session.reviewQuestionIds = reviewQuestionIds;
+      session.questions = reviewQuestions;
+      session.currentIndex = 0;
+      session.answered = false;
+      session.questionStartedAt = Date.now();
+      renderIrregularVerbQuestion();
+      showScreen("irregularVerbPracticeScreen");
+      return;
+    }
+  }
+  recordIrregularVerbLearningHistory(session, "completed");
+  const pointSummary = computeSessionEarnedPoints(session);
+  renderIrregularVerbResultScreen(session, pointSummary);
+}
+
 function orderResponseQuestionsForVariety(questions) {
   const pool = [...questions];
   const ordered = [];
@@ -5322,6 +5647,7 @@ function getTrainingCompletionModeLabel(mode) {
   if (normalizedMode === "challenge" || normalizedMode === "review") return "過去の間違い";
   if (normalizedMode === "preposition") return "前置詞特訓";
   if (normalizedMode === "response") return "応答文特訓";
+  if (normalizedMode === "irregular-verb") return "不規則動詞特訓";
   if (normalizedMode === "vocabulary") return "Vocabulary";
   if (normalizedMode === "speaking") return "Speaking";
   return "特訓";
@@ -5860,6 +6186,9 @@ function inferPointModeFromLearningHistoryEntry(mode) {
     return "preposition";
   }
   if (normalized === "response" || normalized === "response-training" || normalized === "応答文特訓") {
+    return "response";
+  }
+  if (normalized === "irregular-verb" || normalized === "irregular-verb-training" || normalized === "不規則動詞特訓") {
     return "response";
   }
   if (normalized === "challenge" || normalized === "review" || normalized === "過去の間違い") {
@@ -6723,6 +7052,84 @@ function getDayMasteryPercent(dayNumber) {
   return Math.max(0, Math.min(100, Math.round(total / dayItems.length)));
 }
 
+function scoreCompactPracticeCandidate(item, options = {}) {
+  const { preferWeak = true } = options;
+  const level = Math.max(1, Math.min(4, Math.floor(getEffectiveLevelForItem(item) || 1)));
+  const levelData = ensureLevelData(item);
+  const stats = getItemLearningStats(item);
+  const attempts = Math.max(0, Number(stats.attempts) || 0);
+  const correct = Math.max(0, Number(stats.correct) || 0);
+  const misses = Math.max(0, attempts - correct);
+  const accuracy = attempts > 0 ? correct / attempts : 0.5;
+  const isUnstudied = !hasItemBeenStudied(item);
+  const isWeak = level <= 2;
+  const isReviewDue = Boolean(item.reviewDue || (Number(item.reviewTodayCount) || 0) > 0);
+  const levelWeight = level === 1 ? 4.2 : level === 2 ? 2.8 : level === 3 ? 1.2 : 0.2;
+  const missWeight = misses * 1.4;
+  const accuracyWeight = preferWeak ? (1 - accuracy) * 3.2 : accuracy * 0.8;
+  const weakWeight = preferWeak && isWeak ? 2.2 : 0;
+  const unstudiedWeight = isUnstudied ? 3.4 : 0;
+  const reviewWeight = isReviewDue ? 1.1 : 0;
+  const stabilityWeight = Number.isFinite(levelData.successCount) ? levelData.successCount * 0.05 : 0;
+  const recencyWeight = stats.lastStudiedDate === todayKey() ? -0.4 : 0;
+  return unstudiedWeight + weakWeight + reviewWeight + levelWeight + missWeight + accuracyWeight + stabilityWeight + recencyWeight;
+}
+
+function scoreWeakFocusCandidate(item, sessionLike = {}) {
+  const questionId = String(item?.id || "");
+  const level = Math.max(1, Math.min(4, Math.floor(getEffectiveLevelForItem(item) || 1)));
+  const isLevelOne = level === 1;
+  const isUnstudied = !hasItemBeenStudied(item);
+  const isWeak = level <= 2;
+  const askedQuestionIds = new Set((sessionLike?.weakFocusAskedQuestionIds || []).map((id) => String(id)));
+  const lastRoundCorrectIds = new Set((sessionLike?.weakFocusLastRoundCorrectIds || []).map((id) => String(id)));
+  const lastRoundWrongIds = new Set((sessionLike?.weakFocusLastRoundWrongIds || []).map((id) => String(id)));
+  const wasAskedInThisSession = askedQuestionIds.has(questionId);
+  const wasCorrectInLastRound = lastRoundCorrectIds.has(questionId);
+  const wasWrongInLastRound = lastRoundWrongIds.has(questionId);
+  const accuracy = getItemAccuracyPercent(item);
+  const accuracyScore = Number.isFinite(accuracy) ? Math.max(0, 100 - accuracy) / 100 : 0.5;
+  const levelScore = isLevelOne ? 2.4 : 0.6;
+  const weakScore = isWeak ? 1.4 : 0.2;
+  const unstudiedScore = isUnstudied ? 1.8 : 0;
+  const wrongScore = wasWrongInLastRound ? 2.2 : 0;
+  const askedPenalty = wasAskedInThisSession ? -3.2 : 0;
+  const correctPenalty = wasCorrectInLastRound ? -1.6 : 0;
+  return levelScore + weakScore + unstudiedScore + wrongScore + accuracyScore + askedPenalty + correctPenalty;
+}
+
+function pickCompactPracticeSet(sourceItems, options = {}) {
+  const source = Array.isArray(sourceItems) ? sourceItems.filter(Boolean) : [];
+  const limit = Math.max(1, Math.floor(Number(options.limit) || source.length || 10));
+  if (!source.length) return [];
+
+  const scorer = typeof options.scorer === "function"
+    ? options.scorer
+    : (item) => scoreCompactPracticeCandidate(item, { preferWeak: options.preferWeak !== false });
+
+  const scored = source.map((item) => ({
+    item,
+    priority: scorer(item, options)
+  }));
+
+  const ranked = scored.sort((left, right) => {
+    if (right.priority !== left.priority) return right.priority - left.priority;
+    return String(left.item.id).localeCompare(String(right.item.id));
+  });
+
+  const selected = [];
+  const seenIds = new Set();
+  for (const entry of ranked) {
+    const key = String(entry.item?.id || "");
+    if (!key || seenIds.has(key)) continue;
+    seenIds.add(key);
+    selected.push(entry.item);
+    if (selected.length >= limit) break;
+  }
+
+  return selected;
+}
+
 function getDayStudyPriorityPool(items) {
   const source = Array.isArray(items) ? items.filter(Boolean) : [];
   if (!source.length) return [];
@@ -6743,32 +7150,10 @@ function getDayStudyPriorityPool(items) {
     other.push(item);
   });
 
-  const sortWeak = (pool) => pool
-    .slice()
-    .sort((left, right) => {
-      const leftLevel = getEffectiveLevelForItem(left);
-      const rightLevel = getEffectiveLevelForItem(right);
-      if (leftLevel !== rightLevel) return leftLevel - rightLevel;
-
-      const leftLevelData = ensureLevelData(left);
-      const rightLevelData = ensureLevelData(right);
-      if (leftLevelData.successCount !== rightLevelData.successCount) {
-        return leftLevelData.successCount - rightLevelData.successCount;
-      }
-
-      const leftAccuracy = getItemAccuracyPercent(left);
-      const rightAccuracy = getItemAccuracyPercent(right);
-      const leftAccuracyValue = Number.isFinite(leftAccuracy) ? leftAccuracy : 101;
-      const rightAccuracyValue = Number.isFinite(rightAccuracy) ? rightAccuracy : 101;
-      if (leftAccuracyValue !== rightAccuracyValue) return leftAccuracyValue - rightAccuracyValue;
-
-      return String(left.id).localeCompare(String(right.id));
-    });
-
   return [
-    ...shuffle(unstudied),
-    ...sortWeak(weak),
-    ...shuffle(other)
+    ...pickCompactPracticeSet(unstudied, { limit: unstudied.length, preferWeak: true }),
+    ...pickCompactPracticeSet(weak, { limit: weak.length, preferWeak: true }),
+    ...pickCompactPracticeSet(other, { limit: other.length, preferWeak: false })
   ];
 }
 
@@ -7223,7 +7608,11 @@ function buildWeakFocusPriorityBuckets(sessionLike) {
   });
 
   return Object.fromEntries(
-    Object.entries(priorityBuckets).map(([key, bucket]) => [key, shuffle(bucket)])
+    Object.entries(priorityBuckets).map(([key, bucket]) => [key, pickCompactPracticeSet(bucket, {
+      limit: bucket.length,
+      preferWeak: true,
+      scorer: (entry) => scoreWeakFocusCandidate(entry, sessionLike)
+    })])
   );
 }
 
@@ -9351,7 +9740,7 @@ function updateTodayExtraTrainingButtonVisibility() {
 function startTodayExtraTrainingFromHome() {
   const remainingCount = getExtraTrainingDailyRemainingCount();
   if (remainingCount <= 0) {
-    alert("本日の追加特訓は上限10回に達しました。明日また挑戦してください。");
+    alert("本日の追加特訓は上限10回に達しました。明日また挑戦してください.");
     return;
   }
   const virtualWeakFocusSession = {
@@ -9372,6 +9761,28 @@ function startTodayExtraTrainingFromHome() {
     startWeakFocusOnly: true,
     extraTraining: true
   });
+}
+
+function renderExtraTrainingScreen() {
+  const title = document.getElementById("extraTrainingScreenTitle");
+  const description = document.getElementById("extraTrainingScreenDescription");
+  const count = document.getElementById("extraTrainingScreenCount");
+  const remaining = document.getElementById("extraTrainingScreenRemaining");
+  const startBtn = document.getElementById("extraTrainingStartBtn");
+  if (!title || !description || !count || !remaining || !startBtn) return;
+
+  const remainingCount = getExtraTrainingDailyRemainingCount();
+  title.textContent = "追加特訓";
+  description.textContent = "未学習・弱点・その他を優先して、今日の追加特訓を始めます。";
+  count.textContent = "5問";
+  remaining.textContent = remainingCount > 0 ? `あと${remainingCount}回挑戦できます` : "本日の上限に達しました";
+  startBtn.disabled = remainingCount <= 0;
+  startBtn.textContent = remainingCount > 0 ? "▶ 追加特訓を始める" : "本日の上限です";
+}
+
+function openExtraTrainingScreen() {
+  renderExtraTrainingScreen();
+  showScreen("extraTrainingScreen");
 }
 
 function renderHomeUpdateHistory() {
@@ -11832,6 +12243,13 @@ function bindEvents() {
   const todayExtraTrainingBtn = document.getElementById("todayExtraTrainingBtn");
   if (todayExtraTrainingBtn) {
     todayExtraTrainingBtn.addEventListener("click", () => {
+      openExtraTrainingScreen();
+    });
+  }
+
+  const extraTrainingStartBtn = document.getElementById("extraTrainingStartBtn");
+  if (extraTrainingStartBtn) {
+    extraTrainingStartBtn.addEventListener("click", () => {
       startTodayExtraTrainingFromHome();
     });
   }
@@ -11954,6 +12372,10 @@ function bindEvents() {
           startResponseTraining("all");
           return;
         }
+        if (item.mode === "irregular-verb-training") {
+          openIrregularVerbTrainingSelector();
+          return;
+        }
         prepareSession(item.mode);
         return;
       }
@@ -12016,6 +12438,78 @@ function bindEvents() {
     responseAnswerForm.addEventListener("submit", (event) => {
       event.preventDefault();
       submitResponseTrainingAnswer();
+    });
+  }
+
+  const irregularVerbAnswerForm = document.getElementById("irregularVerbAnswerForm");
+  if (irregularVerbAnswerForm) {
+    irregularVerbAnswerForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submitIrregularVerbAnswer();
+    });
+  }
+
+  const irregularVerbNextBtn = document.getElementById("irregularVerbNextBtn");
+  if (irregularVerbNextBtn) {
+    irregularVerbNextBtn.addEventListener("click", () => {
+      moveToNextIrregularVerbQuestion();
+    });
+  }
+
+  const irregularVerbRetryBtn = document.getElementById("irregularVerbRetryBtn");
+  if (irregularVerbRetryBtn) {
+    irregularVerbRetryBtn.addEventListener("click", () => {
+      startIrregularVerbTraining(irregularVerbTrainingSession?.form || "past", irregularVerbTrainingSession?.mode || irregularVerbSelectedMode || "training");
+    });
+  }
+
+  const irregularVerbContinueBtn = document.getElementById("irregularVerbContinueBtn");
+  if (irregularVerbContinueBtn) {
+    irregularVerbContinueBtn.addEventListener("click", () => {
+      continueIrregularVerbTrainingReview();
+    });
+  }
+
+  const irregularVerbBackToMenuBtn = document.getElementById("irregularVerbBackToMenuBtn");
+  if (irregularVerbBackToMenuBtn) {
+    irregularVerbBackToMenuBtn.addEventListener("click", () => {
+      showScreen("trainingMenuScreen");
+    });
+  }
+
+  const irregularVerbModeTrainingBtn = document.getElementById("irregularVerbModeTrainingBtn");
+  if (irregularVerbModeTrainingBtn) {
+    irregularVerbModeTrainingBtn.addEventListener("click", () => {
+      irregularVerbSelectedMode = "training";
+      startIrregularVerbTraining("past", "training");
+    });
+  }
+
+  const irregularVerbModeTestBtn = document.getElementById("irregularVerbModeTestBtn");
+  if (irregularVerbModeTestBtn) {
+    irregularVerbModeTestBtn.addEventListener("click", () => {
+      irregularVerbSelectedMode = "test";
+    });
+  }
+
+  const irregularVerbFormBaseBtn = document.getElementById("irregularVerbFormBaseBtn");
+  if (irregularVerbFormBaseBtn) {
+    irregularVerbFormBaseBtn.addEventListener("click", () => {
+      startIrregularVerbTraining("base", irregularVerbSelectedMode || "training");
+    });
+  }
+
+  const irregularVerbFormPastBtn = document.getElementById("irregularVerbFormPastBtn");
+  if (irregularVerbFormPastBtn) {
+    irregularVerbFormPastBtn.addEventListener("click", () => {
+      startIrregularVerbTraining("past", irregularVerbSelectedMode || "training");
+    });
+  }
+
+  const irregularVerbFormPastParticipleBtn = document.getElementById("irregularVerbFormPastParticipleBtn");
+  if (irregularVerbFormPastParticipleBtn) {
+    irregularVerbFormPastParticipleBtn.addEventListener("click", () => {
+      startIrregularVerbTraining("pastparticiple", irregularVerbSelectedMode || "training");
     });
   }
 
@@ -12097,6 +12591,19 @@ function bindEvents() {
       }
       if (currentScreenId === "responsePracticeScreen" && responseTrainingSession) {
         completeResponseTrainingSession("interrupted");
+        return;
+      }
+      if (currentScreenId === "irregularVerbPracticeScreen" && irregularVerbTrainingSession) {
+        recordIrregularVerbLearningHistory(irregularVerbTrainingSession, "interrupted");
+        const pointSummary = computeSessionEarnedPoints(irregularVerbTrainingSession);
+        irregularVerbTrainingSession = null;
+        openTrainingCompleteScreen({
+          mode: "irregular-verb",
+          earnedPoints: pointSummary.earnedPoints,
+          pointBalance: pointSummary.pointBalance,
+          interrupted: true,
+          showTicketAfter: true
+        });
         return;
       }
       if (currentScreenId === "resultScreen") {
