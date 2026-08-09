@@ -10,7 +10,11 @@ import {
 import {
   addDoc,
   collection,
+  doc,
+  getDoc,
   getFirestore,
+  onSnapshot,
+  runTransaction,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
@@ -26,6 +30,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
+const MOBILE_POINT_SYNC_DOC_COLLECTION = "mobileSync";
+const MOBILE_POINT_SYNC_DOC_ID = "pointStateV1";
+const MOBILE_POINT_SYNC_SCHEMA_VERSION = 1;
 
 window.MobileFirebaseAuthState = {
   status: "pending",
@@ -182,6 +189,288 @@ async function saveMobileLearningHistoryToFirestore(historyEntry) {
   }
 }
 
+function getMobilePointJstDateKey(offsetDays = 0) {
+  const base = Date.now() + (Number(offsetDays || 0) * 24 * 60 * 60 * 1000);
+  const formatter = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  const parts = Object.fromEntries(formatter.formatToParts(new Date(base)).map((part) => [part.type, part.value]));
+  return `${parts.year || "0000"}-${parts.month || "00"}-${parts.day || "00"}`;
+}
+
+function createDefaultMobilePointState() {
+  return {
+    homeworkSpeakingPointsByDate: {},
+    homeworkSpeakingCompletionsByDate: {},
+    reviewSpeakingPointsByDate: {},
+    reviewSpeakingCountByDate: {},
+    wordOrderPointsByDate: {},
+    dailyEarnedByDate: {},
+    dailyEarnedByModeByDate: {},
+    todayEarned: 0,
+    previousDayEarned: 0,
+    totalEarned: 0
+  };
+}
+
+function sanitizePointNumber(value) {
+  return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function sanitizePointDayMap(value) {
+  if (!value || typeof value !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(value).map(([dayKey, points]) => [String(dayKey), sanitizePointNumber(points)])
+  );
+}
+
+function sanitizePointModeMapByDay(value) {
+  if (!value || typeof value !== "object") return {};
+  const next = {};
+  Object.entries(value).forEach(([dayKey, modeMap]) => {
+    if (!modeMap || typeof modeMap !== "object") return;
+    next[String(dayKey)] = Object.fromEntries(
+      Object.entries(modeMap).map(([modeKey, points]) => [String(modeKey), sanitizePointNumber(points)])
+    );
+  });
+  return next;
+}
+
+function sanitizeMobilePointState(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    homeworkSpeakingPointsByDate: sanitizePointDayMap(source.homeworkSpeakingPointsByDate),
+    homeworkSpeakingCompletionsByDate: sanitizePointDayMap(source.homeworkSpeakingCompletionsByDate),
+    reviewSpeakingPointsByDate: sanitizePointDayMap(source.reviewSpeakingPointsByDate),
+    reviewSpeakingCountByDate: sanitizePointDayMap(source.reviewSpeakingCountByDate),
+    wordOrderPointsByDate: sanitizePointDayMap(source.wordOrderPointsByDate),
+    dailyEarnedByDate: sanitizePointDayMap(source.dailyEarnedByDate),
+    dailyEarnedByModeByDate: sanitizePointModeMapByDay(source.dailyEarnedByModeByDate),
+    todayEarned: sanitizePointNumber(source.todayEarned),
+    previousDayEarned: sanitizePointNumber(source.previousDayEarned),
+    totalEarned: sanitizePointNumber(source.totalEarned)
+  };
+}
+
+function sumPointMap(mapLike) {
+  return Object.values(mapLike || {}).reduce((sum, value) => sum + sanitizePointNumber(value), 0);
+}
+
+function hydrateMobilePointState(state) {
+  const next = sanitizeMobilePointState(state);
+  const todayKey = getMobilePointJstDateKey(0);
+  const previousKey = getMobilePointJstDateKey(-1);
+  const todayFromDedicated =
+    sanitizePointNumber(next.homeworkSpeakingPointsByDate?.[todayKey]) +
+    sanitizePointNumber(next.reviewSpeakingPointsByDate?.[todayKey]) +
+    sanitizePointNumber(next.wordOrderPointsByDate?.[todayKey]);
+  const previousFromDedicated =
+    sanitizePointNumber(next.homeworkSpeakingPointsByDate?.[previousKey]) +
+    sanitizePointNumber(next.reviewSpeakingPointsByDate?.[previousKey]) +
+    sanitizePointNumber(next.wordOrderPointsByDate?.[previousKey]);
+  const todayFromLegacy = sanitizePointNumber(next.dailyEarnedByDate?.[todayKey]);
+  const previousFromLegacy = sanitizePointNumber(next.dailyEarnedByDate?.[previousKey]);
+
+  const dedicatedTotal =
+    sumPointMap(next.homeworkSpeakingPointsByDate) +
+    sumPointMap(next.reviewSpeakingPointsByDate) +
+    sumPointMap(next.wordOrderPointsByDate);
+  const legacyTotal = sumPointMap(next.dailyEarnedByDate);
+
+  next.todayEarned = Math.max(next.todayEarned, todayFromDedicated, todayFromLegacy);
+  next.previousDayEarned = Math.max(next.previousDayEarned, previousFromDedicated, previousFromLegacy);
+  next.totalEarned = Math.max(next.totalEarned, dedicatedTotal, legacyTotal);
+  return next;
+}
+
+function mergePointDayMapByMax(baseMap, incomingMap) {
+  const merged = { ...sanitizePointDayMap(baseMap) };
+  Object.entries(sanitizePointDayMap(incomingMap)).forEach(([dayKey, value]) => {
+    const current = sanitizePointNumber(merged[dayKey]);
+    merged[dayKey] = Math.max(current, sanitizePointNumber(value));
+  });
+  return merged;
+}
+
+function mergePointModeMapByDayMax(baseMap, incomingMap) {
+  const merged = sanitizePointModeMapByDay(baseMap);
+  const nextIncoming = sanitizePointModeMapByDay(incomingMap);
+  Object.entries(nextIncoming).forEach(([dayKey, modeMap]) => {
+    const currentModeMap = merged[dayKey] && typeof merged[dayKey] === "object" ? merged[dayKey] : {};
+    const mergedModeMap = { ...currentModeMap };
+    Object.entries(modeMap).forEach(([modeKey, value]) => {
+      mergedModeMap[modeKey] = Math.max(sanitizePointNumber(mergedModeMap[modeKey]), sanitizePointNumber(value));
+    });
+    merged[dayKey] = mergedModeMap;
+  });
+  return merged;
+}
+
+function mergeMobilePointStateByMax(baseState, incomingState) {
+  const base = hydrateMobilePointState(baseState);
+  const incoming = hydrateMobilePointState(incomingState);
+  return hydrateMobilePointState({
+    homeworkSpeakingPointsByDate: mergePointDayMapByMax(base.homeworkSpeakingPointsByDate, incoming.homeworkSpeakingPointsByDate),
+    homeworkSpeakingCompletionsByDate: mergePointDayMapByMax(base.homeworkSpeakingCompletionsByDate, incoming.homeworkSpeakingCompletionsByDate),
+    reviewSpeakingPointsByDate: mergePointDayMapByMax(base.reviewSpeakingPointsByDate, incoming.reviewSpeakingPointsByDate),
+    reviewSpeakingCountByDate: mergePointDayMapByMax(base.reviewSpeakingCountByDate, incoming.reviewSpeakingCountByDate),
+    wordOrderPointsByDate: mergePointDayMapByMax(base.wordOrderPointsByDate, incoming.wordOrderPointsByDate),
+    dailyEarnedByDate: mergePointDayMapByMax(base.dailyEarnedByDate, incoming.dailyEarnedByDate),
+    dailyEarnedByModeByDate: mergePointModeMapByDayMax(base.dailyEarnedByModeByDate, incoming.dailyEarnedByModeByDate),
+    todayEarned: Math.max(base.todayEarned, incoming.todayEarned),
+    previousDayEarned: Math.max(base.previousDayEarned, incoming.previousDayEarned),
+    totalEarned: Math.max(base.totalEarned, incoming.totalEarned)
+  });
+}
+
+function getMobilePointDocRef(targetUid = "") {
+  const uid = String(targetUid || auth.currentUser?.uid || "").trim();
+  if (!uid) return null;
+  return doc(firestore, "users", uid, MOBILE_POINT_SYNC_DOC_COLLECTION, MOBILE_POINT_SYNC_DOC_ID);
+}
+
+function normalizeMobilePointDoc(docData) {
+  const source = docData && typeof docData === "object" ? docData : {};
+  const pointState = hydrateMobilePointState(source.pointState);
+  return {
+    pointState,
+    updatedAtMs: sanitizePointNumber(source.updatedAtMs),
+    sourceDeviceId: String(source.sourceDeviceId || "").trim(),
+    sourceDeviceName: String(source.sourceDeviceName || "").trim(),
+    schemaVersion: sanitizePointNumber(source.schemaVersion) || MOBILE_POINT_SYNC_SCHEMA_VERSION
+  };
+}
+
+async function loadMobilePointStateFromFirestore(options = {}) {
+  const targetUid = String(options?.targetUid || auth.currentUser?.uid || "").trim();
+  const ref = getMobilePointDocRef(targetUid);
+  if (!ref || !targetUid) {
+    return { ok: false, exists: false, uid: targetUid, pointState: null };
+  }
+
+  try {
+    const snapshot = await getDoc(ref);
+    if (!snapshot.exists()) {
+      return { ok: true, exists: false, uid: targetUid, pointState: null };
+    }
+    const normalized = normalizeMobilePointDoc(snapshot.data());
+    return {
+      ok: true,
+      exists: true,
+      uid: targetUid,
+      pointState: normalized.pointState,
+      updatedAtMs: normalized.updatedAtMs,
+      sourceDeviceId: normalized.sourceDeviceId,
+      sourceDeviceName: normalized.sourceDeviceName,
+      schemaVersion: normalized.schemaVersion
+    };
+  } catch (error) {
+    console.error("Failed to load mobile point state from Firestore", error);
+    return { ok: false, exists: false, uid: targetUid, pointState: null, error };
+  }
+}
+
+async function saveMobilePointStateToFirestore(pointState, options = {}) {
+  const user = auth.currentUser;
+  const targetUid = String(options?.targetUid || user?.uid || "").trim();
+  const ref = getMobilePointDocRef(targetUid);
+  if (!ref || !targetUid || !pointState || typeof pointState !== "object") {
+    return { ok: false, saved: false, exists: false, uid: targetUid };
+  }
+
+  const allowCreate = options?.allowCreate === true;
+  const normalizedIncoming = hydrateMobilePointState(pointState);
+  const sourceDeviceId = String(options?.sourceDeviceId || "").trim();
+  const sourceDeviceName = String(options?.sourceDeviceName || "").trim();
+
+  try {
+    const result = await runTransaction(firestore, async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      const existsBefore = snapshot.exists();
+      if (!existsBefore && !allowCreate) {
+        return {
+          saved: false,
+          existsBefore,
+          skipped: "missing-remote",
+          pointState: null
+        };
+      }
+
+      const currentState = existsBefore
+        ? normalizeMobilePointDoc(snapshot.data()).pointState
+        : createDefaultMobilePointState();
+      const mergedState = existsBefore
+        ? mergeMobilePointStateByMax(currentState, normalizedIncoming)
+        : normalizedIncoming;
+
+      transaction.set(ref, {
+        uid: targetUid,
+        pointState: mergedState,
+        totalEarned: sanitizePointNumber(mergedState.totalEarned),
+        todayEarned: sanitizePointNumber(mergedState.todayEarned),
+        previousDayEarned: sanitizePointNumber(mergedState.previousDayEarned),
+        sourceDeviceId,
+        sourceDeviceName,
+        schemaVersion: MOBILE_POINT_SYNC_SCHEMA_VERSION,
+        updatedAtMs: Date.now(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      return {
+        saved: true,
+        existsBefore,
+        pointState: mergedState
+      };
+    });
+
+    return {
+      ok: true,
+      saved: Boolean(result?.saved),
+      exists: Boolean(result?.existsBefore),
+      uid: targetUid,
+      skipped: result?.skipped || "",
+      pointState: result?.pointState || null
+    };
+  } catch (error) {
+    console.error("Failed to save mobile point state to Firestore", error);
+    return { ok: false, saved: false, exists: false, uid: targetUid, error };
+  }
+}
+
+function subscribeMobilePointStateFromFirestore(onChange, options = {}) {
+  if (typeof onChange !== "function") {
+    return () => {};
+  }
+  const targetUid = String(options?.targetUid || auth.currentUser?.uid || "").trim();
+  const ref = getMobilePointDocRef(targetUid);
+  if (!ref || !targetUid) {
+    return () => {};
+  }
+
+  return onSnapshot(ref, (snapshot) => {
+    if (!snapshot.exists()) {
+      onChange({ ok: true, exists: false, uid: targetUid, pointState: null });
+      return;
+    }
+    const normalized = normalizeMobilePointDoc(snapshot.data());
+    onChange({
+      ok: true,
+      exists: true,
+      uid: targetUid,
+      pointState: normalized.pointState,
+      updatedAtMs: normalized.updatedAtMs,
+      sourceDeviceId: normalized.sourceDeviceId,
+      sourceDeviceName: normalized.sourceDeviceName,
+      schemaVersion: normalized.schemaVersion
+    });
+  }, (error) => {
+    onChange({ ok: false, exists: false, uid: targetUid, pointState: null, error });
+  });
+}
+
 async function initMobileFirebaseAuthUi() {
   bindAuthUi();
   setLoginBusy(false);
@@ -219,6 +508,9 @@ async function initMobileFirebaseAuthUi() {
 }
 
 window.saveMobileLearningHistoryToFirestore = saveMobileLearningHistoryToFirestore;
+window.loadMobilePointStateFromFirestore = loadMobilePointStateFromFirestore;
+window.saveMobilePointStateToFirestore = saveMobilePointStateToFirestore;
+window.subscribeMobilePointStateFromFirestore = subscribeMobilePointStateFromFirestore;
 window.getMobileFirebaseCurrentUser = () => auth.currentUser;
 window.MobileFirebase = Object.freeze({ app, auth, firestore });
 window.MobileFirebaseReady = initMobileFirebaseAuthUi();

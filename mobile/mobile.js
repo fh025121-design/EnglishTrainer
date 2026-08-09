@@ -23,6 +23,7 @@
   });
   const APP_VERSION = SETTINGS_INFO.releaseHistory[0]?.version || "0/0000/0000";
   const MOBILE_POINT_STORAGE_KEY = "english-trainer-mobile-points-v1";
+  const MOBILE_POINT_PENDING_SYNC_STORAGE_KEY = "english-trainer-mobile-points-pending-sync-v1";
   const MOBILE_POINT_CONFIG = Object.freeze({
     homeworkSpeakingDailyMax: 30,
     reviewSpeakingDailyMax: 400,
@@ -59,6 +60,11 @@
   ]);
   let mobilePointStateCache = null;
   let mobilePointHistoryVisibleCount = MOBILE_POINT_HISTORY_PAGE_SIZE;
+  let mobilePointSyncCurrentUid = "";
+  let mobilePointSyncReady = false;
+  let mobilePointSyncInFlight = null;
+  let mobilePointSyncQueued = false;
+  let mobilePointSyncUnsubscribe = null;
 
   function formatPointValue(value) {
     return `${new Intl.NumberFormat("ja-JP").format(Math.max(0, Math.floor(Number(value) || 0)))}P`;
@@ -313,16 +319,313 @@
     }
   }
 
-  function saveMobilePointState(pointState) {
+  function loadMobilePendingPointStateForSync() {
+    try {
+      const raw = window.localStorage.getItem(MOBILE_POINT_PENDING_SYNC_STORAGE_KEY);
+      if (!raw) return null;
+      return hydrateMobilePointDaySnapshots(sanitizeMobilePointState(JSON.parse(raw)));
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function saveMobilePendingPointStateForSync(pointState) {
+    const sanitized = hydrateMobilePointDaySnapshots(sanitizeMobilePointState(pointState));
+    window.localStorage.setItem(MOBILE_POINT_PENDING_SYNC_STORAGE_KEY, JSON.stringify(sanitized));
+  }
+
+  function clearMobilePendingPointStateForSync() {
+    window.localStorage.removeItem(MOBILE_POINT_PENDING_SYNC_STORAGE_KEY);
+  }
+
+  function persistMobilePointStateLocally(pointState) {
     mobilePointStateCache = hydrateMobilePointDaySnapshots(sanitizeMobilePointState(pointState));
     window.localStorage.setItem(MOBILE_POINT_STORAGE_KEY, JSON.stringify(mobilePointStateCache));
     return mobilePointStateCache;
   }
 
+  function sanitizePointMapForCompare(value) {
+    const source = value && typeof value === "object" ? value : {};
+    const keys = Object.keys(source).sort((left, right) => left.localeCompare(right, "ja"));
+    const next = {};
+    keys.forEach((key) => {
+      next[key] = Math.max(0, Math.floor(Number(source[key]) || 0));
+    });
+    return next;
+  }
+
+  function sanitizePointModeMapByDayForCompare(value) {
+    const source = value && typeof value === "object" ? value : {};
+    const dayKeys = Object.keys(source).sort((left, right) => left.localeCompare(right, "ja"));
+    const next = {};
+    dayKeys.forEach((dayKey) => {
+      next[dayKey] = sanitizePointMapForCompare(source[dayKey]);
+    });
+    return next;
+  }
+
+  function buildStableMobilePointStateSnapshot(value) {
+    const sanitized = hydrateMobilePointDaySnapshots(sanitizeMobilePointState(value));
+    return {
+      homeworkSpeakingPointsByDate: sanitizePointMapForCompare(sanitized.homeworkSpeakingPointsByDate),
+      homeworkSpeakingCompletionsByDate: sanitizePointMapForCompare(sanitized.homeworkSpeakingCompletionsByDate),
+      reviewSpeakingPointsByDate: sanitizePointMapForCompare(sanitized.reviewSpeakingPointsByDate),
+      reviewSpeakingCountByDate: sanitizePointMapForCompare(sanitized.reviewSpeakingCountByDate),
+      wordOrderPointsByDate: sanitizePointMapForCompare(sanitized.wordOrderPointsByDate),
+      dailyEarnedByDate: sanitizePointMapForCompare(sanitized.dailyEarnedByDate),
+      dailyEarnedByModeByDate: sanitizePointModeMapByDayForCompare(sanitized.dailyEarnedByModeByDate),
+      todayEarned: Math.max(0, Math.floor(Number(sanitized.todayEarned) || 0)),
+      previousDayEarned: Math.max(0, Math.floor(Number(sanitized.previousDayEarned) || 0)),
+      totalEarned: Math.max(0, Math.floor(Number(sanitized.totalEarned) || 0))
+    };
+  }
+
+  function areMobilePointStatesEqual(left, right) {
+    return JSON.stringify(buildStableMobilePointStateSnapshot(left)) === JSON.stringify(buildStableMobilePointStateSnapshot(right));
+  }
+
+  function mergePointMapByMax(baseMap, incomingMap) {
+    const merged = { ...sanitizePointMapForCompare(baseMap) };
+    Object.entries(sanitizePointMapForCompare(incomingMap)).forEach(([key, value]) => {
+      merged[key] = Math.max(Math.max(0, Number(merged[key]) || 0), Math.max(0, Number(value) || 0));
+    });
+    return merged;
+  }
+
+  function mergePointModeMapByDayMax(baseMap, incomingMap) {
+    const merged = sanitizePointModeMapByDayForCompare(baseMap);
+    const incoming = sanitizePointModeMapByDayForCompare(incomingMap);
+    Object.entries(incoming).forEach(([dayKey, modeMap]) => {
+      merged[dayKey] = mergePointMapByMax(merged[dayKey], modeMap);
+    });
+    return merged;
+  }
+
+  function mergeMobilePointStateByMax(baseState, incomingState) {
+    const base = buildStableMobilePointStateSnapshot(baseState);
+    const incoming = buildStableMobilePointStateSnapshot(incomingState);
+    return hydrateMobilePointDaySnapshots({
+      homeworkSpeakingPointsByDate: mergePointMapByMax(base.homeworkSpeakingPointsByDate, incoming.homeworkSpeakingPointsByDate),
+      homeworkSpeakingCompletionsByDate: mergePointMapByMax(base.homeworkSpeakingCompletionsByDate, incoming.homeworkSpeakingCompletionsByDate),
+      reviewSpeakingPointsByDate: mergePointMapByMax(base.reviewSpeakingPointsByDate, incoming.reviewSpeakingPointsByDate),
+      reviewSpeakingCountByDate: mergePointMapByMax(base.reviewSpeakingCountByDate, incoming.reviewSpeakingCountByDate),
+      wordOrderPointsByDate: mergePointMapByMax(base.wordOrderPointsByDate, incoming.wordOrderPointsByDate),
+      dailyEarnedByDate: mergePointMapByMax(base.dailyEarnedByDate, incoming.dailyEarnedByDate),
+      dailyEarnedByModeByDate: mergePointModeMapByDayMax(base.dailyEarnedByModeByDate, incoming.dailyEarnedByModeByDate),
+      todayEarned: Math.max(base.todayEarned, incoming.todayEarned),
+      previousDayEarned: Math.max(base.previousDayEarned, incoming.previousDayEarned),
+      totalEarned: Math.max(base.totalEarned, incoming.totalEarned)
+    });
+  }
+
+  function getCurrentMobileFirebaseUser() {
+    return typeof window.getMobileFirebaseCurrentUser === "function"
+      ? window.getMobileFirebaseCurrentUser()
+      : (window.MobileFirebase?.auth?.currentUser || null);
+  }
+
+  function getCurrentMobilePointSyncUid() {
+    return String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+  }
+
+  function refreshMobilePointUiAfterSync() {
+    if (state.currentScreen === "acquiredPointsScreen") {
+      renderMobilePointSummaryScreen();
+      return;
+    }
+    if (state.currentScreen === "pointRewardScreen" && state.pointRewardScreenState) {
+      const summary = getMobilePointSummary();
+      state.pointRewardScreenState.todayEarned = Math.max(0, Number(summary.todayEarned) || 0);
+      state.pointRewardScreenState.totalEarned = Math.max(0, Number(summary.totalEarned) || 0);
+      renderPointRewardScreen();
+    }
+  }
+
+  function handleMobilePointSyncRemoteSnapshot(snapshot) {
+    if (!snapshot?.ok || !snapshot.exists || !snapshot.pointState) {
+      return;
+    }
+    const incoming = hydrateMobilePointDaySnapshots(sanitizeMobilePointState(snapshot.pointState));
+    if (!areMobilePointStatesEqual(getMobilePointState(), incoming)) {
+      persistMobilePointStateLocally(incoming);
+      refreshMobilePointUiAfterSync();
+    }
+    const pending = loadMobilePendingPointStateForSync();
+    if (!pending) {
+      clearMobilePendingPointStateForSync();
+      return;
+    }
+    if (areMobilePointStatesEqual(pending, incoming)) {
+      clearMobilePendingPointStateForSync();
+      return;
+    }
+    const merged = mergeMobilePointStateByMax(incoming, pending);
+    if (!areMobilePointStatesEqual(merged, incoming)) {
+      persistMobilePointStateLocally(merged);
+      saveMobilePendingPointStateForSync(merged);
+      scheduleMobilePointStateSync();
+      refreshMobilePointUiAfterSync();
+      return;
+    }
+    clearMobilePendingPointStateForSync();
+  }
+
+  async function initializeMobilePointSyncForCurrentUser(options = {}) {
+    const force = options?.force === true;
+    const uid = getCurrentMobilePointSyncUid();
+    if (!uid) {
+      mobilePointSyncCurrentUid = "";
+      mobilePointSyncReady = false;
+      if (typeof mobilePointSyncUnsubscribe === "function") {
+        mobilePointSyncUnsubscribe();
+      }
+      mobilePointSyncUnsubscribe = null;
+      return false;
+    }
+
+    if (!force && mobilePointSyncReady && mobilePointSyncCurrentUid === uid) {
+      return true;
+    }
+
+    if (typeof mobilePointSyncUnsubscribe === "function") {
+      mobilePointSyncUnsubscribe();
+    }
+    mobilePointSyncUnsubscribe = null;
+
+    const loadRemote = window.loadMobilePointStateFromFirestore;
+    if (typeof loadRemote !== "function") {
+      mobilePointSyncCurrentUid = uid;
+      mobilePointSyncReady = false;
+      return false;
+    }
+
+    let remoteResult = null;
+    try {
+      remoteResult = await loadRemote({ targetUid: uid });
+    } catch (_error) {
+      remoteResult = null;
+    }
+
+    if (remoteResult?.ok && remoteResult.exists && remoteResult.pointState) {
+      persistMobilePointStateLocally(remoteResult.pointState);
+      mobilePointSyncCurrentUid = uid;
+      mobilePointSyncReady = true;
+      refreshMobilePointUiAfterSync();
+    } else {
+      const canBootstrap = isCurrentSonLoginForMobileLearningHistory();
+      const saveRemote = window.saveMobilePointStateToFirestore;
+      if (canBootstrap && typeof saveRemote === "function") {
+        const localBaseline = loadMobilePendingPointStateForSync() || getMobilePointState();
+        const bootstrapResult = await saveRemote(localBaseline, {
+          targetUid: uid,
+          allowCreate: true,
+          sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
+          sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+        }).catch(() => null);
+        if (bootstrapResult?.ok && bootstrapResult.saved && bootstrapResult.pointState) {
+          persistMobilePointStateLocally(bootstrapResult.pointState);
+          clearMobilePendingPointStateForSync();
+          mobilePointSyncCurrentUid = uid;
+          mobilePointSyncReady = true;
+          refreshMobilePointUiAfterSync();
+        } else {
+          mobilePointSyncCurrentUid = uid;
+          mobilePointSyncReady = false;
+        }
+      } else {
+        mobilePointSyncCurrentUid = uid;
+        mobilePointSyncReady = false;
+      }
+    }
+
+    const subscribeRemote = window.subscribeMobilePointStateFromFirestore;
+    if (typeof subscribeRemote === "function") {
+      mobilePointSyncUnsubscribe = subscribeRemote((snapshot) => {
+        handleMobilePointSyncRemoteSnapshot(snapshot);
+      }, { targetUid: uid });
+    }
+
+    if (mobilePointSyncReady) {
+      await flushMobilePointStateSync();
+    }
+    return mobilePointSyncReady;
+  }
+
+  async function flushMobilePointStateSync() {
+    if (mobilePointSyncInFlight) {
+      mobilePointSyncQueued = true;
+      return mobilePointSyncInFlight;
+    }
+
+    mobilePointSyncInFlight = (async () => {
+      do {
+        mobilePointSyncQueued = false;
+        const uid = getCurrentMobilePointSyncUid();
+        if (!uid || !mobilePointSyncReady || mobilePointSyncCurrentUid !== uid) {
+          break;
+        }
+
+        const saveRemote = window.saveMobilePointStateToFirestore;
+        if (typeof saveRemote !== "function") {
+          break;
+        }
+
+        const pending = loadMobilePendingPointStateForSync();
+        const sourceState = pending || getMobilePointState();
+        saveMobilePendingPointStateForSync(sourceState);
+
+        const result = await saveRemote(sourceState, {
+          targetUid: uid,
+          allowCreate: false,
+          sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
+          sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+        }).catch(() => null);
+
+        if (!result?.ok || !result.saved) {
+          break;
+        }
+
+        if (result.pointState) {
+          persistMobilePointStateLocally(result.pointState);
+          refreshMobilePointUiAfterSync();
+        }
+        clearMobilePendingPointStateForSync();
+      } while (mobilePointSyncQueued);
+    })();
+
+    try {
+      await mobilePointSyncInFlight;
+    } finally {
+      mobilePointSyncInFlight = null;
+    }
+  }
+
+  function scheduleMobilePointStateSync() {
+    const latest = getMobilePointState();
+    saveMobilePendingPointStateForSync(latest);
+    const uid = getCurrentMobilePointSyncUid();
+    if (!uid) {
+      return;
+    }
+    if (!mobilePointSyncReady || mobilePointSyncCurrentUid !== uid) {
+      initializeMobilePointSyncForCurrentUser().catch(() => false);
+      return;
+    }
+    flushMobilePointStateSync().catch(() => undefined);
+  }
+
+  function saveMobilePointState(pointState, options = {}) {
+    const nextState = persistMobilePointStateLocally(pointState);
+    if (options?.skipSync !== true) {
+      scheduleMobilePointStateSync();
+    }
+    return nextState;
+  }
+
   function getMobilePointState() {
     if (!mobilePointStateCache) {
       mobilePointStateCache = hydrateMobilePointDaySnapshots(loadMobilePointState());
-      saveMobilePointState(mobilePointStateCache);
+      persistMobilePointStateLocally(mobilePointStateCache);
     }
     return mobilePointStateCache;
   }
@@ -6311,10 +6614,17 @@
         .catch(() => false)
         .finally(() => {
           flushMobilePendingLearningHistoryEntries().catch(() => 0);
+          initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
         });
       renderHome();
       return;
     }
+    if (typeof mobilePointSyncUnsubscribe === "function") {
+      mobilePointSyncUnsubscribe();
+    }
+    mobilePointSyncUnsubscribe = null;
+    mobilePointSyncCurrentUid = "";
+    mobilePointSyncReady = false;
     flushMobilePendingLearningHistoryEntries().catch(() => 0);
   }
 
@@ -6336,6 +6646,7 @@
         .catch(() => false)
         .finally(() => {
           flushMobilePendingLearningHistoryEntries().catch(() => 0);
+          initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
         });
       renderHome();
       return;
@@ -8720,10 +9031,12 @@
     document.getElementById("openWordOrderTrainingBtn").addEventListener("click", renderWordOrderRangeSelectScreen);
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
-    document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", () => {
+    document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", async () => {
       mobilePointHistoryVisibleCount = MOBILE_POINT_HISTORY_PAGE_SIZE;
       renderMobilePointSummaryScreen();
       showScreen("acquiredPointsScreen");
+      await initializeMobilePointSyncForCurrentUser().catch(() => false);
+      renderMobilePointSummaryScreen();
     });
     document.getElementById("openMobileLearningHistoryBtn").addEventListener("click", renderMobileAdminLearningHistoryScreen);
     document.getElementById("acquiredPointsHomeBtn").addEventListener("click", renderHome);
@@ -8845,6 +9158,10 @@
     document.addEventListener("visibilitychange", handlePageVisibilityChange);
     window.addEventListener("pageshow", handlePageShow);
     window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("online", () => {
+      flushMobilePendingLearningHistoryEntries().catch(() => 0);
+      scheduleMobilePointStateSync();
+    });
   }
 
   function initialize() {
