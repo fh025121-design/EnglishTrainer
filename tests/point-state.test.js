@@ -84,25 +84,29 @@ context.savePointState(cappedPointState);
 assert.strictEqual(context.awardPointsForTrainingMode("irregular-verb"), 0, "irregular-verb should stop at 100P");
 context.savePointState(originalPointState);
 assert.strictEqual(
-  context.formatTrainingDailyPointSummary(11, {
+  context.formatTrainingDailyPointSummary(86, {
+    "day-study": 50,
+    "unstudied-clear": 25,
     preposition: 2,
     response: 1,
     idiom: 3,
     challenge: 4,
     "irregular-verb": 1
   }),
-  "本日の累計11P（前置詞2P　応答文1P　熟語3P　不規則動詞1P　過去問4P）",
+  "本日の累計86P（Day学習50P　未学習なし25P　熟語3P　前置詞2P　応答文1P　不規則動詞1P　過去の間違い4P）",
   "daily point summary should show each item separately"
 );
 assert.strictEqual(
   context.formatTrainingDailyPointBreakdown({
+    "day-study": 50,
+    "unstudied-clear": 25,
     preposition: 2,
     response: 1,
     idiom: 3,
     challenge: 4,
     "irregular-verb": 1
   }),
-  "前置詞2P　応答文1P　熟語3P　不規則動詞1P　過去問4P",
+  "Day学習50P　未学習なし25P　熟語3P　前置詞2P　応答文1P　不規則動詞1P　過去の間違い4P",
   "exchange page breakdown should show each training item separately"
 );
 

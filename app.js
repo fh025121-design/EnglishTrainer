@@ -5813,33 +5813,56 @@ function getTrainingCompletionModeLabel(mode) {
   return "特訓";
 }
 
+function createDefaultPointDayModeRow() {
+  return {
+    "day-study": 0,
+    "unstudied-clear": 0,
+    idiom: 0,
+    preposition: 0,
+    response: 0,
+    "irregular-verb": 0,
+    challenge: 0
+  };
+}
+
 function getTrainingDailyPointModeRow(pointState, todayKey) {
-  return pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
+  const sourceRow = pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
     ? pointState.dailyEarnedByModeByDate[todayKey]
-    : { preposition: 0, response: 0, idiom: 0, challenge: 0, "irregular-verb": 0 };
+    : {};
+  const defaultRow = createDefaultPointDayModeRow();
+  return {
+    ...defaultRow,
+    "day-study": Math.max(0, Number(sourceRow["day-study"]) || 0),
+    "unstudied-clear": Math.max(0, Number(sourceRow["unstudied-clear"]) || 0),
+    idiom: Math.max(0, Number(sourceRow.idiom) || 0),
+    preposition: Math.max(0, Number(sourceRow.preposition) || 0),
+    response: Math.max(0, Number(sourceRow.response) || 0),
+    "irregular-verb": Math.max(0, Number(sourceRow["irregular-verb"]) || 0),
+    challenge: Math.max(0, Number(sourceRow.challenge) || 0)
+  };
+}
+
+function getTrainingDailyPointBreakdownEntries(todayModeRow) {
+  return [
+    ["Day学習", todayModeRow["day-study"]],
+    ["未学習なし", todayModeRow["unstudied-clear"]],
+    ["熟語", todayModeRow.idiom],
+    ["前置詞", todayModeRow.preposition],
+    ["応答文", todayModeRow.response],
+    ["不規則動詞", todayModeRow["irregular-verb"]],
+    ["過去の間違い", todayModeRow.challenge]
+  ];
 }
 
 function formatTrainingDailyPointSummary(todayTotal, todayModeRow) {
-  const breakdown = [
-    ["前置詞", todayModeRow.preposition],
-    ["応答文", todayModeRow.response],
-    ["熟語", todayModeRow.idiom],
-    ["不規則動詞", todayModeRow["irregular-verb"]],
-    ["過去問", todayModeRow.challenge]
-  ]
+  const breakdown = getTrainingDailyPointBreakdownEntries(todayModeRow)
     .map(([label, value]) => `${label}${formatPointValue(value)}`)
     .join("　");
   return `本日の累計${formatPointValue(todayTotal)}（${breakdown}）`;
 }
 
 function formatTrainingDailyPointBreakdown(todayModeRow) {
-  return [
-    ["前置詞", todayModeRow.preposition],
-    ["応答文", todayModeRow.response],
-    ["熟語", todayModeRow.idiom],
-    ["不規則動詞", todayModeRow["irregular-verb"]],
-    ["過去問", todayModeRow.challenge]
-  ]
+  return getTrainingDailyPointBreakdownEntries(todayModeRow)
     .map(([label, value]) => `${label}${formatPointValue(value)}`)
     .join("　");
 }
@@ -5885,6 +5908,8 @@ function openTrainingCompleteScreen(options = {}) {
   const todayKey = getPointTodayKey();
   const todayTotal = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
   const todayModeRow = getTrainingDailyPointModeRow(pointState, todayKey);
+  const dayStudyEarned = Math.max(0, Number(todayModeRow["day-study"]) || 0);
+  const unstudiedClearEarned = Math.max(0, Number(todayModeRow["unstudied-clear"]) || 0);
   const prepositionEarned = Math.max(0, Number(todayModeRow.preposition) || 0);
   const responseEarned = Math.max(0, Number(todayModeRow.response) || 0);
   const challengeEarned = Math.max(0, Number(todayModeRow.challenge) || 0);
@@ -5893,6 +5918,8 @@ function openTrainingCompleteScreen(options = {}) {
   const totalEarned = Math.max(0, Number(pointState.totalEarned) || 0);
 
   dailySummaryText.textContent = formatTrainingDailyPointSummary(todayTotal, {
+    "day-study": dayStudyEarned,
+    "unstudied-clear": unstudiedClearEarned,
     preposition: prepositionEarned,
     response: responseEarned,
     idiom: idiomEarned,
@@ -6004,7 +6031,9 @@ function migratePointDayKeyRow(pointState, jstDayKey, offsetDays) {
   if (legacyModeRow && typeof legacyModeRow === "object") {
     const targetModeRow = pointState.dailyEarnedByModeByDate?.[jstDayKey] && typeof pointState.dailyEarnedByModeByDate[jstDayKey] === "object"
       ? pointState.dailyEarnedByModeByDate[jstDayKey]
-      : { preposition: 0, response: 0, idiom: 0, challenge: 0, "irregular-verb": 0 };
+      : createDefaultPointDayModeRow();
+    targetModeRow["day-study"] = Math.max(0, Number(targetModeRow["day-study"]) || 0) + Math.max(0, Number(legacyModeRow["day-study"]) || 0);
+    targetModeRow["unstudied-clear"] = Math.max(0, Number(targetModeRow["unstudied-clear"]) || 0) + Math.max(0, Number(legacyModeRow["unstudied-clear"]) || 0);
     targetModeRow.preposition = Math.max(0, Number(targetModeRow.preposition) || 0) + Math.max(0, Number(legacyModeRow.preposition) || 0);
     targetModeRow.response = Math.max(0, Number(targetModeRow.response) || 0) + Math.max(0, Number(legacyModeRow.response) || 0);
     targetModeRow.challenge = Math.max(0, Number(targetModeRow.challenge) || 0) + Math.max(0, Number(legacyModeRow.challenge) || 0);
@@ -6044,6 +6073,8 @@ function sanitizePointState(value) {
       Object.entries(source.dailyEarnedByModeByDate).map(([dayKey, modeRow]) => {
         const safeRow = modeRow && typeof modeRow === "object" ? modeRow : {};
         return [String(dayKey), {
+          "day-study": Math.max(0, Math.floor(Number(safeRow["day-study"]) || 0)),
+          "unstudied-clear": Math.max(0, Math.floor(Number(safeRow["unstudied-clear"]) || 0)),
           preposition: Math.max(0, Math.floor(Number(safeRow.preposition) || 0)),
           response: Math.max(0, Math.floor(Number(safeRow.response) || 0)),
           challenge: Math.max(0, Math.floor(Number(safeRow.challenge) || 0)),
@@ -6511,7 +6542,7 @@ async function ensurePointStateFromFirestoreIfMissing() {
           const dayTotal = Math.max(0, Number(restored.dailyEarnedByDate?.[dayKey]) || 0);
           const dayModeRow = restored.dailyEarnedByModeByDate?.[dayKey] && typeof restored.dailyEarnedByModeByDate[dayKey] === "object"
             ? restored.dailyEarnedByModeByDate[dayKey]
-            : { preposition: 0, response: 0, challenge: 0, "irregular-verb": 0, idiom: 0 };
+            : createDefaultPointDayModeRow();
           const modeEarned = Math.max(0, Number(dayModeRow[pointMode]) || 0);
 
           const modeCap = Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode[pointMode]) || 0);
@@ -6613,7 +6644,7 @@ function awardPointsForTrainingMode(mode) {
   pointState.dailyEarnedByDate[todayKey] = todayEarned + earned;
   const todayModeRow = pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
     ? pointState.dailyEarnedByModeByDate[todayKey]
-    : { preposition: 0, response: 0, idiom: 0, challenge: 0, "irregular-verb": 0 };
+    : createDefaultPointDayModeRow();
   todayModeRow[modeKey] = modeDailyEarned + earned;
   pointState.dailyEarnedByModeByDate = pointState.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object"
     ? pointState.dailyEarnedByModeByDate
@@ -6655,6 +6686,14 @@ function awardDayAdvanceCompletionBonus(session, reason) {
   migratePointDayKeyRow(pointState, todayKey, 0);
   const todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
   pointState.dailyEarnedByDate[todayKey] = todayEarned + bonus;
+  const todayModeRow = pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
+    ? pointState.dailyEarnedByModeByDate[todayKey]
+    : createDefaultPointDayModeRow();
+  todayModeRow["day-study"] = Math.max(0, Number(todayModeRow["day-study"]) || 0) + bonus;
+  pointState.dailyEarnedByModeByDate = pointState.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object"
+    ? pointState.dailyEarnedByModeByDate
+    : {};
+  pointState.dailyEarnedByModeByDate[todayKey] = todayModeRow;
 
   savePointState(pointState);
   const exchangeScreen = document.getElementById("exchangeTicketScreen");
@@ -6688,6 +6727,14 @@ function awardDayUnstudiedClearBonus(dayNumber) {
   migratePointDayKeyRow(pointState, todayKey, 0);
   const todayEarned = Math.max(0, Number(pointState.dailyEarnedByDate?.[todayKey]) || 0);
   pointState.dailyEarnedByDate[todayKey] = todayEarned + bonus;
+  const todayModeRow = pointState.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
+    ? pointState.dailyEarnedByModeByDate[todayKey]
+    : createDefaultPointDayModeRow();
+  todayModeRow["unstudied-clear"] = Math.max(0, Number(todayModeRow["unstudied-clear"]) || 0) + bonus;
+  pointState.dailyEarnedByModeByDate = pointState.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object"
+    ? pointState.dailyEarnedByModeByDate
+    : {};
+  pointState.dailyEarnedByModeByDate[todayKey] = todayModeRow;
 
   savePointState(pointState);
 

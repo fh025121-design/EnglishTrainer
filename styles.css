@@ -590,7 +590,9 @@ p {
   font-size: clamp(11px, 0.8rem, 14px);
   font-weight: 700;
   line-height: 1.5;
+  white-space: normal;
   word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .point-exchange-goal-title {
