@@ -7054,6 +7054,7 @@
       renderSpeakingWordDaySelectScreen();
       return;
     }
+    finalizeSpeakingWordLearningHistorySession("completed");
     if (!practice.pointAwarded) {
       practice.pointAwarded = true;
       recordSpeakingWordDayCompletion(practice.weekId, practice.dayKey);
@@ -7080,15 +7081,64 @@
       showMeaning: false,
       showExampleJapanese: false,
       readCount: 0,
+      answeredCount: 0,
+      correctCount: 0,
+      currentItemCorrect: false,
       recognitionInProgress: false,
       recognitionStatus: "",
       activeRecognition: null,
-      pointAwarded: false
+      pointAwarded: false,
+      historyFinalized: false
     };
+
+    if (!state.learningHistorySession) {
+      startMobileLearningHistorySession({
+        source: "vocabulary",
+        mode: "Vocabulary",
+        dayNumber: `${weekId} ${dayKey}`,
+        startedAt: Date.now(),
+        session: null
+      });
+    }
+
     renderSpeakingWordPracticeScreen({ autoSpeakWord: true });
   }
 
+  function getSpeakingWordLearningHistorySummary(practice) {
+    if (!practice) {
+      return {
+        questionCount: 0,
+        correctCount: 0,
+        accuracy: 0
+      };
+    }
+    const questionCount = Math.max(0, Number(practice.answeredCount) || 0);
+    const correctCount = Math.max(0, Number(practice.correctCount) || 0);
+    return {
+      questionCount,
+      correctCount,
+      accuracy: questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0
+    };
+  }
+
+  function finalizeSpeakingWordLearningHistorySession(completedReason) {
+    const practice = state.speakingUi.speakingWordPractice;
+    if (!practice || practice.historyFinalized) return;
+    if (!state.learningHistorySession) {
+      practice.historyFinalized = true;
+      return;
+    }
+    finalizeMobileLearningHistorySession({
+      completedReason,
+      mode: "Vocabulary",
+      dayNumber: `${practice.weekId} ${practice.dayKey}`,
+      summary: getSpeakingWordLearningHistorySummary(practice)
+    });
+    practice.historyFinalized = true;
+  }
+
   function leaveSpeakingWordPracticeToDaySelect() {
+    finalizeSpeakingWordLearningHistorySession("interrupted");
     stopSpeakingWordPracticeRecognition();
     state.speakingUi.speakingWordPractice = null;
     renderSpeakingWordDaySelectScreen();
@@ -7148,6 +7198,9 @@
         practice.readCount = Math.min(2, Math.max(0, Number(practice.readCount) || 0) + 1);
       }
       const isGood = hasSpeech ? isCorrectRecognition(item.example, transcripts) : false;
+      if (isGood) {
+        practice.currentItemCorrect = true;
+      }
       const head = hasSpeech ? (isGood ? "GOOD" : "Missing") : "聞き取り失敗";
       const heard = transcripts[0] || "（認識なし）";
       practice.recognitionStatus = `${head}: ${heard}`;
@@ -7189,7 +7242,14 @@
   function moveToNextSpeakingWordItem() {
     const practice = state.speakingUi.speakingWordPractice;
     if (!practice || practice.readCount < 2) return;
+
+    practice.answeredCount = Math.max(0, Number(practice.answeredCount) || 0) + 1;
+    if (practice.currentItemCorrect) {
+      practice.correctCount = Math.max(0, Number(practice.correctCount) || 0) + 1;
+    }
+
     if (practice.index >= practice.items.length - 1) {
+      practice.currentItemCorrect = false;
       renderSpeakingWordCompleteScreen();
       return;
     }
@@ -7198,6 +7258,7 @@
     practice.showMeaning = false;
     practice.showExampleJapanese = false;
     practice.readCount = 0;
+    practice.currentItemCorrect = false;
     practice.recognitionStatus = "";
     practice.recognitionInProgress = false;
     practice.activeRecognition = null;
