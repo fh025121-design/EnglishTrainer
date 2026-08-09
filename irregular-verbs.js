@@ -22,11 +22,17 @@
 
   function sanitizeVerb(value) {
     if (!value || typeof value !== 'object') return null;
+    const normalizeArrayOrString = (entry) => {
+      if (Array.isArray(entry)) {
+        return entry.map((item) => String(item || '').trim()).filter(Boolean);
+      }
+      return String(entry || '').trim();
+    };
     return {
       id: String(value.id || value.base || '').trim(),
       base: String(value.base || '').trim(),
-      past: String(value.past || '').trim(),
-      pastParticiple: String(value.pastParticiple || '').trim(),
+      past: normalizeArrayOrString(value.past),
+      pastParticiple: normalizeArrayOrString(value.pastParticiple),
       japanese: String(value.japanese || value.meaning || '').trim()
     };
   }
@@ -41,21 +47,37 @@
       .trim();
   }
 
+  function normalizeAnswerSlot(value) {
+    if (value === null || value === undefined) return '';
+    if (Array.isArray(value)) {
+      return value
+        .map((entry) => normalizeAnswerText(entry))
+        .filter(Boolean);
+    }
+    return [normalizeAnswerText(value)].filter(Boolean);
+  }
+
   function buildAnswerCandidates(question, form) {
     const normalizedForm = String(form || '').trim().toLowerCase();
     const base = normalizeAnswerText(question?.base || '');
-    const past = normalizeAnswerText(question?.past || '');
-    const participle = normalizeAnswerText(question?.pastParticiple || '');
+    const past = normalizeAnswerSlot(question?.past || '');
+    const participle = normalizeAnswerSlot(question?.pastParticiple || '');
     const variants = [];
     if (normalizedForm === 'base') {
       variants.push(base);
       if (base) variants.push(base.replace(/\s+/g, ''));
     } else if (normalizedForm === 'past') {
-      variants.push(past);
-      if (past) variants.push(past.replace(/\s+/g, ''));
+      past.forEach((item) => variants.push(item));
     } else if (normalizedForm === 'pastparticiple' || normalizedForm === 'past participle' || normalizedForm === 'pp') {
-      variants.push(participle);
-      if (participle) variants.push(participle.replace(/\s+/g, ''));
+      participle.forEach((item) => variants.push(item));
+    } else if (normalizedForm === 'combined') {
+      const pastVariants = past.length ? past : [normalizeAnswerText(question?.past || '')].filter(Boolean);
+      const participleVariants = participle.length ? participle : [normalizeAnswerText(question?.pastParticiple || '')].filter(Boolean);
+      pastVariants.forEach((pastVariant) => {
+        participleVariants.forEach((participleVariant) => {
+          variants.push(`${pastVariant} ${participleVariant}`);
+        });
+      });
     }
     return Array.from(new Set(variants.filter(Boolean)));
   }
@@ -69,6 +91,15 @@
     if (!answerText) return false;
     if (answerText.includes('/')) {
       return answerText.split('/').map((part) => normalizeAnswerText(part)).some((part) => candidates.includes(part));
+    }
+    if (String(form || '').trim().toLowerCase() === 'combined') {
+      const parts = answerText.split(/\s+/).filter(Boolean);
+      if (parts.length !== 2) return false;
+      const [pastAnswer, participleAnswer] = parts;
+      const pastVariants = normalizeAnswerSlot(normalizedQuestion.past || '');
+      const participleVariants = normalizeAnswerSlot(normalizedQuestion.pastParticiple || '');
+      if (!pastVariants.length || !participleVariants.length) return false;
+      return pastVariants.includes(pastAnswer) && participleVariants.includes(participleAnswer);
     }
     return candidates.includes(answerText);
   }

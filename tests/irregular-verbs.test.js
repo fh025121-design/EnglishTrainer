@@ -49,6 +49,34 @@ test('buildIrregularVerbQuestionSet prioritizes preferred question ids', () => {
   assert.equal(questions[0].id, 'see');
 });
 
+test('evaluateIrregularVerbAnswer accepts a combined past and past participle answer', () => {
+  const question = {
+    id: 'find',
+    base: 'find',
+    past: 'found',
+    pastParticiple: 'found',
+    japanese: '見つける'
+  };
+
+  assert.equal(irregularVerbs.evaluateIrregularVerbAnswer(question, 'combined', 'found found'), true);
+  assert.equal(irregularVerbs.evaluateIrregularVerbAnswer(question, 'combined', 'found'), false);
+  assert.equal(irregularVerbs.evaluateIrregularVerbAnswer(question, 'combined', 'found find'), false);
+});
+
+test('evaluateIrregularVerbAnswer accepts alternate accepted forms for each slot', () => {
+  const question = {
+    id: 'get',
+    base: 'get',
+    past: ['got', 'gotten'],
+    pastParticiple: ['got', 'gotten'],
+    japanese: '得る'
+  };
+
+  assert.equal(irregularVerbs.evaluateIrregularVerbAnswer(question, 'combined', 'got got'), true);
+  assert.equal(irregularVerbs.evaluateIrregularVerbAnswer(question, 'combined', 'gotten gotten'), true);
+  assert.equal(irregularVerbs.evaluateIrregularVerbAnswer(question, 'combined', 'got gotten'), true);
+});
+
 test('getIrregularVerbPromptLabel builds a readable prompt', () => {
   const question = {
     id: 'go',

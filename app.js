@@ -4485,8 +4485,8 @@ function getIrregularVerbQuestionBank() {
       if (!id || seenIds.has(id)) return null;
       seenIds.add(id);
       const base = String(row.base || "").trim();
-      const past = String(row.past || "").trim();
-      const pastParticiple = String(row.pastParticiple || "").trim();
+      const past = Array.isArray(row.past) ? row.past.map((value) => String(value || "").trim()).filter(Boolean) : String(row.past || "").trim();
+      const pastParticiple = Array.isArray(row.pastParticiple) ? row.pastParticiple.map((value) => String(value || "").trim()).filter(Boolean) : String(row.pastParticiple || "").trim();
       const japanese = String(row.japanese || row.meaning || "").trim();
       if (!base || !past || !pastParticiple || !japanese) return null;
       return {
@@ -4534,6 +4534,34 @@ function startIrregularVerbTraining(form = "past", mode = irregularVerbSelectedM
   showScreen("irregularVerbPracticeScreen");
 }
 
+function speakIrregularVerbText(text) {
+  if (typeof window === "undefined" || !window.speechSynthesis || !text) return;
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(String(text));
+    utterance.lang = "en-US";
+    utterance.rate = 0.95;
+    window.speechSynthesis.speak(utterance);
+  } catch (error) {
+    console.warn("Irregular verb speech failed", error);
+  }
+}
+
+function speakIrregularVerbQuestionSequence(question) {
+  const base = String(question?.base || "").trim();
+  if (!base) return;
+  speakIrregularVerbText(base);
+}
+
+function speakIrregularVerbAnswerSequence(question, pastText, participleText) {
+  const base = String(question?.base || "").trim();
+  const past = String(pastText || "").trim();
+  const participle = String(participleText || "").trim();
+  const sequence = [base, past, participle].filter(Boolean).join(", ");
+  if (!sequence) return;
+  speakIrregularVerbText(sequence);
+}
+
 function renderIrregularVerbQuestion() {
   const session = irregularVerbTrainingSession;
   if (!session) {
@@ -4557,14 +4585,14 @@ function renderIrregularVerbQuestion() {
   if (!title || !promptText || !counterText || !questionText || !hintText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
 
   const currentQuestion = session.questions[session.currentIndex];
-  const promptLabel = irregularVerbs.getIrregularVerbPromptLabel(currentQuestion, session.form);
   const modeLabel = session.reviewMode ? "復習" : session.mode === "test" ? "テスト" : "特訓";
-  title.textContent = `不規則動詞特訓 ${modeLabel} ${promptLabel}`;
-  promptText.textContent = `不規則動詞特訓 ${modeLabel} ${promptLabel}`;
+  title.textContent = `不規則動詞特訓 ${modeLabel}`;
+  promptText.textContent = `不規則動詞特訓 ${modeLabel}`;
   counterText.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
   questionText.textContent = `${currentQuestion.japanese}（${currentQuestion.base}）`;
-  hintText.textContent = `${currentQuestion.base} → ${session.form === "pastparticiple" || session.form === "past participle" || session.form === "pp" ? "過去分詞" : session.form === "past" ? "過去形" : "基本形"}`;
+  hintText.textContent = "過去形と過去分詞を半角スペースで入力";
   answerInput.value = "";
+  answerInput.placeholder = "例: went gone";
   answerInput.disabled = false;
   answerBtn.disabled = false;
   feedbackBox.className = "feedback-box hidden";
@@ -4573,7 +4601,10 @@ function renderIrregularVerbQuestion() {
   nextBtn.classList.add("hidden");
   session.answered = false;
   session.questionStartedAt = Date.now();
-  window.setTimeout(() => answerInput.focus(), 30);
+  window.setTimeout(() => {
+    answerInput.focus();
+    speakIrregularVerbQuestionSequence(currentQuestion);
+  }, 120);
 }
 
 function submitIrregularVerbAnswer() {
@@ -4614,14 +4645,13 @@ function submitIrregularVerbAnswer() {
     });
   }
 
-  const isCorrect = irregularVerbs.evaluateIrregularVerbAnswer(currentQuestion, session.form, trimmed);
+  const isCorrect = irregularVerbs.evaluateIrregularVerbAnswer(currentQuestion, "combined", trimmed);
   const answeredAt = Date.now();
   session.answerHistory.push({ at: answeredAt, isCorrect, questionId: currentQuestion.id });
   session.answerCount += 1;
   session.answered = true;
   if (isCorrect) {
     session.correctCount += 1;
-    awardPointsForTrainingMode("response");
     playTrainingCorrectChime();
   } else {
     session.wrongQuestionIds.push(String(currentQuestion.id));
@@ -4634,10 +4664,21 @@ function submitIrregularVerbAnswer() {
   });
   saveState();
 
+  const correctPastValues = Array.isArray(currentQuestion?.past) ? currentQuestion.past : [currentQuestion?.past];
+  const correctParticipleValues = Array.isArray(currentQuestion?.pastParticiple) ? currentQuestion.pastParticiple : [currentQuestion?.pastParticiple];
+  const correctPastText = correctPastValues.filter(Boolean).map((value) => String(value || "").trim()).filter(Boolean).join(" / ");
+  const correctParticipleText = correctParticipleValues.filter(Boolean).map((value) => String(value || "").trim()).filter(Boolean).join(" / ");
+  const expectedAnswerText = `${correctPastText || ""} ${correctParticipleText || ""}`.trim();
+  const alternateFormHint = correctPastText && correctParticipleText && (correctPastText.includes(" / ") || correctParticipleText.includes(" / "))
+    ? `<div class="hint">もう1つの形：${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>`
+    : "";
   feedbackBox.className = `feedback-box ${isCorrect ? "success" : "error"}`;
   feedbackBox.innerHTML = isCorrect
-    ? `<strong>✅ 正解</strong><div class=\"answer-line\">${escapeHtml(trimmed)}</div>`
-    : `<strong>❌ 不正解</strong><div class=\"answer-line\">正解：${escapeHtml(String(currentQuestion[session.form === "pastparticiple" || session.form === "past participle" || session.form === "pp" ? "pastParticiple" : session.form === "past" ? "past" : "base"] || ""))}</div>`;
+    ? `<strong>✅ 正解</strong><div class="answer-line">${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>${alternateFormHint}`
+    : `<strong>❌ 不正解</strong><div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div>`;
+  if (isCorrect) {
+    speakIrregularVerbAnswerSequence(currentQuestion, correctPastText, correctParticipleText);
+  }
   nextBtn.classList.remove("hidden");
   nextBtn.disabled = false;
   answerInput.disabled = true;
@@ -12489,6 +12530,7 @@ function bindEvents() {
   if (irregularVerbModeTestBtn) {
     irregularVerbModeTestBtn.addEventListener("click", () => {
       irregularVerbSelectedMode = "test";
+      startIrregularVerbTraining("past", "test");
     });
   }
 
