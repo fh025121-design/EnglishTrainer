@@ -4677,6 +4677,7 @@ function speakIrregularVerbText(text, options = {}) {
 function speakIrregularVerbTextSequence(texts, options = {}) {
   const queue = (Array.isArray(texts) ? texts : []).map((text) => String(text || "").trim()).filter(Boolean);
   if (!queue.length) return false;
+  const gapMs = Math.max(0, Number(options.gapMs) || 0);
 
   let index = 0;
   const speakNext = () => {
@@ -4690,12 +4691,19 @@ function speakIrregularVerbTextSequence(texts, options = {}) {
     const currentText = queue[index];
     index += 1;
     const isFirst = index === 1;
+    const triggerNext = () => {
+      if (gapMs > 0 && index < queue.length) {
+        setTimeout(speakNext, gapMs);
+        return;
+      }
+      speakNext();
+    };
     const spoke = speakIrregularVerbText(currentText, {
       cancelPrevious: isFirst,
-      onEnd: speakNext
+      onEnd: triggerNext
     });
     if (!spoke) {
-      speakNext();
+      triggerNext();
     }
   };
 
@@ -4713,10 +4721,13 @@ function speakIrregularVerbAnswerSequence(question, pastText, participleText, op
   const base = String(question?.base || "").trim();
   const past = String(pastText || "").trim();
   const participle = String(participleText || "").trim();
-  const merged = [base, past, participle].filter(Boolean).join(" ");
-  if (!merged) return false;
-  const speechText = merged.replace(/\s*\/\s*/g, " or ").replace(/\s+/g, " ").trim();
-  return speakIrregularVerbText(speechText, options);
+  const normalizeSpeechText = (text) => String(text || "").replace(/\s*\/\s*/g, " or ").replace(/\s+/g, " ").trim();
+  const sequence = [normalizeSpeechText(base), normalizeSpeechText(past), normalizeSpeechText(participle)].filter(Boolean);
+  if (!sequence.length) return false;
+  return speakIrregularVerbTextSequence(sequence, {
+    ...options,
+    gapMs: 100
+  });
 }
 
 function renderIrregularVerbQuestion() {
@@ -4837,6 +4848,7 @@ function submitIrregularVerbAnswer() {
 
   if (session.awaitingCorrectionRetry) {
     if (!isCorrect) {
+      session.answered = false;
       feedbackBox.className = "feedback-box error";
       feedbackBox.innerHTML = `<strong>❌ もう一度入力してください</strong>${userAnswerDiffMarkup}<div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div><div class="hint">正しい形を入力すると音声が流れて次の問題へ進みます</div>`;
       answerInput.focus();
