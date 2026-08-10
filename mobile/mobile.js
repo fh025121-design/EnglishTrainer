@@ -7101,33 +7101,32 @@
     const optionShell = document.createElement("div");
     optionShell.className = "translation-training-option-shell";
     const displayFixedPhrases = window.translationTrainingData?.getTranslationTrainingDisplayFixedPhrases?.(currentPart) || [];
-    const cardFeedbackState = training.partSelections[training.currentPartIndex] ? {} : null;
-    const fixedPhraseFragment = document.createDocumentFragment();
-    displayFixedPhrases.forEach((phraseText) => {
-      const phraseEl = document.createElement("div");
-      phraseEl.className = "translation-training-fixed-phrase";
-      phraseEl.textContent = phraseText;
-      fixedPhraseFragment.appendChild(phraseEl);
-    });
-    if (fixedPhraseFragment.childNodes.length) {
-      const fixedWrap = document.createElement("div");
-      fixedWrap.className = "translation-training-fixed-row";
-      fixedWrap.appendChild(fixedPhraseFragment);
-      optionShell.appendChild(fixedWrap);
-    }
-
-    const columnsWrap = document.createElement("div");
-    columnsWrap.className = "translation-training-columns";
-    (currentPart?.selectionGroups || []).forEach((group, groupIndex) => {
+    const selectionGroups = Array.isArray(currentPart?.selectionGroups) ? currentPart.selectionGroups : [];
+    const layoutSequence = window.translationTrainingData?.buildTranslationTrainingLayoutSequence?.(currentPart, displayFixedPhrases) || [];
+    const layoutItems = [];
+    layoutSequence.forEach((item) => {
+      if (item.type === "fixed") {
+        const fixedPhraseBlock = document.createElement("div");
+        fixedPhraseBlock.className = "translation-training-fixed-block";
+        (item.phrases || []).forEach((phraseText) => {
+          const phraseEl = document.createElement("span");
+          phraseEl.className = "translation-training-fixed-phrase";
+          phraseEl.textContent = phraseText;
+          fixedPhraseBlock.appendChild(phraseEl);
+        });
+        layoutItems.push(fixedPhraseBlock);
+        return;
+      }
+      const group = item.group;
+      if (!group) return;
       const column = document.createElement("div");
-      column.className = "translation-training-column";
+      column.className = "translation-training-selection-column";
       const groupOptions = document.createDocumentFragment();
       const solvedSelection = training.partSelections[training.currentPartIndex]?.[group.key];
       group.options.forEach((optionText, optionIndex) => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "secondary-btn translation-training-card";
-        const markerState = window.translationTrainingData?.getTranslationTrainingCardDisplayState?.({ isCorrect: false }) || { marker: "", state: "" };
         const isThisSolvedSelection = Boolean(solvedSelection) && solvedSelection.optionIndex === optionIndex;
         const isThisGroupSolved = Boolean(solvedSelection) && solvedSelection.groupIndex === groupIndex;
         if (isThisSolvedSelection) {
@@ -7159,9 +7158,9 @@
         groupOptions.appendChild(button);
       });
       column.appendChild(groupOptions);
-      columnsWrap.appendChild(column);
+      layoutItems.push(column);
     });
-    optionShell.appendChild(columnsWrap);
+    layoutItems.forEach((item) => optionShell.appendChild(item));
     elements.translationTrainingOptionList.appendChild(optionShell);
 
     const availableWidth = elements.translationTrainingOptionList.clientWidth || window.innerWidth || 360;

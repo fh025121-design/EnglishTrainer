@@ -275,6 +275,28 @@
     return fixedPhrases.filter((phrase) => !excludedSet.has(String(phrase).trim()));
   }
 
+  function buildTranslationTrainingLayoutSequence(part, fixedPhrases = []) {
+    const safePart = part && typeof part === "object" ? part : null;
+    const selectionGroups = Array.isArray(safePart?.selectionGroups) ? safePart.selectionGroups : [];
+    const displayFixedPhrases = Array.isArray(fixedPhrases) ? fixedPhrases.filter(Boolean) : [];
+    const sequence = [];
+    if (!selectionGroups.length) return sequence;
+    if (selectionGroups.length <= 1) {
+      if (displayFixedPhrases.length) {
+        sequence.push({ type: "fixed", phrases: displayFixedPhrases });
+      }
+      sequence.push({ type: "column", group: selectionGroups[0] });
+      return sequence;
+    }
+    selectionGroups.forEach((group, index) => {
+      sequence.push({ type: "column", group });
+      if (index < selectionGroups.length - 1 && displayFixedPhrases.length) {
+        sequence.push({ type: "fixed", phrases: displayFixedPhrases });
+      }
+    });
+    return sequence;
+  }
+
   function buildTranslationTrainingEnglishDisplaySegments(question, currentPartIndex = 0) {
     const safeQuestion = question && typeof question === "object" ? question : null;
     if (!safeQuestion) return [];
@@ -314,6 +336,7 @@
     createTranslationTrainingState,
     resetTranslationTrainingQuestionState,
     getTranslationTrainingDisplayFixedPhrases,
+    buildTranslationTrainingLayoutSequence,
     buildTranslationTrainingEnglishDisplaySegments,
     getTranslationTrainingCardDisplayState
   };
