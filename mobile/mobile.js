@@ -7062,18 +7062,27 @@
     elements.translationTrainingQuestionPanel.classList.remove("hidden");
     elements.translationTrainingCompletePanel.classList.add("hidden");
     elements.translationTrainingQuestionIndexText.textContent = `${training.questionIndex + 1} / ${training.questions.length}`;
-    elements.translationTrainingCurrentPartText.textContent = `${training.currentPartIndex + 1}つ目`;
     const segments = window.translationTrainingData?.buildTranslationTrainingEnglishDisplaySegments?.(question, training.currentPartIndex) || [];
     const englishFragment = document.createDocumentFragment();
     segments.forEach((segment, index) => {
-      const span = document.createElement("span");
-      span.textContent = `${segment.text}`;
-      span.className = segment.state === "current"
-        ? "translation-training-highlight-current"
-        : segment.state === "completed"
-          ? "translation-training-highlight-completed"
-          : "translation-training-highlight-pending";
-      englishFragment.appendChild(span);
+      const wrapper = document.createElement("span");
+      wrapper.className = "translation-training-english-part";
+      if (segment.state === "current") {
+        wrapper.classList.add("translation-training-english-part--current");
+      } else if (segment.state === "completed") {
+        wrapper.classList.add("translation-training-english-part--completed");
+      }
+      if (segment.marker) {
+        const marker = document.createElement("span");
+        marker.className = "translation-training-current-marker";
+        marker.textContent = segment.marker;
+        wrapper.appendChild(marker);
+      }
+      const text = document.createElement("span");
+      text.className = "translation-training-english-text";
+      text.textContent = `${segment.text}`;
+      wrapper.appendChild(text);
+      englishFragment.appendChild(wrapper);
       if (index < segments.length - 1) {
         const separator = document.createElement("span");
         separator.textContent = " / ";
@@ -7086,15 +7095,13 @@
     elements.translationTrainingFeedbackText.textContent = "";
     elements.translationTrainingStatusText.textContent = "";
     elements.translationTrainingStatusText.classList.add("hidden");
-    if (elements.translationTrainingPartLabelText) {
-      elements.translationTrainingPartLabelText.textContent = `${training.currentPartIndex + 1}つ目のまとまり`;
-    }
     elements.translationTrainingOptionList.innerHTML = "";
     elements.translationTrainingOptionList.classList.add("translation-training-option-list");
 
     const optionShell = document.createElement("div");
     optionShell.className = "translation-training-option-shell";
     const displayFixedPhrases = window.translationTrainingData?.getTranslationTrainingDisplayFixedPhrases?.(currentPart) || [];
+    const cardFeedbackState = training.partSelections[training.currentPartIndex] ? {} : null;
     const fixedPhraseFragment = document.createDocumentFragment();
     displayFixedPhrases.forEach((phraseText) => {
       const phraseEl = document.createElement("div");
@@ -7120,15 +7127,34 @@
         const button = document.createElement("button");
         button.type = "button";
         button.className = "secondary-btn translation-training-card";
-        button.textContent = optionText;
-        button.dataset.groupIndex = String(groupIndex);
-        button.dataset.optionIndex = String(optionIndex);
+        const markerState = window.translationTrainingData?.getTranslationTrainingCardDisplayState?.({ isCorrect: false }) || { marker: "", state: "" };
         const isThisSolvedSelection = Boolean(solvedSelection) && solvedSelection.optionIndex === optionIndex;
+        const isThisGroupSolved = Boolean(solvedSelection) && solvedSelection.groupIndex === groupIndex;
         if (isThisSolvedSelection) {
           button.classList.add("active");
+          button.dataset.resultState = "selected";
         } else if (solvedSelection) {
           button.classList.add("dimmed");
+          button.dataset.resultState = "dimmed";
         }
+        if (isThisGroupSolved && solvedSelection) {
+          const currentResultState = window.translationTrainingData?.getTranslationTrainingCardDisplayState?.({ isCorrect: solvedSelection.isCorrect }) || { marker: "", state: "" };
+          button.dataset.resultMarker = currentResultState.marker;
+          button.dataset.resultState = currentResultState.state;
+        }
+        const cardContent = document.createElement("span");
+        cardContent.className = "translation-training-card-content";
+        const marker = document.createElement("span");
+        marker.className = "translation-training-card-marker";
+        marker.textContent = button.dataset.resultMarker || "";
+        const text = document.createElement("span");
+        text.className = "translation-training-card-label";
+        text.textContent = optionText;
+        cardContent.appendChild(marker);
+        cardContent.appendChild(text);
+        button.appendChild(cardContent);
+        button.dataset.groupIndex = String(groupIndex);
+        button.dataset.optionIndex = String(optionIndex);
         button.addEventListener("click", () => handleTranslationTrainingOptionSelect(groupIndex, optionIndex, optionText));
         groupOptions.appendChild(button);
       });
@@ -7143,6 +7169,7 @@
     optionShell.classList.toggle("translation-training-option-shell--inline", layoutMode === "inline");
     optionShell.classList.toggle("translation-training-option-shell--stack", layoutMode !== "inline");
     elements.translationTrainingRetryBtn.disabled = false;
+    elements.translationTrainingRetryBtn.textContent = "戻る";
     elements.translationTrainingNextBtn.textContent = "";
     elements.translationTrainingNextBtn.disabled = true;
     elements.translationTrainingNextBtn.classList.add("hidden");
@@ -7158,21 +7185,27 @@
     if (!group) return;
     const correctIndex = Number.isInteger(group.correctIndex) ? group.correctIndex : 0;
     const isCorrect = optionIndex === correctIndex;
+    const resultState = window.translationTrainingData?.getTranslationTrainingCardDisplayState?.({ isCorrect }) || { marker: "", state: "" };
     elements.translationTrainingFeedbackText.textContent = isCorrect ? "正解です。" : "不正解です。";
-    if (!isCorrect) return;
-    const selectedTextWithSpace = `${training.builtJapanese}${selectedText}`;
-    training.builtJapanese = selectedTextWithSpace;
-    training.completedSelections.push({ partIndex: training.currentPartIndex, groupIndex, text: selectedText });
-    training.answeredGroupKeys = Array.from(new Set([...training.answeredGroupKeys, group.key]));
     if (!training.partSelections[training.currentPartIndex]) {
       training.partSelections[training.currentPartIndex] = {};
     }
     training.partSelections[training.currentPartIndex][group.key] = {
       groupIndex,
       optionIndex,
-      text: selectedText
+      text: selectedText,
+      isCorrect
     };
-
+    if (!isCorrect) {
+      window.requestAnimationFrame(() => {
+        renderTranslationTrainingQuestion();
+      });
+      return;
+    }
+    const selectedTextWithSpace = `${training.builtJapanese}${selectedText}`;
+    training.builtJapanese = selectedTextWithSpace;
+    training.completedSelections.push({ partIndex: training.currentPartIndex, groupIndex, text: selectedText });
+    training.answeredGroupKeys = Array.from(new Set([...training.answeredGroupKeys, group.key]));
     window.setTimeout(() => {
       const completedGroupCount = Object.keys(training.partSelections[training.currentPartIndex] || {}).length;
       const totalGroupCount = currentPart.selectionGroups?.length || 0;
@@ -9679,9 +9712,7 @@
     elements.wordOrderHomeBtn = document.getElementById("wordOrderHomeBtn");
     elements.translationTrainingBackBtn = document.getElementById("translationTrainingBackBtn");
     elements.translationTrainingQuestionIndexText = document.getElementById("translationTrainingQuestionIndexText");
-    elements.translationTrainingCurrentPartText = document.getElementById("translationTrainingCurrentPartText");
     elements.translationTrainingEnglishText = document.getElementById("translationTrainingEnglishText");
-    elements.translationTrainingPartLabelText = document.getElementById("translationTrainingPartLabelText");
     elements.translationTrainingOptionList = document.getElementById("translationTrainingOptionList");
     elements.translationTrainingFeedbackText = document.getElementById("translationTrainingFeedbackText");
     elements.translationTrainingStatusText = document.getElementById("translationTrainingStatusText");
@@ -9789,7 +9820,14 @@
       state.translationTrainingSpeechDetected = false;
       renderHome();
     });
-    elements.translationTrainingRetryBtn.addEventListener("click", () => renderTranslationTrainingQuestion());
+    elements.translationTrainingRetryBtn.addEventListener("click", () => {
+      clearTranslationTrainingSpeechTimer();
+      state.translationTraining = null;
+      state.translationTrainingCurrentPartIndex = 0;
+      state.translationTrainingPartCompleted = false;
+      state.translationTrainingSpeechDetected = false;
+      renderHome();
+    });
     elements.translationTrainingSpeakBtn.addEventListener("click", confirmTranslationTrainingSpeech);
     elements.translationTrainingNextQuestionBtn.addEventListener("click", advanceTranslationTrainingQuestion);
     document.getElementById("comingSoonBackBtn").addEventListener("click", renderHome);

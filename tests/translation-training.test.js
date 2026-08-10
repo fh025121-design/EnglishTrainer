@@ -32,9 +32,19 @@ const firstQuestion = questions[0];
 const firstHighlightState = translationTrainingModule.buildTranslationTrainingEnglishDisplaySegments(firstQuestion, 0);
 assert.strictEqual(firstHighlightState[0].state, "current", "the current slash should be highlighted for the first part");
 assert.strictEqual(firstHighlightState[1].state, "pending", "the later slash should stay pending before it is answered");
+assert.strictEqual(firstHighlightState[0].marker, "▶", "the current slash should expose a current-part marker");
+assert.strictEqual(firstHighlightState[1].marker, "", "the pending slash should not expose a marker");
 
 const secondHighlightState = translationTrainingModule.buildTranslationTrainingEnglishDisplaySegments(firstQuestion, 1);
 assert.strictEqual(secondHighlightState[0].state, "completed", "the already answered part should be marked as completed");
 assert.strictEqual(secondHighlightState[1].state, "current", "the next part should become the current highlight");
+assert.strictEqual(secondHighlightState[1].marker, "▶", "the next slash should expose the current-part marker once it becomes current");
+
+const correctCardState = translationTrainingModule.getTranslationTrainingCardDisplayState({ isCorrect: true, groupIndex: 0, optionIndex: 0 });
+assert.strictEqual(correctCardState.marker, "○", "correct selections should display a clear circle marker");
+assert.strictEqual(correctCardState.state, "correct", "correct selections should use the correct state");
+const incorrectCardState = translationTrainingModule.getTranslationTrainingCardDisplayState({ isCorrect: false, groupIndex: 0, optionIndex: 0 });
+assert.strictEqual(incorrectCardState.marker, "×", "incorrect selections should display a clear cross marker");
+assert.strictEqual(incorrectCardState.state, "incorrect", "incorrect selections should use the incorrect state");
 
 console.log("translation training tests passed");

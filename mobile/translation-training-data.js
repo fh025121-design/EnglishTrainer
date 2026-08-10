@@ -267,16 +267,25 @@
       }
       return {
         text: segment,
-        state
+        state,
+        marker: isCurrent ? "▶" : ""
       };
     });
+  }
+
+  function getTranslationTrainingCardDisplayState({ isCorrect = false } = {}) {
+    return {
+      marker: isCorrect ? "○" : "×",
+      state: isCorrect ? "correct" : "incorrect"
+    };
   }
 
   const exported = {
     getTranslationTrainingQuestions,
     getTranslationTrainingQuestion,
     getTranslationTrainingDisplayFixedPhrases,
-    buildTranslationTrainingEnglishDisplaySegments
+    buildTranslationTrainingEnglishDisplaySegments,
+    getTranslationTrainingCardDisplayState
   };
 
   if (typeof module !== "undefined" && module.exports) {
