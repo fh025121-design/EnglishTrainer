@@ -7016,7 +7016,8 @@
     if (state.translationTraining) {
       return;
     }
-    const questions = window.translationTrainingData?.getTranslationTrainingQuestions?.() || [];
+    const questionBank = window.translationTrainingData?.getTranslationTrainingQuestions?.() || [];
+    const questions = window.translationTrainingData?.createTranslationTrainingSessionQuestions?.(questionBank) || questionBank;
     if (!questions.length) {
       window.alert("和訳トレーニングの問題がありません。")
       return;

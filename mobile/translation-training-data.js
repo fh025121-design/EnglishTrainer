@@ -1566,6 +1566,700 @@
           ]
         }
       ]
+    },
+    {
+      id: 30,
+      level: "A",
+      english: "My father told me / to come home early.",
+      japanese: "父は私に早く家に帰るように言いました。",
+      parts: [
+        {
+          text: "My father told me",
+          fixedPhrases: ["父は"],
+          selectionGroups: [
+            {
+              key: "told-me",
+              prompt: "動詞",
+              correctIndex: 0,
+              options: ["私に言った", "私に尋ねた", "私に見せた"]
+            }
+          ]
+        },
+        {
+          text: "to come home early.",
+          fixedPhrases: [],
+          selectionGroups: [
+            {
+              key: "to-come-home-early",
+              prompt: "不定詞",
+              correctIndex: 0,
+              options: ["早く家に帰るように", "早く家を出た後で", "早く家に帰っている間に"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 31,
+      level: "A",
+      english: "She has already finished / her homework.",
+      japanese: "彼女はもう宿題を終えています。",
+      parts: [
+        {
+          text: "She has already finished",
+          fixedPhrases: ["彼女は"],
+          selectionGroups: [
+            {
+              key: "has-already-finished",
+              prompt: "現在完了",
+              correctIndex: 0,
+              options: ["もう終えている", "今終えているところだ", "これから終える"]
+            }
+          ]
+        },
+        {
+          text: "her homework.",
+          fixedPhrases: ["宿題を"],
+          selectionGroups: []
+        }
+      ]
+    },
+    {
+      id: 32,
+      level: "A",
+      english: "If it is sunny tomorrow, / we will go to the park.",
+      japanese: "もし明日晴れたら、私たちは公園へ行くつもりです。",
+      parts: [
+        {
+          text: "If it is sunny tomorrow,",
+          fixedPhrases: ["明日晴れたら"],
+          selectionGroups: [
+            {
+              key: "if",
+              prompt: "接続",
+              correctIndex: 0,
+              options: ["もし～なら", "～した後で", "～なので"]
+            }
+          ]
+        },
+        {
+          text: "we will go to the park.",
+          fixedPhrases: ["私たちは", "公園へ"],
+          selectionGroups: [
+            {
+              key: "will-go",
+              prompt: "助動詞",
+              correctIndex: 0,
+              options: ["行くつもりだ", "行った", "行っていた"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 33,
+      level: "A",
+      english: "Tom bought some cakes / for his family.",
+      japanese: "トムは家族のためにケーキを買いました。",
+      parts: [
+        {
+          text: "Tom bought some cakes",
+          fixedPhrases: ["トムは", "ケーキを買った"],
+          selectionGroups: []
+        },
+        {
+          text: "for his family.",
+          fixedPhrases: ["家族のために"],
+          selectionGroups: []
+        }
+      ]
+    },
+    {
+      id: 34,
+      level: "A",
+      english: "I was tired, / but I finished my homework.",
+      japanese: "私は疲れていましたが、宿題を終えました。",
+      parts: [
+        {
+          text: "I was tired,",
+          fixedPhrases: ["私は", "疲れていた"],
+          selectionGroups: []
+        },
+        {
+          text: "but I finished my homework.",
+          fixedPhrases: ["宿題を"],
+          selectionGroups: [
+            {
+              key: "but-i",
+              prompt: "接続",
+              correctIndex: 0,
+              options: ["しかし私は", "だから私は", "その前に私は"]
+            },
+            {
+              key: "finished",
+              prompt: "動詞",
+              correctIndex: 0,
+              options: ["終えた", "終えている", "終えるつもりだ"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 35,
+      level: "B",
+      english: "I heard that / your brother won a soccer game / last Sunday.",
+      japanese: "あなたのお兄さんが先週の日曜日にサッカーの試合に勝ったと聞きました。",
+      parts: [
+        {
+          text: "I heard that",
+          fixedPhrases: ["私は"],
+          selectionGroups: [
+            {
+              key: "heard",
+              prompt: "動詞",
+              correctIndex: 0,
+              options: ["聞いた", "信じている", "忘れた"]
+            },
+            {
+              key: "that-clause",
+              prompt: "接続",
+              correctIndex: 0,
+              options: ["～ということを", "～する前に", "～したので"]
+            }
+          ]
+        },
+        {
+          text: "your brother won a soccer game",
+          fixedPhrases: ["あなたの兄が", "サッカーの試合に"],
+          selectionGroups: [
+            {
+              key: "won",
+              prompt: "時制",
+              correctIndex: 0,
+              options: ["勝った", "勝っている", "勝つだろう"]
+            }
+          ]
+        },
+        {
+          text: "last Sunday.",
+          fixedPhrases: ["先週の日曜日に"],
+          selectionGroups: []
+        }
+      ]
+    },
+    {
+      id: 36,
+      level: "B",
+      english: "Kei wanted to make a cake, / so he went to a supermarket / to buy some eggs.",
+      japanese: "ケイはケーキを作りたかったので、卵を買うためにスーパーへ行きました。",
+      parts: [
+        {
+          text: "Kei wanted to make a cake,",
+          fixedPhrases: ["ケイは"],
+          selectionGroups: [
+            {
+              key: "wanted-to-make",
+              prompt: "不定詞",
+              correctIndex: 0,
+              options: ["ケーキを作りたかった", "ケーキを作っている", "ケーキを作らなかった"]
+            }
+          ]
+        },
+        {
+          text: "so he went to a supermarket",
+          fixedPhrases: ["スーパーへ"],
+          selectionGroups: [
+            {
+              key: "so-he",
+              prompt: "接続",
+              correctIndex: 0,
+              options: ["だから彼は", "しかし彼は", "～したとき彼は"]
+            },
+            {
+              key: "went",
+              prompt: "時制",
+              correctIndex: 0,
+              options: ["行った", "行っている", "行くつもりだ"]
+            }
+          ]
+        },
+        {
+          text: "to buy some eggs.",
+          fixedPhrases: ["卵を"],
+          selectionGroups: [
+            {
+              key: "to-buy",
+              prompt: "不定詞",
+              correctIndex: 0,
+              options: ["買うために", "買った後で", "買っている間に"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 37,
+      level: "B",
+      english: "When Emi opened the box, / she found a beautiful watch / inside it.",
+      japanese: "エミが箱を開けると、その中にきれいな腕時計を見つけました。",
+      parts: [
+        {
+          text: "When Emi opened the box,",
+          fixedPhrases: ["エミが箱を開けた"],
+          selectionGroups: [
+            {
+              key: "when",
+              prompt: "接続",
+              correctIndex: 0,
+              options: ["～したとき", "～する前に", "～したので"]
+            }
+          ]
+        },
+        {
+          text: "she found a beautiful watch",
+          fixedPhrases: ["彼女は", "きれいな腕時計を"],
+          selectionGroups: [
+            {
+              key: "found",
+              prompt: "時制",
+              correctIndex: 0,
+              options: ["見つけた", "見つけている", "見つけるだろう"]
+            }
+          ]
+        },
+        {
+          text: "inside it.",
+          fixedPhrases: [],
+          selectionGroups: [
+            {
+              key: "inside-it",
+              prompt: "代名詞",
+              correctIndex: 0,
+              options: ["その箱の中に", "その腕時計の中に", "彼女の中に"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 38,
+      level: "B",
+      english: "My grandmother has lived in this town / for more than twenty years, / but she still likes finding new places.",
+      japanese: "祖母はこの町に20年以上住んでいますが、今でも新しい場所を見つけることが好きです。",
+      parts: [
+        {
+          text: "My grandmother has lived in this town",
+          fixedPhrases: ["祖母は", "この町に"],
+          selectionGroups: [
+            {
+              key: "has-lived",
+              prompt: "現在完了",
+              correctIndex: 0,
+              options: ["住んでいる", "住んでいた", "住むつもりだ"]
+            }
+          ]
+        },
+        {
+          text: "for more than twenty years,",
+          fixedPhrases: ["20年以上"],
+          selectionGroups: []
+        },
+        {
+          text: "but she still likes finding new places.",
+          fixedPhrases: [],
+          selectionGroups: [
+            {
+              key: "but-she-still",
+              prompt: "接続",
+              correctIndex: 0,
+              options: ["しかし彼女は今でも", "だから彼女はもう", "その前に彼女は"]
+            },
+            {
+              key: "likes-finding",
+              prompt: "文構造",
+              correctIndex: 0,
+              options: ["新しい場所を見つけることが好きだ", "新しい場所を見つけた", "新しい場所を見つける必要がある"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 39,
+      level: "B",
+      english: "Before we went to the museum, / my mother checked the train time / on her phone.",
+      japanese: "私たちが博物館へ行く前に、母はスマートフォンで電車の時間を確認しました。",
+      parts: [
+        {
+          text: "Before we went to the museum,",
+          fixedPhrases: ["私たちが博物館へ行った"],
+          selectionGroups: [
+            {
+              key: "before",
+              prompt: "接続",
+              correctIndex: 0,
+              options: ["～する前に", "～した後で", "～している間に"]
+            }
+          ]
+        },
+        {
+          text: "my mother checked the train time",
+          fixedPhrases: ["母は", "電車の時間を"],
+          selectionGroups: [
+            {
+              key: "checked",
+              prompt: "時制",
+              correctIndex: 0,
+              options: ["確認した", "確認している", "確認するだろう"]
+            }
+          ]
+        },
+        {
+          text: "on her phone.",
+          fixedPhrases: ["スマートフォンで"],
+          selectionGroups: []
+        }
+      ]
+    },
+    {
+      id: 40,
+      level: "C",
+      english: "Yui wanted to give her father a present / for his birthday. / She went to a shopping mall / after school on Friday. / She first looked for a shirt, / but she couldn't find one she liked. / Then she saw a nice wallet / and decided to buy it.",
+      japanese: "ユイは父の誕生日にプレゼントをあげたいと思い、金曜日の放課後にショッピングモールへ行きました。最初にシャツを探しましたが、気に入るものが見つかりませんでした。その後すてきな財布を見つけ、それを買うことにしました。",
+      parts: [
+        {
+          text: "Yui wanted to give her father a present",
+          fixedPhrases: ["ユイは"],
+          selectionGroups: [
+            { key: "wanted-to-give", prompt: "不定詞", correctIndex: 0, options: ["父にプレゼントをあげたかった", "父にプレゼントをあげている", "父にプレゼントをあげなかった"] }
+          ]
+        },
+        {
+          text: "for his birthday.",
+          fixedPhrases: ["父の誕生日に"],
+          selectionGroups: []
+        },
+        {
+          text: "She went to a shopping mall",
+          fixedPhrases: ["彼女は", "ショッピングモールへ"],
+          selectionGroups: [
+            { key: "went", prompt: "時制", correctIndex: 0, options: ["行った", "行っている", "行くつもりだ"] }
+          ]
+        },
+        {
+          text: "after school on Friday.",
+          fixedPhrases: ["金曜日の放課後に"],
+          selectionGroups: []
+        },
+        {
+          text: "She first looked for a shirt,",
+          fixedPhrases: ["彼女はまず", "シャツを"],
+          selectionGroups: [
+            { key: "looked-for", prompt: "動詞", correctIndex: 0, options: ["探した", "見つけた", "借りた"] }
+          ]
+        },
+        {
+          text: "but she couldn't find one she liked.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "but-she", prompt: "接続", correctIndex: 0, options: ["しかし彼女は", "だから彼女は", "それから彼女は"] },
+            { key: "couldnt-find", prompt: "助動詞", correctIndex: 0, options: ["見つけられなかった", "見つけられる", "見つけるつもりだった"] },
+            { key: "one-liked", prompt: "代名詞", correctIndex: 0, options: ["気に入るものを", "気に入る財布を", "気に入る先生を"] }
+          ]
+        },
+        {
+          text: "Then she saw a nice wallet",
+          fixedPhrases: ["それから彼女は", "すてきな財布を"],
+          selectionGroups: [
+            { key: "then-saw", prompt: "動詞", correctIndex: 0, options: ["見つけた", "なくした", "渡した"] }
+          ]
+        },
+        {
+          text: "and decided to buy it.",
+          fixedPhrases: ["そして彼女は"],
+          selectionGroups: [
+            { key: "decided-to-buy", prompt: "不定詞", correctIndex: 0, options: ["買うことに決めた", "買わないことにした", "買っている"] },
+            { key: "it", prompt: "代名詞", correctIndex: 0, options: ["それを", "それらを", "彼を"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 41,
+      level: "C",
+      english: "Kenta is staying with a host family / in Australia this month. / Last Saturday, they took him to a large zoo. / He saw many animals there, / but he liked the koalas best. / He took many pictures of them / and plans to show them to his friends / when he returns to Japan.",
+      japanese: "ケンタは今月オーストラリアでホストファミリーと暮らしています。先週の土曜日、ホストファミリーは彼を大きな動物園へ連れて行きました。たくさんの動物を見ましたが、コアラが一番気に入りました。写真をたくさん撮り、日本へ帰ったら友達に見せる予定です。",
+      parts: [
+        {
+          text: "Kenta is staying with a host family",
+          fixedPhrases: ["ケンタは", "ホストファミリーと"],
+          selectionGroups: [
+            { key: "is-staying", prompt: "進行形", correctIndex: 0, options: ["滞在している", "滞在した", "滞在するだろう"] }
+          ]
+        },
+        {
+          text: "in Australia this month.",
+          fixedPhrases: ["オーストラリアで", "今月"],
+          selectionGroups: []
+        },
+        {
+          text: "Last Saturday, they took him to a large zoo.",
+          fixedPhrases: ["先週の土曜日", "彼を大きな動物園へ"],
+          selectionGroups: [
+            { key: "they-took", prompt: "時制", correctIndex: 0, options: ["彼らは連れて行った", "彼らは連れて行く", "彼らは迎えに行った"] }
+          ]
+        },
+        {
+          text: "He saw many animals there,",
+          fixedPhrases: ["彼は", "たくさんの動物をそこで"],
+          selectionGroups: [
+            { key: "saw", prompt: "時制", correctIndex: 0, options: ["見た", "見ている", "見るつもりだ"] }
+          ]
+        },
+        {
+          text: "but he liked the koalas best.",
+          fixedPhrases: ["コアラを"],
+          selectionGroups: [
+            { key: "but-he", prompt: "接続", correctIndex: 0, options: ["しかし彼は", "だから彼は", "その前に彼は"] },
+            { key: "liked-best", prompt: "動詞", correctIndex: 0, options: ["一番気に入った", "一番こわがった", "一番避けた"] }
+          ]
+        },
+        {
+          text: "He took many pictures of them",
+          fixedPhrases: ["彼は", "それらの"],
+          selectionGroups: [
+            { key: "took-pictures", prompt: "動詞", correctIndex: 0, options: ["たくさん写真を撮った", "写真を見せた", "写真をなくした"] }
+          ]
+        },
+        {
+          text: "and plans to show them to his friends",
+          fixedPhrases: ["それらを友達に"],
+          selectionGroups: [
+            { key: "and-plans", prompt: "接続", correctIndex: 0, options: ["そして", "しかし", "そのあと"] },
+            { key: "plans-to-show", prompt: "不定詞", correctIndex: 0, options: ["見せる予定だ", "見せた", "見せる必要がない"] }
+          ]
+        },
+        {
+          text: "when he returns to Japan.",
+          fixedPhrases: ["彼が日本へ帰る"],
+          selectionGroups: [
+            { key: "when", prompt: "接続", correctIndex: 0, options: ["～したとき", "～したので", "～する前に"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 42,
+      level: "C",
+      english: "Sara usually studies at home / after dinner. / Yesterday, however, she went to the library / because she needed a book for her science class. / While she was looking for the book, / she met one of her classmates. / They studied together for an hour / before they went home.",
+      japanese: "サラは普段夕食後に家で勉強します。しかし昨日は、理科の授業で使う本が必要だったので図書館へ行きました。本を探しているとクラスメートの一人に会い、二人は家へ帰る前に1時間一緒に勉強しました。",
+      parts: [
+        {
+          text: "Sara usually studies at home",
+          fixedPhrases: ["サラは普段", "家で"],
+          selectionGroups: [
+            { key: "studies", prompt: "時制", correctIndex: 0, options: ["勉強する", "勉強した", "勉強しているところだ"] }
+          ]
+        },
+        {
+          text: "after dinner.",
+          fixedPhrases: ["夕食後に"],
+          selectionGroups: []
+        },
+        {
+          text: "Yesterday, however, she went to the library",
+          fixedPhrases: ["昨日は", "図書館へ"],
+          selectionGroups: [
+            { key: "however-she", prompt: "接続", correctIndex: 0, options: ["しかし彼女は", "だから彼女は", "そのあと彼女は"] },
+            { key: "went", prompt: "時制", correctIndex: 0, options: ["行った", "行く", "行っている"] }
+          ]
+        },
+        {
+          text: "because she needed a book for her science class.",
+          fixedPhrases: ["理科の授業用の本が"],
+          selectionGroups: [
+            { key: "because-she", prompt: "接続", correctIndex: 0, options: ["なぜなら彼女は", "しかし彼女は", "それでも彼女は"] },
+            { key: "needed", prompt: "時制", correctIndex: 0, options: ["必要だった", "必要だ", "必要になるだろう"] }
+          ]
+        },
+        {
+          text: "While she was looking for the book,",
+          fixedPhrases: ["彼女がその本を探していた"],
+          selectionGroups: [
+            { key: "while", prompt: "接続", correctIndex: 0, options: ["～している間", "～した後で", "～する前に"] }
+          ]
+        },
+        {
+          text: "she met one of her classmates.",
+          fixedPhrases: ["彼女は"],
+          selectionGroups: [
+            { key: "met", prompt: "時制", correctIndex: 0, options: ["会った", "会っている", "会う予定だ"] },
+            { key: "one-of-classmates", prompt: "代名詞", correctIndex: 0, options: ["クラスメートの一人に", "先生の一人に", "家族の一人に"] }
+          ]
+        },
+        {
+          text: "They studied together for an hour",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "they-studied", prompt: "主語", correctIndex: 0, options: ["二人は", "彼女は", "先生は"] },
+            { key: "studied-together", prompt: "動詞", correctIndex: 0, options: ["一緒に勉強した", "一緒に遊んだ", "一緒に食事した"] },
+            { key: "for-an-hour", prompt: "期間", correctIndex: 0, options: ["1時間", "1日", "1週間"] }
+          ]
+        },
+        {
+          text: "before they went home.",
+          fixedPhrases: ["二人が家へ帰る"],
+          selectionGroups: [
+            { key: "before", prompt: "接続", correctIndex: 0, options: ["～する前に", "～した後で", "～している間に"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 43,
+      level: "C",
+      english: "Daichi planned to visit his grandfather / on Sunday morning. / Before he left home, / his mother asked him to take some fruit. / When he arrived at his grandfather's house, / they ate lunch together. / His grandfather told him many stories / about when he was young. / Daichi enjoyed listening to them very much.",
+      japanese: "ダイチは日曜日の朝に祖父を訪ねる予定でした。家を出る前に、母から果物を持っていくよう頼まれました。祖父の家に着くと一緒に昼食を食べ、祖父は若かったころの話をたくさんしてくれました。ダイチはその話を聞くことをとても楽しみました。",
+      parts: [
+        {
+          text: "Daichi planned to visit his grandfather",
+          fixedPhrases: ["ダイチは"],
+          selectionGroups: [
+            { key: "planned-to-visit", prompt: "不定詞", correctIndex: 0, options: ["祖父を訪ねる予定だった", "祖父を訪ねている", "祖父を訪ねなかった"] }
+          ]
+        },
+        {
+          text: "on Sunday morning.",
+          fixedPhrases: ["日曜日の朝に"],
+          selectionGroups: []
+        },
+        {
+          text: "Before he left home,",
+          fixedPhrases: ["彼が家を出た"],
+          selectionGroups: [
+            { key: "before", prompt: "接続", correctIndex: 0, options: ["～する前に", "～した後で", "～している間に"] }
+          ]
+        },
+        {
+          text: "his mother asked him to take some fruit.",
+          fixedPhrases: ["母は彼に頼んだ", "果物を"],
+          selectionGroups: [
+            { key: "asked-him-to", prompt: "文構造", correctIndex: 0, options: ["持っていくように", "持っていった後で", "持っていく前に"] }
+          ]
+        },
+        {
+          text: "When he arrived at his grandfather's house,",
+          fixedPhrases: ["彼が祖父の家に着いた"],
+          selectionGroups: [
+            { key: "when", prompt: "接続", correctIndex: 0, options: ["～したとき", "～する前に", "～したので"] }
+          ]
+        },
+        {
+          text: "they ate lunch together.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "they-ate", prompt: "主語", correctIndex: 0, options: ["二人は", "彼だけが", "祖父だけが"] },
+            { key: "ate-lunch", prompt: "動詞", correctIndex: 0, options: ["一緒に昼食を食べた", "一緒に昼食を作った", "一緒に昼食を運んだ"] }
+          ]
+        },
+        {
+          text: "His grandfather told him many stories",
+          fixedPhrases: ["祖父は", "彼に", "たくさんの話を"],
+          selectionGroups: [
+            { key: "told", prompt: "時制", correctIndex: 0, options: ["話した", "話している", "話すつもりだ"] }
+          ]
+        },
+        {
+          text: "about when he was young.",
+          fixedPhrases: ["祖父が若かったころ"],
+          selectionGroups: [
+            { key: "about", prompt: "前置詞", correctIndex: 0, options: ["～について", "～の前に", "～のあとで"] }
+          ]
+        },
+        {
+          text: "Daichi enjoyed listening to them very much.",
+          fixedPhrases: ["ダイチは"],
+          selectionGroups: [
+            { key: "enjoyed-listening", prompt: "動詞", correctIndex: 0, options: ["とても楽しんだ", "とても怖がった", "とても忘れていた"] },
+            { key: "to-them", prompt: "代名詞", correctIndex: 0, options: ["それらを聞くことを", "彼を聞くことを", "それを作ることを"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 44,
+      level: "C",
+      english: "Mao joined a cooking class / at a community center last month. / She wanted to learn how to make Chinese food. / At first, she was worried / because she had never cooked it before. / However, the teacher showed her what to do, / and she made a delicious dish. / Her family enjoyed eating it / when she made it again at home.",
+      japanese: "マオは先月、地域センターの料理教室に参加しました。中華料理の作り方を学びたかったのですが、それまで一度も作ったことがなく、最初は心配していました。しかし先生がやり方を教えてくれ、おいしい料理を作ることができました。家でもう一度作ると、家族も喜んで食べました。",
+      parts: [
+        {
+          text: "Mao joined a cooking class",
+          fixedPhrases: ["マオは", "料理教室に"],
+          selectionGroups: [
+            { key: "joined", prompt: "時制", correctIndex: 0, options: ["参加した", "参加している", "参加する予定だ"] }
+          ]
+        },
+        {
+          text: "at a community center last month.",
+          fixedPhrases: ["地域センターで", "先月"],
+          selectionGroups: []
+        },
+        {
+          text: "She wanted to learn how to make Chinese food.",
+          fixedPhrases: ["彼女は"],
+          selectionGroups: [
+            { key: "wanted-to-learn", prompt: "不定詞", correctIndex: 0, options: ["学びたかった", "学んでいる", "学ぶ必要がない"] },
+            { key: "how-to-make", prompt: "文構造", correctIndex: 0, options: ["中華料理の作り方を", "中華料理を作る前に", "中華料理を作っている間に"] }
+          ]
+        },
+        {
+          text: "At first, she was worried",
+          fixedPhrases: ["最初は彼女は"],
+          selectionGroups: [
+            { key: "was-worried", prompt: "動詞", correctIndex: 0, options: ["心配だった", "安心していた", "うれしかった"] }
+          ]
+        },
+        {
+          text: "because she had never cooked it before.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "because-she", prompt: "接続", correctIndex: 0, options: ["なぜなら彼女は", "しかし彼女は", "そのあと彼女は"] },
+            { key: "had-never-cooked", prompt: "過去完了", correctIndex: 0, options: ["一度も作ったことがなかった", "作ったことがある", "今作っている"] },
+            { key: "it-before", prompt: "代名詞", correctIndex: 0, options: ["それを以前に", "それらを以前に", "彼を以前に"] }
+          ]
+        },
+        {
+          text: "However, the teacher showed her what to do,",
+          fixedPhrases: ["先生は", "彼女に"],
+          selectionGroups: [
+            { key: "however", prompt: "接続", correctIndex: 0, options: ["しかし", "だから", "その前に"] },
+            { key: "showed-what-to-do", prompt: "文構造", correctIndex: 0, options: ["何をすればよいかを見せた", "何を買うかを忘れた", "何を食べるかを聞いた"] }
+          ]
+        },
+        {
+          text: "and she made a delicious dish.",
+          fixedPhrases: ["そして彼女は", "おいしい料理を"],
+          selectionGroups: [
+            { key: "made", prompt: "時制", correctIndex: 0, options: ["作った", "作っている", "作らない"] }
+          ]
+        },
+        {
+          text: "Her family enjoyed eating it",
+          fixedPhrases: ["家族は"],
+          selectionGroups: [
+            { key: "enjoyed", prompt: "動詞", correctIndex: 0, options: ["楽しんだ", "嫌がった", "避けた"] },
+            { key: "eating-it", prompt: "代名詞", correctIndex: 0, options: ["それを食べることを", "それらを食べることを", "彼を食べることを"] }
+          ]
+        },
+        {
+          text: "when she made it again at home.",
+          fixedPhrases: ["彼女がもう一度それを作った", "家で"],
+          selectionGroups: [
+            { key: "when", prompt: "接続", correctIndex: 0, options: ["～したとき", "～する前に", "～したので"] }
+          ]
+        }
+      ]
     }
   ];
 
@@ -1590,6 +2284,107 @@
     const questionsData = getTranslationTrainingQuestions();
     const normalizedIndex = Math.max(1, Math.floor(Number(index) || 1)) - 1;
     return questionsData[Math.max(0, Math.min(normalizedIndex, questionsData.length - 1))] || null;
+  }
+
+  function shuffleArray(source = [], randomFn = Math.random) {
+    const result = Array.isArray(source) ? source.slice() : [];
+    for (let index = result.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(randomFn() * (index + 1));
+      const temp = result[index];
+      result[index] = result[swapIndex];
+      result[swapIndex] = temp;
+    }
+    return result;
+  }
+
+  function buildTranslationTrainingSessionLevelOrder(levelCounts, randomFn = Math.random) {
+    const buckets = [];
+    Object.keys(levelCounts || {}).forEach((level) => {
+      const count = Math.max(0, Number(levelCounts[level]) || 0);
+      for (let index = 0; index < count; index += 1) {
+        buckets.push(level);
+      }
+    });
+
+    if (!buckets.length) {
+      return [];
+    }
+
+    const isValidOrder = (order) => {
+      if (!order.length) return false;
+      if (order[0] === "C") return false;
+      let maxStreak = 1;
+      let currentStreak = 1;
+      for (let index = 1; index < order.length; index += 1) {
+        if (order[index] === "C" && order[index - 1] === "C") {
+          return false;
+        }
+        if (order[index] === order[index - 1]) {
+          currentStreak += 1;
+          maxStreak = Math.max(maxStreak, currentStreak);
+        } else {
+          currentStreak = 1;
+        }
+      }
+      return maxStreak <= 2;
+    };
+
+    for (let attempt = 0; attempt < 250; attempt += 1) {
+      const candidate = shuffleArray(buckets, randomFn);
+      if (isValidOrder(candidate)) {
+        return candidate;
+      }
+    }
+
+    // Fallback sequence that keeps levels mixed, avoids C adjacency, and starts from non-C.
+    return ["A", "B", "A", "C", "B", "B", "A", "C", "B", "C"];
+  }
+
+  function createTranslationTrainingSessionQuestions(questionBank = [], options = {}) {
+    const source = Array.isArray(questionBank) ? questionBank : [];
+    const randomFn = typeof options.randomFn === "function" ? options.randomFn : Math.random;
+    const requestedLevelCounts = options.levelCounts && typeof options.levelCounts === "object"
+      ? options.levelCounts
+      : { A: 3, B: 4, C: 3 };
+
+    const normalizedLevelCounts = {
+      A: Math.max(0, Number(requestedLevelCounts.A) || 0),
+      B: Math.max(0, Number(requestedLevelCounts.B) || 0),
+      C: Math.max(0, Number(requestedLevelCounts.C) || 0)
+    };
+
+    const groupedByLevel = {
+      A: source.filter((question) => String(question?.level || "").toUpperCase() === "A"),
+      B: source.filter((question) => String(question?.level || "").toUpperCase() === "B"),
+      C: source.filter((question) => String(question?.level || "").toUpperCase() === "C")
+    };
+
+    const hasRequiredBank = ["A", "B", "C"].every((level) => groupedByLevel[level].length >= normalizedLevelCounts[level]);
+    if (!hasRequiredBank) {
+      const fallbackSize = normalizedLevelCounts.A + normalizedLevelCounts.B + normalizedLevelCounts.C;
+      return shuffleArray(source, randomFn).slice(0, Math.max(0, fallbackSize));
+    }
+
+    const selectedByLevel = {
+      A: shuffleArray(groupedByLevel.A, randomFn).slice(0, normalizedLevelCounts.A),
+      B: shuffleArray(groupedByLevel.B, randomFn).slice(0, normalizedLevelCounts.B),
+      C: shuffleArray(groupedByLevel.C, randomFn).slice(0, normalizedLevelCounts.C)
+    };
+
+    const levelOrder = buildTranslationTrainingSessionLevelOrder(normalizedLevelCounts, randomFn);
+    const usedByLevel = { A: 0, B: 0, C: 0 };
+    const result = [];
+
+    levelOrder.forEach((level) => {
+      const list = selectedByLevel[level] || [];
+      const pointer = usedByLevel[level] || 0;
+      if (list[pointer]) {
+        result.push(list[pointer]);
+        usedByLevel[level] = pointer + 1;
+      }
+    });
+
+    return result;
   }
 
   function createTranslationTrainingState(questions = []) {
@@ -1686,6 +2481,7 @@
   const exported = {
     getTranslationTrainingQuestions,
     getTranslationTrainingQuestion,
+    createTranslationTrainingSessionQuestions,
     createTranslationTrainingState,
     resetTranslationTrainingQuestionState,
     getTranslationTrainingDisplayFixedPhrases,

@@ -5,21 +5,66 @@ const translationTrainingModule = require(path.join(__dirname, "..", "mobile", "
 const questions = translationTrainingModule.getTranslationTrainingQuestions();
 
 assert.strictEqual(Array.isArray(questions), true, "translation training questions should be available");
-assert.strictEqual(questions.length, 29, "translation training should contain 29 questions including the newly added 15 samples");
+assert.strictEqual(questions.length, 44, "translation training should contain 44 questions including the newest 15 samples");
 assert.strictEqual(questions[0].level, "A", "existing questions should carry level metadata");
 const previousAddedQuestions = questions.filter((question) => Number(question.id) >= 6 && Number(question.id) <= 14);
 assert.strictEqual(previousAddedQuestions.length, 9, "previously added sample questions should remain 9");
 assert.strictEqual(previousAddedQuestions.filter((question) => question.level === "A").length, 3, "previously added level A samples should remain 3");
 assert.strictEqual(previousAddedQuestions.filter((question) => question.level === "B").length, 3, "previously added level B samples should remain 3");
 assert.strictEqual(previousAddedQuestions.filter((question) => question.level === "C").length, 3, "previously added level C samples should remain 3");
-const newlyAddedQuestions = questions.filter((question) => Number(question.id) >= 15);
-assert.strictEqual(newlyAddedQuestions.length, 15, "newly added sample questions should be 15");
-assert.strictEqual(newlyAddedQuestions.filter((question) => question.level === "A").length, 5, "newly added level A samples should be 5");
-assert.strictEqual(newlyAddedQuestions.filter((question) => question.level === "B").length, 5, "newly added level B samples should be 5");
-assert.strictEqual(newlyAddedQuestions.filter((question) => question.level === "C").length, 5, "newly added level C samples should be 5");
-assert.strictEqual(questions.filter((question) => question.level === "A").length, 13, "total level A questions should be 13");
-assert.strictEqual(questions.filter((question) => question.level === "B").length, 8, "total level B questions should be 8");
-assert.strictEqual(questions.filter((question) => question.level === "C").length, 8, "total level C questions should be 8");
+const middleAddedQuestions = questions.filter((question) => Number(question.id) >= 15 && Number(question.id) <= 29);
+assert.strictEqual(middleAddedQuestions.length, 15, "middle added sample questions should remain 15");
+assert.strictEqual(middleAddedQuestions.filter((question) => question.level === "A").length, 5, "middle added level A samples should remain 5");
+assert.strictEqual(middleAddedQuestions.filter((question) => question.level === "B").length, 5, "middle added level B samples should remain 5");
+assert.strictEqual(middleAddedQuestions.filter((question) => question.level === "C").length, 5, "middle added level C samples should remain 5");
+const latestAddedQuestions = questions.filter((question) => Number(question.id) >= 30);
+assert.strictEqual(latestAddedQuestions.length, 15, "latest added sample questions should be 15");
+assert.strictEqual(latestAddedQuestions.filter((question) => question.level === "A").length, 5, "latest added level A samples should be 5");
+assert.strictEqual(latestAddedQuestions.filter((question) => question.level === "B").length, 5, "latest added level B samples should be 5");
+assert.strictEqual(latestAddedQuestions.filter((question) => question.level === "C").length, 5, "latest added level C samples should be 5");
+assert.strictEqual(questions.filter((question) => question.level === "A").length, 18, "total level A questions should be 18");
+assert.strictEqual(questions.filter((question) => question.level === "B").length, 13, "total level B questions should be 13");
+assert.strictEqual(questions.filter((question) => question.level === "C").length, 13, "total level C questions should be 13");
+
+const sessionSignatures = new Set();
+for (let runIndex = 0; runIndex < 5; runIndex += 1) {
+	const sessionQuestions = translationTrainingModule.createTranslationTrainingSessionQuestions(questions);
+	assert.strictEqual(sessionQuestions.length, 10, `session ${runIndex + 1} should contain 10 questions`);
+	const levelOrder = sessionQuestions.map((question) => String(question.level || "").toUpperCase());
+	const idOrder = sessionQuestions.map((question) => Number(question.id));
+	const aCount = levelOrder.filter((level) => level === "A").length;
+	const bCount = levelOrder.filter((level) => level === "B").length;
+	const cCount = levelOrder.filter((level) => level === "C").length;
+	assert.strictEqual(aCount, 3, `session ${runIndex + 1} should contain 3 A questions`);
+	assert.strictEqual(bCount, 4, `session ${runIndex + 1} should contain 4 B questions`);
+	assert.strictEqual(cCount, 3, `session ${runIndex + 1} should contain 3 C questions`);
+	assert.strictEqual(levelOrder[0] === "C", false, `session ${runIndex + 1} should not start with C`);
+	assert.strictEqual(new Set(idOrder).size, 10, `session ${runIndex + 1} should not contain duplicated question IDs`);
+	assert.strictEqual(levelOrder.includes("A") && levelOrder.includes("B") && levelOrder.includes("C"), true, `session ${runIndex + 1} should mix A/B/C levels`);
+
+	let hasConsecutiveC = false;
+	let maxStreak = 1;
+	let currentStreak = 1;
+	for (let index = 1; index < levelOrder.length; index += 1) {
+		if (levelOrder[index] === "C" && levelOrder[index - 1] === "C") {
+			hasConsecutiveC = true;
+		}
+		if (levelOrder[index] === levelOrder[index - 1]) {
+			currentStreak += 1;
+			maxStreak = Math.max(maxStreak, currentStreak);
+		} else {
+			currentStreak = 1;
+		}
+	}
+	assert.strictEqual(hasConsecutiveC, false, `session ${runIndex + 1} should not place C consecutively`);
+	assert.strictEqual(maxStreak <= 2, true, `session ${runIndex + 1} should avoid long same-level blocks`);
+
+	const signature = `${levelOrder.join("")}:${idOrder.join("-")}`;
+	sessionSignatures.add(signature);
+	console.log(`[session-${runIndex + 1}] counts=A${aCount}/B${bCount}/C${cCount} ids=${idOrder.join(",")} order=${levelOrder.join("")} hasConsecutiveC=${hasConsecutiveC} firstLevel=${levelOrder[0]}`);
+}
+assert.strictEqual(sessionSignatures.size >= 2, true, "session generation should not be fixed to one order");
+
 assert.strictEqual(questions[0].parts.length, 2, "first question should have two slash parts");
 assert.deepStrictEqual(questions[0].parts[0].fixedPhrases, ["私は"], "the first slash should expose a fixed phrase before the selection columns");
 assert.strictEqual(questions[0].parts[0].selectionGroups[0].options[0], "行った", "the first selection column should expose its first card option");
@@ -82,6 +127,26 @@ assert.deepStrictEqual(questions[28].parts[0].fixedPhrases, ["ハルカは普段
 assert.deepStrictEqual(questions[19].parts[2].fixedPhrases, ["クラスメートと"], "question 20 third slash should be fixed-only");
 assert.deepStrictEqual(questions[23].parts[2].fixedPhrases, ["長い間"], "question 24 third slash should be fixed-only");
 assert.deepStrictEqual(questions[26].parts[3].fixedPhrases, ["約20分間"], "question 27 fourth slash should be fixed-only");
+assert.strictEqual(questions[29].english, "My father told me / to come home early.", "question 30 should match A-9 sample text");
+assert.strictEqual(questions[30].parts[1].selectionGroups.length, 0, "question 31 second slash should be fixed-only");
+assert.strictEqual(questions[31].parts[0].selectionGroups[0].key, "if", "question 32 should keep if as a focused connector choice");
+assert.strictEqual(questions[32].parts[0].selectionGroups.length, 0, "question 33 first slash should allow fixed-only progression");
+assert.strictEqual(questions[33].parts[0].selectionGroups.length, 0, "question 34 first slash should allow fixed-only progression");
+assert.strictEqual(questions[34].parts[2].selectionGroups.length, 0, "question 35 third slash should be fixed-only");
+assert.strictEqual(questions[35].parts[1].selectionGroups[0].key, "so-he", "question 36 second slash should keep so as a focused connector choice");
+assert.strictEqual(questions[36].parts[2].selectionGroups[0].key, "inside-it", "question 37 third slash should keep referent interpretation choice");
+assert.strictEqual(questions[37].parts[1].selectionGroups.length, 0, "question 38 second slash should be fixed-only");
+assert.strictEqual(questions[38].parts[2].selectionGroups.length, 0, "question 39 third slash should be fixed-only");
+assert.strictEqual(questions[39].parts.length, 8, "question 40 should contain 8 slash parts");
+assert.strictEqual(questions[40].parts.length, 8, "question 41 should contain 8 slash parts");
+assert.strictEqual(questions[41].parts.length, 8, "question 42 should contain 8 slash parts");
+assert.strictEqual(questions[42].parts.length, 9, "question 43 should contain 9 slash parts");
+assert.strictEqual(questions[43].parts.length, 9, "question 44 should contain 9 slash parts");
+assert.strictEqual(questions[39].parts[5].selectionGroups.some((group) => group.key === "one-liked"), true, "question 40 should keep one-referent interpretation choice");
+assert.strictEqual(questions[40].parts[5].fixedPhrases.includes("それらの"), true, "question 41 should keep them reference to koalas in fixed phrase");
+assert.strictEqual(questions[40].parts[6].fixedPhrases.includes("それらを友達に"), true, "question 41 should keep them reference to pictures in fixed phrase");
+assert.strictEqual(questions[42].parts[8].selectionGroups.some((group) => group.key === "to-them"), true, "question 43 should keep them-referent interpretation choice");
+assert.strictEqual(questions[43].parts[4].selectionGroups.some((group) => group.key === "it-before"), true, "question 44 should keep it-referent interpretation choice");
 assert.strictEqual(questions[0].japanese, "本が必要だったので、私は図書館へ行きました。", "the natural Japanese translation should be present");
 assert.strictEqual(translationTrainingModule.getTranslationTrainingQuestion(1).id, 1, "question lookup should return the first question for index 1");
 assert.strictEqual(translationTrainingModule.getTranslationTrainingQuestion(2).id, 2, "question lookup should return the second question for index 2");
@@ -118,6 +183,9 @@ assert.strictEqual(layoutSequence[2].groupIndex, 1, "the second selection column
 const fixedOnlySequence = translationTrainingModule.buildTranslationTrainingLayoutSequence(questions[14].parts[1], ["明日"]);
 assert.strictEqual(fixedOnlySequence.length, 1, "fixed-only parts should still produce one layout item");
 assert.strictEqual(fixedOnlySequence[0].type, "fixed", "fixed-only parts should render fixed-card layout entries");
+const fixedOnlySequenceLatest = translationTrainingModule.buildTranslationTrainingLayoutSequence(questions[32].parts[0], ["トムは", "ケーキを買った"]);
+assert.strictEqual(fixedOnlySequenceLatest.length, 1, "latest fixed-only parts should still produce one layout item");
+assert.strictEqual(fixedOnlySequenceLatest[0].type, "fixed", "latest fixed-only parts should render fixed-card layout entries");
 
 const secondHighlightState = translationTrainingModule.buildTranslationTrainingEnglishDisplaySegments(firstQuestion, 1);
 assert.strictEqual(secondHighlightState[0].state, "completed", "the already answered part should be marked as completed");
