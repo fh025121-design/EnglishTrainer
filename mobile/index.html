@@ -53,6 +53,7 @@
           <section class="panel action-panel">
             <button id="openSpeakingFeatureBtn" class="primary-btn large-btn" type="button">🎤 Speaking</button>
             <button id="openWordOrderTrainingBtn" class="secondary-btn large-btn" type="button">語順トレーニング</button>
+            <button id="openTranslationTrainingBtn" class="secondary-btn large-btn" type="button">和訳トレーニング</button>
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
             <button id="refreshCacheBtn" class="secondary-btn large-btn" type="button">♻ キャッシュ更新</button>
             <button id="openAcquiredPointsScreenBtn" class="secondary-btn large-btn" type="button">獲得ポイント</button>
@@ -610,6 +611,51 @@
         </main>
       </section>
 
+      <section id="translationTrainingScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="translationTrainingBackBtn" class="back-btn" type="button">← ホーム</button>
+        </header>
+
+        <main class="study-layout">
+          <section class="panel">
+            <div class="study-meta">
+              <p id="translationTrainingQuestionIndexText" class="progress-text">1 / 5</p>
+              <p id="translationTrainingCurrentPartText" class="day-badge">1つ目</p>
+            </div>
+          </section>
+
+          <section id="translationTrainingQuestionPanel" class="study-card conversation-card">
+            <p class="study-type-text">英文を前から順番に理解しよう</p>
+            <p id="translationTrainingEnglishText" class="word-order-prompt-text"></p>
+            <div class="recognized-block word-order-zone">
+              <p id="translationTrainingPartLabelText" class="recognized-label">1つ目のまとまり</p>
+              <div id="translationTrainingOptionList" class="word-order-card-grid"></div>
+              <p id="translationTrainingFeedbackText" class="word-order-feedback-text"></p>
+            </div>
+            <div id="translationTrainingStatusText" class="word-order-feedback-text"></div>
+            <div class="word-order-actions-row">
+              <button id="translationTrainingRetryBtn" class="secondary-btn" type="button">やり直す</button>
+              <button id="translationTrainingNextBtn" class="primary-btn" type="button">次へ</button>
+            </div>
+          </section>
+
+          <section id="translationTrainingCompletePanel" class="panel result-panel speaking-complete-panel hidden">
+            <h2>和訳トレーニング 完了</h2>
+            <p id="translationTrainingCompleteText" class="status-text">5問完了</p>
+            <p id="translationTrainingJapaneseText" class="word-order-prompt-text"></p>
+            <div class="word-order-zone">
+              <p class="recognized-label">日本語を声に出して読もう</p>
+              <p id="translationTrainingReadInstructionText" class="status-text">画面の日本語をそのまま音読してください。</p>
+              <p id="translationTrainingMicStatusText" class="word-order-feedback-text">マイクを待機しています…</p>
+              <div class="word-order-actions-row">
+                <button id="translationTrainingSpeakBtn" class="primary-btn" type="button">発声確認</button>
+                <button id="translationTrainingNextQuestionBtn" class="secondary-btn" type="button">次へ</button>
+              </div>
+            </div>
+          </section>
+        </main>
+      </section>
+
       <section id="comingSoonScreen" class="screen">
         <header class="screen-topbar">
           <button id="comingSoonBackBtn" class="back-btn" type="button">← ホーム</button>
@@ -644,6 +690,7 @@
           { src: "../release-info.js", type: "text/javascript" },
           { src: "speaking-data.js", type: "text/javascript" },
           { src: "word-order-data.js", type: "text/javascript" },
+          { src: "translation-training-data.js", type: "text/javascript" },
           { src: "mobile.js", type: "text/javascript" }
         ];
 
