@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260809-2219";
+        const defaultToken = "20260810-0725";
         const queryToken = new URLSearchParams(window.location.search).get("v") || "";
         const cacheToken = queryToken || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -703,9 +703,16 @@
           if (next.type === "module") {
             script.type = "module";
           }
-          script.onload = loadNext;
+          script.onload = () => {
+            index += 1;
+            loadNext();
+          };
+          script.onerror = () => {
+            console.warn(`[mobile] failed to load ${next.src}`);
+            index += 1;
+            loadNext();
+          };
           document.body.appendChild(script);
-          index += 1;
         };
 
         loadNext();

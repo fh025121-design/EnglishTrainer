@@ -140,9 +140,35 @@
     return questionsData[Math.max(0, Math.min(normalizedIndex, questionsData.length - 1))] || null;
   }
 
+  function buildTranslationTrainingEnglishDisplaySegments(question, currentPartIndex = 0) {
+    const safeQuestion = question && typeof question === "object" ? question : null;
+    if (!safeQuestion) return [];
+    const englishText = String(safeQuestion.english || "");
+    const parts = Array.isArray(safeQuestion.parts) ? safeQuestion.parts : [];
+    const slashParts = englishText.split("/").map((part) => part.trim());
+
+    if (!slashParts.length) return [];
+
+    return slashParts.map((segment, index) => {
+      const isCurrent = index === currentPartIndex;
+      const isCompleted = index < currentPartIndex;
+      let state = "pending";
+      if (isCurrent) {
+        state = "current";
+      } else if (isCompleted) {
+        state = "completed";
+      }
+      return {
+        text: segment,
+        state
+      };
+    });
+  }
+
   const exported = {
     getTranslationTrainingQuestions,
-    getTranslationTrainingQuestion
+    getTranslationTrainingQuestion,
+    buildTranslationTrainingEnglishDisplaySegments
   };
 
   if (typeof module !== "undefined" && module.exports) {

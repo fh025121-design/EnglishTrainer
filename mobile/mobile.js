@@ -7008,7 +7008,11 @@
     }
   }
 
-  function startTranslationTraining() {
+  function startTranslationTraining(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     const questions = window.translationTrainingData?.getTranslationTrainingQuestions?.() || [];
     if (!questions.length) {
       window.alert("和訳トレーニングの問題がありません。")
@@ -7025,7 +7029,9 @@
     state.translationTrainingSpeechDetected = false;
     clearTranslationTrainingSpeechTimer();
     renderTranslationTrainingQuestion();
-    showScreen("translationTrainingScreen");
+    window.requestAnimationFrame(() => {
+      showScreen("translationTrainingScreen");
+    });
   }
 
   function renderTranslationTrainingQuestion() {
@@ -7034,15 +7040,33 @@
     const question = training.questions[training.questionIndex];
     if (!question) return;
     const currentPart = question.parts[training.currentPartIndex];
-    const currentPartLabel = training.currentPartIndex + 1;
     elements.translationTrainingQuestionPanel.classList.remove("hidden");
     elements.translationTrainingCompletePanel.classList.add("hidden");
     elements.translationTrainingQuestionIndexText.textContent = `${training.questionIndex + 1} / ${training.questions.length}`;
-    elements.translationTrainingCurrentPartText.textContent = `${currentPartLabel}つ目`;
-    elements.translationTrainingEnglishText.textContent = question.english.replace(/\//g, " / ");
-    elements.translationTrainingPartLabelText.textContent = `${currentPartLabel}つ目のまとまり`;
+    elements.translationTrainingCurrentPartText.textContent = "";
+    const segments = window.translationTrainingData?.buildTranslationTrainingEnglishDisplaySegments?.(question, training.currentPartIndex) || [];
+    const englishFragment = document.createDocumentFragment();
+    segments.forEach((segment, index) => {
+      const span = document.createElement("span");
+      span.textContent = `${segment.text}`;
+      span.className = segment.state === "current"
+        ? "translation-training-highlight-current"
+        : segment.state === "completed"
+          ? "translation-training-highlight-completed"
+          : "translation-training-highlight-pending";
+      englishFragment.appendChild(span);
+      if (index < segments.length - 1) {
+        const separator = document.createElement("span");
+        separator.textContent = " / ";
+        separator.className = "translation-training-highlight-separator";
+        englishFragment.appendChild(separator);
+      }
+    });
+    elements.translationTrainingEnglishText.innerHTML = "";
+    elements.translationTrainingEnglishText.appendChild(englishFragment);
+    elements.translationTrainingPartLabelText.textContent = "";
     elements.translationTrainingFeedbackText.textContent = "";
-    elements.translationTrainingStatusText.textContent = currentPart ? `次は「${currentPart.text}」の意味を選びましょう。` : "";
+    elements.translationTrainingStatusText.textContent = "";
     elements.translationTrainingOptionList.innerHTML = "";
     const optionsFragment = document.createDocumentFragment();
     currentPart.options.forEach((optionText, optionIndex) => {
@@ -7055,8 +7079,9 @@
     });
     elements.translationTrainingOptionList.appendChild(optionsFragment);
     elements.translationTrainingRetryBtn.disabled = false;
-    elements.translationTrainingNextBtn.textContent = "次へ";
+    elements.translationTrainingNextBtn.textContent = "";
     elements.translationTrainingNextBtn.disabled = true;
+    elements.translationTrainingNextBtn.classList.add("hidden");
   }
 
   function handleTranslationTrainingOptionSelect(optionIndex, selectedText) {
@@ -7068,45 +7093,26 @@
     const correctIndex = Number.isInteger(currentPart.correctIndex) ? currentPart.correctIndex : 0;
     const isCorrect = optionIndex === correctIndex;
     elements.translationTrainingFeedbackText.textContent = isCorrect ? "正解です。" : "不正解です。";
-    elements.translationTrainingStatusText.textContent = isCorrect
-      ? `正解。次のまとまりへ進めます。`
-      : `正解は「${currentPart.options[correctIndex]}」です。`;
     if (isCorrect) {
       training.completedParts.push({ partIndex: training.currentPartIndex, selectedText });
       if (training.currentPartIndex + 1 < question.parts.length) {
         training.currentPartIndex += 1;
         state.translationTrainingCurrentPartIndex = training.currentPartIndex;
         state.translationTrainingPartCompleted = true;
-        elements.translationTrainingNextBtn.disabled = false;
-        elements.translationTrainingNextBtn.textContent = "次のまとまりへ";
+        window.requestAnimationFrame(() => {
+          renderTranslationTrainingQuestion();
+        });
       } else {
         state.translationTrainingPartCompleted = true;
-        elements.translationTrainingNextBtn.disabled = false;
-        elements.translationTrainingNextBtn.textContent = "日本語訳を見る";
+        window.requestAnimationFrame(() => {
+          renderTranslationTrainingComplete();
+        });
       }
-    } else {
-      elements.translationTrainingNextBtn.disabled = true;
     }
   }
 
   function handleTranslationTrainingAdvance() {
-    const training = state.translationTraining;
-    if (!training) return;
-    const question = training.questions[training.questionIndex];
-    if (!question) return;
-    if (training.currentPartIndex + 1 < question.parts.length) {
-      renderTranslationTrainingQuestion();
-      return;
-    }
-    if (training.questionIndex + 1 < training.questions.length) {
-      training.questionIndex += 1;
-      training.currentPartIndex = 0;
-      state.translationTrainingCurrentPartIndex = 0;
-      state.translationTrainingPartCompleted = false;
-      renderTranslationTrainingQuestion();
-      return;
-    }
-    renderTranslationTrainingComplete();
+    return undefined;
   }
 
   function renderTranslationTrainingComplete() {
@@ -9652,7 +9658,19 @@
   function bindEvents() {
     document.getElementById("openSpeakingFeatureBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("openWordOrderTrainingBtn").addEventListener("click", renderWordOrderRangeSelectScreen);
-    document.getElementById("openTranslationTrainingBtn").addEventListener("click", startTranslationTraining);
+    const translationTrainingHomeBtn = document.getElementById("openTranslationTrainingBtn");
+    if (translationTrainingHomeBtn) {
+      const runTranslationTraining = (event) => {
+        startTranslationTraining(event);
+      };
+      translationTrainingHomeBtn.onclick = runTranslationTraining;
+      translationTrainingHomeBtn.onmousedown = runTranslationTraining;
+      translationTrainingHomeBtn.ontouchstart = runTranslationTraining;
+      translationTrainingHomeBtn.onpointerdown = runTranslationTraining;
+      ["click", "touchend", "touchstart", "pointerup", "pointerdown", "mousedown"].forEach((eventName) => {
+        translationTrainingHomeBtn.addEventListener(eventName, runTranslationTraining);
+      });
+    }
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
     document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", async () => {
@@ -9727,7 +9745,6 @@
       renderHome();
     });
     elements.translationTrainingRetryBtn.addEventListener("click", () => renderTranslationTrainingQuestion());
-    elements.translationTrainingNextBtn.addEventListener("click", handleTranslationTrainingAdvance);
     elements.translationTrainingSpeakBtn.addEventListener("click", confirmTranslationTrainingSpeech);
     elements.translationTrainingNextQuestionBtn.addEventListener("click", advanceTranslationTrainingQuestion);
     document.getElementById("comingSoonBackBtn").addEventListener("click", renderHome);
@@ -9801,6 +9818,7 @@
   }
 
   function initialize() {
+    window.startTranslationTraining = startTranslationTraining;
     loadState();
     mobilePendingLearningHistoryEntries = loadMobilePendingLearningHistoryEntries();
     loadSpeakingProgress();

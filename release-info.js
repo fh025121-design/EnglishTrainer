@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/10 07:10", note: "モバイル版のみ: 和訳トレーニングの起動入口が反応しないケースに対応。スクリプト読み込みの失敗時も後続スクリプトを続けて読み込み、ボタン押下で画面遷移するように修正。PC版・既存の学習機能は未変更。" },
     { version: "2026/08/10 03:10", note: "モバイル版のみ: 英検3級向けの試作『和訳トレーニング』を追加。ホーム画面の『語順トレーニング』の下に『和訳トレーニング』を新設し、5問固定で英文全体→各スラッシュ部分の三択→自然な日本語訳→日本語音読の発声確認までを順に進める試作画面を実装。PC版・既存のDay学習・Vocabulary・Speaking・語順・ポイント・履歴保存は未変更。" },
     { version: "2026/08/10 02:48", note: "モバイル版のみ: Speaking『復習』で会話を最後まで完了した際、既存の復習実績（speakingReviewStatsMap）更新に加えて、同じ conversationId の所属 Week/曜日 を既存会話データから特定し、Week側進捗（speakingDayProgressMap / englishTrainerSpeakingProgress）にも1会話分を反映する接続を追加。『○周目』表示計算式・表示文言・復習選出ロジック・20組上限・ポイント処理・教材データ・PC版は未変更。過去復習実績の遡及移行は行わず、修正後の新規完了分のみ反映。" },
     { version: "2026/08/09 22:19", note: "モバイル版のみ: 学習履歴の earnedPoints 表示不整合を修正。履歴エントリの sanitize/finalize/表示/Firestore読込で earnedPoints を保持し、数値・数値文字列・'+12P'・全角数字を安全に正規化して +xP 表示できるよう統一。さらに Firestore 保存ペイロードへ earnedPoints を追加し、復習セッションはポイント確定後の値を履歴へ反映するよう調整。ポイント付与ルール・日次上限・残高同期・deviceType/deviceId/deviceName・Vocabulary/語順の履歴保存導線は未変更。" },

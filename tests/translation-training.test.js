@@ -13,4 +13,13 @@ assert.strictEqual(questions[0].japanese, "本が必要だったので、私は�
 assert.strictEqual(translationTrainingModule.getTranslationTrainingQuestion(1).id, 1, "question lookup should return the first question for index 1");
 assert.strictEqual(translationTrainingModule.getTranslationTrainingQuestion(2).id, 2, "question lookup should return the second question for index 2");
 
+const firstQuestion = questions[0];
+const firstHighlightState = translationTrainingModule.buildTranslationTrainingEnglishDisplaySegments(firstQuestion, 0);
+assert.strictEqual(firstHighlightState[0].state, "current", "the current slash should be highlighted for the first part");
+assert.strictEqual(firstHighlightState[1].state, "pending", "the later slash should stay pending before it is answered");
+
+const secondHighlightState = translationTrainingModule.buildTranslationTrainingEnglishDisplaySegments(firstQuestion, 1);
+assert.strictEqual(secondHighlightState[0].state, "completed", "the already answered part should be marked as completed");
+assert.strictEqual(secondHighlightState[1].state, "current", "the next part should become the current highlight");
+
 console.log("translation training tests passed");
