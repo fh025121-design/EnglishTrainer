@@ -28,6 +28,20 @@ assert.strictEqual(questions[0].japanese, "本が必要だったので、私は�
 assert.strictEqual(translationTrainingModule.getTranslationTrainingQuestion(1).id, 1, "question lookup should return the first question for index 1");
 assert.strictEqual(translationTrainingModule.getTranslationTrainingQuestion(2).id, 2, "question lookup should return the second question for index 2");
 
+const freshState = translationTrainingModule.createTranslationTrainingState(questions);
+assert.strictEqual(freshState.questionIndex, 0, "a fresh translation-training state should start at the first question");
+assert.deepStrictEqual(freshState.partSelections, {}, "a fresh translation-training state should not preselect any cards");
+assert.strictEqual(freshState.builtJapanese, "", "a fresh translation-training state should not carry over built Japanese text");
+
+const previousState = translationTrainingModule.createTranslationTrainingState(questions);
+previousState.partSelections = { 0: { verb: { optionIndex: 0, isCorrect: true } } };
+previousState.builtJapanese = "答えます";
+previousState.answeredGroupKeys = ["verb"];
+const resetState = translationTrainingModule.resetTranslationTrainingQuestionState(previousState);
+assert.deepStrictEqual(resetState.partSelections, {}, "resetting a question state should clear prior card selections");
+assert.strictEqual(resetState.builtJapanese, "", "resetting a question state should clear built Japanese text");
+assert.deepStrictEqual(resetState.answeredGroupKeys, [], "resetting a question state should clear answered-group tracking");
+
 const firstQuestion = questions[0];
 const firstHighlightState = translationTrainingModule.buildTranslationTrainingEnglishDisplaySegments(firstQuestion, 0);
 assert.strictEqual(firstHighlightState[0].state, "current", "the current slash should be highlighted for the first part");

@@ -238,6 +238,34 @@
     return questionsData[Math.max(0, Math.min(normalizedIndex, questionsData.length - 1))] || null;
   }
 
+  function createTranslationTrainingState(questions = []) {
+    return {
+      questions: Array.isArray(questions) ? questions : [],
+      questionIndex: 0,
+      currentPartIndex: 0,
+      completedParts: [],
+      currentSelectionIndex: 0,
+      completedSelections: [],
+      builtJapanese: "",
+      answeredGroupKeys: [],
+      partSelections: {}
+    };
+  }
+
+  function resetTranslationTrainingQuestionState(training = {}) {
+    if (!training || typeof training !== "object") return training;
+    return {
+      ...training,
+      currentPartIndex: 0,
+      completedParts: [],
+      currentSelectionIndex: 0,
+      completedSelections: [],
+      builtJapanese: "",
+      answeredGroupKeys: [],
+      partSelections: {}
+    };
+  }
+
   function getTranslationTrainingDisplayFixedPhrases(part) {
     const safePart = part && typeof part === "object" ? part : null;
     if (!safePart) return [];
@@ -283,6 +311,8 @@
   const exported = {
     getTranslationTrainingQuestions,
     getTranslationTrainingQuestion,
+    createTranslationTrainingState,
+    resetTranslationTrainingQuestionState,
     getTranslationTrainingDisplayFixedPhrases,
     buildTranslationTrainingEnglishDisplaySegments,
     getTranslationTrainingCardDisplayState

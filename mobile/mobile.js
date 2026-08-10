@@ -7276,7 +7276,8 @@
     if (!training) return;
     if (training.questionIndex + 1 < training.questions.length) {
       training.questionIndex += 1;
-      training.currentPartIndex = 0;
+      const resetState = window.translationTrainingData?.resetTranslationTrainingQuestionState?.(training) || training;
+      Object.assign(training, resetState);
       state.translationTrainingCurrentPartIndex = 0;
       state.translationTrainingPartCompleted = false;
       state.translationTrainingSpeechDetected = false;
