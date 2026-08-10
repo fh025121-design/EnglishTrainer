@@ -7130,11 +7130,27 @@
 
   function triggerTranslationTrainingIncorrectFeedback(button) {
     if (!(button instanceof HTMLElement)) return;
+    let marker = button.querySelector(".translation-training-incorrect-mark");
+    if (!marker) {
+      marker = document.createElement("span");
+      marker.className = "translation-training-incorrect-mark";
+      marker.setAttribute("aria-hidden", "true");
+      marker.textContent = "×";
+      button.appendChild(marker);
+    }
+    if (button.translationTrainingIncorrectTimerId) {
+      window.clearTimeout(button.translationTrainingIncorrectTimerId);
+      button.translationTrainingIncorrectTimerId = null;
+    }
     button.classList.remove("translation-training-card--incorrect-flash");
     void button.offsetWidth;
     button.classList.add("translation-training-card--incorrect-flash");
-    window.setTimeout(() => {
+    button.translationTrainingIncorrectTimerId = window.setTimeout(() => {
       button.classList.remove("translation-training-card--incorrect-flash");
+      if (marker) {
+        marker.remove();
+      }
+      button.translationTrainingIncorrectTimerId = null;
     }, 500);
   }
 

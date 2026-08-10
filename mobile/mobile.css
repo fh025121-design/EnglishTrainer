@@ -396,6 +396,25 @@ select {
   overflow-wrap: anywhere;
   max-width: 100%;
   margin-bottom: 4px;
+  position: relative;
+}
+
+.translation-training-incorrect-mark {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  min-height: 20px;
+  color: #ef4444;
+  font-size: 1.26rem;
+  font-weight: 900;
+  line-height: 1;
+  -webkit-text-stroke: 0.2px rgba(127, 29, 29, 0.45);
+  pointer-events: none;
 }
 
 .translation-training-card-content {
@@ -474,6 +493,9 @@ select {
 .translation-training-card--incorrect-flash .translation-training-card-marker {
   background: rgba(255, 237, 237, 0.95);
   border-color: rgba(248, 113, 113, 0.78);
+  color: #b91c1c;
+  font-size: 0.84rem;
+  font-weight: 900;
 }
 
 @keyframes translation-training-card-shake-x {
