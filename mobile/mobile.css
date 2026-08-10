@@ -307,8 +307,10 @@ select {
 }
 
 #translationTrainingEnglishText .translation-training-highlight-separator {
-  color: #ff4f4f !important;
+  color: #ff1f1f !important;
+  -webkit-text-fill-color: #ff1f1f !important;
   font-weight: 900;
+  text-shadow: 0 0 0 #ff1f1f, 0 0 1px rgba(255, 31, 31, 0.9);
 }
 
 .translation-training-fixed-row {

@@ -7192,6 +7192,8 @@
         const separator = document.createElement("span");
         separator.textContent = " / ";
         separator.className = "translation-training-highlight-separator";
+        separator.style.color = "#ff4f4f";
+        separator.style.fontWeight = "900";
         englishFragment.appendChild(separator);
       }
     });
