@@ -7022,7 +7022,10 @@
       questions,
       questionIndex: 0,
       currentPartIndex: 0,
-      completedParts: []
+      completedParts: [],
+      currentSelectionIndex: 0,
+      completedSelections: [],
+      builtJapanese: ""
     };
     state.translationTrainingCurrentPartIndex = 0;
     state.translationTrainingPartCompleted = false;
@@ -7040,6 +7043,7 @@
     const question = training.questions[training.questionIndex];
     if (!question) return;
     const currentPart = question.parts[training.currentPartIndex];
+    const currentSelection = currentPart?.selections?.[training.currentSelectionIndex];
     elements.translationTrainingQuestionPanel.classList.remove("hidden");
     elements.translationTrainingCompletePanel.classList.add("hidden");
     elements.translationTrainingQuestionIndexText.textContent = `${training.questionIndex + 1} / ${training.questions.length}`;
@@ -7064,16 +7068,17 @@
     });
     elements.translationTrainingEnglishText.innerHTML = "";
     elements.translationTrainingEnglishText.appendChild(englishFragment);
-    elements.translationTrainingPartLabelText.textContent = "";
+    elements.translationTrainingPartLabelText.textContent = currentSelection?.prompt || "";
     elements.translationTrainingFeedbackText.textContent = "";
     elements.translationTrainingStatusText.textContent = "";
     elements.translationTrainingOptionList.innerHTML = "";
     const optionsFragment = document.createDocumentFragment();
-    currentPart.options.forEach((optionText, optionIndex) => {
+    (currentSelection?.options || []).forEach((optionText, optionIndex) => {
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "secondary-btn word-order-card-btn";
+      button.className = "secondary-btn translation-training-card";
       button.textContent = optionText;
+      button.dataset.optionIndex = String(optionIndex);
       button.addEventListener("click", () => handleTranslationTrainingOptionSelect(optionIndex, optionText));
       optionsFragment.appendChild(button);
     });
@@ -7089,14 +7094,32 @@
     if (!training) return;
     const question = training.questions[training.questionIndex];
     const currentPart = question?.parts[training.currentPartIndex];
-    if (!question || !currentPart) return;
-    const correctIndex = Number.isInteger(currentPart.correctIndex) ? currentPart.correctIndex : 0;
+    const currentSelection = currentPart?.selections?.[training.currentSelectionIndex];
+    if (!question || !currentPart || !currentSelection) return;
+    const correctIndex = Number.isInteger(currentSelection.correctIndex) ? currentSelection.correctIndex : 0;
     const isCorrect = optionIndex === correctIndex;
     elements.translationTrainingFeedbackText.textContent = isCorrect ? "正解です。" : "不正解です。";
-    if (isCorrect) {
-      training.completedParts.push({ partIndex: training.currentPartIndex, selectedText });
+    if (!isCorrect) return;
+    const nextBuiltJapanese = `${training.builtJapanese}${selectedText}`;
+    training.builtJapanese = nextBuiltJapanese;
+    training.completedSelections.push({ partIndex: training.currentPartIndex, selectionIndex: training.currentSelectionIndex, text: selectedText });
+    const selectedCards = elements.translationTrainingOptionList.querySelectorAll(".translation-training-card");
+    selectedCards.forEach((card, index) => {
+      card.classList.toggle("active", index === optionIndex);
+      card.classList.toggle("dimmed", index !== optionIndex);
+    });
+    window.setTimeout(() => {
+      const nextSelectionIndex = training.currentSelectionIndex + 1;
+      if (nextSelectionIndex < (currentPart.selections?.length || 0)) {
+        training.currentSelectionIndex = nextSelectionIndex;
+        window.requestAnimationFrame(() => {
+          renderTranslationTrainingQuestion();
+        });
+        return;
+      }
       if (training.currentPartIndex + 1 < question.parts.length) {
         training.currentPartIndex += 1;
+        training.currentSelectionIndex = 0;
         state.translationTrainingCurrentPartIndex = training.currentPartIndex;
         state.translationTrainingPartCompleted = true;
         window.requestAnimationFrame(() => {
@@ -7108,7 +7131,7 @@
           renderTranslationTrainingComplete();
         });
       }
-    }
+    }, 180);
   }
 
   function handleTranslationTrainingAdvance() {

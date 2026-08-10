@@ -7,20 +7,42 @@
       parts: [
         {
           text: "I went to the library",
-          correctIndex: 0,
-          options: [
-            "私は図書館へ行きました",
-            "私は図書館から帰りました",
-            "私は本を読みました"
+          selections: [
+            {
+              key: "subject",
+              prompt: "主語",
+              correctIndex: 0,
+              options: [
+                "私は",
+                "彼は",
+                "彼女は"
+              ]
+            },
+            {
+              key: "verb",
+              prompt: "動詞",
+              correctIndex: 0,
+              options: [
+                "行きました",
+                "帰りました",
+                "読みました"
+              ]
+            }
           ]
         },
         {
           text: "because I needed a book",
-          correctIndex: 1,
-          options: [
-            "本を読んだあと",
-            "本が必要だったので",
-            "本を借りるために"
+          selections: [
+            {
+              key: "reason",
+              prompt: "理由",
+              correctIndex: 1,
+              options: [
+                "本が必要だったので",
+                "本を読んだあと",
+                "本を借りるために"
+              ]
+            }
           ]
         }
       ]
@@ -32,20 +54,42 @@
       parts: [
         {
           text: "She stayed at home",
-          correctIndex: 2,
-          options: [
-            "彼女は学校へ行きました",
-            "彼女は家を出ました",
-            "彼女は家にいました"
+          selections: [
+            {
+              key: "subject",
+              prompt: "主語",
+              correctIndex: 2,
+              options: [
+                "彼女は",
+                "彼は",
+                "私は"
+              ]
+            },
+            {
+              key: "state",
+              prompt: "状態",
+              correctIndex: 0,
+              options: [
+                "家にいました",
+                "学校へ行きました",
+                "家を出ました"
+              ]
+            }
           ]
         },
         {
           text: "because she was tired",
-          correctIndex: 1,
-          options: [
-            "元気だったので",
-            "疲れていたので",
-            "勉強したあと"
+          selections: [
+            {
+              key: "reason",
+              prompt: "理由",
+              correctIndex: 1,
+              options: [
+                "元気だったので",
+                "疲れていたので",
+                "勉強したあと"
+              ]
+            }
           ]
         }
       ]
@@ -57,20 +101,42 @@
       parts: [
         {
           text: "After I finished my homework",
-          correctIndex: 2,
-          options: [
-            "宿題を始める前に",
-            "宿題をしている間",
-            "宿題を終えたあと"
+          selections: [
+            {
+              key: "noun",
+              prompt: "名詞句",
+              correctIndex: 0,
+              options: [
+                "私の宿題",
+                "私の仕事",
+                "私の家族"
+              ]
+            },
+            {
+              key: "connector",
+              prompt: "接続表現",
+              correctIndex: 0,
+              options: [
+                "終えたあとで",
+                "終えた前に",
+                "始めたあとで"
+              ]
+            }
           ]
         },
         {
           text: "I watched TV",
-          correctIndex: 1,
-          options: [
-            "私はテレビを消しました",
-            "私はテレビを見ました",
-            "私は勉強しました"
+          selections: [
+            {
+              key: "verb",
+              prompt: "動詞",
+              correctIndex: 1,
+              options: [
+                "見ます",
+                "見ました",
+                "見たいです"
+              ]
+            }
           ]
         }
       ]
@@ -82,20 +148,32 @@
       parts: [
         {
           text: "When I got home",
-          correctIndex: 2,
-          options: [
-            "私が家を出る前に",
-            "私が学校にいる間",
-            "私が家に帰ったとき"
+          selections: [
+            {
+              key: "time",
+              prompt: "時制",
+              correctIndex: 2,
+              options: [
+                "家を出る前に",
+                "学校にいる間",
+                "家に帰ったとき"
+              ]
+            }
           ]
         },
         {
           text: "my mother was cooking dinner",
-          correctIndex: 2,
-          options: [
-            "母は夕食を食べました",
-            "母は買い物に行きました",
-            "母は夕食を作っていました"
+          selections: [
+            {
+              key: "action",
+              prompt: "動作",
+              correctIndex: 2,
+              options: [
+                "夕食を食べました",
+                "買い物に行きました",
+                "夕食を作っていました"
+              ]
+            }
           ]
         }
       ]
@@ -107,20 +185,32 @@
       parts: [
         {
           text: "This question was difficult",
-          correctIndex: 2,
-          options: [
-            "この問題は簡単でした",
-            "この問題を忘れました",
-            "この問題は難しかったです"
+          selections: [
+            {
+              key: "adjective",
+              prompt: "形容詞",
+              correctIndex: 2,
+              options: [
+                "簡単でした",
+                "忘れました",
+                "難しかったです"
+              ]
+            }
           ]
         },
         {
           text: "but I answered it",
-          correctIndex: 2,
-          options: [
-            "だから私は答えませんでした",
-            "そして私は質問しました",
-            "しかし私はそれに答えました"
+          selections: [
+            {
+              key: "connector",
+              prompt: "接続",
+              correctIndex: 2,
+              options: [
+                "だから私は答えませんでした",
+                "そして私は質問しました",
+                "しかし私はそれに答えました"
+              ]
+            }
           ]
         }
       ]
@@ -130,7 +220,17 @@
   function getTranslationTrainingQuestions() {
     return questions.map((question) => ({
       ...question,
-      parts: question.parts.map((part) => ({ ...part, options: [...part.options], correctIndex: Number.isInteger(part.correctIndex) ? part.correctIndex : 0 }))
+      parts: question.parts.map((part) => ({
+        ...part,
+        selections: Array.isArray(part.selections)
+          ? part.selections.map((selection) => ({
+            ...selection,
+            prompt: selection.prompt || "",
+            correctIndex: Number.isInteger(selection.correctIndex) ? selection.correctIndex : 0,
+            options: Array.isArray(selection.options) ? [...selection.options] : []
+          }))
+          : []
+      }))
     }));
   }
 

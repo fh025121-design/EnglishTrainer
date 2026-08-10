@@ -301,6 +301,34 @@ select {
   color: rgba(244, 248, 255, 0.72);
 }
 
+.translation-training-card {
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 800;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.translation-training-card.active {
+  background: rgba(94, 214, 214, 0.24);
+  border-color: rgba(94, 214, 214, 0.48);
+  box-shadow: 0 10px 24px rgba(94, 214, 214, 0.14);
+  transform: translateY(-1px);
+}
+
+.translation-training-card.dimmed {
+  opacity: 0.64;
+  filter: saturate(0.8);
+}
+
 select,
 .typing-input {
   width: 100%;
