@@ -7042,18 +7042,86 @@
     });
   }
 
-  function getTranslationTrainingLayoutMode(fixedPhrases = [], selectionGroups = [], availableWidth = 0) {
-    const safeFixedPhrases = Array.isArray(fixedPhrases) ? fixedPhrases.filter(Boolean) : [];
-    const safeSelectionGroups = Array.isArray(selectionGroups) ? selectionGroups : [];
-    if (!safeFixedPhrases.length || safeSelectionGroups.length < 2) {
-      return "stack";
+  function isTranslationTrainingSubjectPhrase(value) {
+    const text = String(value || "").trim();
+    if (!text) return false;
+    return /^(私|わたし|僕|ぼく|俺|おれ|彼|彼女|私たち|あなた|君).*(は|が)$/.test(text);
+  }
+
+  function buildTranslationTrainingMeaningColumns(currentPart) {
+    const displayFixedPhrases = window.translationTrainingData?.getTranslationTrainingDisplayFixedPhrases?.(currentPart) || [];
+    const layoutSequence = window.translationTrainingData?.buildTranslationTrainingLayoutSequence?.(currentPart, displayFixedPhrases) || [];
+    const columns = [];
+
+    layoutSequence.forEach((item, sequenceIndex) => {
+      if (item.type === "fixed") {
+        const phrases = Array.isArray(item.phrases) ? item.phrases : [];
+        phrases.forEach((phraseText, phraseIndex) => {
+          columns.push({
+            type: "fixed",
+            key: `fixed-${sequenceIndex}-${phraseIndex}`,
+            text: String(phraseText || "").trim()
+          });
+        });
+        return;
+      }
+
+      const group = item.group;
+      if (!group) return;
+      columns.push({
+        type: "group",
+        key: String(group.key || `group-${sequenceIndex}`),
+        group,
+        groupIndex: Number.isInteger(item.groupIndex) ? item.groupIndex : 0
+      });
+    });
+
+    return columns.filter((column) => {
+      if (column.type === "fixed") return Boolean(column.text);
+      return Boolean(column.group && Array.isArray(column.group.options));
+    });
+  }
+
+  function splitTranslationTrainingColumnRows(columns, availableWidth) {
+    const source = Array.isArray(columns) ? columns.slice() : [];
+    if (!source.length) {
+      return { topRow: [], mainRow: [] };
     }
 
-    const fallbackWidth = window.innerWidth || 360;
-    const resolvedWidth = Number(availableWidth) > 0 ? Number(availableWidth) : fallbackWidth;
-    const phraseLength = safeFixedPhrases.join("").replace(/\s/g, "").length;
-    const phraseLooksShort = phraseLength <= 8;
-    return resolvedWidth >= 360 && phraseLooksShort ? "inline" : "stack";
+    const resolvedWidth = Number.isFinite(Number(availableWidth)) ? Number(availableWidth) : (window.innerWidth || 360);
+    const shouldPreferTopSubject = source.length >= 4 || (source.length >= 3 && resolvedWidth <= 380);
+    const subjectIndex = source.findIndex((column) => column.type === "fixed" && isTranslationTrainingSubjectPhrase(column.text));
+
+    if (!shouldPreferTopSubject || subjectIndex < 0) {
+      return { topRow: [], mainRow: source };
+    }
+
+    const topRow = [source[subjectIndex]];
+    const mainRow = source.filter((_, index) => index !== subjectIndex);
+    return { topRow, mainRow };
+  }
+
+  function createTranslationTrainingFixedCard(text) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-btn translation-training-card translation-training-card--fixed";
+    button.disabled = true;
+    button.dataset.resultState = "correct";
+
+    const cardContent = document.createElement("span");
+    cardContent.className = "translation-training-card-content";
+    const marker = document.createElement("span");
+    marker.className = "translation-training-card-marker";
+    marker.textContent = "";
+    marker.setAttribute("aria-hidden", "true");
+    const label = document.createElement("span");
+    label.className = "translation-training-card-label";
+    label.textContent = text;
+    cardContent.appendChild(marker);
+    cardContent.appendChild(label);
+    button.appendChild(cardContent);
+
+    return button;
   }
 
   function renderTranslationTrainingQuestion() {
@@ -7101,37 +7169,44 @@
     elements.translationTrainingOptionList.innerHTML = "";
     elements.translationTrainingOptionList.classList.add("translation-training-option-list");
 
+    const availableWidth = elements.translationTrainingOptionList.clientWidth || window.innerWidth || 360;
     const optionShell = document.createElement("div");
     optionShell.className = "translation-training-option-shell";
-    const displayFixedPhrases = window.translationTrainingData?.getTranslationTrainingDisplayFixedPhrases?.(currentPart) || [];
     const selectionGroups = Array.isArray(currentPart?.selectionGroups) ? currentPart.selectionGroups : [];
-    const layoutSequence = window.translationTrainingData?.buildTranslationTrainingLayoutSequence?.(currentPart, displayFixedPhrases) || [];
-    const layoutItems = [];
+    const meaningColumns = buildTranslationTrainingMeaningColumns(currentPart);
+    const { topRow, mainRow } = splitTranslationTrainingColumnRows(meaningColumns, availableWidth);
     const currentPartSolved = selectionGroups.every((group) => training.partSelections[training.currentPartIndex]?.[group.key]?.isCorrect === true);
-    layoutSequence.forEach((item) => {
-      if (item.type === "fixed") {
-        const fixedPhraseBlock = document.createElement("div");
-        fixedPhraseBlock.className = "translation-training-fixed-block";
-        (item.phrases || []).forEach((phraseText) => {
-          const phraseEl = document.createElement("span");
-          phraseEl.className = "translation-training-fixed-phrase";
-          phraseEl.textContent = phraseText;
-          fixedPhraseBlock.appendChild(phraseEl);
-        });
-        layoutItems.push(fixedPhraseBlock);
-        return;
-      }
-      const group = item.group;
-      if (!group) return;
-      const groupIndex = Number.isInteger(item.groupIndex) ? item.groupIndex : 0;
+
+    if (topRow.length) {
+      const topRowContainer = document.createElement("div");
+      topRowContainer.className = "translation-training-option-top-row";
+      topRow.forEach((column) => {
+        const fixedWrap = document.createElement("div");
+        fixedWrap.className = "translation-training-selection-column translation-training-selection-column--fixed";
+        fixedWrap.appendChild(createTranslationTrainingFixedCard(column.text));
+        topRowContainer.appendChild(fixedWrap);
+      });
+      elements.translationTrainingOptionList.appendChild(topRowContainer);
+    }
+
+    const mainColumnCount = Math.max(1, mainRow.length);
+    optionShell.style.gridTemplateColumns = `repeat(${mainColumnCount}, minmax(0, 1fr))`;
+
+    mainRow.forEach((columnDef) => {
       const column = document.createElement("div");
       column.className = "translation-training-selection-column";
-      const columnTitle = document.createElement("p");
-      columnTitle.className = "translation-training-selection-column-title";
-      columnTitle.textContent = group.prompt || "選択肢";
-      column.appendChild(columnTitle);
-      const groupOptions = document.createDocumentFragment();
+
+      if (columnDef.type === "fixed") {
+        column.classList.add("translation-training-selection-column--fixed");
+        column.appendChild(createTranslationTrainingFixedCard(columnDef.text));
+        optionShell.appendChild(column);
+        return;
+      }
+
+      const group = columnDef.group;
+      const groupIndex = columnDef.groupIndex;
       const solvedSelection = training.partSelections[training.currentPartIndex]?.[group.key];
+
       group.options.forEach((optionText, optionIndex) => {
         const button = document.createElement("button");
         button.type = "button";
@@ -7159,18 +7234,12 @@
         button.dataset.groupIndex = String(groupIndex);
         button.dataset.optionIndex = String(optionIndex);
         button.addEventListener("click", () => handleTranslationTrainingOptionSelect(groupIndex, optionIndex, optionText));
-        groupOptions.appendChild(button);
+        column.appendChild(button);
       });
-      column.appendChild(groupOptions);
-      layoutItems.push(column);
+      optionShell.appendChild(column);
     });
-    layoutItems.forEach((item) => optionShell.appendChild(item));
-    elements.translationTrainingOptionList.appendChild(optionShell);
 
-    const availableWidth = elements.translationTrainingOptionList.clientWidth || window.innerWidth || 360;
-    const layoutMode = getTranslationTrainingLayoutMode(currentPart?.fixedPhrases || [], currentPart?.selectionGroups || [], availableWidth);
-    optionShell.classList.toggle("translation-training-option-shell--inline", layoutMode === "inline");
-    optionShell.classList.toggle("translation-training-option-shell--stack", layoutMode !== "inline");
+    elements.translationTrainingOptionList.appendChild(optionShell);
     elements.translationTrainingRetryBtn.disabled = false;
     elements.translationTrainingRetryBtn.textContent = "戻る";
     elements.translationTrainingNextBtn.textContent = "次へ";
