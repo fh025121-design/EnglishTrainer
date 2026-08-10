@@ -7030,7 +7030,8 @@
       completedSelections: [],
       builtJapanese: "",
       answeredGroupKeys: [],
-      partSelections: {}
+      partSelections: {},
+      incorrectAttemptsByGroup: {}
     };
     state.translationTrainingCurrentPartIndex = 0;
     state.translationTrainingPartCompleted = false;
@@ -7089,8 +7090,9 @@
     }
 
     const resolvedWidth = Number.isFinite(Number(availableWidth)) ? Number(availableWidth) : (window.innerWidth || 360);
-    const shouldPreferTopSubject = source.length >= 4 || (source.length >= 3 && resolvedWidth <= 380);
     const subjectIndex = source.findIndex((column) => column.type === "fixed" && isTranslationTrainingSubjectPhrase(column.text));
+    const shouldPromoteMidSubject = subjectIndex > 0 && source.length >= 3;
+    const shouldPreferTopSubject = shouldPromoteMidSubject || source.length >= 4 || (source.length >= 3 && resolvedWidth <= 380);
 
     if (!shouldPreferTopSubject || subjectIndex < 0) {
       return { topRow: [], mainRow: source };
@@ -7101,12 +7103,14 @@
     return { topRow, mainRow };
   }
 
-  function createTranslationTrainingFixedCard(text) {
+  function createTranslationTrainingFixedCard(text, isSolved = false) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary-btn translation-training-card translation-training-card--fixed";
     button.disabled = true;
-    button.dataset.resultState = "correct";
+    if (isSolved) {
+      button.dataset.resultState = "correct";
+    }
 
     const cardContent = document.createElement("span");
     cardContent.className = "translation-training-card-content";
@@ -7122,6 +7126,16 @@
     button.appendChild(cardContent);
 
     return button;
+  }
+
+  function triggerTranslationTrainingIncorrectFeedback(button) {
+    if (!(button instanceof HTMLElement)) return;
+    button.classList.remove("translation-training-card--incorrect-flash");
+    void button.offsetWidth;
+    button.classList.add("translation-training-card--incorrect-flash");
+    window.setTimeout(() => {
+      button.classList.remove("translation-training-card--incorrect-flash");
+    }, 500);
   }
 
   function renderTranslationTrainingQuestion() {
@@ -7183,7 +7197,7 @@
       topRow.forEach((column) => {
         const fixedWrap = document.createElement("div");
         fixedWrap.className = "translation-training-selection-column translation-training-selection-column--fixed";
-        fixedWrap.appendChild(createTranslationTrainingFixedCard(column.text));
+        fixedWrap.appendChild(createTranslationTrainingFixedCard(column.text, currentPartSolved));
         topRowContainer.appendChild(fixedWrap);
       });
       elements.translationTrainingOptionList.appendChild(topRowContainer);
@@ -7198,7 +7212,7 @@
 
       if (columnDef.type === "fixed") {
         column.classList.add("translation-training-selection-column--fixed");
-        column.appendChild(createTranslationTrainingFixedCard(columnDef.text));
+        column.appendChild(createTranslationTrainingFixedCard(columnDef.text, currentPartSolved));
         optionShell.appendChild(column);
         return;
       }
@@ -7220,7 +7234,7 @@
           button.classList.add("dimmed");
           button.dataset.resultState = "dimmed";
         }
-        if (isThisGroupSolved && solvedSelection) {
+        if (isThisGroupSolved && solvedSelection && isThisSolvedSelection) {
           const currentResultState = window.translationTrainingData?.getTranslationTrainingCardDisplayState?.({ isCorrect: solvedSelection.isCorrect }) || { state: "" };
           button.dataset.resultState = currentResultState.state || button.dataset.resultState;
         }
@@ -7233,7 +7247,7 @@
         button.appendChild(cardContent);
         button.dataset.groupIndex = String(groupIndex);
         button.dataset.optionIndex = String(optionIndex);
-        button.addEventListener("click", () => handleTranslationTrainingOptionSelect(groupIndex, optionIndex, optionText));
+        button.addEventListener("click", () => handleTranslationTrainingOptionSelect(groupIndex, optionIndex, optionText, button));
         column.appendChild(button);
       });
       optionShell.appendChild(column);
@@ -7247,7 +7261,7 @@
     elements.translationTrainingNextBtn.classList.remove("hidden");
   }
 
-  function handleTranslationTrainingOptionSelect(groupIndex, optionIndex, selectedText) {
+  function handleTranslationTrainingOptionSelect(groupIndex, optionIndex, selectedText, selectedButton = null) {
     const training = state.translationTraining;
     if (!training) return;
     const question = training.questions[training.questionIndex];
@@ -7257,8 +7271,16 @@
     if (!group) return;
     const correctIndex = Number.isInteger(group.correctIndex) ? group.correctIndex : 0;
     const isCorrect = optionIndex === correctIndex;
-    const resultState = window.translationTrainingData?.getTranslationTrainingCardDisplayState?.({ isCorrect }) || { marker: "", state: "" };
-    elements.translationTrainingFeedbackText.textContent = isCorrect ? "正解です。" : "不正解です。";
+    const attemptKey = `${training.currentPartIndex}:${group.key}`;
+    if (!training.incorrectAttemptsByGroup || typeof training.incorrectAttemptsByGroup !== "object") {
+      training.incorrectAttemptsByGroup = {};
+    }
+    elements.translationTrainingFeedbackText.textContent = isCorrect ? "正解です。" : "";
+    if (!isCorrect) {
+      training.incorrectAttemptsByGroup[attemptKey] = Math.max(0, Number(training.incorrectAttemptsByGroup[attemptKey]) || 0) + 1;
+      triggerTranslationTrainingIncorrectFeedback(selectedButton);
+      return;
+    }
     if (!training.partSelections[training.currentPartIndex]) {
       training.partSelections[training.currentPartIndex] = {};
     }
@@ -7268,12 +7290,6 @@
       text: selectedText,
       isCorrect
     };
-    if (!isCorrect) {
-      window.requestAnimationFrame(() => {
-        renderTranslationTrainingQuestion();
-      });
-      return;
-    }
     const selectedTextWithSpace = `${training.builtJapanese}${selectedText}`;
     training.builtJapanese = selectedTextWithSpace;
     training.completedSelections.push({ partIndex: training.currentPartIndex, groupIndex, text: selectedText });
@@ -7308,6 +7324,22 @@
     });
   }
 
+  function retreatTranslationTrainingPart() {
+    const training = state.translationTraining;
+    if (!training) return;
+    if (training.currentPartIndex <= 0) {
+      return;
+    }
+    training.currentPartIndex -= 1;
+    training.currentSelectionIndex = 0;
+    training.answeredGroupKeys = [];
+    state.translationTrainingCurrentPartIndex = training.currentPartIndex;
+    state.translationTrainingPartCompleted = false;
+    window.requestAnimationFrame(() => {
+      renderTranslationTrainingQuestion();
+    });
+  }
+
   function renderTranslationTrainingComplete() {
     const training = state.translationTraining;
     if (!training) return;
@@ -7318,7 +7350,7 @@
     elements.translationTrainingEnglishReadText.textContent = question.english;
     elements.translationTrainingJapaneseText.textContent = question.japanese;
     elements.translationTrainingSpeakBtn.classList.remove("hidden");
-    elements.translationTrainingSpeakBtn.textContent = "声に出して確認してください";
+    elements.translationTrainingSpeakBtn.textContent = "ボタンを押して和訳を発話";
     elements.translationTrainingNextQuestionBtn.classList.add("hidden");
     elements.translationTrainingWaveformContainer.classList.add("hidden");
     state.translationTrainingSpeechDetected = false;
@@ -9892,12 +9924,7 @@
       renderHome();
     });
     elements.translationTrainingRetryBtn.addEventListener("click", () => {
-      clearTranslationTrainingSpeechTimer();
-      state.translationTraining = null;
-      state.translationTrainingCurrentPartIndex = 0;
-      state.translationTrainingPartCompleted = false;
-      state.translationTrainingSpeechDetected = false;
-      renderHome();
+      retreatTranslationTrainingPart();
     });
     elements.translationTrainingSpeakBtn.addEventListener("click", confirmTranslationTrainingSpeech);
     elements.translationTrainingNextBtn.addEventListener("click", advanceTranslationTrainingPart);

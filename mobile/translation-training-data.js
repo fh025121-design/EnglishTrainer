@@ -71,7 +71,7 @@
         },
         {
           text: "because she was tired",
-          fixedPhrases: [],
+          fixedPhrases: ["彼女は"],
           selectionGroups: [
             {
               key: "reason",
@@ -94,23 +94,43 @@
       parts: [
         {
           text: "After I finished my homework",
-          fixedPhrases: ["私は", "宿題を"],
+          fixedPhrases: ["終えた"],
           selectionGroups: [
             {
-              key: "connector",
+              key: "after-subject",
               correctIndex: 0,
               options: [
-                "終えたあとで",
-                "終える前に",
-                "終えている間"
+                "あとで・私は",
+                "まえに・私は",
+                "あいだに・私は"
+              ]
+            },
+            {
+              key: "object",
+              prompt: "目的語",
+              correctIndex: 0,
+              options: [
+                "宿題を",
+                "テレビを",
+                "買い物を"
               ]
             }
           ]
         },
         {
           text: "I watched TV",
-          fixedPhrases: ["私は", "テレビを"],
+          fixedPhrases: [],
           selectionGroups: [
+            {
+              key: "subject",
+              prompt: "主語",
+              correctIndex: 0,
+              options: [
+                "私は",
+                "彼は",
+                "私たちは"
+              ]
+            },
             {
               key: "verb",
               prompt: "動詞",
@@ -119,6 +139,16 @@
                 "見ます",
                 "見ました",
                 "見ることができます"
+              ]
+            },
+            {
+              key: "object",
+              prompt: "目的語",
+              correctIndex: 0,
+              options: [
+                "テレビを",
+                "映画を",
+                "本を"
               ]
             }
           ]
@@ -132,24 +162,54 @@
       parts: [
         {
           text: "When I got home",
-          fixedPhrases: ["私は", "家に"],
+          fixedPhrases: [],
           selectionGroups: [
             {
-              key: "time",
-              prompt: "時制",
+              key: "when-subject",
+              prompt: "接続",
               correctIndex: 0,
               options: [
-                "帰ったとき",
-                "帰るとき",
-                "帰る前に"
+                "とき・私は",
+                "まえに・私は",
+                "あいだに・私は"
+              ]
+            },
+            {
+              key: "verb",
+              prompt: "動詞",
+              correctIndex: 0,
+              options: [
+                "帰った",
+                "帰る",
+                "帰れる"
+              ]
+            },
+            {
+              key: "place",
+              prompt: "場所",
+              correctIndex: 0,
+              options: [
+                "家に",
+                "学校に",
+                "公園に"
               ]
             }
           ]
         },
         {
           text: "my mother was cooking dinner",
-          fixedPhrases: ["母は", "夕食を"],
+          fixedPhrases: [],
           selectionGroups: [
+            {
+              key: "subject",
+              prompt: "主語",
+              correctIndex: 0,
+              options: [
+                "母は",
+                "父は",
+                "私は"
+              ]
+            },
             {
               key: "action",
               prompt: "動作",
@@ -158,6 +218,16 @@
                 "作っていました",
                 "作りました",
                 "作ります"
+              ]
+            },
+            {
+              key: "object",
+              prompt: "目的語",
+              correctIndex: 0,
+              options: [
+                "夕食を",
+                "朝食を",
+                "お弁当を"
               ]
             }
           ]
@@ -187,16 +257,16 @@
         },
         {
           text: "but I answered it",
-          fixedPhrases: ["私は", "それに"],
+          fixedPhrases: [],
           selectionGroups: [
             {
-              key: "connector",
+              key: "connector-subject",
               prompt: "接続",
               correctIndex: 0,
               options: [
-                "しかし",
-                "だから",
-                "そして"
+                "しかし・私は",
+                "だから・私は",
+                "そして・私は"
               ]
             },
             {
@@ -207,6 +277,16 @@
                 "答えました",
                 "答えます",
                 "答えませんでした"
+              ]
+            },
+            {
+              key: "object",
+              prompt: "目的語",
+              correctIndex: 0,
+              options: [
+                "それに",
+                "これに",
+                "そのことに"
               ]
             }
           ]

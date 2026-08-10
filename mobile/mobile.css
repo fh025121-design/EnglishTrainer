@@ -463,9 +463,35 @@ select {
   filter: saturate(0.65);
 }
 
+.translation-training-card--incorrect-flash {
+  border-color: rgba(248, 113, 113, 0.9);
+  background: linear-gradient(180deg, rgba(70, 24, 33, 0.9), rgba(57, 20, 28, 0.9));
+  color: rgba(255, 238, 238, 0.96);
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.2);
+  animation: translation-training-card-shake-x 0.42s ease;
+}
+
+.translation-training-card--incorrect-flash .translation-training-card-marker {
+  background: rgba(255, 237, 237, 0.95);
+  border-color: rgba(248, 113, 113, 0.78);
+}
+
+@keyframes translation-training-card-shake-x {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
 .translation-training-card--fixed {
   min-width: 0;
   cursor: default;
+}
+
+.translation-training-card--fixed:disabled {
+  opacity: 1;
 }
 
 #translationTrainingQuestionPanel .word-order-actions-row {
