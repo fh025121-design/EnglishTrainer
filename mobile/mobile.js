@@ -7163,6 +7163,9 @@
     elements.translationTrainingQuestionPanel.classList.remove("hidden");
     elements.translationTrainingCompletePanel.classList.add("hidden");
     elements.translationTrainingQuestionIndexText.textContent = `${training.questionIndex + 1} / ${training.questions.length}`;
+    if (elements.translationTrainingLevelText) {
+      elements.translationTrainingLevelText.textContent = String(question.level || "-").trim() || "-";
+    }
     const segments = window.translationTrainingData?.buildTranslationTrainingEnglishDisplaySegments?.(question, training.currentPartIndex) || [];
     const englishFragment = document.createDocumentFragment();
     segments.forEach((segment, index) => {
@@ -7365,29 +7368,8 @@
     elements.translationTrainingCompletePanel.classList.remove("hidden");
     elements.translationTrainingEnglishReadText.textContent = question.english;
     elements.translationTrainingJapaneseText.textContent = question.japanese;
-    elements.translationTrainingSpeakBtn.classList.remove("hidden");
-    elements.translationTrainingSpeakBtn.textContent = "ボタンを押して和訳を発話";
-    elements.translationTrainingNextQuestionBtn.classList.add("hidden");
-    elements.translationTrainingWaveformContainer.classList.add("hidden");
     state.translationTrainingSpeechDetected = false;
     clearTranslationTrainingSpeechTimer();
-    window.clearTimeout(state.translationTrainingWaveformTimerId);
-  }
-
-  function confirmTranslationTrainingSpeech() {
-    const training = state.translationTraining;
-    if (!training) return;
-    const question = training.questions[training.questionIndex];
-    if (!question) return;
-    elements.translationTrainingSpeakBtn.classList.add("hidden");
-    elements.translationTrainingWaveformContainer.classList.remove("hidden");
-    elements.translationTrainingNextQuestionBtn.classList.remove("hidden");
-    state.translationTrainingSpeechDetected = true;
-    clearTranslationTrainingSpeechTimer();
-    window.clearTimeout(state.translationTrainingWaveformTimerId);
-    state.translationTrainingWaveformTimerId = window.setTimeout(() => {
-      elements.translationTrainingWaveformContainer.classList.add("hidden");
-    }, 4000);
   }
 
   function advanceTranslationTrainingQuestion() {
@@ -9832,6 +9814,7 @@
     elements.wordOrderHomeBtn = document.getElementById("wordOrderHomeBtn");
     elements.translationTrainingBackBtn = document.getElementById("translationTrainingBackBtn");
     elements.translationTrainingQuestionIndexText = document.getElementById("translationTrainingQuestionIndexText");
+    elements.translationTrainingLevelText = document.getElementById("translationTrainingLevelText");
     elements.translationTrainingEnglishText = document.getElementById("translationTrainingEnglishText");
     elements.translationTrainingOptionList = document.getElementById("translationTrainingOptionList");
     elements.translationTrainingFeedbackText = document.getElementById("translationTrainingFeedbackText");
@@ -9842,8 +9825,6 @@
     elements.translationTrainingCompletePanel = document.getElementById("translationTrainingCompletePanel");
     elements.translationTrainingEnglishReadText = document.getElementById("translationTrainingEnglishReadText");
     elements.translationTrainingJapaneseText = document.getElementById("translationTrainingJapaneseText");
-    elements.translationTrainingWaveformContainer = document.getElementById("translationTrainingWaveformContainer");
-    elements.translationTrainingSpeakBtn = document.getElementById("translationTrainingSpeakBtn");
     elements.translationTrainingNextQuestionBtn = document.getElementById("translationTrainingNextQuestionBtn");
     elements.confirmModal = document.getElementById("confirmModal");
     elements.confirmMessage = document.getElementById("confirmMessage");
@@ -9942,9 +9923,10 @@
     elements.translationTrainingRetryBtn.addEventListener("click", () => {
       retreatTranslationTrainingPart();
     });
-    elements.translationTrainingSpeakBtn.addEventListener("click", confirmTranslationTrainingSpeech);
     elements.translationTrainingNextBtn.addEventListener("click", advanceTranslationTrainingPart);
-    elements.translationTrainingNextQuestionBtn.addEventListener("click", advanceTranslationTrainingQuestion);
+    if (elements.translationTrainingNextQuestionBtn) {
+      elements.translationTrainingNextQuestionBtn.addEventListener("click", advanceTranslationTrainingQuestion);
+    }
     document.getElementById("comingSoonBackBtn").addEventListener("click", renderHome);
     document.getElementById("studyBackBtn").addEventListener("click", confirmLeaveStudy);
     document.getElementById("retrySessionBtn").addEventListener("click", () => startStudy(state.lastSessionMode || "speaking"));

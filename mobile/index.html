@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260811-0155";
+        const defaultToken = "20260811-0303";
         const queryToken = new URLSearchParams(window.location.search).get("v") || "";
         const cacheToken = queryToken || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -619,7 +619,7 @@
         <main class="study-layout">
           <section class="panel">
             <div class="study-meta">
-              <p id="translationTrainingQuestionIndexText" class="progress-text">1 / 5</p>
+              <p class="progress-text translation-training-meta-inline"><span id="translationTrainingQuestionIndexText">1 / 14</span><span class="translation-training-meta-separator">|</span><span id="translationTrainingLevelText">A</span></p>
             </div>
           </section>
 
@@ -642,13 +642,7 @@
               <p id="translationTrainingEnglishReadText" class="word-order-prompt-text"></p>
               <p id="translationTrainingJapaneseText" class="translation-training-read-japanese"></p>
               <div class="translation-training-read-actions">
-                <button id="translationTrainingSpeakBtn" class="primary-btn" type="button">ボタンを押して和訳を発話</button>
-                <div id="translationTrainingWaveformContainer" class="translation-training-waveform-container hidden" aria-hidden="true">
-                  <div class="translation-training-waveform" aria-hidden="true">
-                    <span></span><span></span><span></span><span></span><span></span>
-                  </div>
-                </div>
-                <button id="translationTrainingNextQuestionBtn" class="secondary-btn hidden" type="button">次へ</button>
+                <button id="translationTrainingNextQuestionBtn" class="primary-btn" type="button">次へ</button>
               </div>
             </div>
           </section>

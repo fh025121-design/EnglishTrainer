@@ -5,7 +5,13 @@ const translationTrainingModule = require(path.join(__dirname, "..", "mobile", "
 const questions = translationTrainingModule.getTranslationTrainingQuestions();
 
 assert.strictEqual(Array.isArray(questions), true, "translation training questions should be available");
-assert.strictEqual(questions.length, 5, "translation training should contain 5 fixed questions");
+assert.strictEqual(questions.length, 14, "translation training should contain 14 questions including new A/B/C samples");
+assert.strictEqual(questions[0].level, "A", "existing questions should carry level metadata");
+const addedQuestions = questions.filter((question) => Number(question.id) >= 6);
+assert.strictEqual(addedQuestions.length, 9, "newly added sample questions should be 9");
+assert.strictEqual(addedQuestions.filter((question) => question.level === "A").length, 3, "added level A samples should be 3");
+assert.strictEqual(addedQuestions.filter((question) => question.level === "B").length, 3, "added level B samples should be 3");
+assert.strictEqual(addedQuestions.filter((question) => question.level === "C").length, 3, "added level C samples should be 3");
 assert.strictEqual(questions[0].parts.length, 2, "first question should have two slash parts");
 assert.deepStrictEqual(questions[0].parts[0].fixedPhrases, ["私は"], "the first slash should expose a fixed phrase before the selection columns");
 assert.strictEqual(questions[0].parts[0].selectionGroups[0].options[0], "行った", "the first selection column should expose its first card option");
@@ -17,6 +23,18 @@ assert.strictEqual(questions[2].parts[0].selectionGroups[0].options[0], "あと�
 assert.strictEqual(questions[2].parts[0].selectionGroups[1].options[0], "宿題を", "question 3 first slash should keep homework as an object chunk");
 assert.strictEqual(questions[4].parts[1].selectionGroups[0].options[0], "しかし・私は", "question 5 but-clause should start from connector+subject");
 assert.strictEqual(questions[4].parts[1].selectionGroups[2].options[0], "それに", "question 5 but-clause should keep object phrase after the verb chunk");
+assert.deepStrictEqual(questions[2].parts[1].fixedPhrases, ["私は"], "question 3 second slash should keep obvious subject as fixed phrase");
+assert.deepStrictEqual(questions[5].parts[1].fixedPhrases, ["ケンが"], "question 6 second slash should keep proper noun subject as fixed phrase");
+assert.deepStrictEqual(questions[8].parts[0].fixedPhrases, ["マイは"], "question 9 first slash should keep proper noun subject as fixed phrase");
+assert.deepStrictEqual(questions[11].parts[0].fixedPhrases, ["タクは"], "question 12 first slash should keep proper noun subject as fixed phrase");
+assert.deepStrictEqual(questions[12].parts[0].fixedPhrases, ["アヤは"], "question 13 first slash should keep proper noun subject as fixed phrase");
+assert.deepStrictEqual(questions[13].parts[0].fixedPhrases, ["リクは"], "question 14 first slash should keep proper noun subject as fixed phrase");
+assert.strictEqual(questions[11].parts[0].selectionGroups.some((group) => group.options.includes("ケンは") || group.options.includes("リクは")), false, "question 12 should not include meaningless proper-name distractors");
+assert.strictEqual(questions[12].parts[0].selectionGroups.some((group) => group.options.includes("ユキは") || group.options.includes("メイは")), false, "question 13 should not include meaningless proper-name distractors");
+assert.strictEqual(questions[13].parts[0].selectionGroups.some((group) => group.options.includes("タクは") || group.options.includes("ケンは")), false, "question 14 should not include meaningless proper-name distractors");
+assert.strictEqual(questions[10].parts[1].selectionGroups.some((group) => group.key === "she"), true, "question 11 should keep pronoun-based selection where reference interpretation matters");
+assert.strictEqual(questions[11].parts[2].selectionGroups.some((group) => group.key === "he"), true, "question 12 should keep pronoun-based selection where reference interpretation matters");
+assert.strictEqual(questions[13].parts[6].selectionGroups.some((group) => group.key === "they"), true, "question 14 should keep pronoun-based selection where reference interpretation matters");
 assert.strictEqual(questions[0].parts[0].selectionGroups[0].correctIndex, 0, "question 1 first selection should map to the first displayed option");
 assert.strictEqual(questions[0].parts[0].selectionGroups[1].correctIndex, 0, "question 1 second selection should map to the first displayed option");
 assert.strictEqual(questions[0].parts[1].selectionGroups[0].correctIndex, 0, "question 1 third selection should map to the first displayed option");
@@ -24,19 +42,21 @@ assert.strictEqual(questions[1].parts[0].selectionGroups[0].correctIndex, 0, "qu
 assert.strictEqual(questions[1].parts[1].selectionGroups[0].correctIndex, 0, "question 2 second selection should map to the first displayed option");
 assert.strictEqual(questions[2].parts[0].selectionGroups[0].correctIndex, 0, "question 3 first selection should map to the first displayed option");
 assert.strictEqual(questions[2].parts[0].selectionGroups[1].correctIndex, 0, "question 3 first slash object selection should map to the first displayed option");
-assert.strictEqual(questions[2].parts[1].selectionGroups[0].correctIndex, 0, "question 3 second slash subject selection should map to the first displayed option");
-assert.strictEqual(questions[2].parts[1].selectionGroups[1].correctIndex, 1, "question 3 second slash verb selection should map to the second displayed option");
-assert.strictEqual(questions[2].parts[1].selectionGroups[2].correctIndex, 0, "question 3 second slash object selection should map to the first displayed option");
+assert.strictEqual(questions[2].parts[1].selectionGroups[0].correctIndex, 1, "question 3 second slash verb selection should map to the second displayed option");
+assert.strictEqual(questions[2].parts[1].selectionGroups[1].correctIndex, 0, "question 3 second slash object selection should map to the first displayed option");
 assert.strictEqual(questions[3].parts[0].selectionGroups[0].correctIndex, 0, "question 4 first selection should map to the first displayed option");
 assert.strictEqual(questions[3].parts[0].selectionGroups[1].correctIndex, 0, "question 4 first slash verb selection should map to the first displayed option");
 assert.strictEqual(questions[3].parts[0].selectionGroups[2].correctIndex, 0, "question 4 first slash place selection should map to the first displayed option");
-assert.strictEqual(questions[3].parts[1].selectionGroups[0].correctIndex, 0, "question 4 second slash subject selection should map to the first displayed option");
-assert.strictEqual(questions[3].parts[1].selectionGroups[1].correctIndex, 0, "question 4 second slash action selection should map to the first displayed option");
-assert.strictEqual(questions[3].parts[1].selectionGroups[2].correctIndex, 0, "question 4 second slash object selection should map to the first displayed option");
+assert.strictEqual(questions[3].parts[1].selectionGroups[0].correctIndex, 0, "question 4 second slash action selection should map to the first displayed option");
+assert.strictEqual(questions[3].parts[1].selectionGroups[1].correctIndex, 0, "question 4 second slash object selection should map to the first displayed option");
 assert.strictEqual(questions[4].parts[0].selectionGroups[0].correctIndex, 0, "question 5 first selection should map to the first displayed option");
 assert.strictEqual(questions[4].parts[1].selectionGroups[0].correctIndex, 0, "question 5 second selection should map to the first displayed option");
 assert.strictEqual(questions[4].parts[1].selectionGroups[1].correctIndex, 0, "question 5 third selection should map to the first displayed option");
 assert.strictEqual(questions[4].parts[1].selectionGroups[2].correctIndex, 0, "question 5 fourth selection should map to the first displayed option");
+assert.strictEqual(questions[5].english, "I heard that / Ken visited his grandmother yesterday.", "question 6 should match A-1 sample text");
+assert.strictEqual(questions[8].parts.length, 3, "question 9 should contain 3 slash parts");
+assert.strictEqual(questions[9].parts[1].selectionGroups[0].options[0], "～して以来", "question 10 should include since-connection options");
+assert.strictEqual(questions[13].parts.length, 7, "question 14 should contain 7 slash parts");
 assert.strictEqual(questions[0].japanese, "本が必要だったので、私は図書館へ行きました。", "the natural Japanese translation should be present");
 assert.strictEqual(translationTrainingModule.getTranslationTrainingQuestion(1).id, 1, "question lookup should return the first question for index 1");
 assert.strictEqual(translationTrainingModule.getTranslationTrainingQuestion(2).id, 2, "question lookup should return the second question for index 2");
@@ -63,10 +83,10 @@ assert.strictEqual(firstHighlightState[0].marker, "▶", "the current slash shou
 assert.strictEqual(firstHighlightState[1].marker, "", "the pending slash should not expose a marker");
 
 const layoutSequence = translationTrainingModule.buildTranslationTrainingLayoutSequence(firstQuestion.parts[0], ["私は"]);
-assert.strictEqual(layoutSequence[0].type, "column", "the layout sequence should include the first selection column");
-assert.strictEqual(layoutSequence[0].groupIndex, 0, "the first selection column should carry its group index");
-assert.strictEqual(layoutSequence[1].type, "fixed", "the layout sequence should insert the fixed phrase block between the columns");
-assert.strictEqual(layoutSequence[1].phrases[0], "私は", "the fixed phrase block should expose the display phrase");
+assert.strictEqual(layoutSequence[0].type, "fixed", "the layout sequence should place fixed phrases before selection columns");
+assert.strictEqual(layoutSequence[0].phrases[0], "私は", "the fixed phrase block should expose the display phrase");
+assert.strictEqual(layoutSequence[1].type, "column", "the layout sequence should include the first selection column");
+assert.strictEqual(layoutSequence[1].groupIndex, 0, "the first selection column should carry its group index");
 assert.strictEqual(layoutSequence[2].type, "column", "the layout sequence should include the second selection column");
 assert.strictEqual(layoutSequence[2].groupIndex, 1, "the second selection column should carry its group index");
 
