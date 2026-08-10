@@ -306,7 +306,7 @@ select {
   display: inline-block;
 }
 
-.translation-training-highlight-separator {
+#translationTrainingEnglishText .translation-training-highlight-separator {
   color: #ff4f4f !important;
   font-weight: 900;
 }
