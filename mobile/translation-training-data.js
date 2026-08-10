@@ -7,40 +7,41 @@
       parts: [
         {
           text: "I went to the library",
-          selections: [
-            {
-              key: "subject",
-              prompt: "主語",
-              correctIndex: 0,
-              options: [
-                "私は",
-                "彼は",
-                "彼女は"
-              ]
-            },
+          fixedPhrases: ["私は"],
+          selectionGroups: [
             {
               key: "verb",
               prompt: "動詞",
               correctIndex: 0,
               options: [
-                "行きました",
-                "帰りました",
-                "読みました"
+                "行った",
+                "行く",
+                "行くことができる"
+              ]
+            },
+            {
+              key: "destination",
+              prompt: "目的地",
+              correctIndex: 0,
+              options: [
+                "図書館に",
+                "博物館に"
               ]
             }
           ]
         },
         {
           text: "because I needed a book",
-          selections: [
+          fixedPhrases: ["本が", "必要だったので"],
+          selectionGroups: [
             {
               key: "reason",
               prompt: "理由",
-              correctIndex: 1,
+              correctIndex: 0,
               options: [
-                "本が必要だったので",
-                "本を読んだあと",
-                "本を借りるために"
+                "必要だったので",
+                "必要なので",
+                "欲しかったので"
               ]
             }
           ]
@@ -54,40 +55,32 @@
       parts: [
         {
           text: "She stayed at home",
-          selections: [
-            {
-              key: "subject",
-              prompt: "主語",
-              correctIndex: 2,
-              options: [
-                "彼女は",
-                "彼は",
-                "私は"
-              ]
-            },
+          fixedPhrases: ["彼女は"],
+          selectionGroups: [
             {
               key: "state",
               prompt: "状態",
               correctIndex: 0,
               options: [
-                "家にいました",
-                "学校へ行きました",
-                "家を出ました"
+                "家にいた",
+                "家にいる",
+                "家に帰った"
               ]
             }
           ]
         },
         {
           text: "because she was tired",
-          selections: [
+          fixedPhrases: [],
+          selectionGroups: [
             {
               key: "reason",
               prompt: "理由",
-              correctIndex: 1,
+              correctIndex: 0,
               options: [
-                "元気だったので",
                 "疲れていたので",
-                "勉強したあと"
+                "疲れているので",
+                "疲れるだろうから"
               ]
             }
           ]
@@ -101,32 +94,24 @@
       parts: [
         {
           text: "After I finished my homework",
-          selections: [
-            {
-              key: "noun",
-              prompt: "名詞句",
-              correctIndex: 0,
-              options: [
-                "私の宿題",
-                "私の仕事",
-                "私の家族"
-              ]
-            },
+          fixedPhrases: ["私は", "宿題を"],
+          selectionGroups: [
             {
               key: "connector",
               prompt: "接続表現",
               correctIndex: 0,
               options: [
                 "終えたあとで",
-                "終えた前に",
-                "始めたあとで"
+                "終える前に",
+                "終えている間"
               ]
             }
           ]
         },
         {
           text: "I watched TV",
-          selections: [
+          fixedPhrases: ["私は", "テレビを"],
+          selectionGroups: [
             {
               key: "verb",
               prompt: "動詞",
@@ -134,7 +119,7 @@
               options: [
                 "見ます",
                 "見ました",
-                "見たいです"
+                "見ることができます"
               ]
             }
           ]
@@ -148,30 +133,32 @@
       parts: [
         {
           text: "When I got home",
-          selections: [
+          fixedPhrases: ["私は", "家に"],
+          selectionGroups: [
             {
               key: "time",
               prompt: "時制",
               correctIndex: 2,
               options: [
-                "家を出る前に",
-                "学校にいる間",
-                "家に帰ったとき"
+                "帰ったとき",
+                "帰るとき",
+                "帰る前に"
               ]
             }
           ]
         },
         {
           text: "my mother was cooking dinner",
-          selections: [
+          fixedPhrases: ["母は", "夕食を"],
+          selectionGroups: [
             {
               key: "action",
               prompt: "動作",
               correctIndex: 2,
               options: [
-                "夕食を食べました",
-                "買い物に行きました",
-                "夕食を作っていました"
+                "作っていました",
+                "作りました",
+                "作ります"
               ]
             }
           ]
@@ -185,30 +172,42 @@
       parts: [
         {
           text: "This question was difficult",
-          selections: [
+          fixedPhrases: ["この問題は"],
+          selectionGroups: [
             {
               key: "adjective",
               prompt: "形容詞",
               correctIndex: 2,
               options: [
-                "簡単でした",
-                "忘れました",
-                "難しかったです"
+                "難しかったです",
+                "難しいです",
+                "難しくなるでしょう"
               ]
             }
           ]
         },
         {
           text: "but I answered it",
-          selections: [
+          fixedPhrases: ["私は", "それに"],
+          selectionGroups: [
             {
               key: "connector",
               prompt: "接続",
-              correctIndex: 2,
+              correctIndex: 0,
               options: [
-                "だから私は答えませんでした",
-                "そして私は質問しました",
-                "しかし私はそれに答えました"
+                "しかし",
+                "だから",
+                "そして"
+              ]
+            },
+            {
+              key: "verb",
+              prompt: "動詞",
+              correctIndex: 0,
+              options: [
+                "答えました",
+                "答えます",
+                "答えませんでした"
               ]
             }
           ]

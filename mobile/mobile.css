@@ -301,6 +301,47 @@ select {
   color: rgba(244, 248, 255, 0.72);
 }
 
+.translation-training-fixed-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.translation-training-fixed-phrase {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(94, 214, 214, 0.16);
+  color: #d8f7f3;
+  font-weight: 800;
+  border: 1px solid rgba(94, 214, 214, 0.28);
+}
+
+.translation-training-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.translation-training-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.translation-training-column-title {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #9dd8ff;
+}
+
 .translation-training-card {
   width: 100%;
   min-height: 54px;
