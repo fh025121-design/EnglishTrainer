@@ -307,7 +307,7 @@ select {
 }
 
 .translation-training-highlight-separator {
-  color: #ff6f6f;
+  color: #ff4f4f !important;
   font-weight: 900;
 }
 

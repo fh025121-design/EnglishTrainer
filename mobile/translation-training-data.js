@@ -2260,6 +2260,710 @@
           ]
         }
       ]
+    },
+    {
+      id: 45,
+      level: "A",
+      english: "I have to finish this report / before dinner.",
+      japanese: "私は夕食の前にこのレポートを終えなければなりません。",
+      parts: [
+        {
+          text: "I have to finish this report",
+          fixedPhrases: ["私は", "このレポートを"],
+          selectionGroups: [
+            { key: "have-to-finish", prompt: "動詞", correctIndex: 0, options: ["終えなければならない", "終えたい", "終えたことがある"] }
+          ]
+        },
+        {
+          text: "before dinner.",
+          fixedPhrases: ["夕食の前に"],
+          selectionGroups: []
+        }
+      ]
+    },
+    {
+      id: 46,
+      level: "A",
+      english: "This bag is cheaper / than that one.",
+      japanese: "このバッグはあのバッグより安いです。",
+      parts: [
+        {
+          text: "This bag is cheaper",
+          fixedPhrases: ["このバッグは"],
+          selectionGroups: [
+            { key: "cheaper", prompt: "比較", correctIndex: 0, options: ["より安い", "いちばん安い", "同じくらい高い"] }
+          ]
+        },
+        {
+          text: "than that one.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "than-that-one", prompt: "指示", correctIndex: 0, options: ["あのバッグより", "あの店より", "あの人より"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 47,
+      level: "A",
+      english: "I need something / to drink.",
+      japanese: "私は何か飲むものが必要です。",
+      parts: [
+        {
+          text: "I need something",
+          fixedPhrases: ["私は"],
+          selectionGroups: [
+            { key: "need-something", prompt: "文構造", correctIndex: 0, options: ["何かが必要だ", "何かを作った", "何かを見つけた"] }
+          ]
+        },
+        {
+          text: "to drink.",
+          fixedPhrases: ["飲むための"],
+          selectionGroups: []
+        }
+      ]
+    },
+    {
+      id: 48,
+      level: "B",
+      english: "After I finished breakfast, / my father asked me / to help him wash the car.",
+      japanese: "朝食を終えた後、父は私に車を洗うのを手伝うよう頼みました。",
+      parts: [
+        {
+          text: "After I finished breakfast,",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "after", prompt: "接続", correctIndex: 0, options: ["～した後で", "～する前に", "～している間に"] }
+          ]
+        },
+        {
+          text: "my father asked me",
+          fixedPhrases: ["父は"],
+          selectionGroups: [
+            { key: "asked-me", prompt: "文構造", correctIndex: 0, options: ["私に頼んだ", "私に聞いた", "私に見せた"] }
+          ]
+        },
+        {
+          text: "to help him wash the car.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "to-help", prompt: "不定詞", correctIndex: 0, options: ["彼を手伝うように", "彼を助けたあとで", "彼を手伝わずに"] },
+            { key: "wash-the-car", prompt: "文構造", correctIndex: 0, options: ["車を洗うのを", "車を見に行くのを", "車を直すのを"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 49,
+      level: "B",
+      english: "I have never used this camera, / so my sister showed me / how to use it.",
+      japanese: "私はこのカメラを一度も使ったことがなかったので、姉が使い方を教えてくれました。",
+      parts: [
+        {
+          text: "I have never used this camera,",
+          fixedPhrases: ["私は", "このカメラを"],
+          selectionGroups: [
+            { key: "have-never-used", prompt: "現在完了", correctIndex: 0, options: ["一度も使ったことがない", "今使っている", "よく使っていた"] }
+          ]
+        },
+        {
+          text: "so my sister showed me",
+          fixedPhrases: ["姉は", "私に"],
+          selectionGroups: [
+            { key: "so", prompt: "接続", correctIndex: 0, options: ["だから", "しかし", "～する前に"] },
+            { key: "showed-me", prompt: "動詞", correctIndex: 0, options: ["教えてくれた", "見せた", "借りた"] }
+          ]
+        },
+        {
+          text: "how to use it.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "how-to-use", prompt: "文構造", correctIndex: 0, options: ["使い方を", "使った場所を", "使う人を"] },
+            { key: "it", prompt: "代名詞", correctIndex: 0, options: ["それの", "その人の", "その店の"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 50,
+      level: "B",
+      english: "If you come to my house tomorrow, / we can watch the movie / together.",
+      japanese: "もし明日私の家に来たら、私たちは一緒にその映画を見ることができます。",
+      parts: [
+        {
+          text: "If you come to my house tomorrow,",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "if", prompt: "接続", correctIndex: 0, options: ["もし", "なぜなら", "しかし"] }
+          ]
+        },
+        {
+          text: "we can watch the movie",
+          fixedPhrases: ["私たちは", "その映画を"],
+          selectionGroups: [
+            { key: "can", prompt: "助動詞", correctIndex: 0, options: ["見ることができる", "見なければならない", "見たことがある"] }
+          ]
+        },
+        {
+          text: "together.",
+          fixedPhrases: ["一緒に"],
+          selectionGroups: []
+        }
+      ]
+    },
+    {
+      id: 51,
+      level: "B",
+      english: "When the teacher came into the room, / the students were talking / about the school trip.",
+      japanese: "先生が部屋に入ってきたとき、生徒たちは学校旅行について話していました。",
+      parts: [
+        {
+          text: "When the teacher came into the room,",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "when", prompt: "接続", correctIndex: 0, options: ["～したとき", "～する前に", "～したので"] }
+          ]
+        },
+        {
+          text: "the students were talking",
+          fixedPhrases: ["生徒たちは"],
+          selectionGroups: [
+            { key: "were-talking", prompt: "時制", correctIndex: 0, options: ["話していた", "話した", "話すだろう"] }
+          ]
+        },
+        {
+          text: "about the school trip.",
+          fixedPhrases: ["学校旅行について"],
+          selectionGroups: []
+        }
+      ]
+    },
+    {
+      id: 52,
+      level: "B",
+      english: "Rina couldn't go to the party / because she had to work / that evening.",
+      japanese: "リナはその晩働かなければならなかったので、パーティーへ行けませんでした。",
+      parts: [
+        {
+          text: "Rina couldn't go to the party",
+          fixedPhrases: ["リナは", "パーティーへ"],
+          selectionGroups: [
+            { key: "couldnt", prompt: "否定", correctIndex: 0, options: ["行けなかった", "行きたかった", "行った"] }
+          ]
+        },
+        {
+          text: "because she had to work",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "because", prompt: "接続", correctIndex: 0, options: ["なぜなら", "しかし", "もし"] },
+            { key: "had-to", prompt: "文構造", correctIndex: 0, options: ["働かなければならなかった", "働いていた", "働く予定だった"] }
+          ]
+        },
+        {
+          text: "that evening.",
+          fixedPhrases: ["その晩"],
+          selectionGroups: []
+        }
+      ]
+    },
+    {
+      id: 53,
+      level: "B",
+      english: "The book was more interesting / than I expected, / so I finished it in one day.",
+      japanese: "その本は予想していたより面白かったので、私は1日で読み終えました。",
+      parts: [
+        {
+          text: "The book was more interesting",
+          fixedPhrases: ["その本は"],
+          selectionGroups: [
+            { key: "more-interesting", prompt: "比較", correctIndex: 0, options: ["もっと面白かった", "いちばん面白かった", "同じくらい面白かった"] }
+          ]
+        },
+        {
+          text: "than I expected,",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "than", prompt: "比較", correctIndex: 0, options: ["私が予想したより", "私が聞いたあとで", "私が読んだために"] }
+          ]
+        },
+        {
+          text: "so I finished it in one day.",
+          fixedPhrases: ["だから私は", "それを", "1日で"],
+          selectionGroups: [
+            { key: "finished", prompt: "動詞", correctIndex: 0, options: ["読み終えた", "始めた", "買った"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 54,
+      level: "C",
+      english: "Aki wanted to make dinner for her family, / but she did not know what to cook. / She looked in the refrigerator / and found some chicken and vegetables. / Then she searched for an easy recipe online. / After reading it, / she decided to make chicken soup. / Her family liked it very much, / so Aki wanted to make it again.",
+      japanese: "アキは家族のために夕食を作りたかったのですが、何を作ればよいか分かりませんでした。冷蔵庫を見ると鶏肉と野菜があったので、インターネットで簡単なレシピを探しました。それを読んでチキンスープを作ることにしました。家族がとても気に入ったので、アキはまた作りたいと思いました。",
+      parts: [
+        {
+          text: "Aki wanted to make dinner for her family,",
+          fixedPhrases: ["アキは", "家族のために夕食を"],
+          selectionGroups: [
+            { key: "wanted-to-make", prompt: "不定詞", correctIndex: 0, options: ["作りたかった", "作っている", "作らなかった"] }
+          ]
+        },
+        {
+          text: "but she did not know what to cook.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "but", prompt: "接続", correctIndex: 0, options: ["しかし", "だから", "もし"] },
+            { key: "did-not-know", prompt: "否定", correctIndex: 0, options: ["分からなかった", "分かっていた", "分かるだろう"] },
+            { key: "what-to-cook", prompt: "文構造", correctIndex: 0, options: ["何を作ればよいか", "どこで作るか", "誰と作るか"] }
+          ]
+        },
+        {
+          text: "She looked in the refrigerator",
+          fixedPhrases: ["彼女は", "冷蔵庫の中を"],
+          selectionGroups: [
+            { key: "looked", prompt: "時制", correctIndex: 0, options: ["見た", "見ている", "見る予定だ"] }
+          ]
+        },
+        {
+          text: "and found some chicken and vegetables.",
+          fixedPhrases: ["そして"],
+          selectionGroups: [
+            { key: "found", prompt: "時制", correctIndex: 0, options: ["見つけた", "見つけている", "見つけない"] },
+            { key: "chicken-vegetables", prompt: "名詞", correctIndex: 0, options: ["鶏肉と野菜を", "本と鉛筆を", "靴と帽子を"] }
+          ]
+        },
+        {
+          text: "Then she searched for an easy recipe online.",
+          fixedPhrases: ["それから彼女は", "簡単なレシピを", "ネットで"],
+          selectionGroups: [
+            { key: "searched", prompt: "時制", correctIndex: 0, options: ["探した", "作った", "読んだ"] }
+          ]
+        },
+        {
+          text: "After reading it,",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "after", prompt: "接続", correctIndex: 0, options: ["それを読んだ後で", "それを読んでいる間に", "それを読む前に"] }
+          ]
+        },
+        {
+          text: "she decided to make chicken soup.",
+          fixedPhrases: ["彼女は", "チキンスープを"],
+          selectionGroups: [
+            { key: "decided-to-make", prompt: "不定詞", correctIndex: 0, options: ["作ることに決めた", "作らないことにした", "作っている"] }
+          ]
+        },
+        {
+          text: "Her family liked it very much,",
+          fixedPhrases: ["家族は", "とても"],
+          selectionGroups: [
+            { key: "liked-it", prompt: "動詞", correctIndex: 0, options: ["気に入った", "見つけた", "忘れた"] },
+            { key: "it", prompt: "代名詞", correctIndex: 0, options: ["それを", "それらを", "彼を"] }
+          ]
+        },
+        {
+          text: "so Aki wanted to make it again.",
+          fixedPhrases: ["だからアキは", "また", "それを"],
+          selectionGroups: [
+            { key: "wanted-again", prompt: "不定詞", correctIndex: 0, options: ["作りたいと思った", "作ることを忘れた", "作る必要がなかった"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 55,
+      level: "C",
+      english: "Hiro went to the station / to meet his cousin from Osaka. / He arrived there early, / so he waited at a coffee shop nearby. / While he was drinking juice, / his cousin sent him a message. / The train was twenty minutes late, / but Hiro did not mind waiting. / He was happy when his cousin finally arrived.",
+      japanese: "ヒロは大阪から来るいとこに会うため駅へ行きました。早く着いたので近くの喫茶店で待っていました。ジュースを飲んでいると、いとこから電車が20分遅れていると連絡がありました。ヒロは待つことを気にせず、いとこがようやく到着すると喜びました。",
+      parts: [
+        {
+          text: "Hiro went to the station",
+          fixedPhrases: ["ヒロは", "駅へ"],
+          selectionGroups: [
+            { key: "went", prompt: "時制", correctIndex: 0, options: ["行った", "行っている", "行くだろう"] }
+          ]
+        },
+        {
+          text: "to meet his cousin from Osaka.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "to-meet", prompt: "不定詞", correctIndex: 0, options: ["会うために", "会ったあとで", "会っている間に"] },
+            { key: "from-osaka", prompt: "場所", correctIndex: 0, options: ["大阪から来る", "大阪へ行く", "大阪で住む"] }
+          ]
+        },
+        {
+          text: "He arrived there early,",
+          fixedPhrases: ["彼は", "そこに"],
+          selectionGroups: [
+            { key: "arrived", prompt: "時制", correctIndex: 0, options: ["早く着いた", "遅く着いた", "着く予定だ"] }
+          ]
+        },
+        {
+          text: "so he waited at a coffee shop nearby.",
+          fixedPhrases: ["だから彼は", "近くの喫茶店で"],
+          selectionGroups: [
+            { key: "waited", prompt: "時制", correctIndex: 0, options: ["待った", "待っている", "待つつもりだ"] }
+          ]
+        },
+        {
+          text: "While he was drinking juice,",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "while", prompt: "接続", correctIndex: 0, options: ["～している間に", "～した後で", "～する前に"] },
+            { key: "drinking", prompt: "進行形", correctIndex: 0, options: ["ジュースを飲んでいた", "ジュースを飲んだ", "ジュースを飲む予定だ"] }
+          ]
+        },
+        {
+          text: "his cousin sent him a message.",
+          fixedPhrases: ["いとこは", "彼に", "メッセージを"],
+          selectionGroups: [
+            { key: "sent", prompt: "時制", correctIndex: 0, options: ["送った", "送っている", "送る予定だ"] }
+          ]
+        },
+        {
+          text: "The train was twenty minutes late,",
+          fixedPhrases: ["電車は", "20分"],
+          selectionGroups: [
+            { key: "late", prompt: "形容詞", correctIndex: 0, options: ["遅れていた", "早かった", "止まった"] }
+          ]
+        },
+        {
+          text: "but Hiro did not mind waiting.",
+          fixedPhrases: ["ヒロは"],
+          selectionGroups: [
+            { key: "but", prompt: "接続", correctIndex: 0, options: ["しかし", "だから", "もし"] },
+            { key: "did-not-mind", prompt: "否定", correctIndex: 0, options: ["気にしなかった", "気にした", "気にするだろう"] },
+            { key: "waiting", prompt: "動名詞", correctIndex: 0, options: ["待つことを", "走ることを", "見ることを"] }
+          ]
+        },
+        {
+          text: "He was happy when his cousin finally arrived.",
+          fixedPhrases: ["彼はうれしかった", "いとこがようやく到着した"],
+          selectionGroups: [
+            { key: "when", prompt: "接続", correctIndex: 0, options: ["～したとき", "～する前に", "～したので"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 56,
+      level: "C",
+      english: "Mina joined the school tennis club / this spring. / At first, she could not hit the ball well, / and she often felt tired after practice. / However, she practiced three times a week / and asked older students for advice. / After two months, / she could play much better. / Her coach told her / that she had improved a lot.",
+      japanese: "ミナはこの春、学校のテニス部に入りました。最初はボールをうまく打てず、練習後はよく疲れていました。しかし週3回練習し、上級生にもアドバイスを求めました。2か月後にはずっと上手にできるようになり、コーチからとても上達したと言われました。",
+      parts: [
+        {
+          text: "Mina joined the school tennis club",
+          fixedPhrases: ["ミナは", "学校のテニス部に"],
+          selectionGroups: [
+            { key: "joined", prompt: "時制", correctIndex: 0, options: ["入った", "入っている", "入る予定だ"] }
+          ]
+        },
+        {
+          text: "this spring.",
+          fixedPhrases: ["この春"],
+          selectionGroups: []
+        },
+        {
+          text: "At first, she could not hit the ball well,",
+          fixedPhrases: ["最初は彼女は", "ボールを"],
+          selectionGroups: [
+            { key: "could-not-hit", prompt: "助動詞", correctIndex: 0, options: ["うまく打てなかった", "うまく打った", "うまく打てるだろう"] }
+          ]
+        },
+        {
+          text: "and she often felt tired after practice.",
+          fixedPhrases: ["そして彼女はよく", "練習後に"],
+          selectionGroups: [
+            { key: "felt-tired", prompt: "状態", correctIndex: 0, options: ["疲れていた", "元気だった", "緊張していた"] }
+          ]
+        },
+        {
+          text: "However, she practiced three times a week",
+          fixedPhrases: ["しかし彼女は", "週3回"],
+          selectionGroups: [
+            { key: "however", prompt: "接続", correctIndex: 0, options: ["しかし", "だから", "もし"] }
+          ]
+        },
+        {
+          text: "and asked older students for advice.",
+          fixedPhrases: ["そして"],
+          selectionGroups: [
+            { key: "asked", prompt: "時制", correctIndex: 0, options: ["求めた", "見せた", "忘れた"] },
+            { key: "older-students", prompt: "名詞", correctIndex: 0, options: ["上級生に", "先生に", "家族に"] }
+          ]
+        },
+        {
+          text: "After two months,",
+          fixedPhrases: ["2か月後"],
+          selectionGroups: []
+        },
+        {
+          text: "she could play much better.",
+          fixedPhrases: ["彼女は"],
+          selectionGroups: [
+            { key: "could-play", prompt: "助動詞", correctIndex: 0, options: ["ずっと上手にできるようになった", "ずっと上手にできなかった", "ずっと上手にしたかった"] }
+          ]
+        },
+        {
+          text: "Her coach told her",
+          fixedPhrases: ["コーチは", "彼女に"],
+          selectionGroups: [
+            { key: "told-her", prompt: "時制", correctIndex: 0, options: ["言った", "言っている", "言う予定だ"] }
+          ]
+        },
+        {
+          text: "that she had improved a lot.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "that", prompt: "接続", correctIndex: 0, options: ["彼女が", "しかし彼女が", "だから彼女が"] },
+            { key: "had-improved", prompt: "過去完了", correctIndex: 0, options: ["とても上達した", "とても上達している", "とても上達する予定だ"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 57,
+      level: "C",
+      english: "Koji needed a book / for his history report. / He first looked for it at the school library, / but another student was using it. / The librarian told him / that the city library had the same book. / So Koji went there after school. / He found the book / and borrowed it for one week. / He finished his report two days later.",
+      japanese: "コウジは歴史のレポートのために本が必要でした。学校の図書館で探しましたが、別の生徒が使っていました。司書から市立図書館にも同じ本があると聞き、放課後そこへ行きました。本を見つけて1週間借り、2日後にレポートを完成させました。",
+      parts: [
+        {
+          text: "Koji needed a book",
+          fixedPhrases: ["コウジは"],
+          selectionGroups: [
+            { key: "needed", prompt: "時制", correctIndex: 0, options: ["必要だった", "必要だ", "必要になるだろう"] }
+          ]
+        },
+        {
+          text: "for his history report.",
+          fixedPhrases: ["歴史のレポートのために"],
+          selectionGroups: []
+        },
+        {
+          text: "He first looked for it at the school library,",
+          fixedPhrases: ["彼はまず", "学校図書館で"],
+          selectionGroups: [
+            { key: "looked-for", prompt: "時制", correctIndex: 0, options: ["探した", "見つけた", "借りた"] },
+            { key: "it", prompt: "代名詞", correctIndex: 0, options: ["それを", "彼を", "それらを"] }
+          ]
+        },
+        {
+          text: "but another student was using it.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "but", prompt: "接続", correctIndex: 0, options: ["しかし", "だから", "もし"] },
+            { key: "was-using", prompt: "時制", correctIndex: 0, options: ["使っていた", "使った", "使う予定だ"] },
+            { key: "it", prompt: "代名詞", correctIndex: 0, options: ["それを", "彼を", "それらを"] }
+          ]
+        },
+        {
+          text: "The librarian told him",
+          fixedPhrases: ["司書は", "彼に"],
+          selectionGroups: [
+            { key: "told", prompt: "時制", correctIndex: 0, options: ["教えた", "見せた", "忘れた"] }
+          ]
+        },
+        {
+          text: "that the city library had the same book.",
+          fixedPhrases: ["市立図書館に", "同じ本が"],
+          selectionGroups: [
+            { key: "that", prompt: "接続", correctIndex: 0, options: ["あると", "ないと", "見たいと"] }
+          ]
+        },
+        {
+          text: "So Koji went there after school.",
+          fixedPhrases: ["だからコウジは", "放課後に"],
+          selectionGroups: [
+            { key: "went", prompt: "時制", correctIndex: 0, options: ["行った", "行っている", "行くだろう"] },
+            { key: "there", prompt: "代名詞", correctIndex: 0, options: ["そこへ", "家へ", "公園へ"] }
+          ]
+        },
+        {
+          text: "He found the book",
+          fixedPhrases: ["彼は", "その本を"],
+          selectionGroups: [
+            { key: "found", prompt: "時制", correctIndex: 0, options: ["見つけた", "探した", "読んだ"] }
+          ]
+        },
+        {
+          text: "and borrowed it for one week.",
+          fixedPhrases: ["そして"],
+          selectionGroups: [
+            { key: "borrowed", prompt: "時制", correctIndex: 0, options: ["借りた", "返した", "買った"] },
+            { key: "it", prompt: "代名詞", correctIndex: 0, options: ["それを", "彼を", "それらを"] }
+          ]
+        },
+        {
+          text: "He finished his report two days later.",
+          fixedPhrases: ["彼は", "レポートを", "2日後に"],
+          selectionGroups: [
+            { key: "finished", prompt: "時制", correctIndex: 0, options: ["終えた", "始めた", "見つけた"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 58,
+      level: "C",
+      english: "Yuna received an e-mail from her friend / who lives in Canada. / Her friend asked her / what Japanese food she liked best. / Yuna thought about the question / for a few minutes. / She decided to write about curry rice / because her family often makes it together. / She also sent her friend a picture / that she took at dinner last week.",
+      japanese: "ユナはカナダに住む友達からメールを受け取りました。友達は、ユナがどの日本料理を一番好きか尋ねました。ユナは少し考え、家族でよく一緒に作るカレーライスについて書くことにしました。また、先週の夕食時に撮った写真も友達に送りました。",
+      parts: [
+        {
+          text: "Yuna received an e-mail from her friend",
+          fixedPhrases: ["ユナは", "友達から", "メールを"],
+          selectionGroups: [
+            { key: "received", prompt: "時制", correctIndex: 0, options: ["受け取った", "受け取っている", "受け取る予定だ"] }
+          ]
+        },
+        {
+          text: "who lives in Canada.",
+          fixedPhrases: ["カナダに住む"],
+          selectionGroups: []
+        },
+        {
+          text: "Her friend asked her",
+          fixedPhrases: ["友達は", "彼女に"],
+          selectionGroups: [
+            { key: "asked", prompt: "時制", correctIndex: 0, options: ["尋ねた", "答えた", "見せた"] }
+          ]
+        },
+        {
+          text: "what Japanese food she liked best.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "what", prompt: "疑問", correctIndex: 0, options: ["どの日本料理を", "いつ日本料理を", "どこで日本料理を"] },
+            { key: "liked-best", prompt: "時制", correctIndex: 0, options: ["一番好きか", "一番好きだったか", "一番好きになるか"] }
+          ]
+        },
+        {
+          text: "Yuna thought about the question",
+          fixedPhrases: ["ユナは", "その質問について"],
+          selectionGroups: [
+            { key: "thought", prompt: "時制", correctIndex: 0, options: ["考えた", "考えている", "考える予定だ"] }
+          ]
+        },
+        {
+          text: "for a few minutes.",
+          fixedPhrases: ["数分間"],
+          selectionGroups: []
+        },
+        {
+          text: "She decided to write about curry rice",
+          fixedPhrases: ["彼女は", "カレーライスについて"],
+          selectionGroups: [
+            { key: "decided-to-write", prompt: "不定詞", correctIndex: 0, options: ["書くことに決めた", "書くことを忘れた", "書かないことにした"] }
+          ]
+        },
+        {
+          text: "because her family often makes it together.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "because", prompt: "接続", correctIndex: 0, options: ["なぜなら", "しかし", "それから"] },
+            { key: "family-makes", prompt: "時制", correctIndex: 0, options: ["家族がよく一緒に作るから", "家族が一緒に食べるから", "家族が一緒に見たから"] },
+            { key: "it", prompt: "代名詞", correctIndex: 0, options: ["それを", "彼を", "それらを"] }
+          ]
+        },
+        {
+          text: "She also sent her friend a picture",
+          fixedPhrases: ["彼女はまた", "友達に", "写真を"],
+          selectionGroups: [
+            { key: "sent", prompt: "時制", correctIndex: 0, options: ["送った", "見せた", "描いた"] }
+          ]
+        },
+        {
+          text: "that she took at dinner last week.",
+          fixedPhrases: ["彼女が撮った", "先週の夕食時に"],
+          selectionGroups: [
+            { key: "that", prompt: "接続", correctIndex: 0, options: ["写真を", "友達を", "夕食を"] }
+          ]
+        }
+      ]
+    },
+    {
+      id: 59,
+      level: "C",
+      english: "Takumi and his classmates planned a school event / for younger students. / They wanted everyone to enjoy it, / so they prepared several games. / On the morning of the event, / one of the games did not work well. / The students were worried, / but their teacher gave them an idea. / They changed the rules a little, / and the younger students had a great time. / Takumi was glad that they did not give up.",
+      japanese: "タクミとクラスメートは年下の生徒のために学校行事を計画し、みんなが楽しめるようにいくつかのゲームを準備しました。当日の朝、一つのゲームがうまく動かず心配しましたが、先生からアイデアをもらい、ルールを少し変えました。その結果、年下の生徒たちはとても楽しみ、タクミはみんながあきらめなかったことをうれしく思いました。",
+      parts: [
+        {
+          text: "Takumi and his classmates planned a school event",
+          fixedPhrases: ["タクミとクラスメートは", "学校行事を"],
+          selectionGroups: [
+            { key: "planned", prompt: "時制", correctIndex: 0, options: ["計画した", "計画している", "計画する予定だ"] }
+          ]
+        },
+        {
+          text: "for younger students.",
+          fixedPhrases: ["年下の生徒たちのために"],
+          selectionGroups: []
+        },
+        {
+          text: "They wanted everyone to enjoy it,",
+          fixedPhrases: ["彼らは", "それを"],
+          selectionGroups: [
+            { key: "wanted", prompt: "時制", correctIndex: 0, options: ["みんなに楽しんでほしかった", "みんなに見てほしかった", "みんなに終えてほしかった"] }
+          ]
+        },
+        {
+          text: "so they prepared several games.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "so", prompt: "接続", correctIndex: 0, options: ["だから", "しかし", "もし"] },
+            { key: "prepared", prompt: "時制", correctIndex: 0, options: ["準備した", "準備している", "準備する予定だ"] },
+            { key: "several-games", prompt: "名詞", correctIndex: 0, options: ["いくつかのゲームを", "いくつかの本を", "いくつかの部屋を"] }
+          ]
+        },
+        {
+          text: "On the morning of the event,",
+          fixedPhrases: ["行事当日の朝"],
+          selectionGroups: []
+        },
+        {
+          text: "one of the games did not work well.",
+          fixedPhrases: ["ゲームの一つが"],
+          selectionGroups: [
+            { key: "did-not-work", prompt: "否定", correctIndex: 0, options: ["うまくいかなかった", "うまくいった", "作られた"] }
+          ]
+        },
+        {
+          text: "The students were worried,",
+          fixedPhrases: ["生徒たちは"],
+          selectionGroups: [
+            { key: "were-worried", prompt: "状態", correctIndex: 0, options: ["心配した", "安心した", "喜んだ"] }
+          ]
+        },
+        {
+          text: "but their teacher gave them an idea.",
+          fixedPhrases: [],
+          selectionGroups: [
+            { key: "but", prompt: "接続", correctIndex: 0, options: ["しかし", "だから", "もし"] },
+            { key: "gave-them", prompt: "代名詞", correctIndex: 0, options: ["彼らにくれた", "彼をくれた", "それをくれた"] },
+            { key: "idea", prompt: "名詞", correctIndex: 0, options: ["アイデアを", "地図を", "宿題を"] }
+          ]
+        },
+        {
+          text: "They changed the rules a little,",
+          fixedPhrases: ["彼らは", "ルールを少し"],
+          selectionGroups: [
+            { key: "changed", prompt: "時制", correctIndex: 0, options: ["変えた", "変えている", "変える予定だ"] }
+          ]
+        },
+        {
+          text: "and the younger students had a great time.",
+          fixedPhrases: ["そして年下の生徒たちは"],
+          selectionGroups: [
+            { key: "had-a-great-time", prompt: "文構造", correctIndex: 0, options: ["とても楽しんだ", "とても困った", "とても急いだ"] }
+          ]
+        },
+        {
+          text: "Takumi was glad that they did not give up.",
+          fixedPhrases: ["タクミはうれしかった"],
+          selectionGroups: [
+            { key: "that", prompt: "接続", correctIndex: 0, options: ["彼らが", "彼が", "それが"] },
+            { key: "did-not-give-up", prompt: "否定", correctIndex: 0, options: ["あきらめなかった", "あきらめた", "あきらめる予定だ"] }
+          ]
+        }
+      ]
     }
   ];
 
