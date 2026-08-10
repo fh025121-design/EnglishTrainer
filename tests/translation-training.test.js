@@ -52,8 +52,10 @@ assert.strictEqual(firstHighlightState[1].marker, "", "the pending slash should 
 const layoutSequence = translationTrainingModule.buildTranslationTrainingLayoutSequence(firstQuestion.parts[0], ["私は"]);
 assert.strictEqual(layoutSequence[0].type, "column", "the layout sequence should include the first selection column");
 assert.strictEqual(layoutSequence[0].groupIndex, 0, "the first selection column should carry its group index");
-assert.strictEqual(layoutSequence[1].type, "column", "the layout sequence should include the second selection column");
-assert.strictEqual(layoutSequence[1].groupIndex, 1, "the second selection column should carry its group index");
+assert.strictEqual(layoutSequence[1].type, "fixed", "the layout sequence should insert the fixed phrase block between the columns");
+assert.strictEqual(layoutSequence[1].phrases[0], "私は", "the fixed phrase block should expose the display phrase");
+assert.strictEqual(layoutSequence[2].type, "column", "the layout sequence should include the second selection column");
+assert.strictEqual(layoutSequence[2].groupIndex, 1, "the second selection column should carry its group index");
 
 const secondHighlightState = translationTrainingModule.buildTranslationTrainingEnglishDisplaySegments(firstQuestion, 1);
 assert.strictEqual(secondHighlightState[0].state, "completed", "the already answered part should be marked as completed");

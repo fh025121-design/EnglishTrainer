@@ -329,15 +329,14 @@ select {
 .translation-training-option-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
 }
 
 .translation-training-option-shell {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 10px 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
   width: 100%;
   padding: 0;
   border: 0;
@@ -370,16 +369,27 @@ select {
 .translation-training-selection-column {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
-  flex: 0 1 auto;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.translation-training-selection-column-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: rgba(242, 248, 255, 0.92);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .translation-training-card {
-  width: auto;
-  min-height: 34px;
-  padding: 7px 10px;
-  border-radius: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
@@ -391,9 +401,10 @@ select {
   font-size: 0.84rem;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   white-space: normal;
-  line-height: 1.2;
+  line-height: 1.24;
   overflow-wrap: anywhere;
   max-width: 100%;
+  margin-bottom: 6px;
 }
 
 .translation-training-card-content {
@@ -422,18 +433,18 @@ select {
 }
 
 .translation-training-card.active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.28), rgba(45, 212, 191, 0.24));
-  border-color: rgba(94, 214, 214, 0.48);
-  box-shadow: 0 8px 18px rgba(94, 214, 214, 0.14);
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.24), rgba(22, 163, 74, 0.2));
+  border-color: rgba(74, 222, 128, 0.56);
+  box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.2), 0 10px 24px rgba(74, 222, 128, 0.16);
   transform: translateY(-1px);
-  color: #111827;
+  color: #f8fff9;
 }
 
 .translation-training-card[data-result-state="correct"] {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(16, 185, 129, 0.96));
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.94), rgba(16, 185, 129, 0.96));
   border-color: rgba(255, 255, 255, 0.72);
   color: #f8fffb;
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.24);
+  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.22);
 }
 
 .translation-training-card[data-result-state="correct"] .translation-training-card-marker {
@@ -464,10 +475,28 @@ select {
 }
 
 #translationTrainingRetryBtn {
-  min-height: 40px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  opacity: 0.9;
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: 0.92rem;
+  opacity: 0.95;
+}
+
+#translationTrainingNextBtn {
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: 0.92rem;
+}
+
+.word-order-actions-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.word-order-actions-row > button {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 14px;
 }
 
 .translation-training-read-japanese {
