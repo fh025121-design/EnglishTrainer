@@ -49,6 +49,12 @@ assert.strictEqual(firstHighlightState[1].state, "pending", "the later slash sho
 assert.strictEqual(firstHighlightState[0].marker, "▶", "the current slash should expose a current-part marker");
 assert.strictEqual(firstHighlightState[1].marker, "", "the pending slash should not expose a marker");
 
+const layoutSequence = translationTrainingModule.buildTranslationTrainingLayoutSequence(firstQuestion.parts[0], ["私は"]);
+assert.strictEqual(layoutSequence[0].type, "column", "the layout sequence should include the first selection column");
+assert.strictEqual(layoutSequence[0].groupIndex, 0, "the first selection column should carry its group index");
+assert.strictEqual(layoutSequence[1].type, "column", "the layout sequence should include the second selection column");
+assert.strictEqual(layoutSequence[1].groupIndex, 1, "the second selection column should carry its group index");
+
 const secondHighlightState = translationTrainingModule.buildTranslationTrainingEnglishDisplaySegments(firstQuestion, 1);
 assert.strictEqual(secondHighlightState[0].state, "completed", "the already answered part should be marked as completed");
 assert.strictEqual(secondHighlightState[1].state, "current", "the next part should become the current highlight");

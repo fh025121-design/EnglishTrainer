@@ -7013,6 +7013,9 @@
       event.preventDefault();
       event.stopPropagation();
     }
+    if (state.translationTraining) {
+      return;
+    }
     const questions = window.translationTrainingData?.getTranslationTrainingQuestions?.() || [];
     if (!questions.length) {
       window.alert("和訳トレーニングの問題がありません。")
@@ -7119,6 +7122,7 @@
       }
       const group = item.group;
       if (!group) return;
+      const groupIndex = Number.isInteger(item.groupIndex) ? item.groupIndex : 0;
       const column = document.createElement("div");
       column.className = "translation-training-selection-column";
       const groupOptions = document.createDocumentFragment();
@@ -9740,12 +9744,11 @@
         startTranslationTraining(event);
       };
       translationTrainingHomeBtn.onclick = runTranslationTraining;
-      translationTrainingHomeBtn.onmousedown = runTranslationTraining;
-      translationTrainingHomeBtn.ontouchstart = runTranslationTraining;
-      translationTrainingHomeBtn.onpointerdown = runTranslationTraining;
-      ["click", "touchend", "touchstart", "pointerup", "pointerdown", "mousedown"].forEach((eventName) => {
-        translationTrainingHomeBtn.addEventListener(eventName, runTranslationTraining);
-      });
+      translationTrainingHomeBtn.onmousedown = null;
+      translationTrainingHomeBtn.ontouchstart = null;
+      translationTrainingHomeBtn.onpointerdown = null;
+      translationTrainingHomeBtn.removeEventListener("click", runTranslationTraining);
+      translationTrainingHomeBtn.addEventListener("click", runTranslationTraining);
     }
     document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);

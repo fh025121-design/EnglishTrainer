@@ -285,11 +285,11 @@
       if (displayFixedPhrases.length) {
         sequence.push({ type: "fixed", phrases: displayFixedPhrases });
       }
-      sequence.push({ type: "column", group: selectionGroups[0] });
+      sequence.push({ type: "column", group: selectionGroups[0], groupIndex: 0 });
       return sequence;
     }
     selectionGroups.forEach((group, index) => {
-      sequence.push({ type: "column", group });
+      sequence.push({ type: "column", group, groupIndex: index });
       if (index < selectionGroups.length - 1 && displayFixedPhrases.length) {
         sequence.push({ type: "fixed", phrases: displayFixedPhrases });
       }
