@@ -7039,6 +7039,20 @@
     });
   }
 
+  function getTranslationTrainingLayoutMode(fixedPhrases = [], selectionGroups = [], availableWidth = 0) {
+    const safeFixedPhrases = Array.isArray(fixedPhrases) ? fixedPhrases.filter(Boolean) : [];
+    const safeSelectionGroups = Array.isArray(selectionGroups) ? selectionGroups : [];
+    if (!safeFixedPhrases.length || safeSelectionGroups.length < 2) {
+      return "stack";
+    }
+
+    const fallbackWidth = window.innerWidth || 360;
+    const resolvedWidth = Number(availableWidth) > 0 ? Number(availableWidth) : fallbackWidth;
+    const phraseLength = safeFixedPhrases.join("").replace(/\s/g, "").length;
+    const phraseLooksShort = phraseLength <= 8;
+    return resolvedWidth >= 360 && phraseLooksShort ? "inline" : "stack";
+  }
+
   function renderTranslationTrainingQuestion() {
     const training = state.translationTraining;
     if (!training) return;
@@ -7070,13 +7084,19 @@
     elements.translationTrainingEnglishText.innerHTML = "";
     elements.translationTrainingEnglishText.appendChild(englishFragment);
     elements.translationTrainingFeedbackText.textContent = "";
-    elements.translationTrainingStatusText.textContent = training.builtJapanese || "";
-    elements.translationTrainingPartLabelText.textContent = `${training.currentPartIndex + 1}つ目のまとまり`;
+    elements.translationTrainingStatusText.textContent = "";
+    elements.translationTrainingStatusText.classList.add("hidden");
+    if (elements.translationTrainingPartLabelText) {
+      elements.translationTrainingPartLabelText.textContent = `${training.currentPartIndex + 1}つ目のまとまり`;
+    }
     elements.translationTrainingOptionList.innerHTML = "";
     elements.translationTrainingOptionList.classList.add("translation-training-option-list");
 
+    const optionShell = document.createElement("div");
+    optionShell.className = "translation-training-option-shell";
+    const displayFixedPhrases = window.translationTrainingData?.getTranslationTrainingDisplayFixedPhrases?.(currentPart) || [];
     const fixedPhraseFragment = document.createDocumentFragment();
-    (currentPart?.fixedPhrases || []).forEach((phraseText) => {
+    displayFixedPhrases.forEach((phraseText) => {
       const phraseEl = document.createElement("div");
       phraseEl.className = "translation-training-fixed-phrase";
       phraseEl.textContent = phraseText;
@@ -7086,17 +7106,14 @@
       const fixedWrap = document.createElement("div");
       fixedWrap.className = "translation-training-fixed-row";
       fixedWrap.appendChild(fixedPhraseFragment);
-      elements.translationTrainingOptionList.appendChild(fixedWrap);
+      optionShell.appendChild(fixedWrap);
     }
 
-    const columnsFragment = document.createDocumentFragment();
+    const columnsWrap = document.createElement("div");
+    columnsWrap.className = "translation-training-columns";
     (currentPart?.selectionGroups || []).forEach((group, groupIndex) => {
       const column = document.createElement("div");
       column.className = "translation-training-column";
-      const title = document.createElement("div");
-      title.className = "translation-training-column-title";
-      title.textContent = group.prompt || "";
-      column.appendChild(title);
       const groupOptions = document.createDocumentFragment();
       const solvedSelection = training.partSelections[training.currentPartIndex]?.[group.key];
       group.options.forEach((optionText, optionIndex) => {
@@ -7116,9 +7133,15 @@
         groupOptions.appendChild(button);
       });
       column.appendChild(groupOptions);
-      columnsFragment.appendChild(column);
+      columnsWrap.appendChild(column);
     });
-    elements.translationTrainingOptionList.appendChild(columnsFragment);
+    optionShell.appendChild(columnsWrap);
+    elements.translationTrainingOptionList.appendChild(optionShell);
+
+    const availableWidth = elements.translationTrainingOptionList.clientWidth || window.innerWidth || 360;
+    const layoutMode = getTranslationTrainingLayoutMode(currentPart?.fixedPhrases || [], currentPart?.selectionGroups || [], availableWidth);
+    optionShell.classList.toggle("translation-training-option-shell--inline", layoutMode === "inline");
+    optionShell.classList.toggle("translation-training-option-shell--stack", layoutMode !== "inline");
     elements.translationTrainingRetryBtn.disabled = false;
     elements.translationTrainingNextBtn.textContent = "";
     elements.translationTrainingNextBtn.disabled = true;
@@ -7188,12 +7211,15 @@
     if (!question) return;
     elements.translationTrainingQuestionPanel.classList.add("hidden");
     elements.translationTrainingCompletePanel.classList.remove("hidden");
-    elements.translationTrainingCompleteText.textContent = `5問完了`;
+    elements.translationTrainingEnglishReadText.textContent = question.english;
     elements.translationTrainingJapaneseText.textContent = question.japanese;
-    elements.translationTrainingMicStatusText.textContent = "マイクを待機しています…";
-    elements.translationTrainingReadInstructionText.textContent = "画面の日本語をそのまま音読してください。";
+    elements.translationTrainingSpeakBtn.classList.remove("hidden");
+    elements.translationTrainingSpeakBtn.textContent = "声に出して確認してください";
+    elements.translationTrainingNextQuestionBtn.classList.add("hidden");
+    elements.translationTrainingWaveformContainer.classList.add("hidden");
     state.translationTrainingSpeechDetected = false;
     clearTranslationTrainingSpeechTimer();
+    window.clearTimeout(state.translationTrainingWaveformTimerId);
   }
 
   function confirmTranslationTrainingSpeech() {
@@ -7201,61 +7227,15 @@
     if (!training) return;
     const question = training.questions[training.questionIndex];
     if (!question) return;
-    elements.translationTrainingMicStatusText.textContent = "発声を確認しています…";
-    state.translationTrainingSpeechDetected = false;
+    elements.translationTrainingSpeakBtn.classList.add("hidden");
+    elements.translationTrainingWaveformContainer.classList.remove("hidden");
+    elements.translationTrainingNextQuestionBtn.classList.remove("hidden");
+    state.translationTrainingSpeechDetected = true;
     clearTranslationTrainingSpeechTimer();
-    const timerId = window.setTimeout(() => {
-      if (!state.translationTrainingSpeechDetected) {
-        elements.translationTrainingMicStatusText.textContent = "発声が確認できませんでした。もう一度お試しください。";
-      }
-    }, 1400);
-    state.translationTrainingSpeechTimerId = timerId;
-    const audioContext = window.AudioContext || window.webkitAudioContext;
-    if (!audioContext) {
-      state.translationTrainingSpeechDetected = true;
-      elements.translationTrainingMicStatusText.textContent = "発声確認を進めます。";
-      return;
-    }
-    navigator.mediaDevices?.getUserMedia?.({ audio: true })
-      .then((stream) => {
-        const context = new audioContext();
-        const source = context.createMediaStreamSource(stream);
-        const analyser = context.createAnalyser();
-        analyser.fftSize = 2048;
-        source.connect(analyser);
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        let totalVolume = 0;
-        let frames = 0;
-        const detect = () => {
-          analyser.getByteTimeDomainData(dataArray);
-          let sum = 0;
-          for (let index = 0; index < dataArray.length; index += 1) {
-            const value = (dataArray[index] - 128) / 128;
-            sum += value * value;
-          }
-          const rms = Math.sqrt(sum / dataArray.length);
-          totalVolume += rms;
-          frames += 1;
-          if (frames >= 12 && totalVolume / frames > 0.03) {
-            state.translationTrainingSpeechDetected = true;
-            elements.translationTrainingMicStatusText.textContent = "発声を確認しました。";
-            clearTranslationTrainingSpeechTimer();
-            stream.getTracks().forEach((track) => track.stop());
-            return;
-          }
-          if (frames < 30) {
-            window.requestAnimationFrame(detect);
-          } else {
-            stream.getTracks().forEach((track) => track.stop());
-            elements.translationTrainingMicStatusText.textContent = "発声が確認できませんでした。もう一度お試しください。";
-          }
-        };
-        window.requestAnimationFrame(detect);
-      })
-      .catch(() => {
-        state.translationTrainingSpeechDetected = true;
-        elements.translationTrainingMicStatusText.textContent = "発声確認を進めます。";
-      });
+    window.clearTimeout(state.translationTrainingWaveformTimerId);
+    state.translationTrainingWaveformTimerId = window.setTimeout(() => {
+      elements.translationTrainingWaveformContainer.classList.add("hidden");
+    }, 4000);
   }
 
   function advanceTranslationTrainingQuestion() {
@@ -9709,10 +9689,9 @@
     elements.translationTrainingNextBtn = document.getElementById("translationTrainingNextBtn");
     elements.translationTrainingQuestionPanel = document.getElementById("translationTrainingQuestionPanel");
     elements.translationTrainingCompletePanel = document.getElementById("translationTrainingCompletePanel");
-    elements.translationTrainingCompleteText = document.getElementById("translationTrainingCompleteText");
+    elements.translationTrainingEnglishReadText = document.getElementById("translationTrainingEnglishReadText");
     elements.translationTrainingJapaneseText = document.getElementById("translationTrainingJapaneseText");
-    elements.translationTrainingReadInstructionText = document.getElementById("translationTrainingReadInstructionText");
-    elements.translationTrainingMicStatusText = document.getElementById("translationTrainingMicStatusText");
+    elements.translationTrainingWaveformContainer = document.getElementById("translationTrainingWaveformContainer");
     elements.translationTrainingSpeakBtn = document.getElementById("translationTrainingSpeakBtn");
     elements.translationTrainingNextQuestionBtn = document.getElementById("translationTrainingNextQuestionBtn");
     elements.confirmModal = document.getElementById("confirmModal");

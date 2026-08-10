@@ -98,7 +98,6 @@
           selectionGroups: [
             {
               key: "connector",
-              prompt: "接続表現",
               correctIndex: 0,
               options: [
                 "終えたあとで",
@@ -138,7 +137,7 @@
             {
               key: "time",
               prompt: "時制",
-              correctIndex: 2,
+              correctIndex: 0,
               options: [
                 "帰ったとき",
                 "帰るとき",
@@ -154,7 +153,7 @@
             {
               key: "action",
               prompt: "動作",
-              correctIndex: 2,
+              correctIndex: 0,
               options: [
                 "作っていました",
                 "作りました",
@@ -177,7 +176,7 @@
             {
               key: "adjective",
               prompt: "形容詞",
-              correctIndex: 2,
+              correctIndex: 0,
               options: [
                 "難しかったです",
                 "難しいです",
@@ -239,6 +238,15 @@
     return questionsData[Math.max(0, Math.min(normalizedIndex, questionsData.length - 1))] || null;
   }
 
+  function getTranslationTrainingDisplayFixedPhrases(part) {
+    const safePart = part && typeof part === "object" ? part : null;
+    if (!safePart) return [];
+    const fixedPhrases = Array.isArray(safePart.fixedPhrases) ? safePart.fixedPhrases.filter(Boolean) : [];
+    const selectableTexts = (safePart.selectionGroups || []).flatMap((group) => Array.isArray(group?.options) ? group.options.filter(Boolean) : []);
+    const excludedSet = new Set(selectableTexts.map((text) => String(text).trim()));
+    return fixedPhrases.filter((phrase) => !excludedSet.has(String(phrase).trim()));
+  }
+
   function buildTranslationTrainingEnglishDisplaySegments(question, currentPartIndex = 0) {
     const safeQuestion = question && typeof question === "object" ? question : null;
     if (!safeQuestion) return [];
@@ -267,6 +275,7 @@
   const exported = {
     getTranslationTrainingQuestions,
     getTranslationTrainingQuestion,
+    getTranslationTrainingDisplayFixedPhrases,
     buildTranslationTrainingEnglishDisplaySegments
   };
 

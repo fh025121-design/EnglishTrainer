@@ -628,11 +628,10 @@
             <p class="study-type-text">英文を前から順番に理解しよう</p>
             <p id="translationTrainingEnglishText" class="word-order-prompt-text"></p>
             <div class="recognized-block word-order-zone">
-              <p id="translationTrainingPartLabelText" class="recognized-label">1つ目のまとまり</p>
-              <div id="translationTrainingOptionList" class="word-order-card-grid"></div>
+              <div id="translationTrainingOptionList" class="translation-training-option-list"></div>
               <p id="translationTrainingFeedbackText" class="word-order-feedback-text"></p>
             </div>
-            <div id="translationTrainingStatusText" class="word-order-feedback-text"></div>
+            <div id="translationTrainingStatusText" class="word-order-feedback-text hidden"></div>
             <div class="word-order-actions-row">
               <button id="translationTrainingRetryBtn" class="secondary-btn" type="button">やり直す</button>
               <button id="translationTrainingNextBtn" class="primary-btn" type="button">次へ</button>
@@ -640,16 +639,17 @@
           </section>
 
           <section id="translationTrainingCompletePanel" class="panel result-panel speaking-complete-panel hidden">
-            <h2>和訳トレーニング 完了</h2>
-            <p id="translationTrainingCompleteText" class="status-text">5問完了</p>
-            <p id="translationTrainingJapaneseText" class="word-order-prompt-text"></p>
-            <div class="word-order-zone">
-              <p class="recognized-label">日本語を声に出して読もう</p>
-              <p id="translationTrainingReadInstructionText" class="status-text">画面の日本語をそのまま音読してください。</p>
-              <p id="translationTrainingMicStatusText" class="word-order-feedback-text">マイクを待機しています…</p>
-              <div class="word-order-actions-row">
-                <button id="translationTrainingSpeakBtn" class="primary-btn" type="button">発声確認</button>
-                <button id="translationTrainingNextQuestionBtn" class="secondary-btn" type="button">次へ</button>
+            <div class="translation-training-readout">
+              <p id="translationTrainingEnglishReadText" class="word-order-prompt-text"></p>
+              <p id="translationTrainingJapaneseText" class="translation-training-read-japanese"></p>
+              <div class="translation-training-read-actions">
+                <button id="translationTrainingSpeakBtn" class="primary-btn" type="button">声に出して確認してください</button>
+                <div id="translationTrainingWaveformContainer" class="translation-training-waveform-container hidden" aria-hidden="true">
+                  <div class="translation-training-waveform" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
+                </div>
+                <button id="translationTrainingNextQuestionBtn" class="secondary-btn hidden" type="button">次へ</button>
               </div>
             </div>
           </section>
