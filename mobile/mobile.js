@@ -7297,6 +7297,38 @@
     elements.translationTrainingOptionList.innerHTML = "";
     elements.translationTrainingOptionList.classList.add("translation-training-option-list");
 
+    const isInlineCurrentEnglishSample = Number(question?.id) === 44
+      && String(question?.english || "").startsWith("Mao joined a cooking class / at a community center last month.");
+    if (isInlineCurrentEnglishSample && currentPart) {
+      const currentEnglishWrapper = document.createElement("div");
+      const currentChip = document.createElement("span");
+      currentChip.className = "translation-training-english-part translation-training-english-part--current";
+
+      const marker = document.createElement("span");
+      marker.className = "translation-training-current-marker";
+      marker.textContent = "▶";
+      currentChip.appendChild(marker);
+
+      const currentText = document.createElement("span");
+      currentText.className = "translation-training-english-text";
+      const partText = String(currentPart?.text || "");
+      currentText.textContent = partText;
+      currentChip.appendChild(currentText);
+
+      if (!/[.?!]["')\]]*$/.test(partText.trim())) {
+        const separator = document.createElement("span");
+        separator.textContent = " /";
+        separator.className = "translation-training-highlight-separator";
+        separator.style.color = "#ff1f1f";
+        separator.style.fontWeight = "900";
+        separator.style.whiteSpace = "nowrap";
+        currentChip.appendChild(separator);
+      }
+
+      currentEnglishWrapper.appendChild(currentChip);
+      elements.translationTrainingOptionList.appendChild(currentEnglishWrapper);
+    }
+
     const optionShell = document.createElement("div");
     optionShell.className = "translation-training-option-shell";
     const selectionGroups = Array.isArray(currentPart?.selectionGroups) ? currentPart.selectionGroups : [];
