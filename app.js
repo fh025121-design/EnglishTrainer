@@ -310,6 +310,14 @@ function getScopedLocalStorageKey(baseKey, uid = getCurrentPcFirebaseUid()) {
   return safeUid ? `${baseKey}-${safeUid}` : "";
 }
 
+function extractUidFromScopedStorageKey(storageKey, baseKey) {
+  const rawKey = String(storageKey || "").trim();
+  const rawBaseKey = String(baseKey || "").trim();
+  if (!rawKey || !rawBaseKey) return "";
+  const prefix = `${rawBaseKey}-`;
+  return rawKey.startsWith(prefix) ? rawKey.slice(prefix.length).trim() : "";
+}
+
 function buildPcBrowserDeviceId() {
   try {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -652,6 +660,13 @@ function renderPcDeviceIdentitySettings() {
 
 function resetUserScopedStorageCaches() {
   studyCoreSyncMetaCache = null;
+  gameTicketSyncMetaCache = null;
+  gameTicketSyncPromise = null;
+  gameTicketSyncDirty = false;
+  if (gameTicketSyncFlushTimer) {
+    clearTimeout(gameTicketSyncFlushTimer);
+    gameTicketSyncFlushTimer = null;
+  }
   pointStateCache = null;
   pointStateBootstrapPromise = null;
   pointStateSyncMetaCache = null;
@@ -5598,19 +5613,35 @@ function pruneGameTicketUsageHistory(store) {
 
 function syncGameTicketState() {
   const store = ensureGameTicketState();
+  let mutated = false;
+  const beforeInventoryCount = Array.isArray(store.inventory) ? store.inventory.length : 0;
+  const beforeUsageCount = Array.isArray(store.usageHistory) ? store.usageHistory.length : 0;
   pruneExpiredGameTickets(store);
   pruneGameTicketUsageHistory(store);
+  if (store.inventory.length !== beforeInventoryCount || store.usageHistory.length !== beforeUsageCount) {
+    mutated = true;
+  }
   if (!isDesktopGameTicketEnabled()) {
+    if (mutated) {
+      persistGameTicketState();
+    }
     return store;
   }
 
   const currentDate = todayKey();
   if (!store.lastProcessedDate) {
     store.lastProcessedDate = currentDate;
+    mutated = true;
+    if (mutated) {
+      persistGameTicketState();
+    }
     return store;
   }
   if (store.lastProcessedDate === currentDate) {
     processChallengeGameTicketAwards(store);
+    if (mutated) {
+      persistGameTicketState();
+    }
     return store;
   }
 
@@ -5625,7 +5656,11 @@ function syncGameTicketState() {
   store.dailyTrainingCount = 0;
   store.dailyEarnedCount = 0;
   store.lastProcessedDate = currentDate;
+  mutated = true;
   processChallengeGameTicketAwards(store);
+  if (mutated) {
+    persistGameTicketState();
+  }
   return store;
 }
 
@@ -5653,12 +5688,14 @@ function queueGameTicketReward(store, ticket, meta = {}) {
   });
   if (!reward) return;
   store.pendingRewards.push(reward);
+  markGameTicketSyncDirty();
 }
 
 function awardGameTicket(store, minutes, source, meta = {}, options = {}) {
   if (!store) return null;
   const ticket = createGameTicketInventoryEntry(minutes, source);
   store.inventory.push(ticket);
+  markGameTicketSyncDirty();
   if (source === "random" && options.countAsDailyEarned !== false) {
     store.dailyEarnedCount += 1;
   }
@@ -5753,7 +5790,7 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
   }
 
   if (mutated) {
-    saveState();
+    persistGameTicketState();
   }
 
   return earnedTickets;
@@ -5763,10 +5800,12 @@ function processCompletedTicketTraining(options = {}) {
   if (!isDesktopGameTicketEnabled()) return [];
   const store = syncGameTicketState();
   store.dailyTrainingCount += 1;
+  markGameTicketSyncDirty();
   const earnedTickets = [];
 
   if (options.trainingType === "normal-weak-focus") {
     store.normalWeakFocusCompletedCount += 1;
+    markGameTicketSyncDirty();
     const reachedFirstBonus =
       !store.normalWeakFocusFirstBonusGranted &&
       store.normalWeakFocusCompletedCount >= GAME_TICKET_CONFIG.firstBonusWeakFocusTarget;
@@ -5796,6 +5835,7 @@ function processCompletedTicketTraining(options = {}) {
     const rescueTicket = awardGameTicket(store, pickGameTicketMinutes(), "random");
     if (rescueTicket) {
       store.unsuccessfulEligibleDays = 0;
+      markGameTicketSyncDirty();
       earnedTickets.push(rescueTicket);
     }
   }
@@ -5836,6 +5876,7 @@ function processStreakBonusTicket(reason) {
   const streakTicket = awardGameTicket(store, minutes, "streakBonus", { streakDays });
   if (!streakTicket) return null;
   store.streakBonusAwardedDays = [...store.streakBonusAwardedDays, awardKey].slice(-180);
+  markGameTicketSyncDirty();
   return streakTicket;
 }
 
@@ -6525,8 +6566,368 @@ function dismissCurrentGameTicketReward() {
     modal.classList.add("hidden");
     modal.setAttribute("aria-hidden", "true");
   }
-  saveState();
+  persistGameTicketState();
   showPendingGameTicketModalIfAny();
+}
+
+let gameTicketSyncMetaCache = null;
+let gameTicketSyncPromise = null;
+let gameTicketSyncFlushTimer = null;
+let gameTicketSyncDirty = false;
+let gameTicketSyncSkipBootstrap = false;
+const GAME_TICKET_SYNC_META_KEY = "english-trainer-pc-game-ticket-sync-v1";
+const GAME_TICKET_SYNC_SCHEMA_VERSION = 1;
+const GAME_TICKET_SYNC_DEBOUNCE_MS = 250;
+
+function createDefaultGameTicketSyncMeta() {
+  return {
+    uid: "",
+    updatedAt: 0,
+    lastAppliedRemoteUpdatedAt: 0,
+    lastAdoptedSource: ""
+  };
+}
+
+function sanitizeGameTicketSyncMeta(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    uid: String(source.uid || "").trim(),
+    updatedAt: Math.max(0, Number(source.updatedAt) || 0),
+    lastAppliedRemoteUpdatedAt: Math.max(0, Number(source.lastAppliedRemoteUpdatedAt) || 0),
+    lastAdoptedSource: typeof source.lastAdoptedSource === "string" ? source.lastAdoptedSource : ""
+  };
+}
+
+function loadGameTicketSyncMeta() {
+  if (gameTicketSyncMetaCache) return gameTicketSyncMetaCache;
+  try {
+    const storageKey = getScopedLocalStorageKey(GAME_TICKET_SYNC_META_KEY);
+    if (!storageKey) {
+      gameTicketSyncMetaCache = createDefaultGameTicketSyncMeta();
+      return gameTicketSyncMetaCache;
+    }
+    const raw = localStorage.getItem(storageKey);
+    gameTicketSyncMetaCache = sanitizeGameTicketSyncMeta(raw ? JSON.parse(raw) : null);
+    return gameTicketSyncMetaCache;
+  } catch (_error) {
+    gameTicketSyncMetaCache = createDefaultGameTicketSyncMeta();
+    return gameTicketSyncMetaCache;
+  }
+}
+
+function saveGameTicketSyncMeta(metaLike) {
+  gameTicketSyncMetaCache = sanitizeGameTicketSyncMeta(metaLike);
+  const storageKey = getScopedLocalStorageKey(GAME_TICKET_SYNC_META_KEY, gameTicketSyncMetaCache.uid || getCurrentPcFirebaseUid());
+  if (!storageKey) return gameTicketSyncMetaCache;
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(gameTicketSyncMetaCache));
+  } catch (_error) {
+    // Keep runtime values even if persistence fails.
+  }
+  return gameTicketSyncMetaCache;
+}
+
+function markGameTicketSyncDirty() {
+  gameTicketSyncDirty = true;
+}
+
+function clearGameTicketSyncDirty() {
+  gameTicketSyncDirty = false;
+}
+
+function markSkipGameTicketSyncOnce() {
+  gameTicketSyncSkipBootstrap = true;
+}
+
+function consumeSkipGameTicketSyncOnce() {
+  if (!gameTicketSyncSkipBootstrap) return false;
+  gameTicketSyncSkipBootstrap = false;
+  return true;
+}
+
+function persistGameTicketState() {
+  markGameTicketSyncDirty();
+  saveState();
+}
+
+function createGameTicketSyncSummary(storeLike, options = {}) {
+  const store = sanitizeGameTicketStats(storeLike);
+  const activeInventory = (store.inventory || []).filter((ticket) => !ticket.usedAt && ticket.expiresAt > Date.now());
+  return {
+    updatedAt: Math.max(0, Number(options.updatedAt) || 0),
+    inventoryCount: store.inventory.length,
+    activeInventoryCount: activeInventory.length,
+    earnedHistoryCount: store.earnedHistory.length,
+    usageHistoryCount: store.usageHistory.length,
+    pendingRewardsCount: store.pendingRewards.length,
+    challengeDayCount: Object.keys(store.challengeTicketStateByDate || {}).length,
+    dailyEarnedCount: Math.max(0, Number(store.dailyEarnedCount) || 0),
+    dailyTrainingCount: Math.max(0, Number(store.dailyTrainingCount) || 0),
+    unsuccessfulEligibleDays: Math.max(0, Number(store.unsuccessfulEligibleDays) || 0),
+    normalWeakFocusCompletedCount: Math.max(0, Number(store.normalWeakFocusCompletedCount) || 0),
+    normalWeakFocusFirstBonusGranted: Boolean(store.normalWeakFocusFirstBonusGranted),
+    streakBonusCount: Array.isArray(store.streakBonusAwardedDays) ? store.streakBonusAwardedDays.length : 0,
+    lastProcessedDate: typeof store.lastProcessedDate === "string" ? store.lastProcessedDate : ""
+  };
+}
+
+function isMeaningfulGameTicketSyncSummary(summary) {
+  const safe = summary && typeof summary === "object" ? summary : createGameTicketSyncSummary(createDefaultGameTicketStats());
+  return safe.inventoryCount > 0 ||
+    safe.earnedHistoryCount > 0 ||
+    safe.usageHistoryCount > 0 ||
+    safe.pendingRewardsCount > 0 ||
+    safe.challengeDayCount > 0 ||
+    safe.dailyEarnedCount > 0 ||
+    safe.dailyTrainingCount > 0 ||
+    safe.unsuccessfulEligibleDays > 0 ||
+    safe.normalWeakFocusCompletedCount > 0 ||
+    safe.normalWeakFocusFirstBonusGranted ||
+    safe.streakBonusCount > 0 ||
+    Boolean(safe.lastProcessedDate);
+}
+
+function buildGameTicketPayload(storeLike = ensureGameTicketState()) {
+  const payload = {
+    schemaVersion: GAME_TICKET_SYNC_SCHEMA_VERSION,
+    source: "pc",
+    updatedAt: Date.now(),
+    gameTickets: sanitizeGameTicketStats(storeLike)
+  };
+  const meta = loadGameTicketSyncMeta();
+  meta.uid = String(getCurrentPcFirebaseUid() || meta.uid || "");
+  meta.updatedAt = Math.max(meta.updatedAt, payload.updatedAt);
+  saveGameTicketSyncMeta(meta);
+  return payload;
+}
+
+function mergeUniqueEntriesById(primaryList, secondaryList, mergeEntry) {
+  const mergedMap = new Map();
+  (Array.isArray(primaryList) ? primaryList : []).forEach((entry) => {
+    if (!entry?.id || mergedMap.has(entry.id)) return;
+    mergedMap.set(entry.id, entry);
+  });
+  (Array.isArray(secondaryList) ? secondaryList : []).forEach((entry) => {
+    if (!entry?.id) return;
+    if (!mergedMap.has(entry.id)) {
+      mergedMap.set(entry.id, entry);
+      return;
+    }
+    if (typeof mergeEntry === "function") {
+      mergedMap.set(entry.id, mergeEntry(mergedMap.get(entry.id), entry));
+    }
+  });
+  return [...mergedMap.values()];
+}
+
+function mergeGameTicketInventoryEntry(primaryEntry, secondaryEntry) {
+  const primary = sanitizeGameTicketInventoryEntry(primaryEntry);
+  const secondary = sanitizeGameTicketInventoryEntry(secondaryEntry);
+  if (!primary) return secondary;
+  if (!secondary) return primary;
+  const usedAtCandidates = [primary.usedAt, secondary.usedAt].filter((value) => Number.isFinite(Number(value)));
+  return sanitizeGameTicketInventoryEntry({
+    id: primary.id || secondary.id,
+    minutes: primary.minutes || secondary.minutes,
+    earnedAt: Number.isFinite(Number(primary.earnedAt)) ? primary.earnedAt : secondary.earnedAt,
+    expiresAt: Number.isFinite(Number(primary.expiresAt)) ? primary.expiresAt : secondary.expiresAt,
+    usedAt: usedAtCandidates.length ? Math.max(...usedAtCandidates) : null,
+    source: primary.source === "random" && secondary.source !== "random" ? secondary.source : primary.source
+  });
+}
+
+function mergeChallengeTicketDailyState(primaryValue, secondaryValue) {
+  const primary = sanitizeChallengeTicketDailyState(primaryValue);
+  const secondary = sanitizeChallengeTicketDailyState(secondaryValue);
+  const mergeThresholdState = (key, thresholds) => {
+    const next = { awarded: Boolean(primary[key]?.awarded || secondary[key]?.awarded) };
+    thresholds.forEach((threshold) => {
+      next[String(threshold)] = Boolean(primary[key]?.[String(threshold)] || secondary[key]?.[String(threshold)]);
+    });
+    return next;
+  };
+  return {
+    fiveMinute: mergeThresholdState("fiveMinute", [90, 120, 153, 180]),
+    fifteenA: mergeThresholdState("fifteenA", [84, 132, 183, 210]),
+    fifteenB: mergeThresholdState("fifteenB", [150, 192, 240]),
+    thirty: mergeThresholdState("thirty", [126, 201, 249]),
+    rescue: {
+      processed: Boolean(primary.rescue?.processed || secondary.rescue?.processed),
+      awarded: Boolean(primary.rescue?.awarded || secondary.rescue?.awarded)
+    }
+  };
+}
+
+function mergeChallengeTicketStateByDate(primaryState, secondaryState) {
+  const dayKeys = new Set([
+    ...Object.keys(primaryState && typeof primaryState === "object" ? primaryState : {}),
+    ...Object.keys(secondaryState && typeof secondaryState === "object" ? secondaryState : {})
+  ]);
+  return Object.fromEntries([...dayKeys].map((dayKey) => {
+    return [String(dayKey), mergeChallengeTicketDailyState(primaryState?.[dayKey], secondaryState?.[dayKey])];
+  }));
+}
+
+function mergeGameTicketStates(primaryState, secondaryState) {
+  const primary = sanitizeGameTicketStats(primaryState);
+  const secondary = sanitizeGameTicketStats(secondaryState);
+  const primaryDayIsNewer = String(primary.lastProcessedDate || "") >= String(secondary.lastProcessedDate || "");
+  const dayCounterSource = primary.lastProcessedDate === secondary.lastProcessedDate
+    ? null
+    : (primaryDayIsNewer ? primary : secondary);
+  return sanitizeGameTicketStats({
+    inventory: mergeUniqueEntriesById(primary.inventory, secondary.inventory, mergeGameTicketInventoryEntry),
+    dailyTrainingCount: dayCounterSource ? dayCounterSource.dailyTrainingCount : Math.max(primary.dailyTrainingCount, secondary.dailyTrainingCount),
+    dailyEarnedCount: dayCounterSource ? dayCounterSource.dailyEarnedCount : Math.max(primary.dailyEarnedCount, secondary.dailyEarnedCount),
+    normalWeakFocusCompletedCount: Math.max(primary.normalWeakFocusCompletedCount, secondary.normalWeakFocusCompletedCount),
+    normalWeakFocusFirstBonusGranted: Boolean(primary.normalWeakFocusFirstBonusGranted || secondary.normalWeakFocusFirstBonusGranted),
+    unsuccessfulEligibleDays: dayCounterSource ? dayCounterSource.unsuccessfulEligibleDays : Math.max(primary.unsuccessfulEligibleDays, secondary.unsuccessfulEligibleDays),
+    lastProcessedDate: String(primary.lastProcessedDate || "") >= String(secondary.lastProcessedDate || "") ? primary.lastProcessedDate : secondary.lastProcessedDate,
+    streakBonusAwardedDays: [...new Set([...(primary.streakBonusAwardedDays || []), ...(secondary.streakBonusAwardedDays || [])])],
+    earnedHistory: mergeUniqueEntriesById(primary.earnedHistory, secondary.earnedHistory).sort((left, right) => Number(right?.earnedAt || 0) - Number(left?.earnedAt || 0)),
+    usageHistory: mergeUniqueEntriesById(primary.usageHistory, secondary.usageHistory).sort((left, right) => Number(right?.usedAt || 0) - Number(left?.usedAt || 0)),
+    pendingRewards: mergeUniqueEntriesById(primary.pendingRewards, secondary.pendingRewards).sort((left, right) => Number(left?.queuedAt || 0) - Number(right?.queuedAt || 0)),
+    challengeTicketStateByDate: mergeChallengeTicketStateByDate(primary.challengeTicketStateByDate, secondary.challengeTicketStateByDate)
+  });
+}
+
+function chooseGameTicketSyncAdoption(localStore, remoteResult) {
+  const localMeta = loadGameTicketSyncMeta();
+  const localSummary = createGameTicketSyncSummary(localStore, { updatedAt: localMeta.updatedAt });
+  const remoteSummary = createGameTicketSyncSummary(remoteResult?.data?.gameTickets, {
+    updatedAt: Math.max(0, Number(remoteResult?.data?.updatedAt) || 0)
+  });
+  const remoteExists = Boolean(remoteResult?.exists && remoteResult?.data && typeof remoteResult.data === "object");
+  if (!remoteExists) {
+    if (isMeaningfulGameTicketSyncSummary(localSummary)) {
+      return { adopted: "local-first-upload", localSummary, remoteSummary, reason: "remote-missing" };
+    }
+    return { adopted: "none", localSummary, remoteSummary, reason: "both-empty" };
+  }
+  if (!isMeaningfulGameTicketSyncSummary(localSummary)) {
+    return { adopted: "firestore", localSummary, remoteSummary, reason: "local-empty" };
+  }
+  if (localSummary.updatedAt > remoteSummary.updatedAt) {
+    return { adopted: "local", localSummary, remoteSummary, reason: "local-newer" };
+  }
+  return { adopted: "firestore", localSummary, remoteSummary, reason: remoteSummary.updatedAt > localSummary.updatedAt ? "remote-newer" : "timestamps-equal" };
+}
+
+function applyGameTicketStateFromFirestore(remoteData) {
+  if (!remoteData || typeof remoteData !== "object") return false;
+  state.stats.gameTickets = sanitizeGameTicketStats(remoteData.gameTickets);
+  clearGameTicketSyncDirty();
+  saveState();
+  const meta = loadGameTicketSyncMeta();
+  meta.uid = String(getCurrentPcFirebaseUid() || meta.uid || "");
+  meta.updatedAt = Math.max(meta.updatedAt, Math.max(0, Number(remoteData.updatedAt) || 0));
+  meta.lastAppliedRemoteUpdatedAt = Math.max(0, Number(remoteData.updatedAt) || 0);
+  meta.lastAdoptedSource = "firestore";
+  saveGameTicketSyncMeta(meta);
+  return true;
+}
+
+async function flushGameTicketSync() {
+  if (gameTicketSyncPromise) return gameTicketSyncPromise;
+  const currentUid = getCurrentPcFirebaseUid();
+  if (!currentUid || typeof window.loadGameTicketsFromFirestore !== "function" || typeof window.saveGameTicketsToFirestore !== "function") {
+    return false;
+  }
+
+  gameTicketSyncPromise = (async () => {
+    const localStore = ensureGameTicketState();
+    const remoteResult = await window.loadGameTicketsFromFirestore(currentUid);
+    const adoption = chooseGameTicketSyncAdoption(localStore, remoteResult);
+
+    if (adoption.adopted === "none") {
+      clearGameTicketSyncDirty();
+      return false;
+    }
+
+    if (adoption.adopted === "firestore") {
+      applyGameTicketStateFromFirestore(remoteResult.data);
+      return false;
+    }
+
+    const mergedStore = adoption.adopted === "local" && remoteResult?.exists
+      ? mergeGameTicketStates(localStore, remoteResult.data?.gameTickets)
+      : sanitizeGameTicketStats(localStore);
+    const payload = buildGameTicketPayload(mergedStore);
+    const saved = await window.saveGameTicketsToFirestore(payload, { targetUid: currentUid });
+    if (!saved) {
+      return false;
+    }
+    state.stats.gameTickets = sanitizeGameTicketStats(mergedStore);
+    clearGameTicketSyncDirty();
+    saveState();
+    const meta = loadGameTicketSyncMeta();
+    meta.uid = currentUid;
+    meta.updatedAt = Math.max(meta.updatedAt, payload.updatedAt);
+    meta.lastAppliedRemoteUpdatedAt = Math.max(meta.lastAppliedRemoteUpdatedAt, payload.updatedAt);
+    meta.lastAdoptedSource = adoption.adopted === "local-first-upload" ? "local-first-upload" : "local";
+    saveGameTicketSyncMeta(meta);
+    return true;
+  })().finally(() => {
+    gameTicketSyncPromise = null;
+  });
+
+  return gameTicketSyncPromise;
+}
+
+function scheduleGameTicketSync() {
+  if (gameTicketSyncFlushTimer) {
+    clearTimeout(gameTicketSyncFlushTimer);
+  }
+  gameTicketSyncFlushTimer = setTimeout(() => {
+    gameTicketSyncFlushTimer = null;
+    flushGameTicketSync().catch((error) => {
+      console.error("Failed to synchronize game tickets", error);
+    });
+  }, GAME_TICKET_SYNC_DEBOUNCE_MS);
+}
+
+async function syncGameTicketAfterLogin() {
+  const currentUid = getCurrentPcFirebaseUid();
+  if (!currentUid || typeof window.loadGameTicketsFromFirestore !== "function" || typeof window.saveGameTicketsToFirestore !== "function") {
+    return;
+  }
+  if (consumeSkipGameTicketSyncOnce()) {
+    const meta = loadGameTicketSyncMeta();
+    meta.uid = currentUid;
+    meta.lastAdoptedSource = "restore-local-only-skip-sync";
+    saveGameTicketSyncMeta(meta);
+    return;
+  }
+
+  const localStore = ensureGameTicketState();
+  const remoteResult = await window.loadGameTicketsFromFirestore(currentUid);
+  const adoption = chooseGameTicketSyncAdoption(localStore, remoteResult);
+
+  if (adoption.adopted === "firestore") {
+    applyGameTicketStateFromFirestore(remoteResult.data);
+    return;
+  }
+
+  if (adoption.adopted === "local" || adoption.adopted === "local-first-upload") {
+    await flushGameTicketSync();
+  }
+}
+
+function bindGameTicketAuthStateListener() {
+  if (document.body?.dataset.gameTicketAuthBound === "true") return;
+  document.addEventListener("pc-firebase-auth-state", (event) => {
+    const user = event?.detail?.user || null;
+    if (!user) {
+      clearGameTicketSyncDirty();
+      return;
+    }
+    syncGameTicketAfterLogin().catch((error) => {
+      console.error("Failed to synchronize game tickets after login", error);
+    });
+  });
+  if (document.body) {
+    document.body.dataset.gameTicketAuthBound = "true";
+  }
 }
 
 let pointStateCache = null;
@@ -7608,7 +8009,7 @@ function useGameTicketByMinutes(minutes) {
     usedAt: nextTicket.usedAt
   });
   pruneGameTicketUsageHistory(store);
-  saveState();
+  persistGameTicketState();
   renderHome();
   return true;
 }
@@ -9274,6 +9675,13 @@ function saveState() {
   const storageKey = getScopedLocalStorageKey(STORAGE_KEY);
   if (!storageKey) return;
   localStorage.setItem(storageKey, JSON.stringify(buildPersistedStateSnapshot()));
+  if (gameTicketSyncDirty && getCurrentPcFirebaseUid()) {
+    const meta = loadGameTicketSyncMeta();
+    meta.uid = String(getCurrentPcFirebaseUid() || meta.uid || "");
+    meta.updatedAt = Date.now();
+    saveGameTicketSyncMeta(meta);
+    scheduleGameTicketSync();
+  }
 }
 
 function createLearningBackupPayload() {
@@ -9418,6 +9826,19 @@ async function tryRestoreLearningDataFromFile(file) {
         confirmText: "復元する"
       });
       if (!legacyConfirmed) return;
+    }
+
+    const backupUid = extractUidFromScopedStorageKey(backup.storageKey, STORAGE_KEY);
+    if (backupUid && currentUid && backupUid !== currentUid) {
+      backup.state.stats = backup.state.stats && typeof backup.state.stats === "object"
+        ? {
+          ...backup.state.stats,
+          gameTickets: createDefaultGameTicketStats()
+        }
+        : {
+          gameTickets: createDefaultGameTicketStats()
+        };
+      markSkipGameTicketSyncOnce();
     }
 
     const serializedState = JSON.stringify(backup.state);
@@ -12857,6 +13278,7 @@ function handleEnterKey(event) {
 
 function bindEvents() {
   bindUserScopedStorageAuthStateListener();
+  bindGameTicketAuthStateListener();
   bindStudyCoreAuthStateListener();
   bindStudyCoreBackupAuthStateListener();
   bindPointStateAuthStateListener();

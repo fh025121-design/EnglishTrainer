@@ -188,8 +188,8 @@ async function saveLearningHistoryToFirestore(historyEntry) {
         answeredAt: Math.max(0, Number(entry?.answeredAt ?? entry?.at) || 0)
       })).filter((entry) => entry.questionId)
       : [],
-    ticketEarned: Math.max(0, Number(historyEntry?.ticket?.earnedMinutes) || 0),
-    ticketUsed: Math.max(0, Number(historyEntry?.ticket?.usedMinutes) || 0),
+    ticketEarned: Math.max(0, Number(historyEntry?.ticket?.earned?.gameTicketsMinutes) || Number(historyEntry?.ticket?.earnedMinutes) || 0),
+    ticketUsed: Math.max(0, Number(historyEntry?.ticket?.used?.gameTicketsMinutes) || Number(historyEntry?.ticket?.usedMinutes) || 0),
     deviceType: "pc",
     deviceId: String(historyEntry.deviceId || "").trim(),
     deviceName: String(historyEntry.deviceName || "").trim(),
@@ -362,6 +362,44 @@ async function savePointStateToFirestore(payload, options = {}) {
     return true;
   } catch (error) {
     console.error("Failed to save point state to Firestore", error);
+    return false;
+  }
+}
+
+async function loadGameTicketsFromFirestore(targetUid = null) {
+  const user = auth.currentUser;
+  const resolvedUid = String(targetUid || user?.uid || "").trim();
+  if (!resolvedUid) {
+    return { exists: false, data: null };
+  }
+
+  const snapshot = await getDoc(doc(firestore, "users", resolvedUid, "sync", "gameTickets"));
+  if (!snapshot.exists()) {
+    return { exists: false, data: null };
+  }
+
+  return {
+    exists: true,
+    data: normalizeFirestoreSerializableValue(snapshot.data() || {})
+  };
+}
+
+async function saveGameTicketsToFirestore(payload, options = {}) {
+  const user = auth.currentUser;
+  const resolvedUid = String(options?.targetUid || user?.uid || "").trim();
+  if (!resolvedUid || !payload || typeof payload !== "object") {
+    return false;
+  }
+
+  try {
+    await setDoc(
+      doc(firestore, "users", resolvedUid, "sync", "gameTickets"),
+      payload,
+      { merge: false }
+    );
+    return true;
+  } catch (error) {
+    console.error("Failed to save game tickets to Firestore", error);
     return false;
   }
 }
@@ -558,6 +596,8 @@ window.loadStudyCoreFromFirestore = loadStudyCoreFromFirestore;
 window.saveStudyCoreToFirestore = saveStudyCoreToFirestore;
 window.loadPointStateFromFirestore = loadPointStateFromFirestore;
 window.savePointStateToFirestore = savePointStateToFirestore;
+window.loadGameTicketsFromFirestore = loadGameTicketsFromFirestore;
+window.saveGameTicketsToFirestore = saveGameTicketsToFirestore;
 window.loadStudyCoreBackupsFromFirestore = loadStudyCoreBackupsFromFirestore;
 window.saveStudyCoreBackupToFirestore = saveStudyCoreBackupToFirestore;
 window.deleteStudyCoreBackupFromFirestore = deleteStudyCoreBackupFromFirestore;
