@@ -6224,7 +6224,16 @@ function showGameTicketModal(ticket) {
   const minutesText = document.getElementById("gameTicketMinutesText");
   const bodyText = document.getElementById("gameTicketBodyText");
   const introText = document.getElementById("gameTicketIntroText");
-  if (!modal || !titleText || !minutesText || !bodyText || !introText) return;
+  const thirtyPoster = document.getElementById("gameTicketThirtyPoster");
+  if (!modal || !titleText || !minutesText || !bodyText || !introText || !thirtyPoster) return;
+  const isThirtyMinuteTicket = Math.max(0, Math.floor(Number(ticket?.minutes) || 0)) === 30;
+  modal.classList.toggle("ticket-reward-card-30", isThirtyMinuteTicket);
+  thirtyPoster.classList.toggle("hidden", !isThirtyMinuteTicket);
+  thirtyPoster.setAttribute("aria-hidden", isThirtyMinuteTicket ? "false" : "true");
+  titleText.classList.toggle("hidden", isThirtyMinuteTicket);
+  minutesText.classList.toggle("ticket-reward-30-minutes", isThirtyMinuteTicket);
+  bodyText.classList.toggle("ticket-reward-30-get", isThirtyMinuteTicket);
+  introText.classList.toggle("hidden", isThirtyMinuteTicket);
   if (ticket.type === "streakBonus") {
     titleText.textContent = "🔥 連続学習ボーナス";
     minutesText.textContent = `${ticket.minutes}分券を獲得しました！`;
@@ -6233,14 +6242,99 @@ function showGameTicketModal(ticket) {
     titleText.textContent = "🎉 初回ボーナス！ 追加特訓を3回達成しました";
     minutesText.textContent = "ゲームチケット 5分券を獲得！";
     bodyText.textContent = "";
+  } else if (isThirtyMinuteTicket) {
+    titleText.textContent = "";
+    minutesText.textContent = "";
+    bodyText.textContent = "";
   } else {
     titleText.textContent = "🎫 ゲームチケット";
     minutesText.textContent = `${ticket.minutes}分券を獲得しました！`;
     bodyText.textContent = "追加特訓、よく頑張りました。";
   }
-  introText.textContent = "📷 スクリーンショットを撮って、保護者に見せましょう。";
+  introText.textContent = isThirtyMinuteTicket ? "" : "📷 スクリーンショットを撮って、保護者に見せましょう。";
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
+  if (isThirtyMinuteTicket) {
+    playGameTicketThirtyFanfare();
+  }
+}
+
+function playGameTicketThirtyFanfare() {
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return;
+  let audioContext = window.gameTicketFanfareAudioContext;
+  try {
+    if (!audioContext) {
+      audioContext = new AudioCtor();
+      window.gameTicketFanfareAudioContext = audioContext;
+    }
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(() => {});
+    }
+    const master = audioContext.createGain();
+    master.gain.value = 0.0001;
+    master.connect(audioContext.destination);
+
+    const compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.value = -24;
+    compressor.knee.value = 16;
+    compressor.ratio.value = 8;
+    compressor.attack.value = 0.002;
+    compressor.release.value = 0.18;
+    master.disconnect();
+    master.connect(compressor);
+    compressor.connect(audioContext.destination);
+
+    const notes = [
+      { freq: 220, start: 0.00, duration: 0.20, type: "sine", gain: 0.22 },
+      { freq: 440, start: 0.02, duration: 0.18, type: "triangle", gain: 0.18 },
+      { freq: 659.25, start: 0.10, duration: 0.22, type: "square", gain: 0.12 },
+      { freq: 880, start: 0.16, duration: 0.24, type: "triangle", gain: 0.16 },
+      { freq: 1046.5, start: 0.24, duration: 0.28, type: "sine", gain: 0.14 },
+      { freq: 1318.5, start: 0.32, duration: 0.34, type: "sawtooth", gain: 0.10 }
+    ];
+
+    const now = audioContext.currentTime + 0.02;
+    notes.forEach((note) => {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.type = note.type;
+      oscillator.frequency.setValueAtTime(note.freq, now + note.start);
+      oscillator.frequency.exponentialRampToValueAtTime(note.freq * 1.015, now + note.start + note.duration);
+      gainNode.gain.setValueAtTime(0.0001, now + note.start);
+      gainNode.gain.exponentialRampToValueAtTime(note.gain, now + note.start + 0.03);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + note.start + note.duration);
+      oscillator.connect(gainNode);
+      gainNode.connect(master);
+      oscillator.start(now + note.start);
+      oscillator.stop(now + note.start + note.duration + 0.04);
+    });
+
+    const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.25, audioContext.sampleRate);
+    const noiseData = noiseBuffer.getChannelData(0);
+    for (let index = 0; index < noiseData.length; index += 1) {
+      noiseData[index] = (Math.random() * 2 - 1) * (1 - index / noiseData.length);
+    }
+    const noiseSource = audioContext.createBufferSource();
+    const noiseGain = audioContext.createGain();
+    noiseSource.buffer = noiseBuffer;
+    noiseGain.gain.setValueAtTime(0.0001, now + 0.03);
+    noiseGain.gain.exponentialRampToValueAtTime(0.12, now + 0.07);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+    noiseSource.connect(noiseGain);
+    noiseGain.connect(master);
+    noiseSource.start(now + 0.03);
+    noiseSource.stop(now + 0.28);
+  } catch (error) {
+    console.warn("Failed to play 30-minute ticket fanfare", error);
+  }
+}
+
+function showImmediateGameTicketReward(ticket) {
+  if (!ticket) return;
+  const modal = document.getElementById("gameTicketModal");
+  if (!modal || !modal.classList.contains("hidden")) return;
+  showGameTicketModal(ticket);
 }
 
 function showPendingGameTicketModalIfAny() {
@@ -7118,7 +7212,10 @@ function awardPointsForTrainingMode(mode) {
   pointState.dailyEarnedByModeByDate[todayKey] = todayModeRow;
   savePointState(pointState);
   if (modeKey === "challenge") {
-    processChallengeGameTicketAwards();
+    const challengeTickets = processChallengeGameTicketAwards();
+    if (Array.isArray(challengeTickets) && challengeTickets.length) {
+      showImmediateGameTicketReward(challengeTickets[0]);
+    }
   }
   const exchangeScreen = document.getElementById("exchangeTicketScreen");
   if (exchangeScreen && exchangeScreen.classList.contains("active")) {
