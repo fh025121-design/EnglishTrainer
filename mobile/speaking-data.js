@@ -14,9 +14,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "What subject do you like?",
               "keywords": [
-                "what",
-                "subject",
-                "like"
+                "subject"
               ],
               "japanese": "どの科目が好きですか。",
               "hintType": "noun",
@@ -28,7 +26,6 @@ window.speakingData = {
               "speaker": "B",
               "english": "I like English.",
               "keywords": [
-                "like",
                 "English"
               ],
               "japanese": "英語が好きです。"
@@ -37,9 +34,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Where do you study English?",
               "keywords": [
-                "where",
-                "study",
-                "English"
+                "study"
               ],
               "japanese": "どこで英語を勉強しますか。",
               "hintType": "noun",
@@ -51,8 +46,6 @@ window.speakingData = {
               "speaker": "B",
               "english": "I study English at home.",
               "keywords": [
-                "study",
-                "English",
                 "home"
               ],
               "japanese": "家で英語を勉強します。"
@@ -467,9 +460,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "What subject do you like?",
               "keywords": [
-                "what",
-                "subject",
-                "like"
+                "subject"
               ],
               "japanese": "どの科目が好きですか。",
               "lineId": "W1-D1-QR01-01"
@@ -478,7 +469,6 @@ window.speakingData = {
               "speaker": "B",
               "english": "I like English.",
               "keywords": [
-                "like",
                 "English"
               ],
               "japanese": "英語が好きです。",
@@ -494,9 +484,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Where do you study English?",
               "keywords": [
-                "where",
-                "study",
-                "English"
+                "study"
               ],
               "japanese": "どこで英語を勉強しますか。",
               "lineId": "W1-D1-QR02-01"
@@ -505,8 +493,6 @@ window.speakingData = {
               "speaker": "B",
               "english": "I study English at home.",
               "keywords": [
-                "study",
-                "English",
                 "home"
               ],
               "japanese": "家で英語を勉強します。",
@@ -522,9 +508,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "When do you study at home?",
               "keywords": [
-                "when",
-                "study",
-                "home"
+                "study"
               ],
               "japanese": "いつ家で勉強しますか。",
               "lineId": "W1-D1-QR03-01"
@@ -533,7 +517,6 @@ window.speakingData = {
               "speaker": "B",
               "english": "I study in the evening.",
               "keywords": [
-                "study",
                 "evening"
               ],
               "japanese": "夕方［夜］に勉強します。",
@@ -549,8 +532,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "What sport do you play?",
               "keywords": [
-                "what sport",
-                "play"
+                "sport"
               ],
               "japanese": "何のスポーツをしますか。",
               "lineId": "W1-D1-QR04-01"
@@ -559,7 +541,6 @@ window.speakingData = {
               "speaker": "B",
               "english": "I play soccer.",
               "keywords": [
-                "play",
                 "soccer"
               ],
               "japanese": "サッカーをします。",
@@ -575,9 +556,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Do you study English every day?",
               "keywords": [
-                "study",
-                "English",
-                "every day"
+                "study"
               ],
               "japanese": "毎日英語を勉強しますか。",
               "lineId": "W1-D2-QR01-01"
@@ -586,8 +565,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, I do.",
               "keywords": [
-                "yes",
-                "do"
+                "yes"
               ],
               "japanese": "はい、します。",
               "lineId": "W1-D2-QR01-02"
@@ -602,8 +580,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Where do you have lunch?",
               "keywords": [
-                "where",
-                "have lunch"
+                "lunch"
               ],
               "japanese": "どこで昼食を食べますか。",
               "lineId": "W1-D2-QR02-01"
@@ -612,7 +589,6 @@ window.speakingData = {
               "speaker": "B",
               "english": "I have lunch at school.",
               "keywords": [
-                "have lunch",
                 "school"
               ],
               "japanese": "学校で昼食を食べます。",
@@ -628,8 +604,6 @@ window.speakingData = {
               "speaker": "A",
               "english": "What do you do at night?",
               "keywords": [
-                "what",
-                "do",
                 "night"
               ],
               "japanese": "夜、何をしますか。",
@@ -639,9 +613,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "I read books at night.",
               "keywords": [
-                "read",
-                "books",
-                "night"
+                "books"
               ],
               "japanese": "夜、本を読みます。",
               "lineId": "W1-D2-QR03-02"
@@ -656,9 +628,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Do you play tennis after school?",
               "keywords": [
-                "play",
-                "tennis",
-                "after school"
+                "tennis"
               ],
               "japanese": "放課後、テニスをしますか。",
               "lineId": "W1-D2-QR04-01"
@@ -667,8 +637,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "No, I don't.",
               "keywords": [
-                "no",
-                "don't"
+                "no"
               ],
               "japanese": "いいえ、しません。",
               "lineId": "W1-D2-QR04-02"
@@ -683,9 +652,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Does your friend like English?",
               "keywords": [
-                "friend",
-                "like",
-                "English"
+                "like"
               ],
               "japanese": "あなたの友達は英語が好きですか。",
               "lineId": "W1-D3-QR01-01"
@@ -694,8 +661,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, he does.",
               "keywords": [
-                "yes",
-                "does"
+                "yes"
               ],
               "japanese": "はい、好きです。",
               "lineId": "W1-D3-QR01-02"
@@ -710,9 +676,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "What sport does your friend play?",
               "keywords": [
-                "what sport",
-                "friend",
-                "play"
+                "sport"
               ],
               "japanese": "あなたの友達は何のスポーツをしますか。",
               "lineId": "W1-D3-QR02-01"
@@ -721,7 +685,6 @@ window.speakingData = {
               "speaker": "B",
               "english": "He plays soccer.",
               "keywords": [
-                "plays",
                 "soccer"
               ],
               "japanese": "彼はサッカーをします。",
@@ -737,8 +700,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Does he study English?",
               "keywords": [
-                "study",
-                "English"
+                "study"
               ],
               "japanese": "彼は英語を勉強しますか。",
               "lineId": "W1-D3-QR03-01"
@@ -747,8 +709,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, he does.",
               "keywords": [
-                "yes",
-                "does"
+                "yes"
               ],
               "japanese": "はい、勉強します。",
               "lineId": "W1-D3-QR03-02"
@@ -763,7 +724,6 @@ window.speakingData = {
               "speaker": "A",
               "english": "Can your friend swim?",
               "keywords": [
-                "friend",
                 "swim"
               ],
               "japanese": "あなたの友達は泳ぐことができますか。",
@@ -773,8 +733,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, he can.",
               "keywords": [
-                "yes",
-                "can"
+                "yes"
               ],
               "japanese": "はい、できます。",
               "lineId": "W1-D3-QR04-02"
@@ -798,8 +757,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, I can.",
               "keywords": [
-                "yes",
-                "can"
+                "yes"
               ],
               "japanese": "はい、できます。",
               "lineId": "W1-D4-QR01-02"
@@ -814,8 +772,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Can you run fast?",
               "keywords": [
-                "run",
-                "fast"
+                "run"
               ],
               "japanese": "速く走ることができますか。",
               "lineId": "W1-D4-QR02-01"
@@ -824,8 +781,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, I can.",
               "keywords": [
-                "yes",
-                "can"
+                "yes"
               ],
               "japanese": "はい、できます。",
               "lineId": "W1-D4-QR02-02"
@@ -840,8 +796,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Can you speak English?",
               "keywords": [
-                "speak",
-                "English"
+                "speak"
               ],
               "japanese": "英語を話すことができますか。",
               "lineId": "W1-D4-QR03-01"
@@ -850,9 +805,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "I can speak English a little.",
               "keywords": [
-                "speak",
-                "English",
-                "a little"
+                "speak"
               ],
               "japanese": "少し英語を話すことができます。",
               "lineId": "W1-D4-QR03-02"
@@ -867,7 +820,6 @@ window.speakingData = {
               "speaker": "A",
               "english": "What can you do?",
               "keywords": [
-                "what",
                 "do"
               ],
               "japanese": "何ができますか。",
@@ -877,8 +829,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "I can run fast.",
               "keywords": [
-                "run",
-                "fast"
+                "run"
               ],
               "japanese": "速く走ることができます。",
               "lineId": "W1-D4-QR04-02"
@@ -893,7 +844,6 @@ window.speakingData = {
               "speaker": "A",
               "english": "Is this your notebook?",
               "keywords": [
-                "your",
                 "notebook"
               ],
               "japanese": "これはあなたのノートですか。",
@@ -903,8 +853,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, it is.",
               "keywords": [
-                "yes",
-                "is"
+                "yes"
               ],
               "japanese": "はい、そうです。",
               "lineId": "W1-D5-QR01-02"
@@ -919,7 +868,6 @@ window.speakingData = {
               "speaker": "A",
               "english": "Are these your pens?",
               "keywords": [
-                "your",
                 "pens"
               ],
               "japanese": "これらはあなたのペンですか。",
@@ -929,8 +877,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, they are.",
               "keywords": [
-                "yes",
-                "are"
+                "yes"
               ],
               "japanese": "はい、そうです。",
               "lineId": "W1-D5-QR02-02"
@@ -954,7 +901,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "This is my notebook.",
               "keywords": [
-                "my notebook"
+                "notebook"
               ],
               "japanese": "私のノートです。",
               "lineId": "W1-D5-QR03-02"
@@ -978,7 +925,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "These are my pens.",
               "keywords": [
-                "my pens"
+                "pens"
               ],
               "japanese": "私のペンです。",
               "lineId": "W1-D5-QR04-02"
@@ -993,9 +940,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Did you study English yesterday?",
               "keywords": [
-                "study",
-                "English",
-                "yesterday"
+                "study"
               ],
               "japanese": "昨日、英語を勉強しましたか。",
               "lineId": "W1-D6-QR01-01"
@@ -1004,8 +949,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, I did.",
               "keywords": [
-                "yes",
-                "did"
+                "yes"
               ],
               "japanese": "はい、しました。",
               "lineId": "W1-D6-QR01-02"
@@ -1020,8 +964,6 @@ window.speakingData = {
               "speaker": "A",
               "english": "What did you do yesterday?",
               "keywords": [
-                "what",
-                "do",
                 "yesterday"
               ],
               "japanese": "昨日、何をしましたか。",
@@ -1031,8 +973,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "I studied English.",
               "keywords": [
-                "studied",
-                "English"
+                "studied"
               ],
               "japanese": "英語を勉強しました。",
               "lineId": "W1-D6-QR02-02"
@@ -1047,9 +988,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Did you play soccer yesterday?",
               "keywords": [
-                "play",
-                "soccer",
-                "yesterday"
+                "soccer"
               ],
               "japanese": "昨日、サッカーをしましたか。",
               "lineId": "W1-D6-QR03-01"
@@ -1058,8 +997,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, I did.",
               "keywords": [
-                "yes",
-                "did"
+                "yes"
               ],
               "japanese": "はい、しました。",
               "lineId": "W1-D6-QR03-02"
@@ -1074,9 +1012,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Where did you go yesterday?",
               "keywords": [
-                "where",
-                "go",
-                "yesterday"
+                "go"
               ],
               "japanese": "昨日、どこへ行きましたか。",
               "lineId": "W1-D6-QR04-01"
@@ -1085,7 +1021,6 @@ window.speakingData = {
               "speaker": "B",
               "english": "I went to school.",
               "keywords": [
-                "went",
                 "school"
               ],
               "japanese": "学校へ行きました。",
@@ -1101,9 +1036,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "What subject do you like?",
               "keywords": [
-                "what",
-                "subject",
-                "like"
+                "subject"
               ],
               "japanese": "どの科目が好きですか。",
               "lineId": "W1-D7-QR01-01"
@@ -1112,7 +1045,6 @@ window.speakingData = {
               "speaker": "B",
               "english": "I like English.",
               "keywords": [
-                "like",
                 "English"
               ],
               "japanese": "英語が好きです。",
@@ -1128,8 +1060,6 @@ window.speakingData = {
               "speaker": "A",
               "english": "What can you do in English?",
               "keywords": [
-                "what",
-                "do",
                 "English"
               ],
               "japanese": "英語で何ができますか。",
@@ -1139,8 +1069,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "I can write short sentences.",
               "keywords": [
-                "write",
-                "short sentences"
+                "write"
               ],
               "japanese": "短い文を書くことができます。",
               "lineId": "W1-D7-QR02-02"
@@ -1155,9 +1084,7 @@ window.speakingData = {
               "speaker": "A",
               "english": "Did you study English yesterday?",
               "keywords": [
-                "study",
-                "English",
-                "yesterday"
+                "study"
               ],
               "japanese": "昨日、英語を勉強しましたか。",
               "lineId": "W1-D7-QR03-01"
@@ -1166,8 +1093,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "Yes, I did.",
               "keywords": [
-                "yes",
-                "did"
+                "yes"
               ],
               "japanese": "はい、しました。",
               "lineId": "W1-D7-QR03-02"
@@ -1182,8 +1108,6 @@ window.speakingData = {
               "speaker": "A",
               "english": "What do you want to practice?",
               "keywords": [
-                "what",
-                "want",
                 "practice"
               ],
               "japanese": "何を練習したいですか。",
@@ -1193,8 +1117,7 @@ window.speakingData = {
               "speaker": "B",
               "english": "I want to practice speaking.",
               "keywords": [
-                "want",
-                "practice speaking"
+                "speaking"
               ],
               "japanese": "話す練習をしたいです。",
               "lineId": "W1-D7-QR04-02"

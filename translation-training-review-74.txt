@@ -1,0 +1,6036 @@
+【id 1 / A】
+
+英文全体：
+I went to the library / because I needed a book.
+
+スラッシュ1：
+英文：
+I went to the library
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「行った / 行く / 行くことができる」
+③ 2択「図書館に / 博物館に」
+
+正解：
+① 固定「私は」
+② 「行った」
+③ 「図書館に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+because I needed a book.
+
+現在の画面表示順：
+① 固定「本が」
+② 3択「必要だったので / 必要なので / 欲しかったので」
+
+正解：
+① 固定「本が」
+② 「必要だったので」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 2 / A】
+
+英文全体：
+She stayed at home / because she was tired.
+
+スラッシュ1：
+英文：
+She stayed at home
+
+現在の画面表示順：
+① 固定「彼女は」
+② 3択「家にいた / 家にいる / 家に帰った」
+
+正解：
+① 固定「彼女は」
+② 「家にいた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+because she was tired.
+
+現在の画面表示順：
+① 固定「彼女は」
+② 3択「疲れていたので / 疲れているので / 疲れるだろうから」
+
+正解：
+① 固定「彼女は」
+② 「疲れていたので」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 3 / A】
+
+英文全体：
+After I finished my homework, / I watched TV.
+
+スラッシュ1：
+英文：
+After I finished my homework,
+
+現在の画面表示順：
+① 固定「終えた」
+② 3択「あとで・私は / まえに・私は / あいだに・私は」
+③ 3択「宿題を / テレビを / 買い物を」
+
+正解：
+① 固定「終えた」
+② 「あとで・私は」
+③ 「宿題を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+I watched TV.
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「見ます / 見ました / 見ることができます」
+③ 3択「テレビを / 映画を / 本を」
+
+正解：
+① 固定「私は」
+② 「見ました」
+③ 「テレビを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 4 / A】
+
+英文全体：
+When I got home, / my mother was cooking dinner.
+
+スラッシュ1：
+英文：
+When I got home,
+
+現在の画面表示順：
+① 3択「とき・私は / まえに・私は / あいだに・私は」
+② 3択「帰った / 帰る / 帰れる」
+③ 3択「家に / 学校に / 公園に」
+
+正解：
+① 「とき・私は」
+② 「帰った」
+③ 「家に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+my mother was cooking dinner.
+
+現在の画面表示順：
+① 固定「母は」
+② 3択「作っていました / 作りました / 作ります」
+③ 3択「夕食を / 朝食を / お弁当を」
+
+正解：
+① 固定「母は」
+② 「作っていました」
+③ 「夕食を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 5 / A】
+
+英文全体：
+This question was difficult, / but I answered it.
+
+スラッシュ1：
+英文：
+This question was difficult,
+
+現在の画面表示順：
+① 固定「この問題は」
+② 3択「難しかったです / 難しいです / 難しくなるでしょう」
+
+正解：
+① 固定「この問題は」
+② 「難しかったです」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+but I answered it.
+
+現在の画面表示順：
+① 3択「しかし・私は / だから・私は / そして・私は」
+② 3択「答えました / 答えます / 答えませんでした」
+③ 3択「それに / これに / そのことに」
+
+正解：
+① 「しかし・私は」
+② 「答えました」
+③ 「それに」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 6 / A】
+
+英文全体：
+I heard that / Ken visited his grandmother yesterday.
+
+スラッシュ1：
+英文：
+I heard that
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「聞いた / 思った / 尋ねた」
+③ 3択「～ということを / ～ので / ～のあと」
+
+正解：
+① 固定「私は」
+② 「聞いた」
+③ 「～ということを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+Ken visited his grandmother yesterday.
+
+現在の画面表示順：
+① 固定「ケンが」
+② 3択「訪ねた / 訪ねる / 訪ねる予定だ」
+③ 3択「昨日祖母を / 祖母に昨日 / 祖母と昨日」
+
+正解：
+① 固定「ケンが」
+② 「訪ねた」
+③ 「昨日祖母を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 7 / A】
+
+英文全体：
+When I got home, / my mother was cooking dinner.
+
+スラッシュ1：
+英文：
+When I got home,
+
+現在の画面表示順：
+① 3択「～したとき私は / ～する前に私は / ～している間私は」
+② 3択「帰った / 帰る / 帰る予定だった」
+③ 3択「家に / 学校に / 図書館に」
+
+正解：
+① 「～したとき私は」
+② 「帰った」
+③ 「家に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+my mother was cooking dinner.
+
+現在の画面表示順：
+① 固定「母は」
+② 3択「作っていた / 作った / 作るつもりだった」
+③ 3択「夕食を / 朝食を / 昼食を」
+
+正解：
+① 固定「母は」
+② 「作っていた」
+③ 「夕食を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 8 / A】
+
+英文全体：
+I stayed home / because it was raining.
+
+スラッシュ1：
+英文：
+I stayed home
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「いた / 行った / 帰った」
+③ 3択「家に / 学校に / 駅に」
+
+正解：
+① 固定「私は」
+② 「いた」
+③ 「家に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+because it was raining.
+
+現在の画面表示順：
+① 3択「なぜなら / だから / それでも」
+② 3択「雨が / 雪が / 風が」
+③ 3択「降っていたから / 降るだろうから / 降っていなかったから」
+
+正解：
+① 「なぜなら」
+② 「雨が」
+③ 「降っていたから」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 9 / B】
+
+英文全体：
+Mai went to a bookstore / to buy a book about animals, / but she couldn't find one.
+
+スラッシュ1：
+英文：
+Mai went to a bookstore
+
+現在の画面表示順：
+① 固定「マイは」
+② 3択「行った / 行く / 行っている」
+③ 3択「本屋へ / 図書館へ / 公園へ」
+
+正解：
+① 固定「マイは」
+② 「行った」
+③ 「本屋へ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+to buy a book about animals,
+
+現在の画面表示順：
+① 3択「買うために / 読むために / 借りるために」
+② 3択「本を / 雑誌を / ノートを」
+③ 3択「動物についての / 旅行についての / 音楽についての」
+
+正解：
+① 「買うために」
+② 「本を」
+③ 「動物についての」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+but she couldn't find one.
+
+現在の画面表示順：
+① 3択「しかし彼女は / だから彼女は / そして彼女は」
+② 3択「見つけられなかった / 見つけられる / 見つけようとした」
+③ 3択「それを / それで / そこを」
+
+正解：
+① 「しかし彼女は」
+② 「見つけられなかった」
+③ 「それを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 10 / B】
+
+英文全体：
+I haven't seen my cousin / since he moved to Osaka, / so I want to visit him this summer.
+
+スラッシュ1：
+英文：
+I haven't seen my cousin
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「会っていない / 会わなかった / 会うつもりはない」
+③ 3択「いとこに / 友達に / 先生に」
+
+正解：
+① 固定「私は」
+② 「会っていない」
+③ 「いとこに」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+since he moved to Osaka,
+
+現在の画面表示順：
+① 3択「～して以来 / ～する前に / ～したので」
+② 3択「彼が引っ越した / 彼が引っ越している / 彼が引っ越すだろう」
+③ 3択「大阪へ / 京都へ / 神戸へ」
+
+正解：
+① 「～して以来」
+② 「彼が引っ越した」
+③ 「大阪へ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+so I want to visit him this summer.
+
+現在の画面表示順：
+① 3択「だから私は / しかし私は / それでも私は」
+② 3択「訪ねたい / 訪ねた / 訪ねている」
+③ 3択「彼をこの夏に / 彼にこの夏 / 彼とこの夏」
+
+正解：
+① 「だから私は」
+② 「訪ねたい」
+③ 「彼をこの夏に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 11 / B】
+
+英文全体：
+When Yuki comes back from Canada, / she will show me / the pictures she took there.
+
+スラッシュ1：
+英文：
+When Yuki comes back from Canada,
+
+現在の画面表示順：
+① 固定「ユキが」
+② 3択「～したとき / ～する前に / ～している間」
+③ 3択「帰ってくる / 帰ってきた / 帰ってこない」
+④ 3択「カナダから / アメリカから / イギリスから」
+
+正解：
+① 固定「ユキが」
+② 「～したとき」
+③ 「帰ってくる」
+④ 「カナダから」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+she will show me
+
+現在の画面表示順：
+① 3択「彼女は / 彼は / 私は」
+② 3択「見せるだろう / 見せた / 見せている」
+③ 3択「私に / 私を / 私と」
+
+正解：
+① 「彼女は」
+② 「見せるだろう」
+③ 「私に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+the pictures she took there.
+
+現在の画面表示順：
+① 3択「写真を / 手紙を / 本を」
+② 3択「彼女が撮った / 彼女が撮る / 彼女が見た」
+③ 3択「そこで / ここで / あとで」
+
+正解：
+① 「写真を」
+② 「彼女が撮った」
+③ 「そこで」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 12 / C】
+
+英文全体：
+Taku went to a sports shop / because he wanted to buy new soccer shoes. / He found a pair he liked, / but they were too expensive. / So he decided to save his money / and come back next month.
+
+スラッシュ1：
+英文：
+Taku went to a sports shop
+
+現在の画面表示順：
+① 固定「タクは」
+② 3択「行った / 行く / 行っている」
+③ 3択「スポーツ店へ / 図書館へ / 学校へ」
+
+正解：
+① 固定「タクは」
+② 「行った」
+③ 「スポーツ店へ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+because he wanted to buy new soccer shoes.
+
+現在の画面表示順：
+① 3択「なぜなら彼は / しかし彼は / だから彼は」
+② 3択「買いたかった / 買っている / 買わなかった」
+③ 3択「新しいサッカーシューズを / 新しい帽子を / 新しい本を」
+
+正解：
+① 「なぜなら彼は」
+② 「買いたかった」
+③ 「新しいサッカーシューズを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+He found a pair he liked,
+
+現在の画面表示順：
+① 3択「彼は / 彼女は / 私は」
+② 3択「見つけた / 見つける / 見つけたい」
+③ 3択「気に入った一足を / 高い一足を / 古い一足を」
+
+正解：
+① 「彼は」
+② 「見つけた」
+③ 「気に入った一足を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+but they were too expensive.
+
+現在の画面表示順：
+① 3択「しかしそれは / だからそれは / そしてそれは」
+② 3択「高すぎた / 安すぎた / ちょうどよかった」
+
+正解：
+① 「しかしそれは」
+② 「高すぎた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+So he decided to save his money
+
+現在の画面表示順：
+① 3択「だから彼は / しかし彼は / それでも彼は」
+② 3択「～することに決めた / ～している / ～する必要がある」
+③ 3択「お金を貯める / お金を使う / お金を借りる」
+
+正解：
+① 「だから彼は」
+② 「～することに決めた」
+③ 「お金を貯める」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+and come back next month.
+
+現在の画面表示順：
+① 3択「そして / しかし / だから」
+② 3択「また来る / また行く / また見る」
+③ 3択「来月 / 昨日 / 先週」
+
+正解：
+① 「そして」
+② 「また来る」
+③ 「来月」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 13 / C】
+
+英文全体：
+Aya went to the library / to study for her English test. / When she was looking for a dictionary, / she met her old teacher. / Aya was very happy to see her / because they hadn't met for two years.
+
+スラッシュ1：
+英文：
+Aya went to the library
+
+現在の画面表示順：
+① 固定「アヤは」
+② 3択「行った / 行く / 行っている」
+③ 3択「図書館へ / 本屋へ / 公園へ」
+
+正解：
+① 固定「アヤは」
+② 「行った」
+③ 「図書館へ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+to study for her English test.
+
+現在の画面表示順：
+① 3択「勉強するために / 遊ぶために / 休むために」
+② 3択「英語のテストに向けて / 英語の先生のために / 英語の本について」
+
+正解：
+① 「勉強するために」
+② 「英語のテストに向けて」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+When she was looking for a dictionary,
+
+現在の画面表示順：
+① 3択「～していたとき彼女が / ～する前に彼女が / ～してから彼女が」
+② 3択「探していた / 探した / 探すつもりだ」
+③ 3択「辞書を / ノートを / 時計を」
+
+正解：
+① 「～していたとき彼女が」
+② 「探していた」
+③ 「辞書を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+she met her old teacher.
+
+現在の画面表示順：
+① 3択「彼女は / 彼は / 私は」
+② 3択「会った / 会う / 会いたい」
+③ 3択「昔の先生に / 友達に / 母に」
+
+正解：
+① 「彼女は」
+② 「会った」
+③ 「昔の先生に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+Aya was very happy to see her
+
+現在の画面表示順：
+① 固定「アヤは」
+② 3択「とてもうれしかった / とても悲しかった / とても疲れていた」
+③ 3択「彼女に会えて / 彼女に会うために / 彼女に会わずに」
+
+正解：
+① 固定「アヤは」
+② 「とてもうれしかった」
+③ 「彼女に会えて」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+because they hadn't met for two years.
+
+現在の画面表示順：
+① 3択「なぜなら二人は / しかし二人は / だから二人は」
+② 3択「会っていなかった / 会っていた / 会うだろう」
+③ 3択「2年間 / 2日間 / 2週間」
+
+正解：
+① 「なぜなら二人は」
+② 「会っていなかった」
+③ 「2年間」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 14 / C】
+
+英文全体：
+Riku planned to play baseball / with his friends on Sunday. / But when he woke up, / it was raining heavily. / So they went to a sports center / and played basketball instead. / They had a great time there.
+
+スラッシュ1：
+英文：
+Riku planned to play baseball
+
+現在の画面表示順：
+① 固定「リクは」
+② 3択「～する予定だった / ～している / ～したくなかった」
+③ 3択「野球をする / サッカーをする / 勉強をする」
+
+正解：
+① 固定「リクは」
+② 「～する予定だった」
+③ 「野球をする」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+with his friends on Sunday.
+
+現在の画面表示順：
+① 3択「友達と / 先生と / 家族と」
+② 3択「日曜日に / 土曜日に / 月曜日に」
+
+正解：
+① 「友達と」
+② 「日曜日に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+But when he woke up,
+
+現在の画面表示順：
+① 3択「しかし～したとき / だから～したとき / そして～したとき」
+② 3択「彼が起きた / 彼が起きる / 彼が寝た」
+
+正解：
+① 「しかし～したとき」
+② 「彼が起きた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+it was raining heavily.
+
+現在の画面表示順：
+① 3択「雨が / 雪が / 風が」
+② 3択「激しく / 静かに / ゆっくり」
+③ 3択「降っていた / 降るだろう / 降っていない」
+
+正解：
+① 「雨が」
+② 「激しく」
+③ 「降っていた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+So they went to a sports center
+
+現在の画面表示順：
+① 3択「だから彼らは / しかし彼らは / そして彼らは」
+② 3択「行った / 行く / 戻った」
+③ 3択「スポーツセンターへ / 図書館へ / 学校へ」
+
+正解：
+① 「だから彼らは」
+② 「行った」
+③ 「スポーツセンターへ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+and played basketball instead.
+
+現在の画面表示順：
+① 3択「そして / しかし / だから」
+② 3択「バスケットボールをした / バスケットボールを見る / バスケットボールを習う」
+③ 3択「代わりに / すぐに / いつも」
+
+正解：
+① 「そして」
+② 「バスケットボールをした」
+③ 「代わりに」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+They had a great time there.
+
+現在の画面表示順：
+① 3択「彼らは / 彼女は / 私は」
+② 3択「とても楽しく過ごした / とても疲れていた / とても急いでいた」
+③ 3択「そこで / ここで / 家で」
+
+正解：
+① 「彼らは」
+② 「とても楽しく過ごした」
+③ 「そこで」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 15 / A】
+
+英文全体：
+I will give the present to my sister / tomorrow.
+
+スラッシュ1：
+英文：
+I will give the present to my sister
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「あげるつもりだ / あげた / あげている」
+③ 3択「プレゼントを妹に / プレゼントを友達に / プレゼントを先生に」
+
+正解：
+① 固定「私は」
+② 「あげるつもりだ」
+③ 「プレゼントを妹に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+tomorrow.
+
+現在の画面表示順：
+① 固定「明日」
+
+正解：
+① 固定「明日」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 16 / A】
+
+英文全体：
+My brother wants to visit Canada / next year.
+
+スラッシュ1：
+英文：
+My brother wants to visit Canada
+
+現在の画面表示順：
+① 固定「私の兄は」
+② 3択「訪れたい / 訪れた / 訪れなければならない」
+③ 3択「カナダを / アメリカを / 韓国を」
+
+正解：
+① 固定「私の兄は」
+② 「訪れたい」
+③ 「カナダを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+next year.
+
+現在の画面表示順：
+① 固定「来年」
+
+正解：
+① 固定「来年」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 17 / A】
+
+英文全体：
+We are going to play soccer / after school.
+
+スラッシュ1：
+英文：
+We are going to play soccer
+
+現在の画面表示順：
+① 固定「私たちは」
+② 3択「サッカーをする予定だ / サッカーをしていた / サッカーをしなければならない」
+
+正解：
+① 固定「私たちは」
+② 「サッカーをする予定だ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+after school.
+
+現在の画面表示順：
+① 固定「放課後に」
+
+正解：
+① 固定「放課後に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 18 / A】
+
+英文全体：
+I haven't seen my uncle / for three years.
+
+スラッシュ1：
+英文：
+I haven't seen my uncle
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「会っていない / 会わなかった / 会うつもりだ」
+③ 3択「おじに / 友達に / 先生に」
+
+正解：
+① 固定「私は」
+② 「会っていない」
+③ 「おじに」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+for three years.
+
+現在の画面表示順：
+① 固定「3年間」
+
+正解：
+① 固定「3年間」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 19 / A】
+
+英文全体：
+Mika went to the library / to study English.
+
+スラッシュ1：
+英文：
+Mika went to the library
+
+現在の画面表示順：
+① 固定「ミカは」
+② 3択「行った / 行く / 行っている」
+③ 3択「図書館へ / 駅へ / 公園へ」
+
+正解：
+① 固定「ミカは」
+② 「行った」
+③ 「図書館へ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+to study English.
+
+現在の画面表示順：
+① 3択「勉強するために / 勉強した後で / 勉強している間に」
+② 3択「英語を / 数学を / 理科を」
+
+正解：
+① 「勉強するために」
+② 「英語を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 20 / B】
+
+英文全体：
+I hear that / you are preparing for a school festival / with your classmates.
+
+スラッシュ1：
+英文：
+I hear that
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「聞いている / 聞いた / 聞いていない」
+③ 3択「～ということを / ～する前に / ～したので」
+
+正解：
+① 固定「私は」
+② 「聞いている」
+③ 「～ということを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+you are preparing for a school festival
+
+現在の画面表示順：
+① 固定「あなたが」
+② 3択「準備している / 準備した / 準備するつもりだ」
+③ 3択「学校祭のために / 学校祭のあとで / 学校祭の近くで」
+
+正解：
+① 固定「あなたが」
+② 「準備している」
+③ 「学校祭のために」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+with your classmates.
+
+現在の画面表示順：
+① 固定「クラスメートと」
+
+正解：
+① 固定「クラスメートと」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 21 / B】
+
+英文全体：
+When I come back to Japan, / I will show you / the pictures I took in Australia.
+
+スラッシュ1：
+英文：
+When I come back to Japan,
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「～したら / ～する前に / ～している間」
+③ 3択「帰ってくる / 帰ってきた / 帰ってこない」
+④ 3択「日本へ / カナダへ / アメリカへ」
+
+正解：
+① 固定「私は」
+② 「～したら」
+③ 「帰ってくる」
+④ 「日本へ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+I will show you
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「見せるつもりだ / 見せた / 見せている」
+③ 3択「あなたに / あなたを / あなたと」
+
+正解：
+① 固定「私は」
+② 「見せるつもりだ」
+③ 「あなたに」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+the pictures I took in Australia.
+
+現在の画面表示順：
+① 3択「写真を / 手紙を / 地図を」
+② 3択「私が撮った / 私が見る / 私が送った」
+③ 3択「オーストラリアで / 日本で / カナダで」
+
+正解：
+① 「写真を」
+② 「私が撮った」
+③ 「オーストラリアで」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 22 / B】
+
+英文全体：
+The bag was too expensive / for me to buy, / so I chose a cheaper one.
+
+スラッシュ1：
+英文：
+The bag was too expensive
+
+現在の画面表示順：
+① 固定「そのバッグは」
+② 3択「高すぎた / 高くない / ちょうどよかった」
+
+正解：
+① 固定「そのバッグは」
+② 「高すぎた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+for me to buy,
+
+現在の画面表示順：
+① 固定「私が」
+② 3択「買うには / 買ったので / 買っている間に」
+
+正解：
+① 固定「私が」
+② 「買うには」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+so I chose a cheaper one.
+
+現在の画面表示順：
+① 固定「だから私は」
+② 3択「選んだ / 選ぶ / 選んでいる」
+③ 3択「もっと安いものを / 同じものを / 高いものを」
+
+正解：
+① 固定「だから私は」
+② 「選んだ」
+③ 「もっと安いものを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 23 / B】
+
+英文全体：
+After finishing her homework, / Emi helped her mother / make dinner.
+
+スラッシュ1：
+英文：
+After finishing her homework,
+
+現在の画面表示順：
+① 3択「終えた後 / 終える前 / 終えている間」
+② 3択「宿題を / 買い物を / 練習を」
+
+正解：
+① 「終えた後」
+② 「宿題を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+Emi helped her mother
+
+現在の画面表示順：
+① 固定「エミは」
+② 3択「手伝った / 手伝う / 手伝っている」
+③ 3択「母を / 姉を / 友達を」
+
+正解：
+① 固定「エミは」
+② 「手伝った」
+③ 「母を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+make dinner.
+
+現在の画面表示順：
+① 3択「夕食を作るのを / 夕食を食べるのを / 夕食を買うのを」
+
+正解：
+① 「夕食を作るのを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 24 / B】
+
+英文全体：
+Yuta was happy to see his friend / because they hadn't met / for a long time.
+
+スラッシュ1：
+英文：
+Yuta was happy to see his friend
+
+現在の画面表示順：
+① 固定「ユウタは」
+② 3択「うれしかった / 悲しかった / 怒っていた」
+③ 3択「友達に会えて / 友達に会うために / 友達に会わずに」
+
+正解：
+① 固定「ユウタは」
+② 「うれしかった」
+③ 「友達に会えて」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+because they hadn't met
+
+現在の画面表示順：
+① 3択「なぜなら二人は / しかし二人は / それでも二人は」
+② 3択「会っていなかった / 会っていた / 会うだろう」
+
+正解：
+① 「なぜなら二人は」
+② 「会っていなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+for a long time.
+
+現在の画面表示順：
+① 固定「長い間」
+
+正解：
+① 固定「長い間」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 25 / C】
+
+英文全体：
+Miki went to a bookstore / to buy a birthday present for her friend. / When she got there, / she couldn't find the book she wanted. / But a store clerk showed her another book, / and she decided to buy it.
+
+スラッシュ1：
+英文：
+Miki went to a bookstore
+
+現在の画面表示順：
+① 固定「ミキは」
+② 3択「行った / 行く / 行っている」
+③ 3択「本屋へ / 図書館へ / 駅へ」
+
+正解：
+① 固定「ミキは」
+② 「行った」
+③ 「本屋へ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+to buy a birthday present for her friend.
+
+現在の画面表示順：
+① 3択「買うために / 買ったあとで / 買っている間に」
+② 3択「誕生日プレゼントを / 宿題を / おみやげを」
+③ 3択「友達への / 友達と / 友達の近くで」
+
+正解：
+① 「買うために」
+② 「誕生日プレゼントを」
+③ 「友達への」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+When she got there,
+
+現在の画面表示順：
+① 3択「～したとき彼女が / ～する前に彼女が / ～している間彼女が」
+② 3択「そこに着いた / そこを出た / そこに戻る」
+
+正解：
+① 「～したとき彼女が」
+② 「そこに着いた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+she couldn't find the book she wanted.
+
+現在の画面表示順：
+① 固定「彼女は」
+② 3択「見つけられなかった / 見つけられる / 見つけるつもりだった」
+③ 3択「欲しかった本を / 読んだ本を / 借りる本を」
+
+正解：
+① 固定「彼女は」
+② 「見つけられなかった」
+③ 「欲しかった本を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+But a store clerk showed her another book,
+
+現在の画面表示順：
+① 3択「しかし店員が / だから店員が / そして店員が」
+② 3択「見せてくれた / 見せる / 見せられた」
+③ 3択「別の本を / 同じ本を / 古い本を」
+
+正解：
+① 「しかし店員が」
+② 「見せてくれた」
+③ 「別の本を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+and she decided to buy it.
+
+現在の画面表示順：
+① 固定「そして彼女は」
+② 3択「買うことに決めた / 買わないことにした / 買っている」
+③ 3択「それを / それらを / そこで」
+
+正解：
+① 固定「そして彼女は」
+② 「買うことに決めた」
+③ 「それを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 26 / C】
+
+英文全体：
+Kota is going to play tennis / with his friends tomorrow morning. / After that, they will have lunch / at a restaurant near the station. / Kota has never been there, / so he is looking forward to it.
+
+スラッシュ1：
+英文：
+Kota is going to play tennis
+
+現在の画面表示順：
+① 固定「コウタは」
+② 3択「テニスをする予定だ / テニスをした / テニスをしなければならない」
+
+正解：
+① 固定「コウタは」
+② 「テニスをする予定だ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+with his friends tomorrow morning.
+
+現在の画面表示順：
+① 3択「友達と / 先生と / 家族と」
+② 3択「明日の朝 / 昨夜 / 来週」
+
+正解：
+① 「友達と」
+② 「明日の朝」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+After that, they will have lunch
+
+現在の画面表示順：
+① 3択「その後彼らは / しかし彼らは / その前に彼らは」
+② 3択「昼食をとる予定だ / 昼食をとった / 昼食をとっている」
+
+正解：
+① 「その後彼らは」
+② 「昼食をとる予定だ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+at a restaurant near the station.
+
+現在の画面表示順：
+① 3択「レストランで / レストランへ / レストランから」
+② 3択「駅の近くの / 駅の向こうの / 駅の外の」
+
+正解：
+① 「レストランで」
+② 「駅の近くの」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+Kota has never been there,
+
+現在の画面表示順：
+① 固定「コウタは」
+② 3択「一度も行ったことがない / 行ったことがある / 今行っている」
+③ 3択「そこへ / ここへ / 家へ」
+
+正解：
+① 固定「コウタは」
+② 「一度も行ったことがない」
+③ 「そこへ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+so he is looking forward to it.
+
+現在の画面表示順：
+① 3択「だから彼は / しかし彼は / それでも彼は」
+② 3択「楽しみにしている / 心配している / 忘れてしまった」
+③ 3択「それを / 彼を / それらを」
+
+正解：
+① 「だから彼は」
+② 「楽しみにしている」
+③ 「それを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 27 / C】
+
+英文全体：
+While Nana was shopping for dinner, / she saw her old music teacher. / They talked about their school days / for about twenty minutes. / Nana was surprised to see him / because he now lived in another city.
+
+スラッシュ1：
+英文：
+While Nana was shopping for dinner,
+
+現在の画面表示順：
+① 固定「ナナが」
+② 3択「～している間 / ～した後 / ～する前」
+③ 3択「買い物をしていた / 買い物をした / 買い物をするだろう」
+④ 3択「夕食のために / 夕食のあとで / 夕食の近くで」
+
+正解：
+① 固定「ナナが」
+② 「～している間」
+③ 「買い物をしていた」
+④ 「夕食のために」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+she saw her old music teacher.
+
+現在の画面表示順：
+① 固定「彼女は」
+② 3択「見かけた / 見つける / 会う予定だ」
+③ 3択「昔の音楽の先生を / 新しい英語の先生を / 近所の友達を」
+
+正解：
+① 固定「彼女は」
+② 「見かけた」
+③ 「昔の音楽の先生を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+They talked about their school days
+
+現在の画面表示順：
+① 3択「二人は / 彼女は / 先生は」
+② 3択「話した / 聞いた / 忘れた」
+③ 3択「学校時代について / 学校時代の前に / 学校時代のあとで」
+
+正解：
+① 「二人は」
+② 「話した」
+③ 「学校時代について」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+for about twenty minutes.
+
+現在の画面表示順：
+① 固定「約20分間」
+
+正解：
+① 固定「約20分間」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ5：
+英文：
+Nana was surprised to see him
+
+現在の画面表示順：
+① 固定「ナナは」
+② 3択「驚いた / 喜んだ / 安心した」
+③ 3択「彼に会って / 彼に会うために / 彼に会わずに」
+
+正解：
+① 固定「ナナは」
+② 「驚いた」
+③ 「彼に会って」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+because he now lived in another city.
+
+現在の画面表示順：
+① 3択「なぜなら彼は今 / しかし彼は今 / その前に彼は今」
+② 3択「住んでいた / 住んでいる / 住むだろう」
+③ 3択「別の町に / 同じ町に / 学校に」
+
+正解：
+① 「なぜなら彼は今」
+② 「住んでいた」
+③ 「別の町に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 28 / C】
+
+英文全体：
+Sora visited a large park / with his host family in New Zealand. / The weather was beautiful, / so he took many pictures of the lake and flowers. / He wants to show them to his family / when he returns to Japan.
+
+スラッシュ1：
+英文：
+Sora visited a large park
+
+現在の画面表示順：
+① 固定「ソラは」
+② 3択「訪れた / 訪れる / 訪れている」
+③ 3択「大きな公園を / 小さな公園を / 博物館を」
+
+正解：
+① 固定「ソラは」
+② 「訪れた」
+③ 「大きな公園を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+with his host family in New Zealand.
+
+現在の画面表示順：
+① 3択「ホストファミリーと / クラスメートと / 先生と」
+② 3択「ニュージーランドで / 日本で / オーストラリアで」
+
+正解：
+① 「ホストファミリーと」
+② 「ニュージーランドで」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+The weather was beautiful,
+
+現在の画面表示順：
+① 固定「天気は」
+② 3択「とてもよかった / 悪かった / 変わらなかった」
+
+正解：
+① 固定「天気は」
+② 「とてもよかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+so he took many pictures of the lake and flowers.
+
+現在の画面表示順：
+① 3択「だから彼は / しかし彼は / その前に彼は」
+② 3択「たくさん写真を撮った / 写真を見た / 写真をなくした」
+③ 3択「湖や花の / 山や川の / 家や学校の」
+
+正解：
+① 「だから彼は」
+② 「たくさん写真を撮った」
+③ 「湖や花の」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+He wants to show them to his family
+
+現在の画面表示順：
+① 固定「彼は」
+② 3択「見せたい / 見せた / 見せなければならない」
+③ 3択「それらを家族に / それを先生に / 彼を家族に」
+
+正解：
+① 固定「彼は」
+② 「見せたい」
+③ 「それらを家族に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+when he returns to Japan.
+
+現在の画面表示順：
+① 3択「～したとき彼が / ～する前に彼が / ～したので彼が」
+② 3択「日本へ帰る / 日本へ来た / 日本に住んでいる」
+
+正解：
+① 「～したとき彼が」
+② 「日本へ帰る」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 29 / C】
+
+英文全体：
+Haruka usually rides her bike to school, / but she took the bus this morning / because it was raining heavily. / The bus was crowded, / so she couldn't find a seat. / She stood near the door instead / and read a book on the way to school.
+
+スラッシュ1：
+英文：
+Haruka usually rides her bike to school,
+
+現在の画面表示順：
+① 固定「ハルカは普段」
+② 3択「自転車で行く / 歩いて行く / 行かなかった」
+③ 3択「学校へ / 駅へ / 図書館へ」
+
+正解：
+① 固定「ハルカは普段」
+② 「自転車で行く」
+③ 「学校へ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+but she took the bus this morning
+
+現在の画面表示順：
+① 固定「しかし彼女は」
+② 3択「バスに乗った / バスに乗る / バスを待っている」
+③ 3択「今朝 / 昨夜 / 来週」
+
+正解：
+① 固定「しかし彼女は」
+② 「バスに乗った」
+③ 「今朝」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+because it was raining heavily.
+
+現在の画面表示順：
+① 3択「なぜなら / しかし / それでも」
+② 3択「雨が激しく / 雪が静かに / 風が弱く」
+③ 3択「降っていたから / 降るだろうから / 降っていないから」
+
+正解：
+① 「なぜなら」
+② 「雨が激しく」
+③ 「降っていたから」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+The bus was crowded,
+
+現在の画面表示順：
+① 固定「バスは」
+② 3択「混んでいた / 空いていた / 止まっていた」
+
+正解：
+① 固定「バスは」
+② 「混んでいた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+so she couldn't find a seat.
+
+現在の画面表示順：
+① 固定「だから彼女は」
+② 3択「見つけられなかった / 見つけられる / 見つけるつもりだ」
+③ 3択「座席を / 切符を / かばんを」
+
+正解：
+① 固定「だから彼女は」
+② 「見つけられなかった」
+③ 「座席を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+She stood near the door instead
+
+現在の画面表示順：
+① 固定「彼女は代わりに」
+② 3択「立っていた / 座っていた / 走っていた」
+③ 3択「ドアの近くに / 窓の外に / 駅の前に」
+
+正解：
+① 固定「彼女は代わりに」
+② 「立っていた」
+③ 「ドアの近くに」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+and read a book on the way to school.
+
+現在の画面表示順：
+① 3択「そして本を読んだ / しかし本をなくした / だから本を買った」
+② 3択「学校へ行く途中で / 学校へ着いたあとで / 学校へ行く前に」
+
+正解：
+① 「そして本を読んだ」
+② 「学校へ行く途中で」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 30 / A】
+
+英文全体：
+My father told me / to come home early.
+
+スラッシュ1：
+英文：
+My father told me
+
+現在の画面表示順：
+① 固定「父は」
+② 3択「私に言った / 私に尋ねた / 私に見せた」
+
+正解：
+① 固定「父は」
+② 「私に言った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+to come home early.
+
+現在の画面表示順：
+① 3択「早く家に帰るように / 早く家を出た後で / 早く家に帰っている間に」
+
+正解：
+① 「早く家に帰るように」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 31 / A】
+
+英文全体：
+She has already finished / her homework.
+
+スラッシュ1：
+英文：
+She has already finished
+
+現在の画面表示順：
+① 固定「彼女は」
+② 3択「もう終えている / 今終えているところだ / これから終える」
+
+正解：
+① 固定「彼女は」
+② 「もう終えている」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+her homework.
+
+現在の画面表示順：
+① 固定「宿題を」
+
+正解：
+① 固定「宿題を」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 32 / A】
+
+英文全体：
+If it is sunny tomorrow, / we will go to the park.
+
+スラッシュ1：
+英文：
+If it is sunny tomorrow,
+
+現在の画面表示順：
+① 固定「明日晴れたら」
+② 3択「もし～なら / ～した後で / ～なので」
+
+正解：
+① 固定「明日晴れたら」
+② 「もし～なら」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+we will go to the park.
+
+現在の画面表示順：
+① 固定「私たちは」
+② 固定「公園へ」
+③ 3択「行くつもりだ / 行った / 行っていた」
+
+正解：
+① 固定「私たちは」
+② 固定「公園へ」
+③ 「行くつもりだ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 33 / A】
+
+英文全体：
+Tom bought some cakes / for his family.
+
+スラッシュ1：
+英文：
+Tom bought some cakes
+
+現在の画面表示順：
+① 固定「トムは」
+② 固定「ケーキを買った」
+
+正解：
+① 固定「トムは」
+② 固定「ケーキを買った」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ2：
+英文：
+for his family.
+
+現在の画面表示順：
+① 固定「家族のために」
+
+正解：
+① 固定「家族のために」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 34 / A】
+
+英文全体：
+I was tired, / but I finished my homework.
+
+スラッシュ1：
+英文：
+I was tired,
+
+現在の画面表示順：
+① 固定「私は」
+② 固定「疲れていた」
+
+正解：
+① 固定「私は」
+② 固定「疲れていた」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ2：
+英文：
+but I finished my homework.
+
+現在の画面表示順：
+① 固定「宿題を」
+② 3択「しかし私は / だから私は / その前に私は」
+③ 3択「終えた / 終えている / 終えるつもりだ」
+
+正解：
+① 固定「宿題を」
+② 「しかし私は」
+③ 「終えた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 35 / B】
+
+英文全体：
+I heard that / your brother won a soccer game / last Sunday.
+
+スラッシュ1：
+英文：
+I heard that
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「聞いた / 信じている / 忘れた」
+③ 3択「～ということを / ～する前に / ～したので」
+
+正解：
+① 固定「私は」
+② 「聞いた」
+③ 「～ということを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+your brother won a soccer game
+
+現在の画面表示順：
+① 固定「あなたの兄が」
+② 固定「サッカーの試合に」
+③ 3択「勝った / 勝っている / 勝つだろう」
+
+正解：
+① 固定「あなたの兄が」
+② 固定「サッカーの試合に」
+③ 「勝った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+last Sunday.
+
+現在の画面表示順：
+① 固定「先週の日曜日に」
+
+正解：
+① 固定「先週の日曜日に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 36 / B】
+
+英文全体：
+Kei wanted to make a cake, / so he went to a supermarket / to buy some eggs.
+
+スラッシュ1：
+英文：
+Kei wanted to make a cake,
+
+現在の画面表示順：
+① 固定「ケイは」
+② 3択「ケーキを作りたかった / ケーキを作っている / ケーキを作らなかった」
+
+正解：
+① 固定「ケイは」
+② 「ケーキを作りたかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+so he went to a supermarket
+
+現在の画面表示順：
+① 固定「スーパーへ」
+② 3択「だから彼は / しかし彼は / ～したとき彼は」
+③ 3択「行った / 行っている / 行くつもりだ」
+
+正解：
+① 固定「スーパーへ」
+② 「だから彼は」
+③ 「行った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+to buy some eggs.
+
+現在の画面表示順：
+① 固定「卵を」
+② 3択「買うために / 買った後で / 買っている間に」
+
+正解：
+① 固定「卵を」
+② 「買うために」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 37 / B】
+
+英文全体：
+When Emi opened the box, / she found a beautiful watch / inside it.
+
+スラッシュ1：
+英文：
+When Emi opened the box,
+
+現在の画面表示順：
+① 固定「エミが箱を開けた」
+② 3択「～したとき / ～する前に / ～したので」
+
+正解：
+① 固定「エミが箱を開けた」
+② 「～したとき」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+she found a beautiful watch
+
+現在の画面表示順：
+① 固定「彼女は」
+② 固定「きれいな腕時計を」
+③ 3択「見つけた / 見つけている / 見つけるだろう」
+
+正解：
+① 固定「彼女は」
+② 固定「きれいな腕時計を」
+③ 「見つけた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+inside it.
+
+現在の画面表示順：
+① 3択「その箱の中に / その腕時計の中に / 彼女の中に」
+
+正解：
+① 「その箱の中に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 38 / B】
+
+英文全体：
+My grandmother has lived in this town / for more than twenty years, / but she still likes finding new places.
+
+スラッシュ1：
+英文：
+My grandmother has lived in this town
+
+現在の画面表示順：
+① 固定「祖母は」
+② 固定「この町に」
+③ 3択「住んでいる / 住んでいた / 住むつもりだ」
+
+正解：
+① 固定「祖母は」
+② 固定「この町に」
+③ 「住んでいる」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+for more than twenty years,
+
+現在の画面表示順：
+① 固定「20年以上」
+
+正解：
+① 固定「20年以上」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+but she still likes finding new places.
+
+現在の画面表示順：
+① 3択「しかし彼女は今でも / だから彼女はもう / その前に彼女は」
+② 3択「新しい場所を見つけることが好きだ / 新しい場所を見つけた / 新しい場所を見つける必要がある」
+
+正解：
+① 「しかし彼女は今でも」
+② 「新しい場所を見つけることが好きだ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 39 / B】
+
+英文全体：
+Before we went to the museum, / my mother checked the train time / on her phone.
+
+スラッシュ1：
+英文：
+Before we went to the museum,
+
+現在の画面表示順：
+① 固定「私たちが博物館へ行った」
+② 3択「～する前に / ～した後で / ～している間に」
+
+正解：
+① 固定「私たちが博物館へ行った」
+② 「～する前に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+my mother checked the train time
+
+現在の画面表示順：
+① 固定「母は」
+② 固定「電車の時間を」
+③ 3択「確認した / 確認している / 確認するだろう」
+
+正解：
+① 固定「母は」
+② 固定「電車の時間を」
+③ 「確認した」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+on her phone.
+
+現在の画面表示順：
+① 固定「スマートフォンで」
+
+正解：
+① 固定「スマートフォンで」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 40 / C】
+
+英文全体：
+Yui wanted to give her father a present / for his birthday. / She went to a shopping mall / after school on Friday. / She first looked for a shirt, / but she couldn't find one she liked. / Then she saw a nice wallet / and decided to buy it.
+
+スラッシュ1：
+英文：
+Yui wanted to give her father a present
+
+現在の画面表示順：
+① 固定「ユイは」
+② 3択「父にプレゼントをあげたかった / 父にプレゼントをあげている / 父にプレゼントをあげなかった」
+
+正解：
+① 固定「ユイは」
+② 「父にプレゼントをあげたかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+for his birthday.
+
+現在の画面表示順：
+① 固定「父の誕生日に」
+
+正解：
+① 固定「父の誕生日に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+She went to a shopping mall
+
+現在の画面表示順：
+① 固定「彼女は」
+② 固定「ショッピングモールへ」
+③ 3択「行った / 行っている / 行くつもりだ」
+
+正解：
+① 固定「彼女は」
+② 固定「ショッピングモールへ」
+③ 「行った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+after school on Friday.
+
+現在の画面表示順：
+① 固定「金曜日の放課後に」
+
+正解：
+① 固定「金曜日の放課後に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ5：
+英文：
+She first looked for a shirt,
+
+現在の画面表示順：
+① 固定「彼女はまず」
+② 固定「シャツを」
+③ 3択「探した / 見つけた / 借りた」
+
+正解：
+① 固定「彼女はまず」
+② 固定「シャツを」
+③ 「探した」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+but she couldn't find one she liked.
+
+現在の画面表示順：
+① 3択「しかし彼女は / だから彼女は / それから彼女は」
+② 3択「見つけられなかった / 見つけられる / 見つけるつもりだった」
+③ 3択「気に入るものを / 気に入る財布を / 気に入る先生を」
+
+正解：
+① 「しかし彼女は」
+② 「見つけられなかった」
+③ 「気に入るものを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+Then she saw a nice wallet
+
+現在の画面表示順：
+① 固定「それから彼女は」
+② 固定「すてきな財布を」
+③ 3択「見つけた / なくした / 渡した」
+
+正解：
+① 固定「それから彼女は」
+② 固定「すてきな財布を」
+③ 「見つけた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+and decided to buy it.
+
+現在の画面表示順：
+① 固定「そして彼女は」
+② 3択「買うことに決めた / 買わないことにした / 買っている」
+③ 3択「それを / それらを / 彼を」
+
+正解：
+① 固定「そして彼女は」
+② 「買うことに決めた」
+③ 「それを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 41 / C】
+
+英文全体：
+Kenta is staying with a host family / in Australia this month. / Last Saturday, they took him to a large zoo. / He saw many animals there, / but he liked the koalas best. / He took many pictures of them / and plans to show them to his friends / when he returns to Japan.
+
+スラッシュ1：
+英文：
+Kenta is staying with a host family
+
+現在の画面表示順：
+① 固定「ケンタは」
+② 固定「ホストファミリーと」
+③ 3択「滞在している / 滞在した / 滞在するだろう」
+
+正解：
+① 固定「ケンタは」
+② 固定「ホストファミリーと」
+③ 「滞在している」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+in Australia this month.
+
+現在の画面表示順：
+① 固定「オーストラリアで」
+② 固定「今月」
+
+正解：
+① 固定「オーストラリアで」
+② 固定「今月」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+Last Saturday, they took him to a large zoo.
+
+現在の画面表示順：
+① 固定「先週の土曜日」
+② 固定「彼を大きな動物園へ」
+③ 3択「彼らは連れて行った / 彼らは連れて行く / 彼らは迎えに行った」
+
+正解：
+① 固定「先週の土曜日」
+② 固定「彼を大きな動物園へ」
+③ 「彼らは連れて行った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+He saw many animals there,
+
+現在の画面表示順：
+① 固定「彼は」
+② 固定「たくさんの動物をそこで」
+③ 3択「見た / 見ている / 見るつもりだ」
+
+正解：
+① 固定「彼は」
+② 固定「たくさんの動物をそこで」
+③ 「見た」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+but he liked the koalas best.
+
+現在の画面表示順：
+① 固定「コアラを」
+② 3択「しかし彼は / だから彼は / その前に彼は」
+③ 3択「一番気に入った / 一番こわがった / 一番避けた」
+
+正解：
+① 固定「コアラを」
+② 「しかし彼は」
+③ 「一番気に入った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+He took many pictures of them
+
+現在の画面表示順：
+① 固定「彼は」
+② 固定「それらの」
+③ 3択「たくさん写真を撮った / 写真を見せた / 写真をなくした」
+
+正解：
+① 固定「彼は」
+② 固定「それらの」
+③ 「たくさん写真を撮った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+and plans to show them to his friends
+
+現在の画面表示順：
+① 固定「それらを友達に」
+② 3択「そして / しかし / そのあと」
+③ 3択「見せる予定だ / 見せた / 見せる必要がない」
+
+正解：
+① 固定「それらを友達に」
+② 「そして」
+③ 「見せる予定だ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+when he returns to Japan.
+
+現在の画面表示順：
+① 固定「彼が日本へ帰る」
+② 3択「～したとき / ～したので / ～する前に」
+
+正解：
+① 固定「彼が日本へ帰る」
+② 「～したとき」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 42 / C】
+
+英文全体：
+Sara usually studies at home / after dinner. / Yesterday, however, she went to the library / because she needed a book for her science class. / While she was looking for the book, / she met one of her classmates. / They studied together for an hour / before they went home.
+
+スラッシュ1：
+英文：
+Sara usually studies at home
+
+現在の画面表示順：
+① 固定「サラは普段」
+② 固定「家で」
+③ 3択「勉強する / 勉強した / 勉強しているところだ」
+
+正解：
+① 固定「サラは普段」
+② 固定「家で」
+③ 「勉強する」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+after dinner.
+
+現在の画面表示順：
+① 固定「夕食後に」
+
+正解：
+① 固定「夕食後に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+Yesterday, however, she went to the library
+
+現在の画面表示順：
+① 固定「昨日は」
+② 固定「図書館へ」
+③ 3択「しかし彼女は / だから彼女は / そのあと彼女は」
+④ 3択「行った / 行く / 行っている」
+
+正解：
+① 固定「昨日は」
+② 固定「図書館へ」
+③ 「しかし彼女は」
+④ 「行った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+because she needed a book for her science class.
+
+現在の画面表示順：
+① 固定「理科の授業用の本が」
+② 3択「なぜなら彼女は / しかし彼女は / それでも彼女は」
+③ 3択「必要だった / 必要だ / 必要になるだろう」
+
+正解：
+① 固定「理科の授業用の本が」
+② 「なぜなら彼女は」
+③ 「必要だった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+While she was looking for the book,
+
+現在の画面表示順：
+① 固定「彼女がその本を探していた」
+② 3択「～している間 / ～した後で / ～する前に」
+
+正解：
+① 固定「彼女がその本を探していた」
+② 「～している間」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+she met one of her classmates.
+
+現在の画面表示順：
+① 固定「彼女は」
+② 3択「会った / 会っている / 会う予定だ」
+③ 3択「クラスメートの一人に / 先生の一人に / 家族の一人に」
+
+正解：
+① 固定「彼女は」
+② 「会った」
+③ 「クラスメートの一人に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+They studied together for an hour
+
+現在の画面表示順：
+① 3択「二人は / 彼女は / 先生は」
+② 3択「一緒に勉強した / 一緒に遊んだ / 一緒に食事した」
+③ 3択「1時間 / 1日 / 1週間」
+
+正解：
+① 「二人は」
+② 「一緒に勉強した」
+③ 「1時間」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+before they went home.
+
+現在の画面表示順：
+① 固定「二人が家へ帰る」
+② 3択「～する前に / ～した後で / ～している間に」
+
+正解：
+① 固定「二人が家へ帰る」
+② 「～する前に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 43 / C】
+
+英文全体：
+Daichi planned to visit his grandfather / on Sunday morning. / Before he left home, / his mother asked him to take some fruit. / When he arrived at his grandfather's house, / they ate lunch together. / His grandfather told him many stories / about when he was young. / Daichi enjoyed listening to them very much.
+
+スラッシュ1：
+英文：
+Daichi planned to visit his grandfather
+
+現在の画面表示順：
+① 固定「ダイチは」
+② 3択「祖父を訪ねる予定だった / 祖父を訪ねている / 祖父を訪ねなかった」
+
+正解：
+① 固定「ダイチは」
+② 「祖父を訪ねる予定だった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+on Sunday morning.
+
+現在の画面表示順：
+① 固定「日曜日の朝に」
+
+正解：
+① 固定「日曜日の朝に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+Before he left home,
+
+現在の画面表示順：
+① 固定「彼が家を出た」
+② 3択「～する前に / ～した後で / ～している間に」
+
+正解：
+① 固定「彼が家を出た」
+② 「～する前に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+his mother asked him to take some fruit.
+
+現在の画面表示順：
+① 固定「母は彼に頼んだ」
+② 固定「果物を」
+③ 3択「持っていくように / 持っていった後で / 持っていく前に」
+
+正解：
+① 固定「母は彼に頼んだ」
+② 固定「果物を」
+③ 「持っていくように」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+When he arrived at his grandfather's house,
+
+現在の画面表示順：
+① 固定「彼が祖父の家に着いた」
+② 3択「～したとき / ～する前に / ～したので」
+
+正解：
+① 固定「彼が祖父の家に着いた」
+② 「～したとき」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+they ate lunch together.
+
+現在の画面表示順：
+① 3択「二人は / 彼だけが / 祖父だけが」
+② 3択「一緒に昼食を食べた / 一緒に昼食を作った / 一緒に昼食を運んだ」
+
+正解：
+① 「二人は」
+② 「一緒に昼食を食べた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+His grandfather told him many stories
+
+現在の画面表示順：
+① 固定「祖父は」
+② 固定「彼に」
+③ 固定「たくさんの話を」
+④ 3択「話した / 話している / 話すつもりだ」
+
+正解：
+① 固定「祖父は」
+② 固定「彼に」
+③ 固定「たくさんの話を」
+④ 「話した」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+about when he was young.
+
+現在の画面表示順：
+① 固定「祖父が若かったころ」
+② 3択「～について / ～の前に / ～のあとで」
+
+正解：
+① 固定「祖父が若かったころ」
+② 「～について」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+Daichi enjoyed listening to them very much.
+
+現在の画面表示順：
+① 固定「ダイチは」
+② 3択「とても楽しんだ / とても怖がった / とても忘れていた」
+③ 3択「それらを聞くことを / 彼を聞くことを / それを作ることを」
+
+正解：
+① 固定「ダイチは」
+② 「とても楽しんだ」
+③ 「それらを聞くことを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 44 / C】
+
+英文全体：
+Mao joined a cooking class / at a community center last month. / She wanted to learn how to make Chinese food. / At first, she was worried / because she had never cooked it before. / However, the teacher showed her what to do, / and she made a delicious dish. / Her family enjoyed eating it / when she made it again at home.
+
+スラッシュ1：
+英文：
+Mao joined a cooking class
+
+現在の画面表示順：
+① 固定「マオは」
+② 固定「料理教室に」
+③ 3択「参加した / 参加している / 参加する予定だ」
+
+正解：
+① 固定「マオは」
+② 固定「料理教室に」
+③ 「参加した」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+at a community center last month.
+
+現在の画面表示順：
+① 固定「地域センターで」
+② 固定「先月」
+
+正解：
+① 固定「地域センターで」
+② 固定「先月」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+She wanted to learn how to make Chinese food.
+
+現在の画面表示順：
+① 固定「彼女は」
+② 3択「学びたかった / 学んでいる / 学ぶ必要がない」
+③ 3択「中華料理の作り方を / 中華料理を作る前に / 中華料理を作っている間に」
+
+正解：
+① 固定「彼女は」
+② 「学びたかった」
+③ 「中華料理の作り方を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+At first, she was worried
+
+現在の画面表示順：
+① 固定「最初は彼女は」
+② 3択「心配だった / 安心していた / うれしかった」
+
+正解：
+① 固定「最初は彼女は」
+② 「心配だった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+because she had never cooked it before.
+
+現在の画面表示順：
+① 3択「なぜなら彼女は / しかし彼女は / そのあと彼女は」
+② 3択「一度も作ったことがなかった / 作ったことがある / 今作っている」
+③ 3択「それを以前に / それらを以前に / 彼を以前に」
+
+正解：
+① 「なぜなら彼女は」
+② 「一度も作ったことがなかった」
+③ 「それを以前に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+However, the teacher showed her what to do,
+
+現在の画面表示順：
+① 固定「先生は」
+② 固定「彼女に」
+③ 3択「しかし / だから / その前に」
+④ 3択「何をすればよいかを見せた / 何を買うかを忘れた / 何を食べるかを聞いた」
+
+正解：
+① 固定「先生は」
+② 固定「彼女に」
+③ 「しかし」
+④ 「何をすればよいかを見せた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+and she made a delicious dish.
+
+現在の画面表示順：
+① 固定「そして彼女は」
+② 固定「おいしい料理を」
+③ 3択「作った / 作っている / 作らない」
+
+正解：
+① 固定「そして彼女は」
+② 固定「おいしい料理を」
+③ 「作った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+Her family enjoyed eating it
+
+現在の画面表示順：
+① 固定「家族は」
+② 3択「楽しんだ / 嫌がった / 避けた」
+③ 3択「それを食べることを / それらを食べることを / 彼を食べることを」
+
+正解：
+① 固定「家族は」
+② 「楽しんだ」
+③ 「それを食べることを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+when she made it again at home.
+
+現在の画面表示順：
+① 固定「彼女がもう一度それを作った」
+② 固定「家で」
+③ 3択「～したとき / ～する前に / ～したので」
+
+正解：
+① 固定「彼女がもう一度それを作った」
+② 固定「家で」
+③ 「～したとき」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 45 / A】
+
+英文全体：
+I have to finish this report / before dinner.
+
+スラッシュ1：
+英文：
+I have to finish this report
+
+現在の画面表示順：
+① 固定「私は」
+② 固定「このレポートを」
+③ 3択「終えなければならない / 終えたい / 終えたことがある」
+
+正解：
+① 固定「私は」
+② 固定「このレポートを」
+③ 「終えなければならない」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+before dinner.
+
+現在の画面表示順：
+① 固定「夕食の前に」
+
+正解：
+① 固定「夕食の前に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 46 / A】
+
+英文全体：
+This bag is cheaper / than that one.
+
+スラッシュ1：
+英文：
+This bag is cheaper
+
+現在の画面表示順：
+① 固定「このバッグは」
+② 3択「より安い / いちばん安い / 同じくらい高い」
+
+正解：
+① 固定「このバッグは」
+② 「より安い」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+than that one.
+
+現在の画面表示順：
+① 3択「あのバッグより / あの店より / あの人より」
+
+正解：
+① 「あのバッグより」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 47 / A】
+
+英文全体：
+I need something / to drink.
+
+スラッシュ1：
+英文：
+I need something
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「何かが必要だ / 何かを作った / 何かを見つけた」
+
+正解：
+① 固定「私は」
+② 「何かが必要だ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+to drink.
+
+現在の画面表示順：
+① 固定「飲むための」
+
+正解：
+① 固定「飲むための」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 48 / B】
+
+英文全体：
+After I finished breakfast, / my father asked me / to help him wash the car.
+
+スラッシュ1：
+英文：
+After I finished breakfast,
+
+現在の画面表示順：
+① 3択「～した後で / ～する前に / ～している間に」
+
+正解：
+① 「～した後で」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+my father asked me
+
+現在の画面表示順：
+① 固定「父は」
+② 3択「私に頼んだ / 私に聞いた / 私に見せた」
+
+正解：
+① 固定「父は」
+② 「私に頼んだ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+to help him wash the car.
+
+現在の画面表示順：
+① 3択「彼を手伝うように / 彼を助けたあとで / 彼を手伝わずに」
+② 3択「車を洗うのを / 車を見に行くのを / 車を直すのを」
+
+正解：
+① 「彼を手伝うように」
+② 「車を洗うのを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 49 / B】
+
+英文全体：
+I have never used this camera, / so my sister showed me / how to use it.
+
+スラッシュ1：
+英文：
+I have never used this camera,
+
+現在の画面表示順：
+① 固定「私は」
+② 固定「このカメラを」
+③ 3択「一度も使ったことがない / 今使っている / よく使っていた」
+
+正解：
+① 固定「私は」
+② 固定「このカメラを」
+③ 「一度も使ったことがない」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+so my sister showed me
+
+現在の画面表示順：
+① 固定「姉は」
+② 固定「私に」
+③ 3択「だから / しかし / ～する前に」
+④ 3択「教えてくれた / 見せた / 借りた」
+
+正解：
+① 固定「姉は」
+② 固定「私に」
+③ 「だから」
+④ 「教えてくれた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+how to use it.
+
+現在の画面表示順：
+① 3択「使い方を / 使った場所を / 使う人を」
+② 3択「それの / その人の / その店の」
+
+正解：
+① 「使い方を」
+② 「それの」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 50 / B】
+
+英文全体：
+If you come to my house tomorrow, / we can watch the movie / together.
+
+スラッシュ1：
+英文：
+If you come to my house tomorrow,
+
+現在の画面表示順：
+① 3択「もし / なぜなら / しかし」
+
+正解：
+① 「もし」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+we can watch the movie
+
+現在の画面表示順：
+① 固定「私たちは」
+② 固定「その映画を」
+③ 3択「見ることができる / 見なければならない / 見たことがある」
+
+正解：
+① 固定「私たちは」
+② 固定「その映画を」
+③ 「見ることができる」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+together.
+
+現在の画面表示順：
+① 固定「一緒に」
+
+正解：
+① 固定「一緒に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 51 / B】
+
+英文全体：
+When the teacher came into the room, / the students were talking / about the school trip.
+
+スラッシュ1：
+英文：
+When the teacher came into the room,
+
+現在の画面表示順：
+① 3択「～したとき / ～する前に / ～したので」
+
+正解：
+① 「～したとき」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+the students were talking
+
+現在の画面表示順：
+① 固定「生徒たちは」
+② 3択「話していた / 話した / 話すだろう」
+
+正解：
+① 固定「生徒たちは」
+② 「話していた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+about the school trip.
+
+現在の画面表示順：
+① 固定「学校旅行について」
+
+正解：
+① 固定「学校旅行について」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 52 / B】
+
+英文全体：
+Rina couldn't go to the party / because she had to work / that evening.
+
+スラッシュ1：
+英文：
+Rina couldn't go to the party
+
+現在の画面表示順：
+① 固定「リナは」
+② 固定「パーティーへ」
+③ 3択「行けなかった / 行きたかった / 行った」
+
+正解：
+① 固定「リナは」
+② 固定「パーティーへ」
+③ 「行けなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+because she had to work
+
+現在の画面表示順：
+① 3択「なぜなら / しかし / もし」
+② 3択「働かなければならなかった / 働いていた / 働く予定だった」
+
+正解：
+① 「なぜなら」
+② 「働かなければならなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+that evening.
+
+現在の画面表示順：
+① 固定「その晩」
+
+正解：
+① 固定「その晩」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 53 / B】
+
+英文全体：
+The book was more interesting / than I expected, / so I finished it in one day.
+
+スラッシュ1：
+英文：
+The book was more interesting
+
+現在の画面表示順：
+① 固定「その本は」
+② 3択「もっと面白かった / いちばん面白かった / 同じくらい面白かった」
+
+正解：
+① 固定「その本は」
+② 「もっと面白かった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+than I expected,
+
+現在の画面表示順：
+① 3択「私が予想したより / 私が聞いたあとで / 私が読んだために」
+
+正解：
+① 「私が予想したより」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+so I finished it in one day.
+
+現在の画面表示順：
+① 固定「だから私は」
+② 固定「それを」
+③ 固定「1日で」
+④ 3択「読み終えた / 始めた / 買った」
+
+正解：
+① 固定「だから私は」
+② 固定「それを」
+③ 固定「1日で」
+④ 「読み終えた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 54 / C】
+
+英文全体：
+Aki wanted to make dinner for her family, / but she did not know what to cook. / She looked in the refrigerator / and found some chicken and vegetables. / Then she searched for an easy recipe online. / After reading it, / she decided to make chicken soup. / Her family liked it very much, / so Aki wanted to make it again.
+
+スラッシュ1：
+英文：
+Aki wanted to make dinner for her family,
+
+現在の画面表示順：
+① 固定「アキは」
+② 固定「家族のために夕食を」
+③ 3択「作りたかった / 作っている / 作らなかった」
+
+正解：
+① 固定「アキは」
+② 固定「家族のために夕食を」
+③ 「作りたかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+but she did not know what to cook.
+
+現在の画面表示順：
+① 3択「しかし / だから / もし」
+② 3択「分からなかった / 分かっていた / 分かるだろう」
+③ 3択「何を作ればよいか / どこで作るか / 誰と作るか」
+
+正解：
+① 「しかし」
+② 「分からなかった」
+③ 「何を作ればよいか」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+She looked in the refrigerator
+
+現在の画面表示順：
+① 固定「彼女は」
+② 固定「冷蔵庫の中を」
+③ 3択「見た / 見ている / 見る予定だ」
+
+正解：
+① 固定「彼女は」
+② 固定「冷蔵庫の中を」
+③ 「見た」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+and found some chicken and vegetables.
+
+現在の画面表示順：
+① 固定「そして」
+② 3択「見つけた / 見つけている / 見つけない」
+③ 3択「鶏肉と野菜を / 本と鉛筆を / 靴と帽子を」
+
+正解：
+① 固定「そして」
+② 「見つけた」
+③ 「鶏肉と野菜を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+Then she searched for an easy recipe online.
+
+現在の画面表示順：
+① 固定「それから彼女は」
+② 固定「簡単なレシピを」
+③ 固定「ネットで」
+④ 3択「探した / 作った / 読んだ」
+
+正解：
+① 固定「それから彼女は」
+② 固定「簡単なレシピを」
+③ 固定「ネットで」
+④ 「探した」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+After reading it,
+
+現在の画面表示順：
+① 3択「それを読んだ後で / それを読んでいる間に / それを読む前に」
+
+正解：
+① 「それを読んだ後で」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+she decided to make chicken soup.
+
+現在の画面表示順：
+① 固定「彼女は」
+② 固定「チキンスープを」
+③ 3択「作ることに決めた / 作らないことにした / 作っている」
+
+正解：
+① 固定「彼女は」
+② 固定「チキンスープを」
+③ 「作ることに決めた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+Her family liked it very much,
+
+現在の画面表示順：
+① 固定「家族は」
+② 固定「とても」
+③ 3択「気に入った / 見つけた / 忘れた」
+④ 3択「それを / それらを / 彼を」
+
+正解：
+① 固定「家族は」
+② 固定「とても」
+③ 「気に入った」
+④ 「それを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+so Aki wanted to make it again.
+
+現在の画面表示順：
+① 固定「だからアキは」
+② 固定「また」
+③ 固定「それを」
+④ 3択「作りたいと思った / 作ることを忘れた / 作る必要がなかった」
+
+正解：
+① 固定「だからアキは」
+② 固定「また」
+③ 固定「それを」
+④ 「作りたいと思った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 55 / C】
+
+英文全体：
+Hiro went to the station / to meet his cousin from Osaka. / He arrived there early, / so he waited at a coffee shop nearby. / While he was drinking juice, / his cousin sent him a message. / The train was twenty minutes late, / but Hiro did not mind waiting. / He was happy when his cousin finally arrived.
+
+スラッシュ1：
+英文：
+Hiro went to the station
+
+現在の画面表示順：
+① 固定「ヒロは」
+② 固定「駅へ」
+③ 3択「行った / 行っている / 行くだろう」
+
+正解：
+① 固定「ヒロは」
+② 固定「駅へ」
+③ 「行った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+to meet his cousin from Osaka.
+
+現在の画面表示順：
+① 3択「会うために / 会ったあとで / 会っている間に」
+② 3択「大阪から来る / 大阪へ行く / 大阪で住む」
+
+正解：
+① 「会うために」
+② 「大阪から来る」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+He arrived there early,
+
+現在の画面表示順：
+① 固定「彼は」
+② 固定「そこに」
+③ 3択「早く着いた / 遅く着いた / 着く予定だ」
+
+正解：
+① 固定「彼は」
+② 固定「そこに」
+③ 「早く着いた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+so he waited at a coffee shop nearby.
+
+現在の画面表示順：
+① 固定「だから彼は」
+② 固定「近くの喫茶店で」
+③ 3択「待った / 待っている / 待つつもりだ」
+
+正解：
+① 固定「だから彼は」
+② 固定「近くの喫茶店で」
+③ 「待った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+While he was drinking juice,
+
+現在の画面表示順：
+① 3択「～している間に / ～した後で / ～する前に」
+② 3択「ジュースを飲んでいた / ジュースを飲んだ / ジュースを飲む予定だ」
+
+正解：
+① 「～している間に」
+② 「ジュースを飲んでいた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+his cousin sent him a message.
+
+現在の画面表示順：
+① 固定「いとこは」
+② 固定「彼に」
+③ 固定「メッセージを」
+④ 3択「送った / 送っている / 送る予定だ」
+
+正解：
+① 固定「いとこは」
+② 固定「彼に」
+③ 固定「メッセージを」
+④ 「送った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+The train was twenty minutes late,
+
+現在の画面表示順：
+① 固定「電車は」
+② 固定「20分」
+③ 3択「遅れていた / 早かった / 止まった」
+
+正解：
+① 固定「電車は」
+② 固定「20分」
+③ 「遅れていた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+but Hiro did not mind waiting.
+
+現在の画面表示順：
+① 固定「ヒロは」
+② 3択「しかし / だから / もし」
+③ 3択「気にしなかった / 気にした / 気にするだろう」
+④ 3択「待つことを / 走ることを / 見ることを」
+
+正解：
+① 固定「ヒロは」
+② 「しかし」
+③ 「気にしなかった」
+④ 「待つことを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+He was happy when his cousin finally arrived.
+
+現在の画面表示順：
+① 固定「彼はうれしかった」
+② 固定「いとこがようやく到着した」
+③ 3択「～したとき / ～する前に / ～したので」
+
+正解：
+① 固定「彼はうれしかった」
+② 固定「いとこがようやく到着した」
+③ 「～したとき」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 56 / C】
+
+英文全体：
+Mina joined the school tennis club / this spring. / At first, she could not hit the ball well, / and she often felt tired after practice. / However, she practiced three times a week / and asked older students for advice. / After two months, / she could play much better. / Her coach told her / that she had improved a lot.
+
+スラッシュ1：
+英文：
+Mina joined the school tennis club
+
+現在の画面表示順：
+① 固定「ミナは」
+② 固定「学校のテニス部に」
+③ 3択「入った / 入っている / 入る予定だ」
+
+正解：
+① 固定「ミナは」
+② 固定「学校のテニス部に」
+③ 「入った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+this spring.
+
+現在の画面表示順：
+① 固定「この春」
+
+正解：
+① 固定「この春」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+At first, she could not hit the ball well,
+
+現在の画面表示順：
+① 固定「最初は彼女は」
+② 固定「ボールを」
+③ 3択「うまく打てなかった / うまく打った / うまく打てるだろう」
+
+正解：
+① 固定「最初は彼女は」
+② 固定「ボールを」
+③ 「うまく打てなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+and she often felt tired after practice.
+
+現在の画面表示順：
+① 固定「そして彼女はよく」
+② 固定「練習後に」
+③ 3択「疲れていた / 元気だった / 緊張していた」
+
+正解：
+① 固定「そして彼女はよく」
+② 固定「練習後に」
+③ 「疲れていた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+However, she practiced three times a week
+
+現在の画面表示順：
+① 固定「しかし彼女は」
+② 固定「週3回」
+③ 3択「しかし / だから / もし」
+
+正解：
+① 固定「しかし彼女は」
+② 固定「週3回」
+③ 「しかし」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+and asked older students for advice.
+
+現在の画面表示順：
+① 固定「そして」
+② 3択「求めた / 見せた / 忘れた」
+③ 3択「上級生に / 先生に / 家族に」
+
+正解：
+① 固定「そして」
+② 「求めた」
+③ 「上級生に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+After two months,
+
+現在の画面表示順：
+① 固定「2か月後」
+
+正解：
+① 固定「2か月後」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ8：
+英文：
+she could play much better.
+
+現在の画面表示順：
+① 固定「彼女は」
+② 3択「ずっと上手にできるようになった / ずっと上手にできなかった / ずっと上手にしたかった」
+
+正解：
+① 固定「彼女は」
+② 「ずっと上手にできるようになった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+Her coach told her
+
+現在の画面表示順：
+① 固定「コーチは」
+② 固定「彼女に」
+③ 3択「言った / 言っている / 言う予定だ」
+
+正解：
+① 固定「コーチは」
+② 固定「彼女に」
+③ 「言った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ10：
+英文：
+that she had improved a lot.
+
+現在の画面表示順：
+① 3択「彼女が / しかし彼女が / だから彼女が」
+② 3択「とても上達した / とても上達している / とても上達する予定だ」
+
+正解：
+① 「彼女が」
+② 「とても上達した」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 57 / C】
+
+英文全体：
+Koji needed a book / for his history report. / He first looked for it at the school library, / but another student was using it. / The librarian told him / that the city library had the same book. / So Koji went there after school. / He found the book / and borrowed it for one week. / He finished his report two days later.
+
+スラッシュ1：
+英文：
+Koji needed a book
+
+現在の画面表示順：
+① 固定「コウジは」
+② 3択「必要だった / 必要だ / 必要になるだろう」
+
+正解：
+① 固定「コウジは」
+② 「必要だった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+for his history report.
+
+現在の画面表示順：
+① 固定「歴史のレポートのために」
+
+正解：
+① 固定「歴史のレポートのために」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+He first looked for it at the school library,
+
+現在の画面表示順：
+① 固定「彼はまず」
+② 固定「学校図書館で」
+③ 3択「探した / 見つけた / 借りた」
+④ 3択「それを / 彼を / それらを」
+
+正解：
+① 固定「彼はまず」
+② 固定「学校図書館で」
+③ 「探した」
+④ 「それを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+but another student was using it.
+
+現在の画面表示順：
+① 3択「しかし / だから / もし」
+② 3択「使っていた / 使った / 使う予定だ」
+③ 3択「それを / 彼を / それらを」
+
+正解：
+① 「しかし」
+② 「使っていた」
+③ 「それを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+The librarian told him
+
+現在の画面表示順：
+① 固定「司書は」
+② 固定「彼に」
+③ 3択「教えた / 見せた / 忘れた」
+
+正解：
+① 固定「司書は」
+② 固定「彼に」
+③ 「教えた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+that the city library had the same book.
+
+現在の画面表示順：
+① 固定「市立図書館に」
+② 固定「同じ本が」
+③ 3択「あると / ないと / 見たいと」
+
+正解：
+① 固定「市立図書館に」
+② 固定「同じ本が」
+③ 「あると」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+So Koji went there after school.
+
+現在の画面表示順：
+① 固定「だからコウジは」
+② 固定「放課後に」
+③ 3択「行った / 行っている / 行くだろう」
+④ 3択「そこへ / 家へ / 公園へ」
+
+正解：
+① 固定「だからコウジは」
+② 固定「放課後に」
+③ 「行った」
+④ 「そこへ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+He found the book
+
+現在の画面表示順：
+① 固定「彼は」
+② 固定「その本を」
+③ 3択「見つけた / 探した / 読んだ」
+
+正解：
+① 固定「彼は」
+② 固定「その本を」
+③ 「見つけた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+and borrowed it for one week.
+
+現在の画面表示順：
+① 固定「そして」
+② 3択「借りた / 返した / 買った」
+③ 3択「それを / 彼を / それらを」
+
+正解：
+① 固定「そして」
+② 「借りた」
+③ 「それを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ10：
+英文：
+He finished his report two days later.
+
+現在の画面表示順：
+① 固定「彼は」
+② 固定「レポートを」
+③ 固定「2日後に」
+④ 3択「終えた / 始めた / 見つけた」
+
+正解：
+① 固定「彼は」
+② 固定「レポートを」
+③ 固定「2日後に」
+④ 「終えた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 58 / C】
+
+英文全体：
+Yuna received an e-mail from her friend / who lives in Canada. / Her friend asked her / what Japanese food she liked best. / Yuna thought about the question / for a few minutes. / She decided to write about curry rice / because her family often makes it together. / She also sent her friend a picture / that she took at dinner last week.
+
+スラッシュ1：
+英文：
+Yuna received an e-mail from her friend
+
+現在の画面表示順：
+① 固定「ユナは」
+② 固定「友達から」
+③ 固定「メールを」
+④ 3択「受け取った / 受け取っている / 受け取る予定だ」
+
+正解：
+① 固定「ユナは」
+② 固定「友達から」
+③ 固定「メールを」
+④ 「受け取った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+who lives in Canada.
+
+現在の画面表示順：
+① 固定「カナダに住む」
+
+正解：
+① 固定「カナダに住む」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+Her friend asked her
+
+現在の画面表示順：
+① 固定「友達は」
+② 固定「彼女に」
+③ 3択「尋ねた / 答えた / 見せた」
+
+正解：
+① 固定「友達は」
+② 固定「彼女に」
+③ 「尋ねた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+what Japanese food she liked best.
+
+現在の画面表示順：
+① 3択「どの日本料理を / いつ日本料理を / どこで日本料理を」
+② 3択「一番好きか / 一番好きだったか / 一番好きになるか」
+
+正解：
+① 「どの日本料理を」
+② 「一番好きか」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+Yuna thought about the question
+
+現在の画面表示順：
+① 固定「ユナは」
+② 固定「その質問について」
+③ 3択「考えた / 考えている / 考える予定だ」
+
+正解：
+① 固定「ユナは」
+② 固定「その質問について」
+③ 「考えた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+for a few minutes.
+
+現在の画面表示順：
+① 固定「数分間」
+
+正解：
+① 固定「数分間」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ7：
+英文：
+She decided to write about curry rice
+
+現在の画面表示順：
+① 固定「彼女は」
+② 固定「カレーライスについて」
+③ 3択「書くことに決めた / 書くことを忘れた / 書かないことにした」
+
+正解：
+① 固定「彼女は」
+② 固定「カレーライスについて」
+③ 「書くことに決めた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+because her family often makes it together.
+
+現在の画面表示順：
+① 3択「なぜなら / しかし / それから」
+② 3択「家族がよく一緒に作るから / 家族が一緒に食べるから / 家族が一緒に見たから」
+③ 3択「それを / 彼を / それらを」
+
+正解：
+① 「なぜなら」
+② 「家族がよく一緒に作るから」
+③ 「それを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+She also sent her friend a picture
+
+現在の画面表示順：
+① 固定「彼女はまた」
+② 固定「友達に」
+③ 固定「写真を」
+④ 3択「送った / 見せた / 描いた」
+
+正解：
+① 固定「彼女はまた」
+② 固定「友達に」
+③ 固定「写真を」
+④ 「送った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ10：
+英文：
+that she took at dinner last week.
+
+現在の画面表示順：
+① 固定「彼女が撮った」
+② 固定「先週の夕食時に」
+③ 3択「写真を / 友達を / 夕食を」
+
+正解：
+① 固定「彼女が撮った」
+② 固定「先週の夕食時に」
+③ 「写真を」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 59 / C】
+
+英文全体：
+Takumi and his classmates planned a school event / for younger students. / They wanted everyone to enjoy it, / so they prepared several games. / On the morning of the event, / one of the games did not work well. / The students were worried, / but their teacher gave them an idea. / They changed the rules a little, / and the younger students had a great time. / Takumi was glad that they did not give up.
+
+スラッシュ1：
+英文：
+Takumi and his classmates planned a school event
+
+現在の画面表示順：
+① 固定「タクミとクラスメートは」
+② 固定「学校行事を」
+③ 3択「計画した / 計画している / 計画する予定だ」
+
+正解：
+① 固定「タクミとクラスメートは」
+② 固定「学校行事を」
+③ 「計画した」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+for younger students.
+
+現在の画面表示順：
+① 固定「年下の生徒たちのために」
+
+正解：
+① 固定「年下の生徒たちのために」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+They wanted everyone to enjoy it,
+
+現在の画面表示順：
+① 固定「彼らは」
+② 固定「それを」
+③ 3択「みんなに楽しんでほしかった / みんなに見てほしかった / みんなに終えてほしかった」
+
+正解：
+① 固定「彼らは」
+② 固定「それを」
+③ 「みんなに楽しんでほしかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+so they prepared several games.
+
+現在の画面表示順：
+① 3択「だから / しかし / もし」
+② 3択「準備した / 準備している / 準備する予定だ」
+③ 3択「いくつかのゲームを / いくつかの本を / いくつかの部屋を」
+
+正解：
+① 「だから」
+② 「準備した」
+③ 「いくつかのゲームを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+On the morning of the event,
+
+現在の画面表示順：
+① 固定「行事当日の朝」
+
+正解：
+① 固定「行事当日の朝」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ6：
+英文：
+one of the games did not work well.
+
+現在の画面表示順：
+① 固定「ゲームの一つが」
+② 3択「うまくいかなかった / うまくいった / 作られた」
+
+正解：
+① 固定「ゲームの一つが」
+② 「うまくいかなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+The students were worried,
+
+現在の画面表示順：
+① 固定「生徒たちは」
+② 3択「心配した / 安心した / 喜んだ」
+
+正解：
+① 固定「生徒たちは」
+② 「心配した」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+but their teacher gave them an idea.
+
+現在の画面表示順：
+① 3択「しかし / だから / もし」
+② 3択「彼らにくれた / 彼をくれた / それをくれた」
+③ 3択「アイデアを / 地図を / 宿題を」
+
+正解：
+① 「しかし」
+② 「彼らにくれた」
+③ 「アイデアを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+They changed the rules a little,
+
+現在の画面表示順：
+① 固定「彼らは」
+② 固定「ルールを少し」
+③ 3択「変えた / 変えている / 変える予定だ」
+
+正解：
+① 固定「彼らは」
+② 固定「ルールを少し」
+③ 「変えた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ10：
+英文：
+and the younger students had a great time.
+
+現在の画面表示順：
+① 固定「そして年下の生徒たちは」
+② 3択「とても楽しんだ / とても困った / とても急いだ」
+
+正解：
+① 固定「そして年下の生徒たちは」
+② 「とても楽しんだ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ11：
+英文：
+Takumi was glad that they did not give up.
+
+現在の画面表示順：
+① 固定「タクミはうれしかった」
+② 3択「彼らが / 彼が / それが」
+③ 3択「あきらめなかった / あきらめた / あきらめる予定だ」
+
+正解：
+① 固定「タクミはうれしかった」
+② 「彼らが」
+③ 「あきらめなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 60 / A】
+
+英文全体：
+Have you ever been to Kyoto / before?
+
+スラッシュ1：
+英文：
+Have you ever been to Kyoto
+
+現在の画面表示順：
+① 固定「あなたは」
+② 固定「京都へ」
+③ 3択「行ったことがありますか / 今行っていますか / 行く予定ですか」
+
+正解：
+① 固定「あなたは」
+② 固定「京都へ」
+③ 「行ったことがありますか」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+before?
+
+現在の画面表示順：
+① 固定「以前に」
+
+正解：
+① 固定「以前に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 61 / A】
+
+英文全体：
+You should take an umbrella / because it may rain.
+
+スラッシュ1：
+英文：
+You should take an umbrella
+
+現在の画面表示順：
+① 固定「あなたは」
+② 固定「傘を」
+③ 3択「持っていくべきだ / 持っていくことがある / 持っていく予定だった」
+
+正解：
+① 固定「あなたは」
+② 固定「傘を」
+③ 「持っていくべきだ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+because it may rain.
+
+現在の画面表示順：
+① 3択「なぜなら / しかし / もし」
+② 3択「降るかもしれない / 降ったにちがいない / 降る必要がある」
+
+正解：
+① 「なぜなら」
+② 「降るかもしれない」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 62 / A】
+
+英文全体：
+This box is too heavy / for me to carry.
+
+スラッシュ1：
+英文：
+This box is too heavy
+
+現在の画面表示順：
+① 固定「この箱は」
+② 3択「重すぎる / 重くない / ちょうどよい」
+
+正解：
+① 固定「この箱は」
+② 「重すぎる」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+for me to carry.
+
+現在の画面表示順：
+① 固定「私が」
+② 固定「運ぶには」
+
+正解：
+① 固定「私が」
+② 固定「運ぶには」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 63 / B】
+
+英文全体：
+Since I moved to this town, / I have made many friends / at school.
+
+スラッシュ1：
+英文：
+Since I moved to this town,
+
+現在の画面表示順：
+① 3択「～して以来 / ～する前に / ～したので」
+
+正解：
+① 「～して以来」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+I have made many friends
+
+現在の画面表示順：
+① 固定「私は」
+② 固定「たくさん友達が」
+③ 3択「できました / できています / できるでしょう」
+
+正解：
+① 固定「私は」
+② 固定「たくさん友達が」
+③ 「できました」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+at school.
+
+現在の画面表示順：
+① 固定「学校で」
+
+正解：
+① 固定「学校で」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 64 / B】
+
+英文全体：
+My teacher told us / that the museum would close early / that day.
+
+スラッシュ1：
+英文：
+My teacher told us
+
+現在の画面表示順：
+① 固定「先生は」
+② 3択「私たちに言った / 私たちに聞いた / 私たちに見せた」
+
+正解：
+① 固定「先生は」
+② 「私たちに言った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+that the museum would close early
+
+現在の画面表示順：
+① 固定「博物館が」
+② 固定「早く」
+③ 3択「閉まると / 閉まるだろうと / 閉まったと」
+
+正解：
+① 固定「博物館が」
+② 固定「早く」
+③ 「閉まると」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+that day.
+
+現在の画面表示順：
+① 固定「その日」
+
+正解：
+① 固定「その日」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 65 / B】
+
+英文全体：
+I didn't know / which bus to take, / so I asked a station worker.
+
+スラッシュ1：
+英文：
+I didn't know
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「分からなかった / 分かっていた / 考えた」
+
+正解：
+① 固定「私は」
+② 「分からなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+which bus to take,
+
+現在の画面表示順：
+① 3択「どのバスに乗ればよいか / どのバスに乗ったか / どのバスに乗る予定か」
+
+正解：
+① 「どのバスに乗ればよいか」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+so I asked a station worker.
+
+現在の画面表示順：
+① 固定「だから私は」
+② 固定「駅員に」
+③ 3択「尋ねた / 待った / 走った」
+
+正解：
+① 固定「だから私は」
+② 固定「駅員に」
+③ 「尋ねた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 66 / B】
+
+英文全体：
+The boy who is standing by the door / is my cousin / from Nagoya.
+
+スラッシュ1：
+英文：
+The boy who is standing by the door
+
+現在の画面表示順：
+① 固定「その男の子は」
+② 固定「ドアのそばに」
+③ 3択「立っている / 立っていた / 立つだろう」
+
+正解：
+① 固定「その男の子は」
+② 固定「ドアのそばに」
+③ 「立っている」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+is my cousin
+
+現在の画面表示順：
+① 固定「私のいとこです」
+
+正解：
+① 固定「私のいとこです」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+from Nagoya.
+
+現在の画面表示順：
+① 固定「名古屋から来た」
+
+正解：
+① 固定「名古屋から来た」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 67 / B】
+
+英文全体：
+Mika was so tired / that she went to bed / before nine.
+
+スラッシュ1：
+英文：
+Mika was so tired
+
+現在の画面表示順：
+① 固定「ミカは」
+② 3択「とても疲れていた / あまり疲れていなかった / 少し疲れそうだった」
+
+正解：
+① 固定「ミカは」
+② 「とても疲れていた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+that she went to bed
+
+現在の画面表示順：
+① 3択「そのため彼女は寝た / そのため彼女は起きた / しかし彼女は歩いた」
+
+正解：
+① 「そのため彼女は寝た」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+before nine.
+
+現在の画面表示順：
+① 固定「9時前に」
+
+正解：
+① 固定「9時前に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 68 / B】
+
+英文全体：
+I was looking for my keys / when my brother found them / under the table.
+
+スラッシュ1：
+英文：
+I was looking for my keys
+
+現在の画面表示順：
+① 固定「私は」
+② 3択「鍵を探していた / 鍵を見つけた / 鍵を持っていた」
+
+正解：
+① 固定「私は」
+② 「鍵を探していた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+when my brother found them
+
+現在の画面表示順：
+① 3択「～したとき / ～したあとで / ～する前に」
+② 3択「弟がそれらを見つけた / 弟がそれを忘れた / 弟がそれらを持った」
+③ 3択「それらを / 彼を / それを」
+
+正解：
+① 「～したとき」
+② 「弟がそれらを見つけた」
+③ 「それらを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+under the table.
+
+現在の画面表示順：
+① 固定「テーブルの下で」
+
+正解：
+① 固定「テーブルの下で」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+----------------------------------------
+
+【id 69 / C】
+
+英文全体：
+Mai received a message from her cousin / on Saturday morning. / Her cousin wanted to visit a new shopping mall / near Mai's house. / Mai had never been there, / so they decided to go together. / When they arrived, / many people were waiting outside. / They learned that the mall would open / thirty minutes later. / Instead of going home, / they waited at a nearby cafe.
+
+スラッシュ1：
+英文：
+Mai received a message from her cousin
+
+現在の画面表示順：
+① 固定「マイは」
+② 固定「いとこから」
+③ 固定「メッセージを」
+④ 3択「受け取った / 受け取っている / 受け取る予定だ」
+
+正解：
+① 固定「マイは」
+② 固定「いとこから」
+③ 固定「メッセージを」
+④ 「受け取った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+on Saturday morning.
+
+現在の画面表示順：
+① 固定「土曜日の朝に」
+
+正解：
+① 固定「土曜日の朝に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+Her cousin wanted to visit a new shopping mall
+
+現在の画面表示順：
+① 固定「いとこは」
+② 固定「新しいショッピングモールへ」
+③ 3択「行きたがっていた / 行きたかった / 行く必要があった」
+
+正解：
+① 固定「いとこは」
+② 固定「新しいショッピングモールへ」
+③ 「行きたがっていた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+near Mai's house.
+
+現在の画面表示順：
+① 固定「マイの家の近くの」
+
+正解：
+① 固定「マイの家の近くの」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ5：
+英文：
+Mai had never been there,
+
+現在の画面表示順：
+① 固定「マイは」
+② 固定「そこへ」
+③ 3択「一度も行ったことがなかった / 何度も行ったことがあった / 行くつもりだった」
+
+正解：
+① 固定「マイは」
+② 固定「そこへ」
+③ 「一度も行ったことがなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+so they decided to go together.
+
+現在の画面表示順：
+① 固定「だから二人は」
+② 3択「一緒に行くことに決めた / 別々に帰ることにした / すぐ電話することにした」
+
+正解：
+① 固定「だから二人は」
+② 「一緒に行くことに決めた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+When they arrived,
+
+現在の画面表示順：
+① 3択「～したとき / ～する前に / ～したので」
+
+正解：
+① 「～したとき」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+many people were waiting outside.
+
+現在の画面表示順：
+① 固定「多くの人が」
+② 固定「外で」
+③ 3択「待っていた / 待った / 待つだろう」
+
+正解：
+① 固定「多くの人が」
+② 固定「外で」
+③ 「待っていた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+They learned that the mall would open
+
+現在の画面表示順：
+① 固定「二人は知った」
+② 固定「モールが開くと」
+③ 3択「30分後に開く / 30分後に開いた / 30分後に開くだろう」
+
+正解：
+① 固定「二人は知った」
+② 固定「モールが開くと」
+③ 「30分後に開く」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ10：
+英文：
+thirty minutes later.
+
+現在の画面表示順：
+① 固定「30分後に」
+
+正解：
+① 固定「30分後に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ11：
+英文：
+Instead of going home,
+
+現在の画面表示順：
+① 固定「家へ帰る代わりに」
+② 3択「instead of ～ing / because of ～ing / before ～ing」
+
+正解：
+① 固定「家へ帰る代わりに」
+② 「instead of ～ing」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ12：
+英文：
+they waited at a nearby cafe.
+
+現在の画面表示順：
+① 固定「二人は」
+② 固定「近くのカフェで」
+③ 3択「待った / 探した / 歩いた」
+
+正解：
+① 固定「二人は」
+② 固定「近くのカフェで」
+③ 「待った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 70 / C】
+
+英文全体：
+Ken's class was preparing for a school festival / when their teacher gave them some news. / The room they planned to use / was not available. / At first, the students were disappointed, / because they had already decorated it. / However, another teacher offered them a larger room. / The students moved their decorations there / and changed their plan a little. / In the end, / more people could visit their activity / than they had expected.
+
+スラッシュ1：
+英文：
+Ken's class was preparing for a school festival
+
+現在の画面表示順：
+① 固定「ケンのクラスは」
+② 3択「準備していた / 準備した / 準備する予定だった」
+
+正解：
+① 固定「ケンのクラスは」
+② 「準備していた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+when their teacher gave them some news.
+
+現在の画面表示順：
+① 3択「～したとき / ～する前に / ～したので」
+② 3択「先生が彼らに知らせた / 先生が彼を知らせた / 先生がそれを知らせた」
+
+正解：
+① 「～したとき」
+② 「先生が彼らに知らせた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+The room they planned to use
+
+現在の画面表示順：
+① 固定「その部屋は」
+② 3択「彼らが使う予定だった / 彼らが掃除したかった / 彼らが見たかった」
+
+正解：
+① 固定「その部屋は」
+② 「彼らが使う予定だった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+was not available.
+
+現在の画面表示順：
+① 3択「使えなかった / 使えた / 開いていた」
+
+正解：
+① 「使えなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+At first, the students were disappointed,
+
+現在の画面表示順：
+① 固定「最初は」
+② 固定「生徒たちは」
+③ 3択「がっかりした / 喜んだ / 緊張した」
+
+正解：
+① 固定「最初は」
+② 固定「生徒たちは」
+③ 「がっかりした」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+because they had already decorated it.
+
+現在の画面表示順：
+① 3択「なぜなら / しかし / もし」
+② 3択「すでに飾り付けていた / まだ飾り付けていなかった / すぐに飾り付ける予定だった」
+③ 3択「そこを / それを / 彼を」
+
+正解：
+① 「なぜなら」
+② 「すでに飾り付けていた」
+③ 「そこを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+However, another teacher offered them a larger room.
+
+現在の画面表示順：
+① 3択「しかし / だから / それから」
+② 3択「用意してくれた / 借りた / 見せた」
+③ 3択「より大きな部屋 / より小さな部屋 / 同じ大きさの部屋」
+
+正解：
+① 「しかし」
+② 「用意してくれた」
+③ 「より大きな部屋」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+The students moved their decorations there
+
+現在の画面表示順：
+① 固定「生徒たちは」
+② 固定「飾りを」
+③ 3択「移した / 見つけた / 作った」
+④ 3択「そこへ / それを / そこで」
+
+正解：
+① 固定「生徒たちは」
+② 固定「飾りを」
+③ 「移した」
+④ 「そこへ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+and changed their plan a little.
+
+現在の画面表示順：
+① 固定「そして」
+② 固定「計画を少し」
+③ 3択「変えた / 変えている / 変える予定だ」
+
+正解：
+① 固定「そして」
+② 固定「計画を少し」
+③ 「変えた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ10：
+英文：
+In the end,
+
+現在の画面表示順：
+① 固定「最終的に」
+
+正解：
+① 固定「最終的に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ11：
+英文：
+more people could visit their activity
+
+現在の画面表示順：
+① 固定「より多くの人が」
+② 固定「彼らの活動に」
+③ 3択「参加できた / 参加しなければならなかった / 参加したことがある」
+
+正解：
+① 固定「より多くの人が」
+② 固定「彼らの活動に」
+③ 「参加できた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ12：
+英文：
+than they had expected.
+
+現在の画面表示順：
+① 3択「彼らが予想したより / 彼らが知ったあとで / 彼らが行く前に」
+
+正解：
+① 「彼らが予想したより」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 71 / C】
+
+英文全体：
+Ryo wanted to improve his English, / so he started watching short videos / in English every evening. / At first, he could understand only a few words. / His teacher told him / not to worry about understanding everything. / She suggested watching the same video several times. / Ryo followed her advice, / and after a few weeks, / he noticed that he could understand much more. / Now he enjoys studying English this way.
+
+スラッシュ1：
+英文：
+Ryo wanted to improve his English,
+
+現在の画面表示順：
+① 固定「リョウは」
+② 固定「英語を」
+③ 3択「上達させたかった / 上達させている / 上達させる必要がない」
+
+正解：
+① 固定「リョウは」
+② 固定「英語を」
+③ 「上達させたかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+so he started watching short videos
+
+現在の画面表示順：
+① 3択「だから / しかし / ～したあとで」
+② 3択「見始めた / 見続けた / 見た」
+
+正解：
+① 「だから」
+② 「見始めた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ3：
+英文：
+in English every evening.
+
+現在の画面表示順：
+① 固定「英語で」
+② 固定「毎晩」
+
+正解：
+① 固定「英語で」
+② 固定「毎晩」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ4：
+英文：
+At first, he could understand only a few words.
+
+現在の画面表示順：
+① 固定「最初は彼は」
+② 3択「少しの単語しか理解できなかった / 多くの単語を理解できた / 単語をすぐ話せた」
+
+正解：
+① 固定「最初は彼は」
+② 「少しの単語しか理解できなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+His teacher told him
+
+現在の画面表示順：
+① 固定「先生は」
+② 固定「彼に」
+③ 3択「言った / 尋ねた / 見せた」
+
+正解：
+① 固定「先生は」
+② 固定「彼に」
+③ 「言った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+not to worry about understanding everything.
+
+現在の画面表示順：
+① 3択「心配しないように / 心配するために / 心配したあとで」
+② 3択「すべてを理解することを / すべてを忘れることを / すべてを読むことを」
+
+正解：
+① 「心配しないように」
+② 「すべてを理解することを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+She suggested watching the same video several times.
+
+現在の画面表示順：
+① 固定「先生は」
+② 3択「勧めた / 止めた / 隠した」
+③ 3択「同じ動画を何度か見ること / 別の動画を1回見ること / 動画を作ること」
+
+正解：
+① 固定「先生は」
+② 「勧めた」
+③ 「同じ動画を何度か見ること」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+Ryo followed her advice,
+
+現在の画面表示順：
+① 固定「リョウは」
+② 固定「彼女の助言に」
+③ 3択「従った / 聞かなかった / 覚えた」
+
+正解：
+① 固定「リョウは」
+② 固定「彼女の助言に」
+③ 「従った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+and after a few weeks,
+
+現在の画面表示順：
+① 固定「そして数週間後」
+
+正解：
+① 固定「そして数週間後」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ10：
+英文：
+he noticed that he could understand much more.
+
+現在の画面表示順：
+① 固定「彼は気づいた」
+② 3択「もっと理解できるようになったと / 英語が難しいと / 勉強をやめたと」
+③ 3択「もっと理解できた / 少ししか理解できなかった / 全く理解できなかった」
+
+正解：
+① 固定「彼は気づいた」
+② 「もっと理解できるようになったと」
+③ 「もっと理解できた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ11：
+英文：
+Now he enjoys studying English this way.
+
+現在の画面表示順：
+① 固定「今では彼は」
+② 固定「この方法で英語を勉強することを」
+③ 3択「楽しんでいる / やめた / 忘れた」
+
+正解：
+① 固定「今では彼は」
+② 固定「この方法で英語を勉強することを」
+③ 「楽しんでいる」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 72 / C】
+
+英文全体：
+Nana's grandmother lives in a small town / near the sea. / During summer vacation, / Nana stayed with her for three days. / One morning, her grandmother asked her / to help pick vegetables in the garden. / After they finished the work, / they used some of the vegetables / to make lunch together. / Nana had never cooked that dish before, / but her grandmother showed her what to do. / Nana liked the meal so much / that she asked for the recipe.
+
+スラッシュ1：
+英文：
+Nana's grandmother lives in a small town
+
+現在の画面表示順：
+① 固定「ナナの祖母は」
+② 固定「小さな町に」
+③ 3択「住んでいる / 住んでいた / 住む予定だ」
+
+正解：
+① 固定「ナナの祖母は」
+② 固定「小さな町に」
+③ 「住んでいる」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+near the sea.
+
+現在の画面表示順：
+① 固定「海の近くの」
+
+正解：
+① 固定「海の近くの」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+During summer vacation,
+
+現在の画面表示順：
+① 固定「夏休みの間」
+
+正解：
+① 固定「夏休みの間」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ4：
+英文：
+Nana stayed with her for three days.
+
+現在の画面表示順：
+① 固定「ナナは」
+② 固定「祖母の家に」
+③ 3択「泊まった / 泊まっている / 泊まる予定だ」
+④ 3択「3日間 / 3週間 / 3か月間」
+
+正解：
+① 固定「ナナは」
+② 固定「祖母の家に」
+③ 「泊まった」
+④ 「3日間」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+One morning, her grandmother asked her
+
+現在の画面表示順：
+① 固定「ある朝」
+② 固定「祖母は」
+③ 固定「ナナに」
+④ 3択「頼んだ / 見せた / 教えた」
+
+正解：
+① 固定「ある朝」
+② 固定「祖母は」
+③ 固定「ナナに」
+④ 「頼んだ」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+to help pick vegetables in the garden.
+
+現在の画面表示順：
+① 3択「手伝うように / 手伝わないように / 手伝ったあとで」
+② 3択「庭で野菜を採るのを / 庭で花を植えるのを / 庭を歩くのを」
+
+正解：
+① 「手伝うように」
+② 「庭で野菜を採るのを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+After they finished the work,
+
+現在の画面表示順：
+① 3択「～した後で / ～する前に / ～したので」
+
+正解：
+① 「～した後で」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+they used some of the vegetables
+
+現在の画面表示順：
+① 固定「二人は」
+② 固定「野菜の一部を」
+③ 3択「使った / 見つけた / 食べた」
+
+正解：
+① 固定「二人は」
+② 固定「野菜の一部を」
+③ 「使った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+to make lunch together.
+
+現在の画面表示順：
+① 3択「一緒に昼食を作るために / 一緒に昼食を食べるために / 一緒に昼食を探すために」
+
+正解：
+① 「一緒に昼食を作るために」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ10：
+英文：
+Nana had never cooked that dish before,
+
+現在の画面表示順：
+① 固定「ナナは」
+② 固定「その料理を以前に」
+③ 3択「一度も作ったことがなかった / 何度も作ったことがあった / 作る予定だった」
+
+正解：
+① 固定「ナナは」
+② 固定「その料理を以前に」
+③ 「一度も作ったことがなかった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ11：
+英文：
+but her grandmother showed her what to do.
+
+現在の画面表示順：
+① 3択「しかし / だから / もし」
+② 3択「教えた / 隠した / 忘れた」
+③ 3択「何をすればよいか / どこへ行くか / いつ始めるか」
+
+正解：
+① 「しかし」
+② 「教えた」
+③ 「何をすればよいか」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ12：
+英文：
+Nana liked the meal so much
+
+現在の画面表示順：
+① 固定「ナナは」
+② 固定「その料理をとても」
+③ 3択「気に入った / 作った / 見た」
+
+正解：
+① 固定「ナナは」
+② 固定「その料理をとても」
+③ 「気に入った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ13：
+英文：
+that she asked for the recipe.
+
+現在の画面表示順：
+① 3択「そのため彼女は / しかし彼女は / その前に彼女は」
+② 3択「レシピを尋ねた / 料理を始めた / 家へ帰った」
+
+正解：
+① 「そのため彼女は」
+② 「レシピを尋ねた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 73 / C】
+
+英文全体：
+Sota was going to play soccer / with his friends after school, / but one of them hurt his leg / during P.E. class. / They decided not to play soccer that day. / Instead, they went to the library / to work on their science project. / While they were looking for information, / they found an interesting book about space. / They borrowed it / because they thought it would help their project.
+
+スラッシュ1：
+英文：
+Sota was going to play soccer
+
+現在の画面表示順：
+① 固定「ソウタは」
+② 固定「サッカーをする予定だった」
+③ 3択「～するつもりだった / ～した / ～できる」
+
+正解：
+① 固定「ソウタは」
+② 固定「サッカーをする予定だった」
+③ 「～するつもりだった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+with his friends after school,
+
+現在の画面表示順：
+① 固定「友達と」
+② 固定「放課後に」
+
+正解：
+① 固定「友達と」
+② 固定「放課後に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+but one of them hurt his leg
+
+現在の画面表示順：
+① 3択「しかし / だから / もし」
+② 3択「彼らの一人が / 彼の一人が / それらの一人が」
+③ 3択「足を痛めた / 足を見た / 足を洗った」
+
+正解：
+① 「しかし」
+② 「彼らの一人が」
+③ 「足を痛めた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ4：
+英文：
+during P.E. class.
+
+現在の画面表示順：
+① 固定「体育の授業中に」
+
+正解：
+① 固定「体育の授業中に」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ5：
+英文：
+They decided not to play soccer that day.
+
+現在の画面表示順：
+① 固定「彼らは」
+② 固定「その日はサッカーを」
+③ 3択「しないことに決めた / しなかったことに決めた / することに決めた」
+
+正解：
+① 固定「彼らは」
+② 固定「その日はサッカーを」
+③ 「しないことに決めた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+Instead, they went to the library
+
+現在の画面表示順：
+① 固定「代わりに彼らは」
+② 固定「図書館へ」
+③ 3択「行った / 行っている / 行くだろう」
+
+正解：
+① 固定「代わりに彼らは」
+② 固定「図書館へ」
+③ 「行った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+to work on their science project.
+
+現在の画面表示順：
+① 3択「取り組むために / 取り組んでいる間に / 取り組んだあとで」
+② 3択「理科の課題に / 数学の問題に / 音楽の練習に」
+
+正解：
+① 「取り組むために」
+② 「理科の課題に」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ8：
+英文：
+While they were looking for information,
+
+現在の画面表示順：
+① 3択「～している間 / ～したあとで / ～する前に」
+② 3択「彼らが情報を探していた / 彼らが情報を探した / 彼らが情報を探す予定だ」
+
+正解：
+① 「～している間」
+② 「彼らが情報を探していた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+they found an interesting book about space.
+
+現在の画面表示順：
+① 固定「彼らは」
+② 固定「宇宙についての面白い本を」
+③ 3択「見つけた / 読んだ / 借りた」
+
+正解：
+① 固定「彼らは」
+② 固定「宇宙についての面白い本を」
+③ 「見つけた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ10：
+英文：
+They borrowed it
+
+現在の画面表示順：
+① 固定「彼らは」
+② 固定「それを」
+③ 3択「借りた / 返した / 売った」
+
+正解：
+① 固定「彼らは」
+② 固定「それを」
+③ 「借りた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ11：
+英文：
+because they thought it would help their project.
+
+現在の画面表示順：
+① 3択「なぜなら / しかし / それから」
+② 3択「～と思った / ～を忘れた / ～を見た」
+③ 3択「それが課題に役立つだろうと / それが課題に必要だと / それが課題を終えたと」
+
+正解：
+① 「なぜなら」
+② 「～と思った」
+③ 「それが課題に役立つだろうと」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
+
+【id 74 / C】
+
+英文全体：
+Eri saw a poster about a volunteer event / at her community center. / The event was for people / who wanted to clean a nearby park. / Eri had never joined a volunteer event before, / but she decided to try it. / On Sunday morning, / she met the other volunteers at the park. / They picked up trash / and planted some flowers. / After the work was finished, / Eri was tired but happy. / She said that she wanted to join again / if there was another event.
+
+スラッシュ1：
+英文：
+Eri saw a poster about a volunteer event
+
+現在の画面表示順：
+① 固定「エリは」
+② 固定「ボランティア活動についての」
+③ 3択「ポスターを見た / ポスターを作った / ポスターを配った」
+
+正解：
+① 固定「エリは」
+② 固定「ボランティア活動についての」
+③ 「ポスターを見た」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ2：
+英文：
+at her community center.
+
+現在の画面表示順：
+① 固定「地域センターで」
+
+正解：
+① 固定「地域センターで」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ3：
+英文：
+The event was for people
+
+現在の画面表示順：
+① 固定「その活動は」
+② 固定「人々のためのものだった」
+
+正解：
+① 固定「その活動は」
+② 固定「人々のためのものだった」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ4：
+英文：
+who wanted to clean a nearby park.
+
+現在の画面表示順：
+① 3択「近くの公園を掃除したい / 近くの公園を見たい / 近くの公園を走りたい」
+
+正解：
+① 「近くの公園を掃除したい」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ5：
+英文：
+Eri had never joined a volunteer event before,
+
+現在の画面表示順：
+① 固定「エリは」
+② 固定「一度も参加したことがなかった」
+③ 固定「ボランティア活動に以前」
+④ 3択「ボランティア活動 / 学校行事 / 会話練習」
+
+正解：
+① 固定「エリは」
+② 固定「一度も参加したことがなかった」
+③ 固定「ボランティア活動に以前」
+④ 「ボランティア活動」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ6：
+英文：
+but she decided to try it.
+
+現在の画面表示順：
+① 固定「しかし彼女は」
+② 固定「やってみることに」
+③ 3択「決めた / 忘れた / 行った」
+④ 3択「それを / 彼を / それらを」
+
+正解：
+① 固定「しかし彼女は」
+② 固定「やってみることに」
+③ 「決めた」
+④ 「それを」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ7：
+英文：
+On Sunday morning,
+
+現在の画面表示順：
+① 固定「日曜日の朝」
+
+正解：
+① 固定「日曜日の朝」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ8：
+英文：
+she met the other volunteers at the park.
+
+現在の画面表示順：
+① 固定「彼女は」
+② 固定「他の参加者に会った」
+③ 固定「公園で」
+④ 3択「会った / 見た / 探した」
+
+正解：
+① 固定「彼女は」
+② 固定「他の参加者に会った」
+③ 固定「公園で」
+④ 「会った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ9：
+英文：
+They picked up trash
+
+現在の画面表示順：
+① 固定「彼らは」
+② 固定「ごみを」
+③ 3択「拾った / 捨てた / 見つけた」
+
+正解：
+① 固定「彼らは」
+② 固定「ごみを」
+③ 「拾った」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ10：
+英文：
+and planted some flowers.
+
+現在の画面表示順：
+① 固定「そして」
+② 固定「花を」
+③ 3択「植えた / 描いた / 集めた」
+
+正解：
+① 固定「そして」
+② 固定「花を」
+③ 「植えた」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ11：
+英文：
+After the work was finished,
+
+現在の画面表示順：
+① 3択「～した後で / ～する前に / ～している間に」
+② 3択「作業が終わった / 作業が始まった / 作業が続いた」
+
+正解：
+① 「～した後で」
+② 「作業が終わった」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ12：
+英文：
+Eri was tired but happy.
+
+現在の画面表示順：
+① 固定「エリは」
+② 固定「疲れていたがうれしかった」
+
+正解：
+① 固定「エリは」
+② 固定「疲れていたがうれしかった」
+
+特殊設定：
+fixedOnlyあり / layoutSequenceなし / selectionGroups: []
+
+スラッシュ13：
+英文：
+She said that she wanted to join again
+
+現在の画面表示順：
+① 固定「彼女は言った」
+② 3択「また参加したいと / 帰りたいと / 休みたいと」
+
+正解：
+① 固定「彼女は言った」
+② 「また参加したいと」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+スラッシュ14：
+英文：
+if there was another event.
+
+現在の画面表示順：
+① 3択「もし / なぜなら / しかし」
+② 3択「別のイベントがあれば / 別のイベントで / 別のイベントに」
+
+正解：
+① 「もし」
+② 「別のイベントがあれば」
+
+特殊設定：
+fixedOnlyなし / layoutSequenceなし
+
+----------------------------------------
