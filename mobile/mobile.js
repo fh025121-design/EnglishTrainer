@@ -32,10 +32,10 @@
   const MOBILE_POINT_CONFIG = Object.freeze({
     homeworkSpeakingDailyMax: 30,
     reviewSpeakingDailyMax: 400,
-    wordOrderDailyMax: 60,
+    wordOrderDailyMax: 50,
     totalDailyMax: Number.POSITIVE_INFINITY,
     homeworkCompletionReward: 10,
-    wordOrderCorrectReward: 2,
+    wordOrderCorrectReward: 1,
     seasonalNote: "summer-2026"
   });
   const MOBILE_POINT_HISTORY_PAGE_SIZE = 3;
