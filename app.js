@@ -4941,6 +4941,7 @@ function submitIrregularVerbAnswer() {
   if (!session || session.answered) return;
   const currentQuestion = session.questions[session.currentIndex];
   if (!currentQuestion) return;
+  const isCorrectionRetryAttempt = Boolean(session.awaitingCorrectionRetry);
 
   const answerInput = document.getElementById("irregularVerbAnswerInput");
   const answerBtn = document.getElementById("irregularVerbAnswerBtn");
@@ -4984,7 +4985,9 @@ function submitIrregularVerbAnswer() {
     if (!session.reviewMode) {
       awardPointsForTrainingMode("irregular-verb");
     }
-    playTrainingCorrectChime();
+    if (!isCorrectionRetryAttempt) {
+      playTrainingCorrectChime();
+    }
   } else {
     session.wrongQuestionIds.push(String(currentQuestion.id));
   }
@@ -11961,7 +11964,8 @@ function submitAnswer(question, rawAnswer, feedbackBox, nextButton, card) {
       item: targetItem,
       result: updateItemLevelProgress(targetItem, true)
     }));
-  if (shouldPlayTrainingCorrectChimeForSession(session)) {
+  const isCorrectionRetryInTrainingSession = isTrainingSession || session.mode === "challenge";
+  if (shouldPlayTrainingCorrectChimeForSession(session) && !isCorrectionRetryInTrainingSession) {
     playTrainingCorrectChime();
   }
   if (!isTrainingSession) {
