@@ -1,6 +1,8 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/11 20:20", note: "モバイル版のみ: 和訳トレーニングをホームボタンで中断したときも、既存モードと同様に獲得ポイント画面を表示するよう修正。和訳完了・中断のどちらでも、問題完了ごとの加点を維持したまま、ポイント表示を経由してホームへ戻る導線へ統一。" },
+    { version: "2026/08/11 20:17", note: "モバイル版のみ: 和訳トレーニングの学習履歴に獲得ポイントを反映。各英文問題の完了時に既存のポイント経路へ1Pずつ加算し、完了/中断どちらでも learningHistory の +P が他の特訓や語順トレーニングと同様に表示されるよう修正。和訳専用の履歴経路は追加せず、既存の localStorage→pending→Firestore→学習履歴表示の共通経路を維持。" },
     { version: "2026/08/11 19:07", note: "モバイル版のみ: 語順トレーニングのポイント設定を再調整。正解1問あたり+1P、日次上限50Pへ変更。モバイル総合ポイント上限なしの仕様は維持。和訳トレーニングのポイント加算仕様は未変更。PC版は未変更。" },
     { version: "2026/08/11 19:02", note: "モバイル版のみ: 和文トレーニング（語順トレーニング）の配点を1題正解あたり+2Pのまま、日次上限を50P→60Pへ変更。あわせてモバイル総合ポイント（日次合計）の上限を廃止し、宿題・復習・語順の各モード上限内で加算されるよう調整。PC版は未変更。" },
     { version: "2026/08/11 13:36", note: "モバイル版のみ: Speaking の Week1 Question & Response keywords を指定値へ更新。対象は W1 Day1〜Day7 の QR01〜QR04 の Question/Answer の keywords のみで、本文・日本語訳・Week2以降・Week7・Vocabulary・Short Conversation・dailyHomework・他機能は未変更。" },

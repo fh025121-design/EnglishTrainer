@@ -47,6 +47,10 @@
     review: Object.freeze({
       title: "🎉 復習お疲れさま！",
       categoryLabel: "復習発話"
+    }),
+    translation: Object.freeze({
+      title: "🎉 和訳トレーニングお疲れさま！",
+      categoryLabel: "和訳"
     })
   });
   const MOBILE_DAY_MIN = 1;
@@ -93,6 +97,7 @@
       reviewSpeakingPointsByDate: {},
       reviewSpeakingCountByDate: {},
       wordOrderPointsByDate: {},
+      translationTrainingPointsByDate: {},
       todayEarned: 0,
       previousDayEarned: 0,
       totalEarned: 0
@@ -126,12 +131,18 @@
         Object.entries(source.wordOrderPointsByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
       )
       : {};
+    const translationTrainingPointsByDate = source.translationTrainingPointsByDate && typeof source.translationTrainingPointsByDate === "object"
+      ? Object.fromEntries(
+        Object.entries(source.translationTrainingPointsByDate).map(([dayKey, earned]) => [String(dayKey), Math.max(0, Math.floor(Number(earned) || 0))])
+      )
+      : {};
     return {
       homeworkSpeakingPointsByDate,
       homeworkSpeakingCompletionsByDate,
       reviewSpeakingPointsByDate,
       reviewSpeakingCountByDate,
       wordOrderPointsByDate,
+      translationTrainingPointsByDate,
       todayEarned: Math.max(0, Math.floor(Number(source.todayEarned) || 0)),
       previousDayEarned: Math.max(0, Math.floor(Number(source.previousDayEarned) || 0)),
       totalEarned: Math.max(0, Math.floor(Number(source.totalEarned) || 0))
@@ -144,16 +155,19 @@
     const todayHomework = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[todayKey]) || 0);
     const todayReview = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
     const todayWordOrder = Math.max(0, Number(pointState.wordOrderPointsByDate?.[todayKey]) || 0);
+    const todayTranslation = Math.max(0, Number(pointState.translationTrainingPointsByDate?.[todayKey]) || 0);
     const previousHomework = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[previousKey]) || 0);
     const previousReview = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[previousKey]) || 0);
     const previousWordOrder = Math.max(0, Number(pointState.wordOrderPointsByDate?.[previousKey]) || 0);
-    pointState.todayEarned = todayHomework + todayReview + todayWordOrder;
-    pointState.previousDayEarned = previousHomework + previousReview + previousWordOrder;
+    const previousTranslation = Math.max(0, Number(pointState.translationTrainingPointsByDate?.[previousKey]) || 0);
+    pointState.todayEarned = todayHomework + todayReview + todayWordOrder + todayTranslation;
+    pointState.previousDayEarned = previousHomework + previousReview + previousWordOrder + previousTranslation;
 
     const homeworkTotal = Object.values(pointState.homeworkSpeakingPointsByDate || {}).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
     const reviewTotal = Object.values(pointState.reviewSpeakingPointsByDate || {}).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
     const wordOrderTotal = Object.values(pointState.wordOrderPointsByDate || {}).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
-    const computedTotal = Math.floor(Math.max(0, homeworkTotal + reviewTotal + wordOrderTotal));
+    const translationTotal = Object.values(pointState.translationTrainingPointsByDate || {}).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
+    const computedTotal = Math.floor(Math.max(0, homeworkTotal + reviewTotal + wordOrderTotal + translationTotal));
     pointState.totalEarned = computedTotal;
     return pointState;
   }
@@ -163,10 +177,12 @@
     const todayHomework = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[todayKey]) || 0);
     const todayReview = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
     const todayWordOrder = Math.max(0, Number(pointState.wordOrderPointsByDate?.[todayKey]) || 0);
+    const todayTranslation = Math.max(0, Number(pointState.translationTrainingPointsByDate?.[todayKey]) || 0);
     return {
       todayHomework,
       todayReview,
       todayWordOrder,
+      todayTranslation,
       todayEarned: Math.max(0, Number(pointState.todayEarned) || 0),
       previousDayEarned: Math.max(0, Number(pointState.previousDayEarned) || 0),
       totalEarned: Math.max(0, Number(pointState.totalEarned) || 0)
@@ -245,6 +261,21 @@
     const totalCapRemaining = getMobilePointDailyTotalRemaining(pointState);
     const earned = Math.max(0, Math.min(baseReward, wordOrderCapRemaining, totalCapRemaining));
     pointState.wordOrderPointsByDate[todayKey] = currentPoints + earned;
+    saveMobilePointState(pointState);
+    return earned;
+  }
+
+  function awardTranslationTrainingPoints(correctCount = 1) {
+    const safeCorrectCount = Math.max(0, Math.floor(Number(correctCount) || 0));
+    if (safeCorrectCount <= 0) return 0;
+    const pointState = getMobilePointState();
+    const todayKey = getMobilePointJstDateKey(0);
+    const currentPoints = Math.max(0, Number(pointState.translationTrainingPointsByDate?.[todayKey]) || 0);
+    const baseReward = safeCorrectCount * Math.max(0, Number(MOBILE_POINT_CONFIG.wordOrderCorrectReward) || 0);
+    const translationCapRemaining = Math.max(0, MOBILE_POINT_CONFIG.wordOrderDailyMax - currentPoints);
+    const totalCapRemaining = getMobilePointDailyTotalRemaining(pointState);
+    const earned = Math.max(0, Math.min(baseReward, translationCapRemaining, totalCapRemaining));
+    pointState.translationTrainingPointsByDate[todayKey] = currentPoints + earned;
     saveMobilePointState(pointState);
     return earned;
   }
@@ -383,6 +414,7 @@
       reviewSpeakingPointsByDate: sanitizePointMapForCompare(sanitized.reviewSpeakingPointsByDate),
       reviewSpeakingCountByDate: sanitizePointMapForCompare(sanitized.reviewSpeakingCountByDate),
       wordOrderPointsByDate: sanitizePointMapForCompare(sanitized.wordOrderPointsByDate),
+      translationTrainingPointsByDate: sanitizePointMapForCompare(sanitized.translationTrainingPointsByDate),
       dailyEarnedByDate: sanitizePointMapForCompare(sanitized.dailyEarnedByDate),
       dailyEarnedByModeByDate: sanitizePointModeMapByDayForCompare(sanitized.dailyEarnedByModeByDate),
       todayEarned: Math.max(0, Math.floor(Number(sanitized.todayEarned) || 0)),
@@ -421,6 +453,7 @@
       reviewSpeakingPointsByDate: mergePointMapByMax(base.reviewSpeakingPointsByDate, incoming.reviewSpeakingPointsByDate),
       reviewSpeakingCountByDate: mergePointMapByMax(base.reviewSpeakingCountByDate, incoming.reviewSpeakingCountByDate),
       wordOrderPointsByDate: mergePointMapByMax(base.wordOrderPointsByDate, incoming.wordOrderPointsByDate),
+      translationTrainingPointsByDate: mergePointMapByMax(base.translationTrainingPointsByDate, incoming.translationTrainingPointsByDate),
       dailyEarnedByDate: mergePointMapByMax(base.dailyEarnedByDate, incoming.dailyEarnedByDate),
       dailyEarnedByModeByDate: mergePointModeMapByDayMax(base.dailyEarnedByModeByDate, incoming.dailyEarnedByModeByDate),
       todayEarned: Math.max(base.todayEarned, incoming.todayEarned),
@@ -838,6 +871,7 @@
     if (key === "homework" || key.includes("宿題")) return "宿題";
     if (key === "speaking" || key.includes("発話")) return "発話";
     if (key.includes("wordorder") || key.includes("語順")) return "語順";
+    if (key.includes("translation") || key.includes("和訳")) return "和訳";
     return String(modeKey || "").trim();
   }
 
@@ -861,7 +895,8 @@
     const fallbackRows = [
       { modeLabel: "発話", points: Math.max(0, Math.floor(Number(pointState?.reviewSpeakingPointsByDate?.[dayKey]) || 0)) },
       { modeLabel: "宿題", points: Math.max(0, Math.floor(Number(pointState?.homeworkSpeakingPointsByDate?.[dayKey]) || 0)) },
-      { modeLabel: "語順", points: Math.max(0, Math.floor(Number(pointState?.wordOrderPointsByDate?.[dayKey]) || 0)) }
+      { modeLabel: "語順", points: Math.max(0, Math.floor(Number(pointState?.wordOrderPointsByDate?.[dayKey]) || 0)) },
+      { modeLabel: "和訳", points: Math.max(0, Math.floor(Number(pointState?.translationTrainingPointsByDate?.[dayKey]) || 0)) }
     ].filter((row) => row.points > 0);
 
     return fallbackRows.sort((left, right) => right.points - left.points || left.modeLabel.localeCompare(right.modeLabel, "ja"));
@@ -888,6 +923,7 @@
     registerFromMap(pointState?.reviewSpeakingPointsByDate);
     registerFromMap(pointState?.homeworkSpeakingPointsByDate);
     registerFromMap(pointState?.wordOrderPointsByDate);
+    registerFromMap(pointState?.translationTrainingPointsByDate);
 
     if (pointState?.dailyEarnedByModeByDate && typeof pointState.dailyEarnedByModeByDate === "object") {
       Object.entries(pointState.dailyEarnedByModeByDate).forEach(([dayKey, modeMap]) => {
@@ -3040,6 +3076,7 @@
     if (normalizedMode === "conversation") return "会話練習";
     if (normalizedMode === "review") return "過去の間違い";
     if (normalizedMode === "word-order" || normalizedMode === "wordorder") return "語順トレーニング";
+    if (normalizedMode === "translation") return "和訳トレーニング";
     return normalizedMode || "-";
   }
 
@@ -3533,6 +3570,7 @@
     if (mode === "会話練習" || lowerMode === "conversation") return "会話練習";
     if (mode === "過去の間違い" || mode === "復習" || lowerMode === "review") return "復習";
     if (mode.includes("語順") || lowerMode.includes("word-order") || lowerMode.includes("wordorder")) return "語順";
+    if (mode.includes("和訳") || lowerMode.includes("translation")) return "和訳";
 
     const dayNumber = String(entry?.dayNumber || "").trim();
     const parsed = parseMobileLearningHistoryDayNumberInfo(dayNumber);
@@ -3646,6 +3684,7 @@
     if (category === "会話練習") return { key: "conversation", label: "会話練習" };
     if (category === "復習") return { key: "review", label: "復習" };
     if (category === "語順") return { key: "wordOrder", label: "語順" };
+    if (category === "和訳") return { key: "translation", label: "和訳" };
     const fallbackLabel = String(entry?.mode || "").trim() || "-";
     return { key: `mode:${fallbackLabel}`, label: fallbackLabel };
   }
@@ -3655,7 +3694,8 @@
       vocabulary: { label: "Vocabulary", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
       conversation: { label: "会話練習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
       review: { label: "復習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
-      wordOrder: { label: "語順", activeStudySeconds: 0, questionCount: 0, correctCount: 0 }
+      wordOrder: { label: "語順", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      translation: { label: "和訳", activeStudySeconds: 0, questionCount: 0, correctCount: 0 }
     };
   }
 
@@ -7403,8 +7443,22 @@
       answeredGroupKeys: [],
       partSelections: {},
       partFixedTaps: {},
-      incorrectAttemptsByGroup: {}
+      incorrectAttemptsByGroup: {},
+      historyQuestionCount: 0,
+      historyCorrectCount: 0,
+      historyEarnedPoints: 0,
+      historyQuestionHadIncorrectMap: {},
+      historyCompletedQuestionMap: {}
     };
+    if (!state.learningHistorySession) {
+      startMobileLearningHistorySession({
+        source: "translation",
+        mode: "和訳トレーニング",
+        dayNumber: "",
+        startedAt: Date.now()
+      });
+    }
+    recordMobileLearningActivity();
     state.translationTrainingCurrentPartIndex = 0;
     state.translationTrainingPartCompleted = false;
     state.translationTrainingSpeechDetected = false;
@@ -7808,6 +7862,11 @@
     }
     elements.translationTrainingFeedbackText.textContent = isCorrect ? "正解です。" : "";
     if (!isCorrect) {
+      const currentQuestionIndex = Math.max(0, Number(training.questionIndex) || 0);
+      if (!training.historyQuestionHadIncorrectMap || typeof training.historyQuestionHadIncorrectMap !== "object") {
+        training.historyQuestionHadIncorrectMap = {};
+      }
+      training.historyQuestionHadIncorrectMap[currentQuestionIndex] = true;
       training.incorrectAttemptsByGroup[attemptKey] = Math.max(0, Number(training.incorrectAttemptsByGroup[attemptKey]) || 0) + 1;
       triggerTranslationTrainingIncorrectFeedback(selectedButton);
       return;
@@ -7881,13 +7940,35 @@
     elements.translationTrainingEnglishReadText.innerHTML = "";
     elements.translationTrainingEnglishReadText.appendChild(buildTranslationTrainingEnglishReadFragment(question.english));
     elements.translationTrainingJapaneseText.textContent = question.japanese;
+    const questionIndex = Math.max(0, Number(training.questionIndex) || 0);
+    if (!training.historyCompletedQuestionMap || typeof training.historyCompletedQuestionMap !== "object") {
+      training.historyCompletedQuestionMap = {};
+    }
+    if (training.historyCompletedQuestionMap[questionIndex] !== true) {
+      training.historyCompletedQuestionMap[questionIndex] = true;
+      training.historyQuestionCount = Math.max(0, Number(training.historyQuestionCount) || 0) + 1;
+      training.historyCorrectCount = Math.max(0, Number(training.historyCorrectCount) || 0) + 1;
+      training.historyEarnedPoints = Math.max(0, Number(training.historyEarnedPoints) || 0) + awardTranslationTrainingPoints(1);
+    }
+    recordMobileLearningActivity();
     state.translationTrainingSpeechDetected = false;
     clearTranslationTrainingSpeechTimer();
+  }
+
+  function buildTranslationLearningHistorySummary(training = state.translationTraining) {
+    const questionCount = Math.max(0, Number(training?.historyQuestionCount) || 0);
+    const correctCount = Math.max(0, Number(training?.historyCorrectCount) || 0);
+    return {
+      questionCount,
+      correctCount,
+      accuracy: questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0
+    };
   }
 
   function advanceTranslationTrainingQuestion() {
     const training = state.translationTraining;
     if (!training) return;
+    recordMobileLearningActivity();
     if (training.questionIndex + 1 < training.questions.length) {
       training.questionIndex += 1;
       const resetState = window.translationTrainingData?.resetTranslationTrainingQuestionState?.(training) || training;
@@ -7900,11 +7981,24 @@
       showScreen("translationTrainingScreen");
       return;
     }
+    if (state.learningHistorySession) {
+      finalizeMobileLearningHistorySession({
+        completedReason: "completed",
+        mode: "和訳トレーニング",
+        dayNumber: "",
+        summary: buildTranslationLearningHistorySummary(training)
+      });
+    }
+    const earnedPoints = Math.max(0, Number(training.historyEarnedPoints) || 0);
     state.translationTraining = null;
     state.translationTrainingCurrentPartIndex = 0;
     state.translationTrainingPartCompleted = false;
     state.translationTrainingSpeechDetected = false;
     clearTranslationTrainingSpeechTimer();
+    if (earnedPoints > 0) {
+      openPointRewardScreen("translation", earnedPoints, { onClose: renderHome });
+      return;
+    }
     renderHome();
   }
 
@@ -10439,11 +10533,25 @@
     elements.wordOrderRestartBtn.addEventListener("click", startWordOrderTraining);
     elements.wordOrderHomeBtn.addEventListener("click", leaveWordOrderTrainingToHome);
     elements.translationTrainingBackBtn.addEventListener("click", () => {
+      recordMobileLearningActivity();
+      const earnedPoints = Math.max(0, Number(state.translationTraining?.historyEarnedPoints) || 0);
+      if (state.translationTraining && state.learningHistorySession) {
+        finalizeMobileLearningHistorySession({
+          completedReason: "interrupted",
+          mode: "和訳トレーニング",
+          dayNumber: "",
+          summary: buildTranslationLearningHistorySummary(state.translationTraining)
+        });
+      }
       clearTranslationTrainingSpeechTimer();
       state.translationTraining = null;
       state.translationTrainingCurrentPartIndex = 0;
       state.translationTrainingPartCompleted = false;
       state.translationTrainingSpeechDetected = false;
+      if (earnedPoints > 0) {
+        openPointRewardScreen("translation", earnedPoints, { onClose: renderHome });
+        return;
+      }
       renderHome();
     });
     elements.translationTrainingRetryBtn.addEventListener("click", () => {
