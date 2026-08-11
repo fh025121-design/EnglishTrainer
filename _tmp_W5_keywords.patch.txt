@@ -1,0 +1,2232 @@
+*** Begin Patch
+*** Update File: C:\Users\hiroshiinoue\Downloads\GitHub\EnglishTrainer\mobile\speaking-data.js
+       ]
+     },
+     {
+-      "weekId": "W5",
+-      "label": "7/20～7/26",
+-      "startDate": "2026-07-20",
+-      "endDate": "2026-07-26",
+-      "shortConversations": [
+-        {
+-          "id": "W5-D1-SC01",
+-          "date": "2026-07-20",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "Why do you practice English?",
+-              "japanese": "なぜ英語を練習するのですか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "よりはっきり話せるようになりたい"
+-              ],
+-              "keywords": [
+-                "why",
+-                "you",
+-                "practice"
+-              ],
+-              "lineId": "W5-D1-SC01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Because I want to speak more clearly.",
+-              "japanese": "よりはっきりと話せるようになりたいからです。",
+-              "keywords": [
+-                "because",
+-                "I",
+-                "want"
+-              ],
+-              "lineId": "W5-D1-SC01-02"
+-            },
+-            {
+-              "speaker": "A",
+-              "english": "What do you do every day?",
+-              "japanese": "毎日何をしますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "短い英文を音読する"
+-              ],
+-              "lineId": "W5-D1-SC01-03"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "I read short sentences aloud.",
+-              "japanese": "短い英文を声に出して読みます。",
+-              "lineId": "W5-D1-SC01-04"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D1-QR01",
+-          "date": "2026-07-20",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "Why did Aya often stop?",
+-              "japanese": "なぜアヤはよく手を止めていたのですか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "文が難しかった"
+-              ],
+-              "keywords": [
+-                "why",
+-                "stop"
+-              ],
+-              "lineId": "W5-D1-QR01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Because the sentences were difficult.",
+-              "japanese": "文が難しかったからです。",
+-              "keywords": [
+-                "because",
+-                "sentences",
+-                "difficult"
+-              ],
+-              "lineId": "W5-D1-QR01-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D1-QR02",
+-          "date": "2026-07-20",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did her teacher tell her to use?",
+-              "japanese": "先生は彼女に何を使うように言いましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "より短い文"
+-              ],
+-              "keywords": [
+-                "what",
+-                "teacher",
+-                "use"
+-              ],
+-              "lineId": "W5-D1-QR02-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Shorter sentences.",
+-              "japanese": "より短い文です。",
+-              "keywords": [
+-                "shorter",
+-                "sentences"
+-              ],
+-              "lineId": "W5-D1-QR02-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D1-QR03",
+-          "date": "2026-07-20",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "How long did Aya continue the practice?",
+-              "japanese": "アヤはどのくらいの期間その練習を続けましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "2週間"
+-              ],
+-              "keywords": [
+-                "how long",
+-                "continue"
+-              ],
+-              "lineId": "W5-D1-QR03-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "For two weeks.",
+-              "japanese": "2週間です。",
+-              "keywords": [
+-                "two",
+-                "weeks"
+-              ],
+-              "lineId": "W5-D1-QR03-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D1-QR04",
+-          "date": "2026-07-20",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What can Aya do now?",
+-              "japanese": "アヤは今、何ができますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "より速く質問に答える"
+-              ],
+-              "keywords": [
+-                "what",
+-                "do"
+-              ],
+-              "lineId": "W5-D1-QR04-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "She can answer questions more quickly.",
+-              "japanese": "彼女はより速く質問に答えることができます。",
+-              "keywords": [
+-                "she",
+-                "answer",
+-                "questions"
+-              ],
+-              "lineId": "W5-D1-QR04-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D2-SC01",
+-          "date": "2026-07-21",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What does your brother do after school?",
+-              "japanese": "あなたのお兄さん［弟］は放課後何をしますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "サッカー"
+-              ],
+-              "keywords": [
+-                "what",
+-                "brother",
+-                "do"
+-              ],
+-              "lineId": "W5-D2-SC01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "He plays soccer.",
+-              "japanese": "彼はサッカーをします。",
+-              "keywords": [
+-                "he",
+-                "plays",
+-                "soccer"
+-              ],
+-              "lineId": "W5-D2-SC01-02"
+-            },
+-            {
+-              "speaker": "A",
+-              "english": "Does he study at night?",
+-              "japanese": "彼は夜に勉強しますか。",
+-              "hintType": "none",
+-              "hints": [],
+-              "lineId": "W5-D2-SC01-03"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Yes, he does.",
+-              "japanese": "はい、勉強します。",
+-              "lineId": "W5-D2-SC01-04"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D2-QR01",
+-          "date": "2026-07-21",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What sport does Riku play?",
+-              "japanese": "リクは何のスポーツをしますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "バスケットボール"
+-              ],
+-              "keywords": [
+-                "what sport",
+-                "play"
+-              ],
+-              "lineId": "W5-D2-QR01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "He plays basketball.",
+-              "japanese": "彼はバスケットボールをします。",
+-              "keywords": [
+-                "basketball"
+-              ],
+-              "lineId": "W5-D2-QR01-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D2-QR02",
+-          "date": "2026-07-21",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "When does he practice?",
+-              "japanese": "彼はいつ練習しますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "放課後"
+-              ],
+-              "keywords": [
+-                "when",
+-                "he",
+-                "practice"
+-              ],
+-              "lineId": "W5-D2-QR02-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "He practices after school.",
+-              "japanese": "彼は放課後に練習します。",
+-              "keywords": [
+-                "he",
+-                "practices",
+-                "after school"
+-              ],
+-              "lineId": "W5-D2-QR02-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D2-QR03",
+-          "date": "2026-07-21",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "Does he watch TV before homework?",
+-              "japanese": "彼は宿題の前にテレビを見ますか。",
+-              "hintType": "none",
+-              "hints": [],
+-              "keywords": [
+-                "does",
+-                "he",
+-                "watch TV"
+-              ],
+-              "lineId": "W5-D2-QR03-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "No, he doesn't.",
+-              "japanese": "いいえ、見ません。",
+-              "keywords": [
+-                "no",
+-                "doesn't"
+-              ],
+-              "lineId": "W5-D2-QR03-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D2-QR04",
+-          "date": "2026-07-21",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What does he do on Sundays?",
+-              "japanese": "彼は日曜日に何をしますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "本を読んで家族を手伝う"
+-              ],
+-              "keywords": [
+-                "what",
+-                "he",
+-                "do"
+-              ],
+-              "lineId": "W5-D2-QR04-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "He reads books and helps his family.",
+-              "japanese": "彼は本を読んだり、家族の手伝いをしたりします。",
+-              "keywords": [
+-                "he",
+-                "helps",
+-                "family"
+-              ],
+-              "lineId": "W5-D2-QR04-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D3-SC01",
+-          "date": "2026-07-22",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "Where do you study English?",
+-              "japanese": "どこで英語を勉強しますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "家"
+-              ],
+-              "keywords": [
+-                "where",
+-                "you",
+-                "study"
+-              ],
+-              "lineId": "W5-D3-SC01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "I study at home.",
+-              "japanese": "家で勉強します。",
+-              "keywords": [
+-                "I",
+-                "study",
+-                "home"
+-              ],
+-              "lineId": "W5-D3-SC01-02"
+-            },
+-            {
+-              "speaker": "A",
+-              "english": "Why do you study there?",
+-              "japanese": "なぜそこで勉強するのですか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "部屋が静か"
+-              ],
+-              "lineId": "W5-D3-SC01-03"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Because my room is quiet.",
+-              "japanese": "私の部屋は静かだからです。",
+-              "lineId": "W5-D3-SC01-04"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D3-QR01",
+-          "date": "2026-07-22",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "Where does Mina study English?",
+-              "japanese": "ミナはどこで英語を勉強しますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "学校の図書館"
+-              ],
+-              "keywords": [
+-                "where",
+-                "study"
+-              ],
+-              "lineId": "W5-D3-QR01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "She studies in the school library.",
+-              "japanese": "彼女は学校の図書館で勉強します。",
+-              "keywords": [
+-                "she",
+-                "studies",
+-                "library"
+-              ],
+-              "lineId": "W5-D3-QR01-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D3-QR02",
+-          "date": "2026-07-22",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "When does she go there?",
+-              "japanese": "彼女はいつそこに行きますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "水曜日の部活のあと"
+-              ],
+-              "keywords": [
+-                "when",
+-                "she",
+-                "go"
+-              ],
+-              "lineId": "W5-D3-QR02-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "She goes there after club practice on Wednesdays.",
+-              "japanese": "彼女は水曜日の部活のあとでそこに行きます。",
+-              "keywords": [
+-                "she",
+-                "goes",
+-                "Wednesdays"
+-              ],
+-              "lineId": "W5-D3-QR02-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D3-QR03",
+-          "date": "2026-07-22",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "Why does she use the library?",
+-              "japanese": "なぜ彼女は図書館を使うのですか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "静かだから"
+-              ],
+-              "keywords": [
+-                "why",
+-                "she",
+-                "use"
+-              ],
+-              "lineId": "W5-D3-QR03-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Because it is quiet.",
+-              "japanese": "静かだからです。",
+-              "keywords": [
+-                "because",
+-                "quiet"
+-              ],
+-              "lineId": "W5-D3-QR03-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D3-QR04",
+-          "date": "2026-07-22",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "Who sometimes studies with Mina?",
+-              "japanese": "誰が時々ミナと一緒に勉強しますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "ユウナ"
+-              ],
+-              "keywords": [
+-                "who",
+-                "study"
+-              ],
+-              "lineId": "W5-D3-QR04-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Her friend Yuna does.",
+-              "japanese": "彼女の友達のユウナです。",
+-              "keywords": [
+-                "does"
+-              ],
+-              "lineId": "W5-D3-QR04-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D4-SC01",
+-          "date": "2026-07-23",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did you do last Sunday?",
+-              "japanese": "この前の日曜日に何をしましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "サッカーを練習する"
+-              ],
+-              "keywords": [
+-                "what",
+-                "you",
+-                "do"
+-              ],
+-              "lineId": "W5-D4-SC01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "I practiced soccer.",
+-              "japanese": "サッカーの練習をしました。",
+-              "keywords": [
+-                "I",
+-                "practiced",
+-                "soccer"
+-              ],
+-              "lineId": "W5-D4-SC01-02"
+-            },
+-            {
+-              "speaker": "A",
+-              "english": "What did you do after that?",
+-              "japanese": "そのあとは何をしましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "家で英語を勉強する"
+-              ],
+-              "lineId": "W5-D4-SC01-03"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "I studied English at home.",
+-              "japanese": "家で英語を勉強しました。",
+-              "lineId": "W5-D4-SC01-04"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D4-QR01",
+-          "date": "2026-07-23",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "Where did Kota go last Sunday?",
+-              "japanese": "コウタはこの前の日曜日、どこへ行きましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "スポーツセンター"
+-              ],
+-              "keywords": [
+-                "where",
+-                "go"
+-              ],
+-              "lineId": "W5-D4-QR01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "He went to the sports center.",
+-              "japanese": "彼はスポーツセンターへ行きました。",
+-              "keywords": [
+-                "he",
+-                "went",
+-                "sports center"
+-              ],
+-              "lineId": "W5-D4-QR01-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D4-QR02",
+-          "date": "2026-07-23",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did he do before the game?",
+-              "japanese": "彼は試合の前に何をしましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "チームと練習した"
+-              ],
+-              "keywords": [
+-                "what",
+-                "he",
+-                "do"
+-              ],
+-              "lineId": "W5-D4-QR02-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "He practiced with his team.",
+-              "japanese": "彼はチームと一緒に練習しました。",
+-              "keywords": [
+-                "he",
+-                "practiced",
+-                "team"
+-              ],
+-              "lineId": "W5-D4-QR02-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D4-QR03",
+-          "date": "2026-07-23",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "When did the game begin?",
+-              "japanese": "試合は何時に始まりましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "10時"
+-              ],
+-              "keywords": [
+-                "when",
+-                "game",
+-                "begin"
+-              ],
+-              "lineId": "W5-D4-QR03-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "It began at ten.",
+-              "japanese": "10時に始まりました。",
+-              "keywords": [
+-                "it",
+-                "began",
+-                "ten"
+-              ],
+-              "lineId": "W5-D4-QR03-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D4-QR04",
+-          "date": "2026-07-23",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did Kota do after he went home?",
+-              "japanese": "コウタは家に帰ったあと、何をしましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "英語の宿題を終わらせた"
+-              ],
+-              "keywords": [
+-                "what",
+-                "do"
+-              ],
+-              "lineId": "W5-D4-QR04-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "He finished his English homework.",
+-              "japanese": "英語の宿題を終わらせました。",
+-              "keywords": [
+-                "he",
+-                "finished",
+-                "homework"
+-              ],
+-              "lineId": "W5-D4-QR04-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D5-SC01",
+-          "date": "2026-07-24",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "How do you check this sentence?",
+-              "japanese": "どのようにこの文を確認しますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "主語と動詞"
+-              ],
+-              "keywords": [
+-                "how",
+-                "you",
+-                "check"
+-              ],
+-              "lineId": "W5-D5-SC01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "I check the subject and the verb.",
+-              "japanese": "主語と動詞を確認します。",
+-              "keywords": [
+-                "I",
+-                "check",
+-                "subject"
+-              ],
+-              "lineId": "W5-D5-SC01-02"
+-            },
+-            {
+-              "speaker": "A",
+-              "english": "What do you do after that?",
+-              "japanese": "そのあとは何をしますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "正しい文を音読する"
+-              ],
+-              "lineId": "W5-D5-SC01-03"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "I read the correct sentence aloud.",
+-              "japanese": "正しい文を声に出して読みます。",
+-              "lineId": "W5-D5-SC01-04"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D5-QR01",
+-          "date": "2026-07-24",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did Yuto check?",
+-              "japanese": "ユウトは何を確認しましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "5つの英文"
+-              ],
+-              "keywords": [
+-                "what",
+-                "check"
+-              ],
+-              "lineId": "W5-D5-QR01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "He checked five English sentences.",
+-              "japanese": "彼は5つの英文を確認しました。",
+-              "keywords": [
+-                "he",
+-                "checked",
+-                "sentences"
+-              ],
+-              "lineId": "W5-D5-QR01-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D5-QR02",
+-          "date": "2026-07-24",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "How many mistakes did each sentence have?",
+-              "japanese": "それぞれの文には何箇所間違いがありましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "1か所"
+-              ],
+-              "keywords": [
+-                "how many",
+-                "sentence",
+-                "have"
+-              ],
+-              "lineId": "W5-D5-QR02-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Each sentence had one mistake.",
+-              "japanese": "それぞれの文に1箇所ずつ間違いがありました。",
+-              "keywords": [
+-                "sentence",
+-                "had",
+-                "mistake"
+-              ],
+-              "lineId": "W5-D5-QR02-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D5-QR03",
+-          "date": "2026-07-24",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did he check first?",
+-              "japanese": "彼は最初に何を確認しましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "主語"
+-              ],
+-              "keywords": [
+-                "what",
+-                "he",
+-                "check"
+-              ],
+-              "lineId": "W5-D5-QR03-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "He checked the subject first.",
+-              "japanese": "彼は最初に主語を確認しました。",
+-              "keywords": [
+-                "he",
+-                "checked",
+-                "subject"
+-              ],
+-              "lineId": "W5-D5-QR03-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D5-QR04",
+-          "date": "2026-07-24",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did he do finally?",
+-              "japanese": "彼は最後に何をしましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "動詞の形を変えて音読した"
+-              ],
+-              "keywords": [
+-                "what",
+-                "he",
+-                "do"
+-              ],
+-              "lineId": "W5-D5-QR04-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "He changed the verb form and read the sentence aloud.",
+-              "japanese": "動詞の形を変えて、正しい文を声に出して読みました。",
+-              "keywords": [
+-                "he",
+-                "changed",
+-                "verb"
+-              ],
+-              "lineId": "W5-D5-QR04-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D6-SC01",
+-          "date": "2026-07-25",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did you do at the school event?",
+-              "japanese": "学校の行事で何をしましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "クラスメイトと活動する"
+-              ],
+-              "keywords": [
+-                "what",
+-                "you",
+-                "do"
+-              ],
+-              "lineId": "W5-D6-SC01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "I worked with my classmates.",
+-              "japanese": "クラスメイトと一緒に活動しました。",
+-              "keywords": [
+-                "I",
+-                "worked",
+-                "classmates"
+-              ],
+-              "lineId": "W5-D6-SC01-02"
+-            },
+-            {
+-              "speaker": "A",
+-              "english": "Were you nervous?",
+-              "japanese": "緊張しましたか。",
+-              "hintType": "none",
+-              "hints": [],
+-              "lineId": "W5-D6-SC01-03"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Yes, but I enjoyed it.",
+-              "japanese": "はい、でも楽しかったです。",
+-              "lineId": "W5-D6-SC01-04"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D6-QR01",
+-          "date": "2026-07-25",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "When did the school have English Day?",
+-              "japanese": "学校はいつイングリッシュ・デイを開催しましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "この前の土曜日"
+-              ],
+-              "keywords": [
+-                "when",
+-                "school",
+-                "have"
+-              ],
+-              "lineId": "W5-D6-QR01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "It had English Day last Saturday.",
+-              "japanese": "この前の土曜日に開催しました。",
+-              "keywords": [
+-                "it",
+-                "had",
+-                "English Day"
+-              ],
+-              "lineId": "W5-D6-QR01-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D6-QR02",
+-          "date": "2026-07-25",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did students prepare?",
+-              "japanese": "生徒たちは何を準備しましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "短いゲームとクイズ"
+-              ],
+-              "keywords": [
+-                "what",
+-                "students",
+-                "prepare"
+-              ],
+-              "lineId": "W5-D6-QR02-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "They prepared short games and quizzes.",
+-              "japanese": "彼らは短いゲームやクイズを準備しました。",
+-              "keywords": [
+-                "they",
+-                "prepared",
+-                "games"
+-              ],
+-              "lineId": "W5-D6-QR02-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D6-QR03",
+-          "date": "2026-07-25",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "Why was the writer nervous at first?",
+-              "japanese": "筆者はなぜ最初は緊張していたのですか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "英語でルールを説明する必要があった"
+-              ],
+-              "keywords": [
+-                "why",
+-                "writer",
+-                "nervous"
+-              ],
+-              "lineId": "W5-D6-QR03-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Because the writer had to explain the rules in English.",
+-              "japanese": "英語でルールを説明しなければならなかったからです。",
+-              "keywords": [
+-                "because",
+-                "explain",
+-                "rules"
+-              ],
+-              "lineId": "W5-D6-QR03-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D6-QR04",
+-          "date": "2026-07-25",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "How did the writer change?",
+-              "japanese": "筆者はどのように変化しましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "よりはっきり話せるようになった"
+-              ],
+-              "keywords": [
+-                "how",
+-                "writer",
+-                "change"
+-              ],
+-              "lineId": "W5-D6-QR04-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "The writer could speak more clearly.",
+-              "japanese": "よりはっきりと話せるようになりました。",
+-              "keywords": [
+-                "writer",
+-                "speak",
+-                "clearly"
+-              ],
+-              "lineId": "W5-D6-QR04-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D7-SC01",
+-          "date": "2026-07-26",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What was difficult this week?",
+-              "japanese": "今週は何が難しかったですか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "Whyの質問"
+-              ],
+-              "keywords": [
+-                "what",
+-                "difficult",
+-                "week"
+-              ],
+-              "lineId": "W5-D7-SC01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "Questions with why were difficult.",
+-              "japanese": "why「なぜ」を使った質問が難しかったです。",
+-              "keywords": [
+-                "questions",
+-                "difficult"
+-              ],
+-              "lineId": "W5-D7-SC01-02"
+-            },
+-            {
+-              "speaker": "A",
+-              "english": "What is your next goal?",
+-              "japanese": "次の目標は何ですか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "より長い答えを書く"
+-              ],
+-              "lineId": "W5-D7-SC01-03"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "I want to write longer answers.",
+-              "japanese": "より長い答えを書けるようになりたいです。",
+-              "lineId": "W5-D7-SC01-04"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D7-QR01",
+-          "date": "2026-07-26",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did the writer practice?",
+-              "japanese": "筆者は何を練習しましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "英語を読むことと書くこと"
+-              ],
+-              "keywords": [
+-                "what",
+-                "writer",
+-                "practice"
+-              ],
+-              "lineId": "W5-D7-QR01-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "The writer practiced reading and writing English.",
+-              "japanese": "筆者は英語を読むことと書くことを練習しました。",
+-              "keywords": [
+-                "writer",
+-                "practiced",
+-                "English"
+-              ],
+-              "lineId": "W5-D7-QR01-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D7-QR02",
+-          "date": "2026-07-26",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What did the writer do when a question was difficult?",
+-              "japanese": "質問が難しかったとき、筆者は何をしましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "本文をもう一度確認した"
+-              ],
+-              "keywords": [
+-                "what",
+-                "writer",
+-                "do"
+-              ],
+-              "lineId": "W5-D7-QR02-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "The writer checked the passage again.",
+-              "japanese": "筆者は本文をもう一度確認しました。",
+-              "keywords": [
+-                "writer",
+-                "checked",
+-                "passage"
+-              ],
+-              "lineId": "W5-D7-QR02-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D7-QR03",
+-          "date": "2026-07-26",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "Which words did the writer check?",
+-              "japanese": "筆者はどの単語を確認しましたか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "does・can・did"
+-              ],
+-              "keywords": [
+-                "which",
+-                "writer",
+-                "check"
+-              ],
+-              "lineId": "W5-D7-QR03-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "The writer checked does, can, and did.",
+-              "japanese": "筆者は does、can、did を確認しました。",
+-              "keywords": [
+-                "writer",
+-                "checked",
+-                "does"
+-              ],
+-              "lineId": "W5-D7-QR03-02"
+-            }
+-          ]
+-        },
+-        {
+-          "id": "W5-D7-QR04",
+-          "date": "2026-07-26",
+-          "lines": [
+-            {
+-              "speaker": "A",
+-              "english": "What does the writer understand now?",
+-              "japanese": "筆者は今、何を理解していますか。",
+-              "hintType": "noun",
+-              "hints": [
+-                "動詞の形が変わる理由"
+-              ],
+-              "keywords": [
+-                "what",
+-                "writer",
+-                "understand"
+-              ],
+-              "lineId": "W5-D7-QR04-01"
+-            },
+-            {
+-              "speaker": "B",
+-              "english": "The writer understands why the verb form changes.",
+-              "japanese": "筆者はなぜ動詞の形が変わるのかを理解しています。",
+-              "keywords": [
+-                "writer",
+-                "understands",
+-                "verb form"
+-              ],
+-              "lineId": "W5-D7-QR04-02"
+-            }
+-          ]
+-        }
+-      ]
+-    },
++      "weekId": "W5",
++      "label": "7/20～7/26",
++      "startDate": "2026-07-20",
++      "endDate": "2026-07-26",
++      "shortConversations": [
++        {
++          "id": "W5-D1-SC01",
++          "date": "2026-07-20",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "Why do you practice English?",
++              "japanese": "なぜ英語を練習するのですか。",
++              "hintType": "noun",
++              "hints": [
++                "よりはっきり話せるようになりたい"
++              ],
++              "keywords": [
++                "why",
++                "you",
++                "practice"
++              ],
++              "lineId": "W5-D1-SC01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "Because I want to speak more clearly.",
++              "japanese": "よりはっきりと話せるようになりたいからです。",
++              "keywords": [
++                "because",
++                "I",
++                "want"
++              ],
++              "lineId": "W5-D1-SC01-02"
++            },
++            {
++              "speaker": "A",
++              "english": "What do you do every day?",
++              "japanese": "毎日何をしますか。",
++              "hintType": "noun",
++              "hints": [
++                "短い英文を音読する"
++              ],
++              "lineId": "W5-D1-SC01-03"
++            },
++            {
++              "speaker": "B",
++              "english": "I read short sentences aloud.",
++              "japanese": "短い英文を声に出して読みます。",
++              "lineId": "W5-D1-SC01-04"
++            }
++          ]
++        },
++        {
++          "id": "W5-D1-QR01",
++          "date": "2026-07-20",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "Why did Aya often stop?",
++              "japanese": "なぜアヤはよく手を止めていたのですか。",
++              "hintType": "noun",
++              "hints": [
++                "文が難しかった"
++              ],
++              "keywords": ["stop"],
++              "lineId": "W5-D1-QR01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "Because the sentences were difficult.",
++              "japanese": "文が難しかったからです。",
++              "keywords": ["difficult"],
++              "lineId": "W5-D1-QR01-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D1-QR02",
++          "date": "2026-07-20",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did her teacher tell her to use?",
++              "japanese": "先生は彼女に何を使うように言いましたか。",
++              "hintType": "noun",
++              "hints": [
++                "より短い文"
++              ],
++              "keywords": ["use"],
++              "lineId": "W5-D1-QR02-01"
++            },
++            {
++              "speaker": "B",
++              "english": "Shorter sentences.",
++              "japanese": "より短い文です。",
++              "keywords": ["sentences"],
++              "lineId": "W5-D1-QR02-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D1-QR03",
++          "date": "2026-07-20",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "How long did Aya continue the practice?",
++              "japanese": "アヤはどのくらいの期間その練習を続けましたか。",
++              "hintType": "noun",
++              "hints": [
++                "2週間"
++              ],
++              "keywords": ["continue"],
++              "lineId": "W5-D1-QR03-01"
++            },
++            {
++              "speaker": "B",
++              "english": "For two weeks.",
++              "japanese": "2週間です。",
++              "keywords": ["weeks"],
++              "lineId": "W5-D1-QR03-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D1-QR04",
++          "date": "2026-07-20",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What can Aya do now?",
++              "japanese": "アヤは今、何ができますか。",
++              "hintType": "noun",
++              "hints": [
++                "より速く質問に答える"
++              ],
++              "keywords": ["do"],
++              "lineId": "W5-D1-QR04-01"
++            },
++            {
++              "speaker": "B",
++              "english": "She can answer questions more quickly.",
++              "japanese": "彼女はより速く質問に答えることができます。",
++              "keywords": ["answer"],
++              "lineId": "W5-D1-QR04-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D2-SC01",
++          "date": "2026-07-21",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What does your brother do after school?",
++              "japanese": "あなたのお兄さん［弟］は放課後何をしますか。",
++              "hintType": "noun",
++              "hints": [
++                "サッカー"
++              ],
++              "keywords": [
++                "what",
++                "brother",
++                "do"
++              ],
++              "lineId": "W5-D2-SC01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "He plays soccer.",
++              "japanese": "彼はサッカーをします。",
++              "keywords": [
++                "he",
++                "plays",
++                "soccer"
++              ],
++              "lineId": "W5-D2-SC01-02"
++            },
++            {
++              "speaker": "A",
++              "english": "Does he study at night?",
++              "japanese": "彼は夜に勉強しますか。",
++              "hintType": "none",
++              "hints": [],
++              "lineId": "W5-D2-SC01-03"
++            },
++            {
++              "speaker": "B",
++              "english": "Yes, he does.",
++              "japanese": "はい、勉強します。",
++              "lineId": "W5-D2-SC01-04"
++            }
++          ]
++        },
++        {
++          "id": "W5-D2-QR01",
++          "date": "2026-07-21",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What sport does Riku play?",
++              "japanese": "リクは何のスポーツをしますか。",
++              "hintType": "noun",
++              "hints": [
++                "バスケットボール"
++              ],
++              "keywords": ["sport"],
++              "lineId": "W5-D2-QR01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "He plays basketball.",
++              "japanese": "彼はバスケットボールをします。",
++              "keywords": ["basketball"],
++              "lineId": "W5-D2-QR01-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D2-QR02",
++          "date": "2026-07-21",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "When does he practice?",
++              "japanese": "彼はいつ練習しますか。",
++              "hintType": "noun",
++              "hints": [
++                "放課後"
++              ],
++              "keywords": ["practice"],
++              "lineId": "W5-D2-QR02-01"
++            },
++            {
++              "speaker": "B",
++              "english": "He practices after school.",
++              "japanese": "彼は放課後に練習します。",
++              "keywords": ["school"],
++              "lineId": "W5-D2-QR02-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D2-QR03",
++          "date": "2026-07-21",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "Does he watch TV before homework?",
++              "japanese": "彼は宿題の前にテレビを見ますか。",
++              "hintType": "none",
++              "hints": [],
++              "keywords": ["watch"],
++              "lineId": "W5-D2-QR03-01"
++            },
++            {
++              "speaker": "B",
++              "english": "No, he doesn't.",
++              "japanese": "いいえ、見ません。",
++              "keywords": ["no"],
++              "lineId": "W5-D2-QR03-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D2-QR04",
++          "date": "2026-07-21",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What does he do on Sundays?",
++              "japanese": "彼は日曜日に何をしますか。",
++              "hintType": "noun",
++              "hints": [
++                "本を読んで家族を手伝う"
++              ],
++              "keywords": ["do"],
++              "lineId": "W5-D2-QR04-01"
++            },
++            {
++              "speaker": "B",
++              "english": "He reads books and helps his family.",
++              "japanese": "彼は本を読んだり、家族の手伝いをしたりします。",
++              "keywords": ["family"],
++              "lineId": "W5-D2-QR04-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D3-SC01",
++          "date": "2026-07-22",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "Where do you study English?",
++              "japanese": "どこで英語を勉強しますか。",
++              "hintType": "noun",
++              "hints": [
++                "家"
++              ],
++              "keywords": [
++                "where",
++                "you",
++                "study"
++              ],
++              "lineId": "W5-D3-SC01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "I study at home.",
++              "japanese": "家で勉強します。",
++              "keywords": [
++                "I",
++                "study",
++                "home"
++              ],
++              "lineId": "W5-D3-SC01-02"
++            },
++            {
++              "speaker": "A",
++              "english": "Why do you study there?",
++              "japanese": "なぜそこで勉強するのですか。",
++              "hintType": "noun",
++              "hints": [
++                "部屋が静か"
++              ],
++              "lineId": "W5-D3-SC01-03"
++            },
++            {
++              "speaker": "B",
++              "english": "Because my room is quiet.",
++              "japanese": "私の部屋は静かだからです。",
++              "lineId": "W5-D3-SC01-04"
++            }
++          ]
++        },
++        {
++          "id": "W5-D3-QR01",
++          "date": "2026-07-22",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "Where does Mina study English?",
++              "japanese": "ミナはどこで英語を勉強しますか。",
++              "hintType": "noun",
++              "hints": [
++                "学校の図書館"
++              ],
++              "keywords": ["study"],
++              "lineId": "W5-D3-QR01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "She studies in the school library.",
++              "japanese": "彼女は学校の図書館で勉強します。",
++              "keywords": ["library"],
++              "lineId": "W5-D3-QR01-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D3-QR02",
++          "date": "2026-07-22",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "When does she go there?",
++              "japanese": "彼女はいつそこに行きますか。",
++              "hintType": "noun",
++              "hints": [
++                "水曜日の部活のあと"
++              ],
++              "keywords": ["go"],
++              "lineId": "W5-D3-QR02-01"
++            },
++            {
++              "speaker": "B",
++              "english": "She goes there after club practice on Wednesdays.",
++              "japanese": "彼女は水曜日の部活のあとでそこに行きます。",
++              "keywords": ["Wednesdays"],
++              "lineId": "W5-D3-QR02-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D3-QR03",
++          "date": "2026-07-22",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "Why does she use the library?",
++              "japanese": "なぜ彼女は図書館を使うのですか。",
++              "hintType": "noun",
++              "hints": [
++                "静かだから"
++              ],
++              "keywords": ["use"],
++              "lineId": "W5-D3-QR03-01"
++            },
++            {
++              "speaker": "B",
++              "english": "Because it is quiet.",
++              "japanese": "静かだからです。",
++              "keywords": ["quiet"],
++              "lineId": "W5-D3-QR03-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D3-QR04",
++          "date": "2026-07-22",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "Who sometimes studies with Mina?",
++              "japanese": "誰が時々ミナと一緒に勉強しますか。",
++              "hintType": "noun",
++              "hints": [
++                "ユウナ"
++              ],
++              "keywords": ["study"],
++              "lineId": "W5-D3-QR04-01"
++            },
++            {
++              "speaker": "B",
++              "english": "Her friend Yuna does.",
++              "japanese": "彼女の友達のユウナです。",
++              "keywords": ["does"],
++              "lineId": "W5-D3-QR04-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D4-SC01",
++          "date": "2026-07-23",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did you do last Sunday?",
++              "japanese": "この前の日曜日に何をしましたか。",
++              "hintType": "noun",
++              "hints": [
++                "サッカーを練習する"
++              ],
++              "keywords": [
++                "what",
++                "you",
++                "do"
++              ],
++              "lineId": "W5-D4-SC01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "I practiced soccer.",
++              "japanese": "サッカーの練習をしました。",
++              "keywords": [
++                "I",
++                "practiced",
++                "soccer"
++              ],
++              "lineId": "W5-D4-SC01-02"
++            },
++            {
++              "speaker": "A",
++              "english": "What did you do after that?",
++              "japanese": "そのあとは何をしましたか。",
++              "hintType": "noun",
++              "hints": [
++                "家で英語を勉強する"
++              ],
++              "lineId": "W5-D4-SC01-03"
++            },
++            {
++              "speaker": "B",
++              "english": "I studied English at home.",
++              "japanese": "家で英語を勉強しました。",
++              "lineId": "W5-D4-SC01-04"
++            }
++          ]
++        },
++        {
++          "id": "W5-D4-QR01",
++          "date": "2026-07-23",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "Where did Kota go last Sunday?",
++              "japanese": "コウタはこの前の日曜日、どこへ行きましたか。",
++              "hintType": "noun",
++              "hints": [
++                "スポーツセンター"
++              ],
++              "keywords": ["go"],
++              "lineId": "W5-D4-QR01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "He went to the sports center.",
++              "japanese": "彼はスポーツセンターへ行きました。",
++              "keywords": ["center"],
++              "lineId": "W5-D4-QR01-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D4-QR02",
++          "date": "2026-07-23",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did he do before the game?",
++              "japanese": "彼は試合の前に何をしましたか。",
++              "hintType": "noun",
++              "hints": [
++                "チームと練習した"
++              ],
++              "keywords": ["do"],
++              "lineId": "W5-D4-QR02-01"
++            },
++            {
++              "speaker": "B",
++              "english": "He practiced with his team.",
++              "japanese": "彼はチームと一緒に練習しました。",
++              "keywords": ["team"],
++              "lineId": "W5-D4-QR02-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D4-QR03",
++          "date": "2026-07-23",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "When did the game begin?",
++              "japanese": "試合は何時に始まりましたか。",
++              "hintType": "noun",
++              "hints": [
++                "10時"
++              ],
++              "keywords": ["begin"],
++              "lineId": "W5-D4-QR03-01"
++            },
++            {
++              "speaker": "B",
++              "english": "It began at ten.",
++              "japanese": "10時に始まりました。",
++              "keywords": ["ten"],
++              "lineId": "W5-D4-QR03-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D4-QR04",
++          "date": "2026-07-23",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did Kota do after he went home?",
++              "japanese": "コウタは家に帰ったあと、何をしましたか。",
++              "hintType": "noun",
++              "hints": [
++                "英語の宿題を終わらせた"
++              ],
++              "keywords": ["do"],
++              "lineId": "W5-D4-QR04-01"
++            },
++            {
++              "speaker": "B",
++              "english": "He finished his English homework.",
++              "japanese": "英語の宿題を終わらせました。",
++              "keywords": ["homework"],
++              "lineId": "W5-D4-QR04-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D5-SC01",
++          "date": "2026-07-24",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "How do you check this sentence?",
++              "japanese": "どのようにこの文を確認しますか。",
++              "hintType": "noun",
++              "hints": [
++                "主語と動詞"
++              ],
++              "keywords": [
++                "how",
++                "you",
++                "check"
++              ],
++              "lineId": "W5-D5-SC01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "I check the subject and the verb.",
++              "japanese": "主語と動詞を確認します。",
++              "keywords": [
++                "I",
++                "check",
++                "subject"
++              ],
++              "lineId": "W5-D5-SC01-02"
++            },
++            {
++              "speaker": "A",
++              "english": "What do you do after that?",
++              "japanese": "そのあとは何をしますか。",
++              "hintType": "noun",
++              "hints": [
++                "正しい文を音読する"
++              ],
++              "lineId": "W5-D5-SC01-03"
++            },
++            {
++              "speaker": "B",
++              "english": "I read the correct sentence aloud.",
++              "japanese": "正しい文を声に出して読みます。",
++              "lineId": "W5-D5-SC01-04"
++            }
++          ]
++        },
++        {
++          "id": "W5-D5-QR01",
++          "date": "2026-07-24",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did Yuto check?",
++              "japanese": "ユウトは何を確認しましたか。",
++              "hintType": "noun",
++              "hints": [
++                "5つの英文"
++              ],
++              "keywords": ["check"],
++              "lineId": "W5-D5-QR01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "He checked five English sentences.",
++              "japanese": "彼は5つの英文を確認しました。",
++              "keywords": ["sentences"],
++              "lineId": "W5-D5-QR01-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D5-QR02",
++          "date": "2026-07-24",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "How many mistakes did each sentence have?",
++              "japanese": "それぞれの文には何箇所間違いがありましたか。",
++              "hintType": "noun",
++              "hints": [
++                "1か所"
++              ],
++              "keywords": ["sentence"],
++              "lineId": "W5-D5-QR02-01"
++            },
++            {
++              "speaker": "B",
++              "english": "Each sentence had one mistake.",
++              "japanese": "それぞれの文に1箇所ずつ間違いがありました。",
++              "keywords": ["mistake"],
++              "lineId": "W5-D5-QR02-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D5-QR03",
++          "date": "2026-07-24",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did he check first?",
++              "japanese": "彼は最初に何を確認しましたか。",
++              "hintType": "noun",
++              "hints": [
++                "主語"
++              ],
++              "keywords": ["check"],
++              "lineId": "W5-D5-QR03-01"
++            },
++            {
++              "speaker": "B",
++              "english": "He checked the subject first.",
++              "japanese": "彼は最初に主語を確認しました。",
++              "keywords": ["subject"],
++              "lineId": "W5-D5-QR03-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D5-QR04",
++          "date": "2026-07-24",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did he do finally?",
++              "japanese": "彼は最後に何をしましたか。",
++              "hintType": "noun",
++              "hints": [
++                "動詞の形を変えて音読した"
++              ],
++              "keywords": ["do"],
++              "lineId": "W5-D5-QR04-01"
++            },
++            {
++              "speaker": "B",
++              "english": "He changed the verb form and read the sentence aloud.",
++              "japanese": "動詞の形を変えて、正しい文を声に出して読みました。",
++              "keywords": ["verb"],
++              "lineId": "W5-D5-QR04-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D6-SC01",
++          "date": "2026-07-25",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did you do at the school event?",
++              "japanese": "学校の行事で何をしましたか。",
++              "hintType": "noun",
++              "hints": [
++                "クラスメイトと活動する"
++              ],
++              "keywords": [
++                "what",
++                "you",
++                "do"
++              ],
++              "lineId": "W5-D6-SC01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "I worked with my classmates.",
++              "japanese": "クラスメイトと一緒に活動しました。",
++              "keywords": [
++                "I",
++                "worked",
++                "classmates"
++              ],
++              "lineId": "W5-D6-SC01-02"
++            },
++            {
++              "speaker": "A",
++              "english": "Were you nervous?",
++              "japanese": "緊張しましたか。",
++              "hintType": "none",
++              "hints": [],
++              "lineId": "W5-D6-SC01-03"
++            },
++            {
++              "speaker": "B",
++              "english": "Yes, but I enjoyed it.",
++              "japanese": "はい、でも楽しかったです。",
++              "lineId": "W5-D6-SC01-04"
++            }
++          ]
++        },
++        {
++          "id": "W5-D6-QR01",
++          "date": "2026-07-25",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "When did the school have English Day?",
++              "japanese": "学校はいつイングリッシュ・デイを開催しましたか。",
++              "hintType": "noun",
++              "hints": [
++                "この前の土曜日"
++              ],
++              "keywords": ["school"],
++              "lineId": "W5-D6-QR01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "It had English Day last Saturday.",
++              "japanese": "この前の土曜日に開催しました。",
++              "keywords": ["Saturday"],
++              "lineId": "W5-D6-QR01-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D6-QR02",
++          "date": "2026-07-25",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did students prepare?",
++              "japanese": "生徒たちは何を準備しましたか。",
++              "hintType": "noun",
++              "hints": [
++                "短いゲームとクイズ"
++              ],
++              "keywords": ["prepare"],
++              "lineId": "W5-D6-QR02-01"
++            },
++            {
++              "speaker": "B",
++              "english": "They prepared short games and quizzes.",
++              "japanese": "彼らは短いゲームやクイズを準備しました。",
++              "keywords": ["games"],
++              "lineId": "W5-D6-QR02-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D6-QR03",
++          "date": "2026-07-25",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "Why was the writer nervous at first?",
++              "japanese": "筆者はなぜ最初は緊張していたのですか。",
++              "hintType": "noun",
++              "hints": [
++                "英語でルールを説明する必要があった"
++              ],
++              "keywords": ["nervous"],
++              "lineId": "W5-D6-QR03-01"
++            },
++            {
++              "speaker": "B",
++              "english": "Because the writer had to explain the rules in English.",
++              "japanese": "英語でルールを説明しなければならなかったからです。",
++              "keywords": ["rules"],
++              "lineId": "W5-D6-QR03-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D6-QR04",
++          "date": "2026-07-25",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "How did the writer change?",
++              "japanese": "筆者はどのように変化しましたか。",
++              "hintType": "noun",
++              "hints": [
++                "よりはっきり話せるようになった"
++              ],
++              "keywords": ["change"],
++              "lineId": "W5-D6-QR04-01"
++            },
++            {
++              "speaker": "B",
++              "english": "The writer could speak more clearly.",
++              "japanese": "よりはっきりと話せるようになりました。",
++              "keywords": ["clearly"],
++              "lineId": "W5-D6-QR04-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D7-SC01",
++          "date": "2026-07-26",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What was difficult this week?",
++              "japanese": "今週は何が難しかったですか。",
++              "hintType": "noun",
++              "hints": [
++                "Whyの質問"
++              ],
++              "keywords": [
++                "what",
++                "difficult",
++                "week"
++              ],
++              "lineId": "W5-D7-SC01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "Questions with why were difficult.",
++              "japanese": "why「なぜ」を使った質問が難しかったです。",
++              "keywords": [
++                "questions",
++                "difficult"
++              ],
++              "lineId": "W5-D7-SC01-02"
++            },
++            {
++              "speaker": "A",
++              "english": "What is your next goal?",
++              "japanese": "次の目標は何ですか。",
++              "hintType": "noun",
++              "hints": [
++                "より長い答えを書く"
++              ],
++              "lineId": "W5-D7-SC01-03"
++            },
++            {
++              "speaker": "B",
++              "english": "I want to write longer answers.",
++              "japanese": "より長い答えを書けるようになりたいです。",
++              "lineId": "W5-D7-SC01-04"
++            }
++          ]
++        },
++        {
++          "id": "W5-D7-QR01",
++          "date": "2026-07-26",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did the writer practice?",
++              "japanese": "筆者は何を練習しましたか。",
++              "hintType": "noun",
++              "hints": [
++                "英語を読むことと書くこと"
++              ],
++              "keywords": ["practice"],
++              "lineId": "W5-D7-QR01-01"
++            },
++            {
++              "speaker": "B",
++              "english": "The writer practiced reading and writing English.",
++              "japanese": "筆者は英語を読むことと書くことを練習しました。",
++              "keywords": ["English"],
++              "lineId": "W5-D7-QR01-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D7-QR02",
++          "date": "2026-07-26",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What did the writer do when a question was difficult?",
++              "japanese": "質問が難しかったとき、筆者は何をしましたか。",
++              "hintType": "noun",
++              "hints": [
++                "本文をもう一度確認した"
++              ],
++              "keywords": ["do"],
++              "lineId": "W5-D7-QR02-01"
++            },
++            {
++              "speaker": "B",
++              "english": "The writer checked the passage again.",
++              "japanese": "筆者は本文をもう一度確認しました。",
++              "keywords": ["passage"],
++              "lineId": "W5-D7-QR02-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D7-QR03",
++          "date": "2026-07-26",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "Which words did the writer check?",
++              "japanese": "筆者はどの単語を確認しましたか。",
++              "hintType": "noun",
++              "hints": [
++                "does・can・did"
++              ],
++              "keywords": ["check"],
++              "lineId": "W5-D7-QR03-01"
++            },
++            {
++              "speaker": "B",
++              "english": "The writer checked does, can, and did.",
++              "japanese": "筆者は does、can、did を確認しました。",
++              "keywords": ["does"],
++              "lineId": "W5-D7-QR03-02"
++            }
++          ]
++        },
++        {
++          "id": "W5-D7-QR04",
++          "date": "2026-07-26",
++          "lines": [
++            {
++              "speaker": "A",
++              "english": "What does the writer understand now?",
++              "japanese": "筆者は今、何を理解していますか。",
++              "hintType": "noun",
++              "hints": [
++                "動詞の形が変わる理由"
++              ],
++              "keywords": ["understand"],
++              "lineId": "W5-D7-QR04-01"
++            },
++            {
++              "speaker": "B",
++              "english": "The writer understands why the verb form changes.",
++              "japanese": "筆者はなぜ動詞の形が変わるのかを理解しています。",
++              "keywords": ["form"],
++              "lineId": "W5-D7-QR04-02"
++            }
++          ]
++        }
++      ]
++    },
+     {
+       "weekId": "W6",
+       "label": "7/27～8/2",
+*** End Patch
