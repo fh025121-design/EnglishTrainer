@@ -2411,7 +2411,8 @@
       parts: [
         {
           text: "If you come to my house tomorrow,",
-          fixedPhrases: [],
+          fixedPhrases: ["あなたが私の家に来たら", "明日"],
+          layoutOrder: ["g0", "f0", "f1"],
           selectionGroups: [
             { key: "if", prompt: "接続", correctIndex: 0, options: ["もし", "なぜなら", "しかし"] }
           ]
@@ -2438,7 +2439,8 @@
       parts: [
         {
           text: "When the teacher came into the room,",
-          fixedPhrases: [],
+          fixedPhrases: ["先生が部屋に入ってきた"],
+          layoutOrder: ["g0", "f0"],
           selectionGroups: [
             { key: "when", prompt: "接続", correctIndex: 0, options: ["～したとき", "～する前に", "～したので"] }
           ]
@@ -2607,7 +2609,7 @@
           fixedPhrases: [],
           selectionGroups: [
             { key: "to-meet", prompt: "不定詞", correctIndex: 0, options: ["会うために", "会ったあとで", "会っている間に"] },
-            { key: "from-osaka", prompt: "場所", correctIndex: 0, options: ["大阪から来る", "大阪へ行く", "大阪で住む"] }
+            { key: "from-osaka", prompt: "場所", correctIndex: 0, options: ["大阪から来るいとこに", "大阪へ行く", "大阪で住む"] }
           ]
         },
         {
@@ -2754,7 +2756,7 @@
           text: "Koji needed a book",
           fixedPhrases: ["コウジは"],
           selectionGroups: [
-            { key: "needed", prompt: "時制", correctIndex: 0, options: ["必要だった", "必要だ", "必要になるだろう"] }
+            { key: "needed", prompt: "時制", correctIndex: 0, options: ["本が必要だった", "必要だ", "必要になるだろう"] }
           ]
         },
         {
@@ -2811,9 +2813,10 @@
         {
           text: "and borrowed it for one week.",
           fixedPhrases: ["そして"],
+          layoutOrder: ["f0", "g0", "g1"],
           selectionGroups: [
-            { key: "borrowed", prompt: "時制", correctIndex: 0, options: ["借りた", "返した", "買った"] },
-            { key: "it", prompt: "代名詞", correctIndex: 0, options: ["それを", "彼を", "それらを"] }
+            { key: "borrowed", prompt: "時制", correctIndex: 0, options: ["それを借りた", "返した", "買った"] },
+            { key: "it", prompt: "代名詞", correctIndex: 0, options: ["1週間", "彼を", "それらを"] }
           ]
         },
         {
@@ -3059,7 +3062,8 @@
       parts: [
         {
           text: "Since I moved to this town,",
-          fixedPhrases: [],
+          fixedPhrases: ["この町へ引っ越して"],
+          layoutOrder: ["f0", "g0"],
           selectionGroups: [
             { key: "since", prompt: "接続", correctIndex: 0, options: ["～して以来", "～する前に", "～したので"] }
           ]
@@ -3311,7 +3315,7 @@
           text: "Ken's class was preparing for a school festival",
           fixedPhrases: ["ケンのクラスは"],
           selectionGroups: [
-            { key: "was-preparing", prompt: "進行形", correctIndex: 0, options: ["準備していた", "準備した", "準備する予定だった"] }
+            { key: "was-preparing", prompt: "進行形", correctIndex: 0, options: ["学校祭の準備をしていた", "準備した", "準備する予定だった"] }
           ]
         },
         {
@@ -3412,10 +3416,11 @@
         },
         {
           text: "so he started watching short videos",
-          fixedPhrases: [],
+          fixedPhrases: ["彼は"],
+          layoutOrder: ["g0", "f0", "g1"],
           selectionGroups: [
             { key: "so", prompt: "接続", correctIndex: 0, options: ["だから", "しかし", "～したあとで"] },
-            { key: "started-watching", prompt: "動名詞", correctIndex: 0, options: ["見始めた", "見続けた", "見た"] }
+            { key: "started-watching", prompt: "動名詞", correctIndex: 0, options: ["短い動画を見始めた", "見続けた", "見た"] }
           ]
         },
         {
@@ -3486,7 +3491,7 @@
       id: 72,
       level: "C",
       english: "Nana's grandmother lives in a small town / near the sea. / During summer vacation, / Nana stayed with her for three days. / One morning, her grandmother asked her / to help pick vegetables in the garden. / After they finished the work, / they used some of the vegetables / to make lunch together. / Nana had never cooked that dish before, / but her grandmother showed her what to do. / Nana liked the meal so much / that she asked for the recipe.",
-      japanese: "ナナの祖母は海の近くの小さな町に住んでいます。夏休みにナナは祖母の家に3日間泊まりました。ある朝、庭で野菜を採るのを手伝い、作業後、その野菜を使って一緒に昼食を作りました。ナナはその料理を作ったことがありませんでしたが、祖母が作り方を教えてくれました。とてもおいしかったので、ナナはレシピを教えてもらいました。",
+      japanese: "ナナの祖母は海の近くの小さな町に住んでいます。夏休みにナナは祖母の家に3日間泊まりました。ある朝、祖母はナナに、庭で野菜を採るのを手伝うよう頼みました。作業後、その野菜を使って一緒に昼食を作りました。ナナはその料理を作ったことがありませんでしたが、祖母が作り方を教えてくれました。とてもおいしかったので、ナナはレシピを教えてもらいました。",
       parts: [
         {
           text: "Nana's grandmother lives in a small town",

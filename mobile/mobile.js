@@ -6679,6 +6679,49 @@
     return startDay === endDay ? `Day${startDay}` : `Day${startDay}-${endDay}`;
   }
 
+  function getWordOrderDayRangeCardLabel(value) {
+    const normalized = String(value || "").trim();
+    return normalized ? `Day${normalized}` : "Day";
+  }
+
+  function buildLearnedWordOrderQuestionIdSet() {
+    const statsMap = loadWordOrderStatsMap();
+    const learnedIds = new Set();
+    Object.entries(statsMap || {}).forEach(([questionId, raw]) => {
+      const key = String(questionId || "").trim();
+      if (!key) return;
+      const entry = sanitizeWordOrderStatsEntry(raw || {});
+      if (entry.attempts > 0) {
+        learnedIds.add(key);
+      }
+    });
+    return learnedIds;
+  }
+
+  function buildWordOrderDayRangeProgressSummary(dayRange, learnedQuestionIds) {
+    const questions = getWordOrderQuestionsByDayRange(dayRange?.startDay, dayRange?.endDay);
+    const total = questions.length;
+    const learnedSet = learnedQuestionIds instanceof Set ? learnedQuestionIds : new Set();
+    const learned = questions.reduce((count, question) => count + (learnedSet.has(String(question?.id || "")) ? 1 : 0), 0);
+    return { learned, total };
+  }
+
+  function renderWordOrderDayRangeProgress() {
+    if (!Array.isArray(elements.wordOrderDayRangeButtons) || !elements.wordOrderDayRangeButtons.length) return;
+    const learnedQuestionIds = buildLearnedWordOrderQuestionIdSet();
+    const progressByRange = new Map();
+    WORD_ORDER_DAY_RANGES.forEach((range) => {
+      progressByRange.set(range.value, buildWordOrderDayRangeProgressSummary(range, learnedQuestionIds));
+    });
+
+    elements.wordOrderDayRangeButtons.forEach((button) => {
+      const rangeValue = String(button?.dataset?.rangeValue || "").trim();
+      const progress = progressByRange.get(rangeValue) || { learned: 0, total: 0 };
+      const label = getWordOrderDayRangeCardLabel(rangeValue);
+      button.innerHTML = `<span class="word-order-range-label">${label}</span><span class="word-order-range-progress">${progress.learned}/${progress.total}問 学習済</span>`;
+    });
+  }
+
   function buildWordOrderLearningHistorySummary(training = state.wordOrderTraining) {
     const correctCount = Math.max(0, Number(training?.correctCount) || 0);
     const incorrectCount = Math.max(0, Number(training?.incorrectCount) || 0);
@@ -6724,6 +6767,7 @@
   }
 
   function renderWordOrderRangeSelectScreen() {
+    renderWordOrderDayRangeProgress();
     setWordOrderDayRangeValue(state.wordOrderSelectedRangeValue);
     state.wordOrderTraining = null;
     if (elements.wordOrderQuestionPanel) {

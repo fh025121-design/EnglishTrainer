@@ -958,12 +958,34 @@ select,
 
 .word-order-range-btn {
   min-height: 46px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
 }
 
 .word-order-range-btn.is-selected {
   background: linear-gradient(135deg, rgba(94, 214, 214, 0.24), rgba(123, 108, 255, 0.22));
   border-color: rgba(94, 214, 214, 0.68);
   color: #ffffff;
+}
+
+.word-order-range-label {
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.word-order-range-progress {
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--muted);
+}
+
+.word-order-range-btn.is-selected .word-order-range-progress {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .word-order-zone {
