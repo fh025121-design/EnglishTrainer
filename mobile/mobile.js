@@ -32,8 +32,8 @@
   const MOBILE_POINT_CONFIG = Object.freeze({
     homeworkSpeakingDailyMax: 30,
     reviewSpeakingDailyMax: 400,
-    wordOrderDailyMax: 50,
-    totalDailyMax: 480,
+    wordOrderDailyMax: 60,
+    totalDailyMax: Number.POSITIVE_INFINITY,
     homeworkCompletionReward: 10,
     wordOrderCorrectReward: 2,
     seasonalNote: "summer-2026"
@@ -174,8 +174,8 @@
   }
 
   function getMobilePointDailyTotalRemaining(pointState = getMobilePointState()) {
-    const summary = getMobilePointSummary(pointState);
-    return Math.max(0, MOBILE_POINT_CONFIG.totalDailyMax - summary.todayEarned);
+    void pointState;
+    return Number.POSITIVE_INFINITY;
   }
 
   function getReviewSpeakingRewardForCount(reviewCount) {
