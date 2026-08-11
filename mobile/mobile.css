@@ -311,7 +311,8 @@ select {
   white-space: nowrap;
 }
 
-#translationTrainingEnglishText .translation-training-highlight-separator {
+#translationTrainingEnglishText .translation-training-highlight-separator,
+#translationTrainingEnglishReadText .translation-training-highlight-separator {
   color: #ff1f1f !important;
   -webkit-text-fill-color: #ff1f1f !important;
   font-weight: 900;
@@ -396,8 +397,8 @@ select {
 .translation-training-group-divider {
   width: min(100%, var(--tt-group-width, 15rem));
   align-self: flex-end;
-  margin: 6px 0 8px;
-  border-top: 1px dashed rgba(200, 221, 245, 0.36);
+  margin: 8px 0 10px;
+  border-top: 2px dashed rgba(203, 223, 245, 0.56);
 }
 
 .translation-training-card {

@@ -7138,6 +7138,29 @@
     return button;
   }
 
+  function createTranslationTrainingSlashSeparator() {
+    const separator = document.createElement("span");
+    separator.textContent = " /";
+    separator.className = "translation-training-highlight-separator";
+    separator.style.color = "#ff1f1f";
+    separator.style.fontWeight = "900";
+    separator.style.whiteSpace = "nowrap";
+    return separator;
+  }
+
+  function buildTranslationTrainingEnglishReadFragment(englishText) {
+    const fragment = document.createDocumentFragment();
+    const parts = String(englishText || "").split("/").map((part) => part.trim());
+    parts.forEach((part, index) => {
+      fragment.appendChild(document.createTextNode(part));
+      if (index < parts.length - 1) {
+        fragment.appendChild(createTranslationTrainingSlashSeparator());
+        fragment.appendChild(document.createElement("br"));
+      }
+    });
+    return fragment;
+  }
+
   function getTranslationTrainingPartFixedKeys(part) {
     const displayFixedPhrases = window.translationTrainingData?.getTranslationTrainingDisplayFixedPhrases?.(part) || [];
     const layoutSequence = window.translationTrainingData?.buildTranslationTrainingLayoutSequence?.(part, displayFixedPhrases) || [];
@@ -7256,13 +7279,7 @@
           lastWordNode.textContent = lastWord;
           slashLock.appendChild(lastWordNode);
 
-          const separator = document.createElement("span");
-          separator.textContent = " /";
-          separator.className = "translation-training-highlight-separator";
-          separator.style.color = "#ff1f1f";
-          separator.style.fontWeight = "900";
-          separator.style.whiteSpace = "nowrap";
-          slashLock.appendChild(separator);
+          slashLock.appendChild(createTranslationTrainingSlashSeparator());
 
           text.appendChild(slashLock);
         } else {
@@ -7270,12 +7287,7 @@
           slashLock.className = "translation-training-slash-lock";
           const content = document.createElement("span");
           content.textContent = segmentText;
-          const separator = document.createElement("span");
-          separator.textContent = " /";
-          separator.className = "translation-training-highlight-separator";
-          separator.style.color = "#ff1f1f";
-          separator.style.fontWeight = "900";
-          separator.style.whiteSpace = "nowrap";
+          const separator = createTranslationTrainingSlashSeparator();
           slashLock.appendChild(content);
           slashLock.appendChild(separator);
           text.appendChild(slashLock);
@@ -7496,7 +7508,8 @@
     if (!question) return;
     elements.translationTrainingQuestionPanel.classList.add("hidden");
     elements.translationTrainingCompletePanel.classList.remove("hidden");
-    elements.translationTrainingEnglishReadText.textContent = question.english;
+    elements.translationTrainingEnglishReadText.innerHTML = "";
+    elements.translationTrainingEnglishReadText.appendChild(buildTranslationTrainingEnglishReadFragment(question.english));
     elements.translationTrainingJapaneseText.textContent = question.japanese;
     state.translationTrainingSpeechDetected = false;
     clearTranslationTrainingSpeechTimer();
