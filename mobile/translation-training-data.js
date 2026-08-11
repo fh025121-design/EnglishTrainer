@@ -2387,6 +2387,7 @@
         {
           text: "so my sister showed me",
           fixedPhrases: ["姉は", "私に"],
+          layoutOrder: ["g0", "f0", "f1", "g1"],
           selectionGroups: [
             { key: "so", prompt: "接続", correctIndex: 0, options: ["だから", "しかし", "～する前に"] },
             { key: "showed-me", prompt: "動詞", correctIndex: 0, options: ["教えてくれた", "見せた", "借りた"] }
@@ -2648,6 +2649,7 @@
         {
           text: "but Hiro did not mind waiting.",
           fixedPhrases: ["ヒロは"],
+          layoutOrder: ["g0", "f0", "g1", "g2"],
           selectionGroups: [
             { key: "but", prompt: "接続", correctIndex: 0, options: ["しかし", "だから", "もし"] },
             { key: "did-not-mind", prompt: "否定", correctIndex: 0, options: ["気にしなかった", "気にした", "気にするだろう"] },
@@ -2657,6 +2659,7 @@
         {
           text: "He was happy when his cousin finally arrived.",
           fixedPhrases: ["彼はうれしかった", "いとこがようやく到着した"],
+          layoutOrder: ["f0", "g0", "f1"],
           selectionGroups: [
             { key: "when", prompt: "接続", correctIndex: 0, options: ["～したとき", "～する前に", "～したので"] }
           ]
