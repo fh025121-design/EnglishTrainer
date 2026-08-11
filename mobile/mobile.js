@@ -68,9 +68,11 @@
     Object.freeze({ value: "36-40", label: "Day 36 - 40", startDay: 36, endDay: 40 })
   ]);
   let mobilePointStateCache = null;
+  let mobilePointStateCacheUid = "";
   let mobilePointHistoryVisibleCount = MOBILE_POINT_HISTORY_PAGE_SIZE;
   let mobilePointSyncCurrentUid = "";
   let mobilePointSyncReady = false;
+  let mobilePointSyncAllowCreate = false;
   let mobilePointSyncInFlight = null;
   let mobilePointSyncQueued = false;
   let mobilePointSyncUnsubscribe = null;
@@ -83,6 +85,16 @@
 
   function formatPointValue(value) {
     return `${new Intl.NumberFormat("ja-JP").format(Math.max(0, Math.floor(Number(value) || 0)))}P`;
+  }
+
+  function getMobilePointStorageKey(uid = getCurrentMobilePointSyncUid()) {
+    const safeUid = String(uid || "").trim();
+    return safeUid ? `${MOBILE_POINT_STORAGE_KEY}:${safeUid}` : MOBILE_POINT_STORAGE_KEY;
+  }
+
+  function getMobilePointPendingSyncStorageKey(uid = getCurrentMobilePointSyncUid()) {
+    const safeUid = String(uid || "").trim();
+    return safeUid ? `${MOBILE_POINT_PENDING_SYNC_STORAGE_KEY}:${safeUid}` : MOBILE_POINT_PENDING_SYNC_STORAGE_KEY;
   }
 
   function getMobilePointJstDateKey(offsetDays = 0) {
@@ -351,9 +363,9 @@
     ].filter(Boolean).join("\n");
   }
 
-  function loadMobilePointState() {
+  function loadMobilePointState(uid = getCurrentMobilePointSyncUid()) {
     try {
-      const raw = window.localStorage.getItem(MOBILE_POINT_STORAGE_KEY);
+      const raw = window.localStorage.getItem(getMobilePointStorageKey(uid));
       if (!raw) return createDefaultMobilePointState();
       return sanitizeMobilePointState(JSON.parse(raw));
     } catch (_error) {
@@ -361,9 +373,9 @@
     }
   }
 
-  function loadMobilePendingPointStateForSync() {
+  function loadMobilePendingPointStateForSync(uid = getCurrentMobilePointSyncUid()) {
     try {
-      const raw = window.localStorage.getItem(MOBILE_POINT_PENDING_SYNC_STORAGE_KEY);
+      const raw = window.localStorage.getItem(getMobilePointPendingSyncStorageKey(uid));
       if (!raw) return null;
       return hydrateMobilePointDaySnapshots(sanitizeMobilePointState(JSON.parse(raw)));
     } catch (_error) {
@@ -371,18 +383,19 @@
     }
   }
 
-  function saveMobilePendingPointStateForSync(pointState) {
+  function saveMobilePendingPointStateForSync(pointState, uid = getCurrentMobilePointSyncUid()) {
     const sanitized = hydrateMobilePointDaySnapshots(sanitizeMobilePointState(pointState));
-    window.localStorage.setItem(MOBILE_POINT_PENDING_SYNC_STORAGE_KEY, JSON.stringify(sanitized));
+    window.localStorage.setItem(getMobilePointPendingSyncStorageKey(uid), JSON.stringify(sanitized));
   }
 
-  function clearMobilePendingPointStateForSync() {
-    window.localStorage.removeItem(MOBILE_POINT_PENDING_SYNC_STORAGE_KEY);
+  function clearMobilePendingPointStateForSync(uid = getCurrentMobilePointSyncUid()) {
+    window.localStorage.removeItem(getMobilePointPendingSyncStorageKey(uid));
   }
 
-  function persistMobilePointStateLocally(pointState) {
+  function persistMobilePointStateLocally(pointState, uid = getCurrentMobilePointSyncUid()) {
     mobilePointStateCache = hydrateMobilePointDaySnapshots(sanitizeMobilePointState(pointState));
-    window.localStorage.setItem(MOBILE_POINT_STORAGE_KEY, JSON.stringify(mobilePointStateCache));
+    mobilePointStateCacheUid = String(uid || "").trim();
+    window.localStorage.setItem(getMobilePointStorageKey(uid), JSON.stringify(mobilePointStateCache));
     return mobilePointStateCache;
   }
 
@@ -489,29 +502,30 @@
     if (!snapshot?.ok || !snapshot.exists || !snapshot.pointState) {
       return;
     }
+    const uid = String(snapshot.uid || getCurrentMobilePointSyncUid() || "").trim();
     const incoming = hydrateMobilePointDaySnapshots(sanitizeMobilePointState(snapshot.pointState));
     if (!areMobilePointStatesEqual(getMobilePointState(), incoming)) {
-      persistMobilePointStateLocally(incoming);
+      persistMobilePointStateLocally(incoming, uid);
       refreshMobilePointUiAfterSync();
     }
-    const pending = loadMobilePendingPointStateForSync();
+    const pending = loadMobilePendingPointStateForSync(uid);
     if (!pending) {
-      clearMobilePendingPointStateForSync();
+      clearMobilePendingPointStateForSync(uid);
       return;
     }
     if (areMobilePointStatesEqual(pending, incoming)) {
-      clearMobilePendingPointStateForSync();
+      clearMobilePendingPointStateForSync(uid);
       return;
     }
     const merged = mergeMobilePointStateByMax(incoming, pending);
     if (!areMobilePointStatesEqual(merged, incoming)) {
-      persistMobilePointStateLocally(merged);
-      saveMobilePendingPointStateForSync(merged);
+      persistMobilePointStateLocally(merged, uid);
+      saveMobilePendingPointStateForSync(merged, uid);
       scheduleMobilePointStateSync();
       refreshMobilePointUiAfterSync();
       return;
     }
-    clearMobilePendingPointStateForSync();
+    clearMobilePendingPointStateForSync(uid);
   }
 
   async function initializeMobilePointSyncForCurrentUser(options = {}) {
@@ -520,6 +534,7 @@
     if (!uid) {
       mobilePointSyncCurrentUid = "";
       mobilePointSyncReady = false;
+      mobilePointSyncAllowCreate = false;
       if (typeof mobilePointSyncUnsubscribe === "function") {
         mobilePointSyncUnsubscribe();
       }
@@ -540,8 +555,12 @@
     if (typeof loadRemote !== "function") {
       mobilePointSyncCurrentUid = uid;
       mobilePointSyncReady = false;
+      mobilePointSyncAllowCreate = false;
       return false;
     }
+
+    mobilePointStateCache = null;
+    mobilePointStateCacheUid = uid;
 
     let remoteResult = null;
     try {
@@ -551,35 +570,17 @@
     }
 
     if (remoteResult?.ok && remoteResult.exists && remoteResult.pointState) {
-      persistMobilePointStateLocally(remoteResult.pointState);
+      persistMobilePointStateLocally(remoteResult.pointState, uid);
       mobilePointSyncCurrentUid = uid;
       mobilePointSyncReady = true;
+      mobilePointSyncAllowCreate = false;
       refreshMobilePointUiAfterSync();
     } else {
-      const canBootstrap = isCurrentSonLoginForMobileLearningHistory();
-      const saveRemote = window.saveMobilePointStateToFirestore;
-      if (canBootstrap && typeof saveRemote === "function") {
-        const localBaseline = loadMobilePendingPointStateForSync() || getMobilePointState();
-        const bootstrapResult = await saveRemote(localBaseline, {
-          targetUid: uid,
-          allowCreate: true,
-          sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
-          sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
-        }).catch(() => null);
-        if (bootstrapResult?.ok && bootstrapResult.saved && bootstrapResult.pointState) {
-          persistMobilePointStateLocally(bootstrapResult.pointState);
-          clearMobilePendingPointStateForSync();
-          mobilePointSyncCurrentUid = uid;
-          mobilePointSyncReady = true;
-          refreshMobilePointUiAfterSync();
-        } else {
-          mobilePointSyncCurrentUid = uid;
-          mobilePointSyncReady = false;
-        }
-      } else {
-        mobilePointSyncCurrentUid = uid;
-        mobilePointSyncReady = false;
-      }
+      persistMobilePointStateLocally(createDefaultMobilePointState(), uid);
+      mobilePointSyncCurrentUid = uid;
+      mobilePointSyncReady = true;
+      mobilePointSyncAllowCreate = true;
+      refreshMobilePointUiAfterSync();
     }
 
     const subscribeRemote = window.subscribeMobilePointStateFromFirestore;
@@ -616,11 +617,11 @@
 
         const pending = loadMobilePendingPointStateForSync();
         const sourceState = pending || getMobilePointState();
-        saveMobilePendingPointStateForSync(sourceState);
+        saveMobilePendingPointStateForSync(sourceState, uid);
 
         const result = await saveRemote(sourceState, {
           targetUid: uid,
-          allowCreate: false,
+          allowCreate: mobilePointSyncAllowCreate,
           sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
           sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
         }).catch(() => null);
@@ -630,10 +631,11 @@
         }
 
         if (result.pointState) {
-          persistMobilePointStateLocally(result.pointState);
+          persistMobilePointStateLocally(result.pointState, uid);
           refreshMobilePointUiAfterSync();
         }
-        clearMobilePendingPointStateForSync();
+        clearMobilePendingPointStateForSync(uid);
+        mobilePointSyncAllowCreate = false;
       } while (mobilePointSyncQueued);
     })();
 
@@ -646,8 +648,8 @@
 
   function scheduleMobilePointStateSync() {
     const latest = getMobilePointState();
-    saveMobilePendingPointStateForSync(latest);
     const uid = getCurrentMobilePointSyncUid();
+    saveMobilePendingPointStateForSync(latest, uid);
     if (!uid) {
       return;
     }
@@ -659,7 +661,7 @@
   }
 
   function saveMobilePointState(pointState, options = {}) {
-    const nextState = persistMobilePointStateLocally(pointState);
+    const nextState = persistMobilePointStateLocally(pointState, getCurrentMobilePointSyncUid());
     if (options?.skipSync !== true) {
       scheduleMobilePointStateSync();
     }
@@ -846,9 +848,13 @@
   }
 
   function getMobilePointState() {
-    if (!mobilePointStateCache) {
-      mobilePointStateCache = hydrateMobilePointDaySnapshots(loadMobilePointState());
-      persistMobilePointStateLocally(mobilePointStateCache);
+    const uid = getCurrentMobilePointSyncUid();
+    if (!mobilePointStateCache || mobilePointStateCacheUid !== uid) {
+      mobilePointStateCache = hydrateMobilePointDaySnapshots(loadMobilePointState(uid));
+      mobilePointStateCacheUid = uid;
+      if (uid) {
+        persistMobilePointStateLocally(mobilePointStateCache, uid);
+      }
     }
     return mobilePointStateCache;
   }
@@ -3552,19 +3558,40 @@
     };
   }
 
+  function stripMobileLearningHistoryWeekDayPrefix(modeLike) {
+    return window.LearningHistoryDisplayShared?.stripPcWeekDayPrefix(modeLike) || String(modeLike || "").trim();
+  }
+
+  function isLikelyPcPhraseLearningHistoryEntry(entryLike) {
+    return window.LearningHistoryDisplayShared?.isLikelyPhraseLearningHistoryEntry(entryLike) || false;
+  }
+
+  function resolveMobilePcLearningHistoryCategory(entry) {
+    return window.LearningHistoryDisplayShared?.resolvePcCategory(entry?.mode, entry) || "不明";
+  }
+
+  function resolveMobilePcLearningHistoryModeLabel(entry) {
+    return window.LearningHistoryDisplayShared?.resolvePcModeLabel(entry, { withDayNumber: true }) || "不明";
+  }
+
+  function getMobileAdminPcModeSummaryRows(summary, dayEntries) {
+    const sharedEntries = window.LearningHistoryDisplayShared?.getPcModeSummaryEntries(summary) || [];
+    const dayLabel = window.LearningHistoryDisplayShared?.resolvePcDaySummaryLabel(dayEntries || []) || "";
+    return sharedEntries.map((entry) => ({
+      label: window.LearningHistoryDisplayShared?.getPcSummaryRowLabel(entry, { dayLabel }) || String(entry?.label || "-"),
+      activeStudySeconds: Math.max(0, Number(entry?.activeStudySeconds) || 0),
+      questionCount: Math.max(0, Number(entry?.questionCount) || 0),
+      earnedPoints: parseMobileLearningHistoryEarnedPoints(entry?.earnedPoints),
+      accuracy: Math.max(0, Number(entry?.accuracy) || 0)
+    }));
+  }
+
   function resolveMobileLearningHistoryCategory(entry) {
     const mode = String(entry?.mode || "").trim();
     const lowerMode = mode.toLowerCase();
     const deviceType = normalizeMobileAdminLearningHistoryDeviceType(entry?.deviceType);
     if (deviceType === "pc") {
-      if (!mode) return "-";
-      if (mode === "Day" || mode === "Day学習" || lowerMode === "normal") return "Day学習";
-      if (mode === "過去の間違い" || lowerMode === "review" || lowerMode === "challenge") return "過去の間違い";
-      if (mode === "前置詞特訓" || lowerMode === "preposition" || lowerMode === "preposition-training") return "前置詞特訓";
-      if (mode === "応答文特訓" || lowerMode === "response" || lowerMode === "response-training") return "応答文特訓";
-      if (mode.includes("単語")) return "単語特訓";
-      if (mode.includes("熟語")) return "熟語特訓";
-      return mode;
+      return resolveMobilePcLearningHistoryCategory(entry);
     }
 
     if (mode === "会話練習" || lowerMode === "conversation") return "会話練習";
@@ -3584,10 +3611,24 @@
   }
 
   function buildMobileLearningHistoryStudyLabel(entry) {
+    const mode = String(entry?.mode || "").trim();
+    const deviceType = normalizeMobileAdminLearningHistoryDeviceType(entry?.deviceType);
+    if (deviceType === "pc") {
+      return {
+        weekDayText: "",
+        categoryText: resolveMobilePcLearningHistoryModeLabel(entry)
+      };
+    }
     const weekDay = getMobileLearningHistoryWeekDayContext(entry);
+    const categoryText = resolveMobileLearningHistoryCategory(entry);
+    const dayNumberText = String(entry?.dayNumber || "").trim();
+    const shouldShowDayNumber = categoryText === "語順" || mode.includes("word-order") || mode.includes("wordorder");
+    const shouldHideWeekDay = categoryText === "和訳" || mode.includes("translation");
     return {
-      weekDayText: `${weekDay.weekLabel} ${weekDay.weekdayLabel}`,
-      categoryText: resolveMobileLearningHistoryCategory(entry)
+      weekDayText: shouldShowDayNumber && dayNumberText
+        ? dayNumberText
+        : (shouldHideWeekDay ? "" : `${weekDay.weekLabel} ${weekDay.weekdayLabel}`),
+      categoryText
     };
   }
 
@@ -3680,6 +3721,14 @@
 
   function getMobileLearningHistoryModeBucket(entry) {
     const category = resolveMobileLearningHistoryCategory(entry);
+    if (category === "Day学習") return { key: "day", label: "Day学習" };
+    if (category === "追加特訓") return { key: "extra", label: "追加特訓" };
+    if (category === "熟語特訓") return { key: "phrase", label: "熟語特訓" };
+    if (category === "単語特訓") return { key: "word", label: "単語特訓" };
+    if (category === "前置詞特訓") return { key: "preposition", label: "前置詞特訓" };
+    if (category === "応答文特訓") return { key: "response", label: "応答文特訓" };
+    if (category === "不規則動詞特訓") return { key: "irregularVerb", label: "不規則動詞特訓" };
+    if (category === "過去の間違い") return { key: "reviewPc", label: "過去の間違い" };
     if (category === "Vocabulary") return { key: "vocabulary", label: "Vocabulary" };
     if (category === "会話練習") return { key: "conversation", label: "会話練習" };
     if (category === "復習") return { key: "review", label: "復習" };
@@ -3691,6 +3740,14 @@
 
   function createMobileLearningHistoryModeTotals() {
     return {
+      day: { label: "Day学習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      extra: { label: "追加特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      phrase: { label: "熟語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      word: { label: "単語特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      preposition: { label: "前置詞特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      response: { label: "応答文特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      irregularVerb: { label: "不規則動詞特訓", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
+      reviewPc: { label: "過去の間違い", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
       vocabulary: { label: "Vocabulary", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
       conversation: { label: "会話練習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
       review: { label: "復習", activeStudySeconds: 0, questionCount: 0, correctCount: 0 },
@@ -4191,6 +4248,10 @@
     mobileAdminLearningHistorySelectedDayKey = selectedDayKey;
     const selectedDaySummary = getMobileLearningHistoryDaySummary(model, selectedDayKey);
     const selectedDayEntries = buildMobileLearningHistoryDetailEntries(selectedDaySummary?.entries || []);
+    const isPcHistoryView = mobileAdminLearningHistorySelectedDeviceType === "pc";
+    const pcModeSummaryRows = isPcHistoryView
+      ? getMobileAdminPcModeSummaryRows(selectedDaySummary, selectedDaySummary?.entries || [])
+      : [];
     const canMoveNext = shiftMobileLearningHistoryDayKey(selectedDayKey, 1) <= todayDayKey;
     const selectedDayHasEntries = selectedDayEntries.length > 0;
 
@@ -4228,14 +4289,16 @@
               <div class="mobile-admin-history-total-stats">
                 <span>${formatMobileLearningDuration(selectedDaySummary.activeStudySeconds)}</span>
                 <span>${selectedDaySummary.questionCount}問</span>
+                ${isPcHistoryView ? `<span>+${Math.max(0, Number(selectedDaySummary.earnedPoints) || 0)}P</span>` : ""}
                 <span>${selectedDaySummary.accuracy}%</span>
               </div>
               <div class="mobile-admin-history-mode-summary-list">
-                ${Object.values(selectedDaySummary.modeTotals).filter((entry) => entry.questionCount > 0 || entry.activeStudySeconds > 0).map((entry) => `
+                ${(isPcHistoryView ? pcModeSummaryRows : Object.values(selectedDaySummary.modeTotals).filter((entry) => entry.questionCount > 0 || entry.activeStudySeconds > 0)).map((entry) => `
                   <div class="mobile-admin-history-mode-summary-row">
                     <span>${escapeHtml(entry.label)}</span>
                     <span>${escapeHtml(formatMobileLearningDuration(entry.activeStudySeconds))}</span>
                     <span>${entry.questionCount}問</span>
+                    ${isPcHistoryView ? `<span>+${Math.max(0, Number(entry.earnedPoints) || 0)}P</span>` : ""}
                     <span>${entry.accuracy}%</span>
                   </div>
                 `).join("")}
@@ -4267,7 +4330,7 @@
                   <div class="mobile-admin-history-detail-item">
                     <p class="mobile-admin-history-detail-row mobile-admin-history-detail-row-main">
                       <span class="mobile-admin-history-detail-time">${startClock}～</span>
-                      <span class="mobile-admin-history-detail-meta">${escapeHtml(studyLabel.weekDayText)}</span>
+                      ${studyLabel.weekDayText ? `<span class="mobile-admin-history-detail-meta">${escapeHtml(studyLabel.weekDayText)}</span>` : ""}
                       <span class="mobile-admin-history-detail-mode">${escapeHtml(studyLabel.categoryText)}</span>
                       <span class="mobile-admin-history-detail-meta">実学習 ${formatMobileLearningDurationMinutesSeconds(activeStudySeconds)}</span>
                     </p>
@@ -4522,7 +4585,7 @@
       : (window.MobileFirebase?.auth?.currentUser || null);
     const currentUid = String(currentUser?.uid || "").trim();
     const resolvedUid = String(targetUid || "").trim();
-    const safeTargetUid = currentUid && resolvedUid && resolvedUid !== currentUid ? currentUid : resolvedUid;
+    const safeTargetUid = resolvedUid || currentUid;
     const firestore = window.MobileFirebase?.firestore || null;
     if (!safeTargetUid || !firestore) {
       return [];
@@ -8025,6 +8088,9 @@
     mobilePointSyncUnsubscribe = null;
     mobilePointSyncCurrentUid = "";
     mobilePointSyncReady = false;
+    mobilePointSyncAllowCreate = false;
+    mobilePointStateCache = null;
+    mobilePointStateCacheUid = "";
     if (typeof wordOrderStatsSyncUnsubscribe === "function") {
       wordOrderStatsSyncUnsubscribe();
     }
@@ -8050,6 +8116,9 @@
     if (authState.status === "logged-in" || currentUser) {
       mobileAuthLastStatus = "logged-in";
       mobileAuthLastUid = String(currentUser?.uid || "").trim();
+      mobilePointStateCache = null;
+      mobilePointStateCacheUid = "";
+      mobilePointSyncAllowCreate = false;
       refreshMobileFamilyIdentityCache()
         .catch(() => false)
         .finally(() => {

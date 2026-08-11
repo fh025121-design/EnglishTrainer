@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260811-1336";
+        const defaultToken = "20260811-2055";
         const queryToken = new URLSearchParams(window.location.search).get("v") || "";
         const cacheToken = queryToken || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -681,6 +681,7 @@
           { src: "../data.js", type: "text/javascript" },
           { src: "../preposition-data.js", type: "text/javascript" },
           { src: "../release-info.js", type: "text/javascript" },
+          { src: "../learning-history-display-shared.js", type: "text/javascript" },
           { src: "speaking-data.js", type: "text/javascript" },
           { src: "word-order-data.js", type: "text/javascript" },
           { src: "translation-training-data.js", type: "text/javascript" },

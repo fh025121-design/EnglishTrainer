@@ -2803,91 +2803,27 @@ function getLearningHistorySelectedDayTitle(dayKey, todayDayKey) {
 }
 
 function resolveLearningHistoryDayNumberForDisplay(entryLike) {
-  const source = entryLike && typeof entryLike === "object" ? entryLike : {};
-  const candidates = [source.dayNumber, source.day, source.studyDay];
-  for (const candidate of candidates) {
-    if (typeof candidate === "number" && Number.isFinite(candidate) && candidate >= 1) {
-      return Math.floor(candidate);
-    }
-    const text = String(candidate || "").trim();
-    if (!text) continue;
-    if (/^\d+$/.test(text)) {
-      const parsed = Number(text);
-      if (Number.isFinite(parsed) && parsed >= 1) {
-        return Math.floor(parsed);
-      }
-    }
-  }
-  return 0;
+  return window.LearningHistoryDisplayShared?.resolveDayNumberForDisplay(entryLike) || 0;
 }
 
 function isLikelyPhraseLearningHistoryEntry(entryLike) {
-  const entry = entryLike && typeof entryLike === "object" ? entryLike : {};
-  const rawMode = String(entry.mode || "").trim().toLowerCase();
-  if (rawMode) {
-    return rawMode.includes("phrase") || rawMode.includes("idiom") || rawMode.includes("熟語");
-  }
-  const dayNumber = resolveLearningHistoryDayNumberForDisplay(entry);
-  if (dayNumber >= 1) return false;
-  const questionCount = Math.max(0, Number(entry.questionCount) || 0);
-  const activeStudySeconds = Math.max(0, Number(entry.activeStudySeconds) || 0);
-  return questionCount > 0 || activeStudySeconds > 0;
+  return window.LearningHistoryDisplayShared?.isLikelyPhraseLearningHistoryEntry(entryLike) || false;
 }
 
 function stripPcLearningHistoryWeekDayPrefix(modeLike) {
-  const mode = String(modeLike || "").trim();
-  if (!mode) return "";
-  // Mobile-derived labels may prefix mode with "Week7 日曜". PC history should show mode only.
-  return mode.replace(/^Week\s*\d+\s+[^\s]+(?:曜|曜日)?\s+/i, "").trim();
+  return window.LearningHistoryDisplayShared?.stripPcWeekDayPrefix(modeLike) || String(modeLike || "").trim();
 }
 
 function resolvePcLearningHistoryCategory(modeLike, entryLike = null) {
-  const mode = stripPcLearningHistoryWeekDayPrefix(modeLike);
-  const lowerMode = mode.toLowerCase();
-  if (!mode) {
-    const dayNumber = resolveLearningHistoryDayNumberForDisplay(entryLike);
-    if (dayNumber >= 1) return "Day学習";
-    return isLikelyPhraseLearningHistoryEntry(entryLike) ? "熟語特訓" : "不明";
-  }
-  if (mode === "Day" || mode === "Day学習" || lowerMode === "normal") return "Day学習";
-  if (mode === LEARNING_MODE.EXTRA_TRAINING || lowerMode === "extratraining" || lowerMode === "extra-training" || mode === "追加特訓") return "追加特訓";
-  if (mode === "過去の間違い" || lowerMode === "review" || lowerMode === "challenge") return "過去の間違い";
-  if (mode === "前置詞特訓" || lowerMode === "preposition" || lowerMode === "preposition-training") return "前置詞特訓";
-  if (mode === "応答文特訓" || lowerMode === "response" || lowerMode === "response-training") return "応答文特訓";
-  if (mode === "不規則動詞特訓" || lowerMode === "irregular-verb" || lowerMode === "irregular-verb-training") return "不規則動詞特訓";
-  if (mode === "単語・熟語学習") return "Vocabulary";
-  if (mode.includes("熟語") || lowerMode.includes("phrase") || lowerMode.includes("idiom")) return "熟語特訓";
-  if (mode.includes("単語")) return "単語特訓";
-  return mode || "不明";
+  return window.LearningHistoryDisplayShared?.resolvePcCategory(modeLike, entryLike) || "不明";
 }
 
 function resolvePcLearningHistoryModeLabel(entryLike, options = {}) {
-  const entry = entryLike && typeof entryLike === "object" ? entryLike : {};
-  const normalized = resolvePcLearningHistoryCategory(entry.mode, entry);
-  if (normalized !== "Day学習") return normalized;
-  if (!options?.withDayNumber) return normalized;
-  const dayNumber = resolveLearningHistoryDayNumberForDisplay(entry);
-  const fallbackDayNumber = Number(options?.fallbackDayNumber);
-  const effectiveDayNumber = dayNumber >= 1
-    ? dayNumber
-    : (Number.isFinite(fallbackDayNumber) && fallbackDayNumber >= 1 ? Math.floor(fallbackDayNumber) : 0);
-  if (effectiveDayNumber < 1) return normalized;
-  return `Day学習（Day${effectiveDayNumber}）`;
+  return window.LearningHistoryDisplayShared?.resolvePcModeLabel(entryLike, options) || "不明";
 }
 
 function resolvePcLearningHistoryDaySummaryLabel(dayEntries) {
-  const source = Array.isArray(dayEntries) ? dayEntries : [];
-  const dayNumberSet = new Set(
-    source
-      .filter((entry) => resolvePcLearningHistoryCategory(entry?.mode, entry) === "Day学習")
-      .map((entry) => resolveLearningHistoryDayNumberForDisplay(entry))
-      .filter((value) => value >= 1)
-  );
-  if (dayNumberSet.size === 1) {
-    const [dayNumber] = [...dayNumberSet];
-    return `Day学習（Day${dayNumber}）`;
-  }
-  return "Day学習";
+  return window.LearningHistoryDisplayShared?.resolvePcDaySummaryLabel(dayEntries) || "Day学習";
 }
 
 function getPcLearningHistorySummaryRowLabel(entry, options = {}) {
@@ -2899,29 +2835,7 @@ function getPcLearningHistorySummaryRowLabel(entry, options = {}) {
 }
 
 function getLearningHistoryModeBucket(modeOrEntry) {
-  const entryLike = modeOrEntry && typeof modeOrEntry === "object" ? modeOrEntry : null;
-  const mode = entryLike ? entryLike.mode : modeOrEntry;
-  const normalized = resolvePcLearningHistoryCategory(mode, entryLike);
-  if (normalized === "Day学習") {
-    return { key: "day", label: "Day学習" };
-  }
-  if (normalized === "追加特訓") {
-    return { key: "extra", label: "追加特訓" };
-  }
-  if (normalized === "単語特訓") {
-    return { key: "word", label: "単語特訓" };
-  }
-  if (normalized === "熟語特訓") {
-    return { key: "phrase", label: "熟語特訓" };
-  }
-  if (normalized === "不規則動詞特訓") {
-    return { key: "irregularVerb", label: "不規則動詞特訓" };
-  }
-  if (normalized === "過去の間違い") {
-    return { key: "review", label: "過去の間違い" };
-  }
-  const fallbackLabel = normalized || "不明";
-  return { key: `mode:${fallbackLabel}`, label: fallbackLabel };
+  return window.LearningHistoryDisplayShared?.getPcModeBucket(modeOrEntry) || { key: "mode:不明", label: "不明" };
 }
 
 function getLearningHistoryModeGroup(mode) {
@@ -2933,21 +2847,11 @@ function getLearningHistoryModeGroup(mode) {
 }
 
 function getLearningHistoryModeSummaryOrder() {
-  return ["day", "extra", "phrase", "irregularVerb", "review", "word"];
+  return window.LearningHistoryDisplayShared?.getPcModeSummaryOrder() || ["day", "extra", "phrase", "irregularVerb", "review", "word"];
 }
 
 function getLearningHistoryModeSummaryEntries(summary) {
-  const modeTotals = summary?.modeTotals && typeof summary.modeTotals === "object" ? summary.modeTotals : {};
-  const knownOrder = getLearningHistoryModeSummaryOrder();
-  const keys = Object.keys(modeTotals);
-  const dynamicKeys = keys.filter((key) => !knownOrder.includes(key)).sort((left, right) => {
-    const leftLabel = String(modeTotals[left]?.label || "");
-    const rightLabel = String(modeTotals[right]?.label || "");
-    return leftLabel.localeCompare(rightLabel, "ja");
-  });
-  return [...knownOrder, ...dynamicKeys]
-    .map((key) => ({ key, ...(modeTotals[key] || {}) }))
-    .filter((entry) => Math.max(0, Number(entry.questionCount) || 0) > 0 || Math.max(0, Number(entry.activeStudySeconds) || 0) > 0);
+  return window.LearningHistoryDisplayShared?.getPcModeSummaryEntries(summary) || [];
 }
 
 function ensureLearningHistoryModeTotal(modeTotals, bucketInfo) {
