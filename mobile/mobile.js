@@ -3623,11 +3623,12 @@
     const categoryText = resolveMobileLearningHistoryCategory(entry);
     const dayNumberText = String(entry?.dayNumber || "").trim();
     const shouldShowDayNumber = categoryText === "語順" || mode.includes("word-order") || mode.includes("wordorder");
+    const shouldShowRangeDash = categoryText === "復習";
     const shouldHideWeekDay = categoryText === "和訳" || mode.includes("translation");
     return {
       weekDayText: shouldShowDayNumber && dayNumberText
         ? dayNumberText
-        : (shouldHideWeekDay ? "" : `${weekDay.weekLabel} ${weekDay.weekdayLabel}`),
+        : (shouldShowRangeDash ? "－" : (shouldHideWeekDay ? "" : `${weekDay.weekLabel} ${weekDay.weekdayLabel}`)),
       categoryText
     };
   }

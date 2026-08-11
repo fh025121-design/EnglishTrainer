@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/11 21:18", note: "モバイル版のみ: 学習履歴の『復習』は複数Week・複数曜日を横断するため、範囲表示を先頭問題由来の Week/曜日 ではなく『－』に変更。Vocabulary・会話練習など通常宿題の Week/曜日表示ロジックは変更なし。" },
     { version: "2026/08/11 20:55", note: "PC履歴表示の基準統一: PC学習履歴の分類・表示ラベル判定を shared helper に集約し、PC画面とモバイル管理画面のPCフィルターで同じ判定条件を使用するよう修正。熟語特訓・Day学習ラベル・モード集計順・ポイント列表示をPC基準へ統一。Firestore保存データやPC側保存処理は未変更。" },
     { version: "2026/08/11 20:44", note: "モバイル版のみ: 管理者の学習履歴で PC 端末の mode 判定を PC 画面と同じ規則へ統一。phrase-spiral / idiom を『熟語特訓』として表示し、PC 履歴には mobile 固有の Week 表示を付けないよう改善。" },
     { version: "2026/08/11 20:31", note: "モバイル版のみ: 獲得ポイントの localStorage と Firestore 同期をUID別に分離し、前ユーザーの点数が親/長男で混ざる不具合を修正。Firestore未作成のユーザーでも、初回保存時にそのUIDへ新規作成できるよう改善。" },
