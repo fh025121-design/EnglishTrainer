@@ -57,7 +57,6 @@ let currentAudio = null;
 let irregularVerbSelectedMode = "training";
 let isResettingLearningData = false;
 const CHALLENGE_PROMO_SCREEN_ID = "challengePromoScreen";
-const CHALLENGE_PROMO_DURATION_MS = 3000;
 const CHALLENGE_PROMO_LIMIT_DAY_KEY = "2026-08-12";
 const CHALLENGE_PROMO_MAX_SHOWS_PER_UID = 2;
 const CHALLENGE_PROMO_COUNTER_STORAGE_KEY = "english-trainer-pc-challenge-promo-counter-v1";
@@ -10635,9 +10634,6 @@ function openChallengePromoScreen(options = {}) {
   }
 
   playChallengePromoEffectOnce();
-  challengePromoTimerId = window.setTimeout(() => {
-    beginChallengeSessionAfterPromo();
-  }, CHALLENGE_PROMO_DURATION_MS);
 }
 
 function renderHomeUpdateHistory() {
@@ -11486,7 +11482,7 @@ function startNextLevelFocusBatch(level) {
     showResultScreen(clearedSummary);
     return;
   }
-  prepareSession("level-focus", { level: focusLevel, customPool: batch });
+  prepareSession("level-focus", { level: focusLevel, customPool: batch, skipPhaseIntro: true });
 }
 
 function prepareSession(mode, options = {}) {
@@ -11680,8 +11676,10 @@ function prepareSession(mode, options = {}) {
     beginSessionPhase(state.session, "phase2", questions, { showIntro: true });
   } else if (mode === "phrase-spiral") {
     beginSessionPhase(state.session, "phase1", questions, { showIntro: false });
-  } else if (mode === "challenge" || mode === "level-focus") {
+  } else if (mode === "challenge") {
     beginSessionPhase(state.session, "phase3", questions, { showIntro: true });
+  } else if (mode === "level-focus") {
+    beginSessionPhase(state.session, "phase3", questions, { showIntro: !options.skipPhaseIntro });
   } else {
     if (startWeakFocusOnly) {
       beginSessionPhase(state.session, "phase3", questions, { showIntro: true });
@@ -13436,7 +13434,14 @@ function bindEvents() {
     trainingCompleteContinueBtn.addEventListener("click", () => {
       pendingTrainingCompleteContext = null;
       deferGameTicketRewardModal = false;
-      prepareSession("challenge", { forceNewSession: true });
+      prepareSession("challenge", { forceNewSession: true, skipChallengePromo: true });
+    });
+  }
+
+  const challengePromoNextBtn = document.getElementById("challengePromoNextBtn");
+  if (challengePromoNextBtn) {
+    challengePromoNextBtn.addEventListener("click", () => {
+      beginChallengeSessionAfterPromo();
     });
   }
 

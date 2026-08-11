@@ -3045,19 +3045,31 @@ select {
   text-shadow: 0 3px 10px rgba(0, 0, 0, 0.65);
 }
 
-.challenge-promo-start-label {
+.challenge-promo-next-btn {
   margin: 24px auto 0;
-  width: fit-content;
-  min-width: min(82%, 430px);
+  width: min(86%, 460px);
   padding: 12px 26px;
   border-radius: 999px;
   font-weight: 900;
   letter-spacing: 0.04em;
   font-size: clamp(1.05rem, 3.3vw, 1.7rem);
-  color: #d6ecff;
+  color: #eff8ff;
   border: 1px solid rgba(118, 189, 255, 0.6);
   background: linear-gradient(120deg, rgba(40, 64, 151, 0.82) 0%, rgba(52, 94, 208, 0.82) 52%, rgba(24, 66, 168, 0.86) 100%);
   box-shadow: 0 8px 18px rgba(19, 26, 68, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.challenge-promo-next-btn:hover,
+.challenge-promo-next-btn:focus-visible {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 12px 22px rgba(19, 26, 68, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.52), 0 0 20px rgba(91, 168, 255, 0.45);
+  outline: none;
+}
+
+.challenge-promo-next-btn:active {
+  transform: translateY(0);
 }
 
 #challengePromoScreen.active .challenge-promo-card {
