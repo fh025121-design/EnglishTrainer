@@ -2936,6 +2936,179 @@ select {
   font-size: 1rem;
 }
 
+#challengePromoScreen.active {
+  overflow: hidden;
+}
+
+.challenge-promo-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(132, 156, 255, 0.34), transparent 46%),
+    radial-gradient(circle at 82% 14%, rgba(255, 203, 91, 0.22), transparent 52%),
+    linear-gradient(165deg, #070b1f 0%, #11193d 46%, #261226 100%);
+}
+
+.challenge-promo-sky,
+.challenge-promo-rain,
+.challenge-promo-lightning {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.challenge-promo-sky {
+  background:
+    radial-gradient(circle at 22% 24%, rgba(155, 181, 255, 0.33), transparent 32%),
+    radial-gradient(circle at 76% 18%, rgba(255, 223, 126, 0.24), transparent 34%),
+    radial-gradient(circle at 58% 68%, rgba(126, 88, 182, 0.18), transparent 42%);
+  animation: challengePromoPulse 2.6s ease-in-out infinite;
+}
+
+.challenge-promo-rain {
+  opacity: 0.42;
+  background-image:
+    repeating-linear-gradient(
+      -72deg,
+      rgba(201, 228, 255, 0.05) 0,
+      rgba(201, 228, 255, 0.05) 3px,
+      transparent 3px,
+      transparent 13px
+    );
+  animation: challengePromoRain 760ms linear infinite;
+}
+
+.challenge-promo-lightning {
+  opacity: 0;
+  background:
+    linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.08) 45%, rgba(255, 255, 255, 0.24) 50%, transparent 56%),
+    radial-gradient(circle at 70% 36%, rgba(255, 237, 166, 0.28), transparent 26%);
+}
+
+#challengePromoScreen.active .challenge-promo-lightning {
+  animation: challengePromoLightning 3s ease-out 1;
+}
+
+.challenge-promo-card {
+  width: min(880px, 94%);
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: clamp(28px, 4vw, 42px) clamp(18px, 4vw, 34px);
+  background: linear-gradient(170deg, rgba(8, 9, 16, 0.76) 0%, rgba(13, 16, 33, 0.66) 100%);
+  border: 1px solid rgba(255, 201, 88, 0.44);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 241, 197, 0.34),
+    0 0 22px rgba(255, 190, 85, 0.18);
+}
+
+.challenge-promo-eyebrow {
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #ffe48f;
+  font-size: clamp(1.6rem, 6vw, 3.2rem);
+  text-shadow: 0 3px 0 rgba(95, 53, 8, 0.9), 0 10px 18px rgba(0, 0, 0, 0.68);
+}
+
+.challenge-promo-title {
+  margin: 10px 0 0;
+  font-weight: 900;
+  line-height: 1.04;
+  color: #ffd241;
+  font-size: clamp(2.4rem, 9.8vw, 5.7rem);
+  text-shadow: 0 4px 0 rgba(115, 58, 5, 0.95), 0 14px 24px rgba(0, 0, 0, 0.72);
+}
+
+.challenge-promo-subtitle {
+  margin: 10px 0 0;
+  font-size: clamp(1.25rem, 4.3vw, 2.35rem);
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 6px 16px rgba(0, 0, 0, 0.72);
+}
+
+.challenge-promo-description {
+  margin: 20px auto 0;
+  width: min(760px, 100%);
+  font-size: clamp(1rem, 2.9vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.45;
+  color: #ffe37a;
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.65);
+}
+
+.challenge-promo-start-label {
+  margin: 24px auto 0;
+  width: fit-content;
+  min-width: min(82%, 430px);
+  padding: 12px 26px;
+  border-radius: 999px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  font-size: clamp(1.05rem, 3.3vw, 1.7rem);
+  color: #d6ecff;
+  border: 1px solid rgba(118, 189, 255, 0.6);
+  background: linear-gradient(120deg, rgba(40, 64, 151, 0.82) 0%, rgba(52, 94, 208, 0.82) 52%, rgba(24, 66, 168, 0.86) 100%);
+  box-shadow: 0 8px 18px rgba(19, 26, 68, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+#challengePromoScreen.active .challenge-promo-card {
+  animation: challengePromoCardIn 320ms ease-out;
+}
+
+@keyframes challengePromoCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes challengePromoRain {
+  from {
+    transform: translateY(-20px);
+  }
+  to {
+    transform: translateY(18px);
+  }
+}
+
+@keyframes challengePromoPulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  45% {
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes challengePromoLightning {
+  0%,
+  22%,
+  40%,
+  58%,
+  100% {
+    opacity: 0;
+  }
+  8%,
+  29%,
+  48% {
+    opacity: 0.9;
+  }
+}
+
 .training-complete-title {
   margin: 0 0 6px;
   font-size: 1.6rem;

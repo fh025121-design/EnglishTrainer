@@ -56,6 +56,13 @@ const TRAINING_CORRECT_CHIME_PRESETS = Object.freeze([
 let currentAudio = null;
 let irregularVerbSelectedMode = "training";
 let isResettingLearningData = false;
+const CHALLENGE_PROMO_SCREEN_ID = "challengePromoScreen";
+const CHALLENGE_PROMO_DURATION_MS = 3000;
+const CHALLENGE_PROMO_LIMIT_DAY_KEY = "2026-08-12";
+const CHALLENGE_PROMO_MAX_SHOWS_PER_UID = 2;
+const CHALLENGE_PROMO_COUNTER_STORAGE_KEY = "english-trainer-pc-challenge-promo-counter-v1";
+let challengePromoTimerId = null;
+let pendingChallengePromoOptions = null;
 const LEVEL_DEFINITIONS = [
   { level: 1, label: "要特訓", icon: "🔥" },
   { level: 2, label: "あと一歩", icon: "⚠️" },
@@ -10512,6 +10519,127 @@ function openExtraTrainingScreen() {
   showScreen("extraTrainingScreen");
 }
 
+function loadChallengePromoCounterByDate() {
+  const storageKey = getScopedLocalStorageKey(CHALLENGE_PROMO_COUNTER_STORAGE_KEY);
+  if (!storageKey) return {};
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return {};
+    return Object.fromEntries(
+      Object.entries(parsed).map(([dayKey, count]) => [
+        String(dayKey),
+        Math.max(0, Math.floor(Number(count) || 0))
+      ])
+    );
+  } catch (_error) {
+    return {};
+  }
+}
+
+function saveChallengePromoCounterByDate(counterByDate) {
+  const storageKey = getScopedLocalStorageKey(CHALLENGE_PROMO_COUNTER_STORAGE_KEY);
+  if (!storageKey) return;
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(counterByDate && typeof counterByDate === "object" ? counterByDate : {}));
+  } catch (_error) {
+    // no-op
+  }
+}
+
+function getChallengePromoShownCount(dayKey = getPointTodayKey()) {
+  const counterByDate = loadChallengePromoCounterByDate();
+  return Math.max(0, Math.floor(Number(counterByDate[String(dayKey)] || 0)));
+}
+
+function markChallengePromoShown(dayKey = getPointTodayKey()) {
+  const safeDayKey = String(dayKey || "").trim();
+  if (!safeDayKey) return;
+  const counterByDate = loadChallengePromoCounterByDate();
+  counterByDate[safeDayKey] = Math.max(0, Math.floor(Number(counterByDate[safeDayKey] || 0))) + 1;
+  saveChallengePromoCounterByDate(counterByDate);
+}
+
+function shouldShowChallengePromo() {
+  const today = getPointTodayKey();
+  if (today !== CHALLENGE_PROMO_LIMIT_DAY_KEY) return false;
+  return getChallengePromoShownCount(today) < CHALLENGE_PROMO_MAX_SHOWS_PER_UID;
+}
+
+function clearChallengePromoTimer() {
+  if (challengePromoTimerId) {
+    window.clearTimeout(challengePromoTimerId);
+    challengePromoTimerId = null;
+  }
+}
+
+function playChallengePromoEffectOnce() {
+  try {
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) return;
+    const context = new AudioContextCtor();
+    const startAt = context.currentTime + 0.02;
+    const gainNode = context.createGain();
+    gainNode.gain.setValueAtTime(0.0001, startAt);
+    gainNode.gain.exponentialRampToValueAtTime(0.08, startAt + 0.08);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, startAt + 1.15);
+    gainNode.connect(context.destination);
+
+    const createTone = (frequency, offset, duration, type = "sawtooth") => {
+      const oscillator = context.createOscillator();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, startAt + offset);
+      oscillator.connect(gainNode);
+      oscillator.start(startAt + offset);
+      oscillator.stop(startAt + offset + duration);
+    };
+
+    createTone(132, 0.0, 0.92, "sawtooth");
+    createTone(196, 0.12, 0.85, "triangle");
+    createTone(294, 0.26, 0.6, "square");
+
+    window.setTimeout(() => {
+      context.close().catch(() => {
+        // no-op
+      });
+    }, 1400);
+  } catch (_error) {
+    // no-op
+  }
+}
+
+function beginChallengeSessionAfterPromo() {
+  clearChallengePromoTimer();
+  const pendingOptions = pendingChallengePromoOptions && typeof pendingChallengePromoOptions === "object"
+    ? pendingChallengePromoOptions
+    : {};
+  pendingChallengePromoOptions = null;
+  prepareSession("challenge", {
+    ...pendingOptions,
+    skipChallengePromo: true
+  });
+}
+
+function openChallengePromoScreen(options = {}) {
+  clearChallengePromoTimer();
+  pendingChallengePromoOptions = options && typeof options === "object" ? { ...options } : {};
+  markChallengePromoShown();
+  showScreen(CHALLENGE_PROMO_SCREEN_ID);
+
+  const promoScreen = document.getElementById(CHALLENGE_PROMO_SCREEN_ID);
+  if (promoScreen) {
+    promoScreen.classList.remove("is-animating");
+    void promoScreen.offsetWidth;
+    promoScreen.classList.add("is-animating");
+  }
+
+  playChallengePromoEffectOnce();
+  challengePromoTimerId = window.setTimeout(() => {
+    beginChallengeSessionAfterPromo();
+  }, CHALLENGE_PROMO_DURATION_MS);
+}
+
 function renderHomeUpdateHistory() {
   const list = document.getElementById("homeUpdateHistoryList");
   if (!list) return;
@@ -10562,6 +10690,10 @@ function persistSessionProgress(sessionLike = state.session) {
 }
 
 function showScreen(screenId, options = {}) {
+  if (screenId !== CHALLENGE_PROMO_SCREEN_ID) {
+    clearChallengePromoTimer();
+    pendingChallengePromoOptions = null;
+  }
   const recordHistory = options.recordHistory !== false;
   if (recordHistory && currentScreenId && currentScreenId !== screenId) {
     screenHistory.push(currentScreenId);
@@ -11369,6 +11501,13 @@ function prepareSession(mode, options = {}) {
       completeCurrentSession("interrupted", { showResult: false });
     } else if (mode !== "normal" && !options.forceNewSession) {
       resumeActiveSession();
+      return;
+    }
+  }
+
+  if (mode === "challenge" && !options.skipChallengePromo) {
+    if (shouldShowChallengePromo()) {
+      openChallengePromoScreen(options);
       return;
     }
   }
