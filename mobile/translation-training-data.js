@@ -2700,9 +2700,11 @@
         },
         {
           text: "However, she practiced three times a week",
-          fixedPhrases: ["しかし彼女は", "週3回"],
+          fixedPhrases: ["彼女は", "週3回"],
+          layoutOrder: ["g0", "f0", "g1", "f1"],
           selectionGroups: [
-            { key: "however", prompt: "接続", correctIndex: 0, options: ["しかし", "だから", "もし"] }
+            { key: "however", prompt: "接続", correctIndex: 0, options: ["しかし", "だから", "もし"] },
+            { key: "practiced", prompt: "時制", correctIndex: 0, options: ["練習した", "練習しなかった", "練習する予定だった"] }
           ]
         },
         {
@@ -3202,8 +3204,7 @@
           fixedPhrases: [],
           selectionGroups: [
             { key: "when", prompt: "接続", correctIndex: 0, options: ["～したとき", "～したあとで", "～する前に"] },
-            { key: "found", prompt: "時制", correctIndex: 0, options: ["弟がそれらを見つけた", "弟がそれを忘れた", "弟がそれらを持った"] },
-            { key: "them", prompt: "代名詞", correctIndex: 0, options: ["それらを", "彼を", "それを"] }
+            { key: "found", prompt: "時制", correctIndex: 0, options: ["弟がそれらを見つけた", "弟がそれを忘れた", "弟がそれらを持った"] }
           ]
         },
         {
@@ -3699,9 +3700,9 @@
         },
         {
           text: "Eri had never joined a volunteer event before,",
-          fixedPhrases: ["エリは", "一度も参加したことがなかった", "ボランティア活動に以前"],
+          fixedPhrases: ["エリは", "一度も参加したことがなかった"],
           selectionGroups: [
-            { key: "had-never-joined", prompt: "過去完了", correctIndex: 0, options: ["ボランティア活動", "学校行事", "会話練習"] }
+            { key: "had-never-joined", prompt: "過去完了", correctIndex: 0, options: ["ボランティア活動に", "学校行事に", "会話練習に"] }
           ]
         },
         {
@@ -3719,7 +3720,8 @@
         },
         {
           text: "she met the other volunteers at the park.",
-          fixedPhrases: ["彼女は", "他の参加者に会った", "公園で"],
+          fixedPhrases: ["彼女は", "他の参加者に", "公園で"],
+          layoutOrder: ["f0", "g0", "f1", "f2"],
           selectionGroups: [
             { key: "met", prompt: "時制", correctIndex: 0, options: ["会った", "見た", "探した"] }
           ]
