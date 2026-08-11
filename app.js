@@ -4179,6 +4179,7 @@ function applyTrainingCorrectChimePreset(presetId, options = {}) {
 function shouldPlayTrainingCorrectChimeForSession(sessionLike) {
   const mode = String(sessionLike?.mode || "").trim().toLowerCase();
   if (!mode) return false;
+  if (mode === "normal" && sessionLike?.isDayStudySession) return true;
   if (mode === "review") return false;
   if (mode === "challenge") return true;
   return Boolean(getTrainingKindByMode(mode));
