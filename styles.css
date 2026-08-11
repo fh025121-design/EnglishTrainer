@@ -139,6 +139,17 @@ body.auth-logged-in .login-shell {
   vertical-align: middle;
 }
 
+.title-account-tag {
+  display: inline-block;
+  margin-left: 10px;
+  color: var(--muted);
+  font-size: 0.66em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
 .title-version-tag {
   display: inline-block;
   margin-left: 8px;

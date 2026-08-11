@@ -8,6 +8,9 @@
   const MOBILE_PENDING_LEARNING_HISTORY_STORAGE_KEY = "english-trainer-mobile-pending-learning-history-v1";
   const MOBILE_LEARNING_HISTORY_DEVICE_NAME_SON = "長男モバイル";
   const MOBILE_LEARNING_HISTORY_DEVICE_NAME_OTHER = "その他";
+  const HOME_ACCOUNT_PARENT_EMAIL_PREFIX = "fh025";
+  const HOME_ACCOUNT_PARENT_ALIAS = "fh025121";
+  const HOME_ACCOUNT_SON_ALIAS = "RRR";
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
   const MOBILE_WORD_ORDER_STATS_STORAGE_KEY = "englishTrainerMobileWordOrderStats_v1";
   const SPEAKING_PROGRESS_KEY = "englishTrainerSpeakingProgress";
@@ -2944,6 +2947,7 @@
         const familyDoc = await sdk.getDoc(sdk.doc(firestore, "families", MOBILE_ADMIN_FAMILY_ID));
         const sonUid = familyDoc.exists() ? String(familyDoc.data()?.children?.son?.uid || "").trim() : "";
         writeMobileCachedSonUid(sonUid);
+        renderMobileHomeAccountAlias();
         return true;
       } catch (_error) {
         return false;
@@ -6993,6 +6997,30 @@
       }
     });
     state.currentScreen = screenId;
+    renderMobileHomeAccountAlias();
+  }
+
+  function resolveHomeAccountAliasForMobileUser(user) {
+    const email = String(user?.email || "").trim().toLowerCase();
+    if (email.startsWith(HOME_ACCOUNT_PARENT_EMAIL_PREFIX)) {
+      return HOME_ACCOUNT_PARENT_ALIAS;
+    }
+    if (isCurrentSonLoginForMobileLearningHistory()) {
+      return HOME_ACCOUNT_SON_ALIAS;
+    }
+    return "";
+  }
+
+  function renderMobileHomeAccountAlias() {
+    const aliasNode = document.getElementById("mobileHomeAccountAlias");
+    if (!aliasNode) return;
+    const currentUser = typeof window.getMobileFirebaseCurrentUser === "function"
+      ? window.getMobileFirebaseCurrentUser()
+      : (window.MobileFirebase?.auth?.currentUser || null);
+    const alias = resolveHomeAccountAliasForMobileUser(currentUser);
+    const shouldShow = state.currentScreen === "homeScreen" && Boolean(alias);
+    aliasNode.textContent = shouldShow ? alias : "";
+    aliasNode.classList.toggle("hidden", !shouldShow);
   }
 
   function renderHome() {

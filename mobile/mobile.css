@@ -122,6 +122,15 @@ select {
   letter-spacing: 0.04em;
 }
 
+.home-account-tag {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 0.84em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
 .stack-layout {
   display: flex;
   flex-direction: column;

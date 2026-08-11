@@ -15,6 +15,9 @@ const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_LABEL = "端末未識別";
 const ADMIN_HISTORY_SON_PC_FILTER_KEY = "son:pc";
 const ADMIN_HISTORY_SON_MOBILE_FILTER_KEY = "son:mobile";
 const ADMIN_HISTORY_SON_OTHER_FILTER_KEY = "son:other";
+const HOME_ACCOUNT_PARENT_EMAIL_PREFIX = "fh025";
+const HOME_ACCOUNT_PARENT_ALIAS = "fh025121";
+const HOME_ACCOUNT_SON_ALIAS = "RRR";
 const ADMIN_LEARNING_HISTORY_PIN = "12345";
 const SETTINGS_INFO = window.ENGLISH_TRAINER_RELEASE_INFO || Object.freeze({
   adminPassword: "12345",
@@ -432,11 +435,32 @@ function startLearningHistoryFamilyWatch() {
     onUpdate: (family) => {
       const sonUid = String(family?.children?.son?.uid || "").trim();
       writeLearningHistoryCachedSonUid(sonUid);
+      renderHomeAccountAliasBadge();
     },
     onError: () => {
       // Keep existing cache when watch fails.
     }
   });
+}
+
+function resolveHomeAccountAliasForPcUser(user) {
+  const email = String(user?.email || "").trim().toLowerCase();
+  if (email.startsWith(HOME_ACCOUNT_PARENT_EMAIL_PREFIX)) {
+    return HOME_ACCOUNT_PARENT_ALIAS;
+  }
+  if (isCurrentSonLoginForLearningHistory()) {
+    return HOME_ACCOUNT_SON_ALIAS;
+  }
+  return "";
+}
+
+function renderHomeAccountAliasBadge() {
+  const aliasNode = document.getElementById("pcHomeAccountAlias");
+  if (!aliasNode) return;
+  const alias = resolveHomeAccountAliasForPcUser(getCurrentPcFirebaseUser());
+  const shouldShow = currentScreenId === "homeScreen" && Boolean(alias);
+  aliasNode.textContent = shouldShow ? alias : "";
+  aliasNode.classList.toggle("hidden", !shouldShow);
 }
 
 function bindLearningHistoryFamilyWatchAuthStateListener() {
@@ -10296,6 +10320,7 @@ function renderHome() {
   renderRecentProgressTop5();
   renderHomeMessage();
   refreshResumeSessionButton();
+  renderHomeAccountAliasBadge();
 }
 
 function hasCompletedTodayNormalDaySession() {
@@ -10434,6 +10459,7 @@ function showScreen(screenId, options = {}) {
   if (appShell) {
     appShell.classList.toggle("non-home-screen", currentScreenId !== "homeScreen");
   }
+  renderHomeAccountAliasBadge();
   applyDesktopResponsiveScale();
   scheduleKeyboardNavigationSync();
 }
