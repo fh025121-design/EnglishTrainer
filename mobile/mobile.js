@@ -7297,9 +7297,8 @@
     elements.translationTrainingOptionList.innerHTML = "";
     elements.translationTrainingOptionList.classList.add("translation-training-option-list");
 
-    const isInlineCurrentEnglishSample = Number(question?.id) === 44
-      && String(question?.english || "").startsWith("Mao joined a cooking class / at a community center last month.");
-    if (isInlineCurrentEnglishSample && currentPart) {
+    const shouldRenderInlineCurrentEnglish = String(question?.level || "").trim().toUpperCase() === "C";
+    if (shouldRenderInlineCurrentEnglish && currentPart) {
       const currentEnglishWrapper = document.createElement("div");
       const currentChip = document.createElement("span");
       currentChip.className = "translation-training-english-part translation-training-english-part--current";
