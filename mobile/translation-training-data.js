@@ -1057,6 +1057,7 @@
         {
           text: "When I come back to Japan,",
           fixedPhrases: ["私は"],
+          layoutOrder: ["g0", "f0", "g1", "g2"],
           selectionGroups: [
             {
               key: "when-come-back",
@@ -1400,6 +1401,7 @@
         {
           text: "While Nana was shopping for dinner,",
           fixedPhrases: ["ナナが"],
+          layoutOrder: ["g0", "f0", "g1", "g2"],
           selectionGroups: [
             { key: "while", prompt: "接続", correctIndex: 0, options: ["～している間", "～した後", "～する前"] },
             { key: "was-shopping", prompt: "時制", correctIndex: 0, options: ["買い物をしていた", "買い物をした", "買い物をするだろう"] },
@@ -1688,6 +1690,7 @@
         {
           text: "but I finished my homework.",
           fixedPhrases: ["宿題を"],
+          layoutOrder: ["g0", "g1", "f0"],
           selectionGroups: [
             {
               key: "but-i",
@@ -1769,6 +1772,7 @@
         {
           text: "so he went to a supermarket",
           fixedPhrases: ["スーパーへ"],
+          layoutOrder: ["g0", "g1", "f0"],
           selectionGroups: [
             {
               key: "so-he",
@@ -1787,6 +1791,7 @@
         {
           text: "to buy some eggs.",
           fixedPhrases: ["卵を"],
+          layoutOrder: ["g0", "f0"],
           selectionGroups: [
             {
               key: "to-buy",
@@ -1807,6 +1812,7 @@
         {
           text: "When Emi opened the box,",
           fixedPhrases: ["エミが箱を開けた"],
+          layoutOrder: ["g0", "f0"],
           selectionGroups: [
             {
               key: "when",
@@ -1894,6 +1900,7 @@
         {
           text: "Before we went to the museum,",
           fixedPhrases: ["私たちが博物館へ行った"],
+          layoutOrder: ["g0", "f0"],
           selectionGroups: [
             {
               key: "before",
@@ -2020,6 +2027,7 @@
         {
           text: "but he liked the koalas best.",
           fixedPhrases: ["コアラを"],
+          layoutOrder: ["g0", "f0", "g1"],
           selectionGroups: [
             { key: "but-he", prompt: "接続", correctIndex: 0, options: ["しかし彼は", "だから彼は", "その前に彼は"] },
             { key: "liked-best", prompt: "動詞", correctIndex: 0, options: ["一番気に入った", "一番こわがった", "一番避けた"] }
@@ -2035,6 +2043,7 @@
         {
           text: "and plans to show them to his friends",
           fixedPhrases: ["それらを友達に"],
+          layoutOrder: ["g0", "g1", "f0"],
           selectionGroups: [
             { key: "and-plans", prompt: "接続", correctIndex: 0, options: ["そして", "しかし", "そのあと"] },
             { key: "plans-to-show", prompt: "不定詞", correctIndex: 0, options: ["見せる予定だ", "見せた", "見せる必要がない"] }
@@ -2043,6 +2052,7 @@
         {
           text: "when he returns to Japan.",
           fixedPhrases: ["彼が日本へ帰る"],
+          layoutOrder: ["g0", "f0"],
           selectionGroups: [
             { key: "when", prompt: "接続", correctIndex: 0, options: ["～したとき", "～したので", "～する前に"] }
           ]
@@ -2070,6 +2080,7 @@
         {
           text: "Yesterday, however, she went to the library",
           fixedPhrases: ["昨日は", "図書館へ"],
+          layoutOrder: ["f0", "g0", "g1", "f1"],
           selectionGroups: [
             { key: "however-she", prompt: "接続", correctIndex: 0, options: ["しかし彼女は", "だから彼女は", "そのあと彼女は"] },
             { key: "went", prompt: "時制", correctIndex: 0, options: ["行った", "行く", "行っている"] }
@@ -2078,6 +2089,7 @@
         {
           text: "because she needed a book for her science class.",
           fixedPhrases: ["理科の授業用の本が"],
+          layoutOrder: ["g0", "g1", "f0"],
           selectionGroups: [
             { key: "because-she", prompt: "接続", correctIndex: 0, options: ["なぜなら彼女は", "しかし彼女は", "それでも彼女は"] },
             { key: "needed", prompt: "時制", correctIndex: 0, options: ["必要だった", "必要だ", "必要になるだろう"] }
@@ -2086,6 +2098,7 @@
         {
           text: "While she was looking for the book,",
           fixedPhrases: ["彼女がその本を探していた"],
+          layoutOrder: ["g0", "f0"],
           selectionGroups: [
             { key: "while", prompt: "接続", correctIndex: 0, options: ["～している間", "～した後で", "～する前に"] }
           ]
@@ -2110,6 +2123,7 @@
         {
           text: "before they went home.",
           fixedPhrases: ["二人が家へ帰る"],
+          layoutOrder: ["g0", "f0"],
           selectionGroups: [
             { key: "before", prompt: "接続", correctIndex: 0, options: ["～する前に", "～した後で", "～している間に"] }
           ]
@@ -2137,6 +2151,7 @@
         {
           text: "Before he left home,",
           fixedPhrases: ["彼が家を出た"],
+          layoutOrder: ["g0", "f0"],
           selectionGroups: [
             { key: "before", prompt: "接続", correctIndex: 0, options: ["～する前に", "～した後で", "～している間に"] }
           ]
@@ -2151,6 +2166,7 @@
         {
           text: "When he arrived at his grandfather's house,",
           fixedPhrases: ["彼が祖父の家に着いた"],
+          layoutOrder: ["g0", "f0"],
           selectionGroups: [
             { key: "when", prompt: "接続", correctIndex: 0, options: ["～したとき", "～する前に", "～したので"] }
           ]
@@ -2173,6 +2189,7 @@
         {
           text: "about when he was young.",
           fixedPhrases: ["祖父が若かったころ"],
+          layoutOrder: ["g0", "f0"],
           selectionGroups: [
             { key: "about", prompt: "前置詞", correctIndex: 0, options: ["～について", "～の前に", "～のあとで"] }
           ]
@@ -2232,6 +2249,7 @@
         {
           text: "However, the teacher showed her what to do,",
           fixedPhrases: ["先生は", "彼女に"],
+          layoutOrder: ["g0", "f0", "f1", "g1"],
           selectionGroups: [
             { key: "however", prompt: "接続", correctIndex: 0, options: ["しかし", "だから", "その前に"] },
             { key: "showed-what-to-do", prompt: "文構造", correctIndex: 0, options: ["何をすればよいかを見せた", "何を買うかを忘れた", "何を食べるかを聞いた"] }
@@ -3916,7 +3934,48 @@
     const safePart = part && typeof part === "object" ? part : null;
     const selectionGroups = Array.isArray(safePart?.selectionGroups) ? safePart.selectionGroups : [];
     const displayFixedPhrases = Array.isArray(fixedPhrases) ? fixedPhrases.filter(Boolean) : [];
+    const customOrder = Array.isArray(safePart?.layoutOrder) ? safePart.layoutOrder : [];
     const sequence = [];
+
+    if (customOrder.length) {
+      const usedFixed = new Set();
+      const usedGroups = new Set();
+
+      customOrder.forEach((token) => {
+        const value = String(token || "").trim();
+        if (/^f\d+$/.test(value)) {
+          const fixedIndex = Number(value.slice(1));
+          if (!Number.isInteger(fixedIndex) || usedFixed.has(fixedIndex)) return;
+          const phrase = String(displayFixedPhrases[fixedIndex] || "").trim();
+          if (!phrase) return;
+          usedFixed.add(fixedIndex);
+          sequence.push({ type: "fixed", phrases: [phrase] });
+          return;
+        }
+
+        if (/^g\d+$/.test(value)) {
+          const groupIndex = Number(value.slice(1));
+          if (!Number.isInteger(groupIndex) || usedGroups.has(groupIndex) || !selectionGroups[groupIndex]) return;
+          usedGroups.add(groupIndex);
+          sequence.push({ type: "column", group: selectionGroups[groupIndex], groupIndex });
+        }
+      });
+
+      displayFixedPhrases.forEach((phrase, index) => {
+        if (usedFixed.has(index)) return;
+        const text = String(phrase || "").trim();
+        if (!text) return;
+        sequence.push({ type: "fixed", phrases: [text] });
+      });
+
+      selectionGroups.forEach((group, index) => {
+        if (usedGroups.has(index)) return;
+        sequence.push({ type: "column", group, groupIndex: index });
+      });
+
+      return sequence;
+    }
+
     if (displayFixedPhrases.length) {
       sequence.push({ type: "fixed", phrases: displayFixedPhrases });
     }
