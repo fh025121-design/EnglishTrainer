@@ -4676,7 +4676,13 @@ function buildIrregularVerbReviewQuestions(bank, reviewQuestionIds, stats) {
     : [];
   if (!reviewPool.length) return [];
   const filteredBank = bank.filter((question) => reviewPool.includes(String(question.id)));
-  return irregularVerbs.buildIrregularVerbQuestionSet(filteredBank, Math.min(filteredBank.length, 10), {
+  const targetCount = Math.min(filteredBank.length, 10);
+  const weightedCandidates = weightedSampleWithoutReplacementByWeight(
+    filteredBank,
+    targetCount,
+    (question) => getTrainingQuestionWeight("irregular-verb", question?.id)
+  );
+  return irregularVerbs.buildIrregularVerbQuestionSet(weightedCandidates, targetCount, {
     stats,
     preferredQuestionIds: reviewPool
   });
@@ -4711,7 +4717,12 @@ function startIrregularVerbTraining(form = "past", mode = irregularVerbSelectedM
   const bank = getIrregularVerbQuestionBank();
   const plan = irregularVerbs.getIrregularVerbSessionPlan(mode, form);
   const stats = state?.stats?.trainingProfiles?.["irregular-verb"]?.questions || {};
-  const questions = irregularVerbs.buildIrregularVerbQuestionSet(bank, plan.questionCount, {
+  const weightedCandidates = weightedSampleWithoutReplacementByWeight(
+    bank,
+    Math.min(plan.questionCount, bank.length),
+    (question) => getTrainingQuestionWeight("irregular-verb", question?.id)
+  );
+  const questions = irregularVerbs.buildIrregularVerbQuestionSet(weightedCandidates, plan.questionCount, {
     stats
   });
   if (!questions.length) {
@@ -5167,7 +5178,11 @@ function buildResponseQuestionSet() {
     seen.add(key);
     uniquePool.push(question);
   });
-  const selected = shuffle(uniquePool);
+  const selected = weightedSampleWithoutReplacementByWeight(
+    uniquePool,
+    uniquePool.length,
+    (question) => getTrainingQuestionWeight("response", question?.id)
+  );
   return orderResponseQuestionsForVariety(selected);
 }
 
@@ -5957,6 +5972,61 @@ function levelIcon(level) {
 
 function getLevelWeight(item) {
   return LEVEL_QUESTION_WEIGHTS[getEffectiveLevelForItem(item)] || 1;
+}
+
+function computeTrainingQuestionWeightByAttemptsAndCorrect(attempts, correct) {
+  const safeAttempts = Math.max(0, Math.floor(Number(attempts) || 0));
+  const safeCorrect = Math.max(0, Math.min(safeAttempts, Math.floor(Number(correct) || 0)));
+  if (safeAttempts < 3) return 1.0;
+
+  const accuracy = safeAttempts > 0 ? (safeCorrect / safeAttempts) * 100 : 0;
+  if (accuracy <= 49) return 1.8;
+  if (accuracy <= 69) return 1.4;
+  if (accuracy <= 89) return 1.0;
+  return 0.8;
+}
+
+function getTrainingQuestionWeight(trainingKind, questionId) {
+  const kind = String(trainingKind || "").trim();
+  const key = String(questionId || "").trim();
+  if (!kind || !key) return 1.0;
+
+  const profile = state?.stats?.trainingProfiles?.[kind];
+  const stats = profile?.questions?.[key];
+  const attempts = Math.max(0, Number(stats?.attempts) || 0);
+  const correct = Math.max(0, Number(stats?.correct) || 0);
+  return computeTrainingQuestionWeightByAttemptsAndCorrect(attempts, correct);
+}
+
+function weightedSampleWithoutReplacementByWeight(pool, count, resolveWeight) {
+  const available = Array.isArray(pool) ? pool.slice() : [];
+  const picked = [];
+  const targetCount = Math.max(0, Math.min(Number(count) || 0, available.length));
+
+  while (picked.length < targetCount && available.length) {
+    const totalWeight = available.reduce((sum, item) => {
+      const resolved = typeof resolveWeight === "function" ? Number(resolveWeight(item)) : 1;
+      const safeWeight = Number.isFinite(resolved) && resolved > 0 ? resolved : 1;
+      return sum + safeWeight;
+    }, 0);
+
+    let cursor = Math.random() * totalWeight;
+    let selectedIndex = available.length - 1;
+
+    for (let index = 0; index < available.length; index += 1) {
+      const resolved = typeof resolveWeight === "function" ? Number(resolveWeight(available[index])) : 1;
+      const safeWeight = Number.isFinite(resolved) && resolved > 0 ? resolved : 1;
+      cursor -= safeWeight;
+      if (cursor <= 0) {
+        selectedIndex = index;
+        break;
+      }
+    }
+
+    picked.push(available.splice(selectedIndex, 1)[0]);
+  }
+
+  return picked;
 }
 
 function weightedSampleWithoutReplacement(pool, count) {
@@ -8476,7 +8546,11 @@ function buildPrepositionQuestionSet(scope, options = {}) {
   });
 
   const targetCount = Math.min(PREPOSITION_TRAINING_QUESTION_LIMIT, uniquePool.length);
-  return shuffle(uniquePool).slice(0, targetCount);
+  return weightedSampleWithoutReplacementByWeight(
+    uniquePool,
+    targetCount,
+    (question) => getTrainingQuestionWeight("preposition", question?.id)
+  );
 }
 
 function startPrepositionTraining(scope, options = {}) {
@@ -10613,14 +10687,19 @@ function getPhraseSpiralPool(count = PHRASE_SPIRAL_TARGET_COUNT) {
   const takeFromPriority = (startLevel, requiredCount) => {
     let needed = requiredCount;
     for (let level = startLevel; level <= 4 && needed > 0; level += 1) {
-      const available = shuffle((buckets[level] || []).filter((item) => !selectedIds.has(String(item.id))));
+      const available = (buckets[level] || []).filter((item) => !selectedIds.has(String(item.id)));
       const takeCount = Math.min(needed, available.length);
-      for (let index = 0; index < takeCount; index += 1) {
-        const picked = available[index];
+      const pickedItems = weightedSampleWithoutReplacementByWeight(
+        available,
+        takeCount,
+        (item) => getTrainingQuestionWeight("idiom", item?.id)
+      );
+      for (let index = 0; index < pickedItems.length; index += 1) {
+        const picked = pickedItems[index];
         selected.push(picked);
         selectedIds.add(String(picked.id));
       }
-      needed -= takeCount;
+      needed -= pickedItems.length;
     }
   };
 
@@ -10629,9 +10708,13 @@ function getPhraseSpiralPool(count = PHRASE_SPIRAL_TARGET_COUNT) {
   });
 
   if (selected.length < targetCount) {
-    const fallback = shuffle(phraseItems.filter((item) => !selectedIds.has(String(item.id))));
+    const fallback = phraseItems.filter((item) => !selectedIds.has(String(item.id)));
     const remaining = targetCount - selected.length;
-    selected.push(...fallback.slice(0, remaining));
+    selected.push(...weightedSampleWithoutReplacementByWeight(
+      fallback,
+      remaining,
+      (item) => getTrainingQuestionWeight("idiom", item?.id)
+    ));
   }
 
   return shuffle(selected).slice(0, targetCount);
