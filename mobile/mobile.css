@@ -282,9 +282,9 @@ select {
 }
 
 .translation-training-english-part--current {
-  background: linear-gradient(135deg, rgba(120, 232, 245, 0.72), rgba(88, 204, 234, 0.62));
+  background: linear-gradient(135deg, rgba(94, 206, 255, 0.94), rgba(47, 163, 244, 0.9));
   color: #f8ffff;
-  box-shadow: inset 0 0 0 1px rgba(208, 251, 255, 0.56), 0 6px 14px rgba(69, 180, 214, 0.26);
+  box-shadow: inset 0 0 0 1px rgba(214, 242, 255, 0.95), 0 8px 18px rgba(37, 122, 194, 0.34);
 }
 
 .translation-training-english-part--completed {
