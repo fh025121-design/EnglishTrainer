@@ -185,14 +185,17 @@ assert.strictEqual(translationTrainingModule.getTranslationTrainingQuestion(2).i
 const freshState = translationTrainingModule.createTranslationTrainingState(questions);
 assert.strictEqual(freshState.questionIndex, 0, "a fresh translation-training state should start at the first question");
 assert.deepStrictEqual(freshState.partSelections, {}, "a fresh translation-training state should not preselect any cards");
+assert.deepStrictEqual(freshState.partFixedTaps, {}, "a fresh translation-training state should not pre-complete fixed cards");
 assert.strictEqual(freshState.builtJapanese, "", "a fresh translation-training state should not carry over built Japanese text");
 
 const previousState = translationTrainingModule.createTranslationTrainingState(questions);
 previousState.partSelections = { 0: { verb: { optionIndex: 0, isCorrect: true } } };
+previousState.partFixedTaps = { 0: { "fixed-0-0": true } };
 previousState.builtJapanese = "答えます";
 previousState.answeredGroupKeys = ["verb"];
 const resetState = translationTrainingModule.resetTranslationTrainingQuestionState(previousState);
 assert.deepStrictEqual(resetState.partSelections, {}, "resetting a question state should clear prior card selections");
+assert.deepStrictEqual(resetState.partFixedTaps, {}, "resetting a question state should clear fixed-card completion state");
 assert.strictEqual(resetState.builtJapanese, "", "resetting a question state should clear built Japanese text");
 assert.deepStrictEqual(resetState.answeredGroupKeys, [], "resetting a question state should clear answered-group tracking");
 

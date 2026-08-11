@@ -7032,6 +7032,7 @@
       builtJapanese: "",
       answeredGroupKeys: [],
       partSelections: {},
+      partFixedTaps: {},
       incorrectAttemptsByGroup: {}
     };
     state.translationTrainingCurrentPartIndex = 0;
@@ -7104,14 +7105,16 @@
     return { topRow, mainRow };
   }
 
-  function createTranslationTrainingFixedCard(text, isSolved = false) {
+  function createTranslationTrainingFixedCard(text, options = {}) {
+    const isCompleted = Boolean(options?.isCompleted);
+    const onTap = typeof options?.onTap === "function" ? options.onTap : null;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary-btn translation-training-card translation-training-card--fixed";
-    button.disabled = true;
-    if (isSolved) {
+    if (isCompleted) {
       button.dataset.resultState = "correct";
     }
+    button.setAttribute("aria-pressed", isCompleted ? "true" : "false");
 
     const cardContent = document.createElement("span");
     cardContent.className = "translation-training-card-content";
@@ -7126,7 +7129,56 @@
     cardContent.appendChild(label);
     button.appendChild(cardContent);
 
+    if (onTap) {
+      button.addEventListener("click", () => {
+        onTap();
+      });
+    }
+
     return button;
+  }
+
+  function getTranslationTrainingPartFixedKeys(part) {
+    const displayFixedPhrases = window.translationTrainingData?.getTranslationTrainingDisplayFixedPhrases?.(part) || [];
+    const layoutSequence = window.translationTrainingData?.buildTranslationTrainingLayoutSequence?.(part, displayFixedPhrases) || [];
+    const fixedKeys = [];
+    layoutSequence.forEach((item, sequenceIndex) => {
+      if (item?.type !== "fixed") return;
+      const phrases = Array.isArray(item?.phrases) ? item.phrases : [];
+      phrases.forEach((_, phraseIndex) => {
+        fixedKeys.push(`fixed-${sequenceIndex}-${phraseIndex}`);
+      });
+    });
+    return fixedKeys;
+  }
+
+  function isTranslationTrainingPartSolved(training, currentPart, partIndex) {
+    const selectionGroups = Array.isArray(currentPart?.selectionGroups) ? currentPart.selectionGroups : [];
+    const solvedSelections = training?.partSelections?.[partIndex] || {};
+    const allGroupsSolved = selectionGroups.every((group) => solvedSelections?.[group.key]?.isCorrect === true);
+    const fixedKeys = getTranslationTrainingPartFixedKeys(currentPart);
+    const fixedTapMap = training?.partFixedTaps?.[partIndex] || {};
+    const allFixedTapped = fixedKeys.every((key) => fixedTapMap?.[key] === true);
+    return allGroupsSolved && allFixedTapped;
+  }
+
+  function handleTranslationTrainingFixedSelect(fixedKey) {
+    const training = state.translationTraining;
+    if (!training) return;
+    const partIndex = Number(training.currentPartIndex) || 0;
+    if (!training.partFixedTaps || typeof training.partFixedTaps !== "object") {
+      training.partFixedTaps = {};
+    }
+    if (!training.partFixedTaps[partIndex]) {
+      training.partFixedTaps[partIndex] = {};
+    }
+    if (training.partFixedTaps[partIndex][fixedKey] === true) {
+      return;
+    }
+    training.partFixedTaps[partIndex][fixedKey] = true;
+    window.requestAnimationFrame(() => {
+      renderTranslationTrainingQuestion();
+    });
   }
 
   function triggerTranslationTrainingIncorrectFeedback(button) {
@@ -7185,16 +7237,56 @@
       }
       const text = document.createElement("span");
       text.className = "translation-training-english-text";
-      text.textContent = `${segment.text}`;
+      const segmentText = `${segment.text || ""}`;
+      const isNotLastSegment = index < segments.length - 1;
+      const isSentenceEnd = /[.?!]["')\]]*$/.test(String(segmentText || "").trim());
+      const shouldShowSeparator = isNotLastSegment && !isSentenceEnd;
+      if (shouldShowSeparator) {
+        const wordMatch = segmentText.match(/^(.*?)(\S+)$/);
+        if (wordMatch) {
+          const prefix = wordMatch[1] || "";
+          const lastWord = wordMatch[2] || "";
+          if (prefix) {
+            text.appendChild(document.createTextNode(prefix));
+          }
+          const slashLock = document.createElement("span");
+          slashLock.className = "translation-training-slash-lock";
+
+          const lastWordNode = document.createElement("span");
+          lastWordNode.textContent = lastWord;
+          slashLock.appendChild(lastWordNode);
+
+          const separator = document.createElement("span");
+          separator.textContent = " /";
+          separator.className = "translation-training-highlight-separator";
+          separator.style.color = "#ff1f1f";
+          separator.style.fontWeight = "900";
+          separator.style.whiteSpace = "nowrap";
+          slashLock.appendChild(separator);
+
+          text.appendChild(slashLock);
+        } else {
+          const slashLock = document.createElement("span");
+          slashLock.className = "translation-training-slash-lock";
+          const content = document.createElement("span");
+          content.textContent = segmentText;
+          const separator = document.createElement("span");
+          separator.textContent = " /";
+          separator.className = "translation-training-highlight-separator";
+          separator.style.color = "#ff1f1f";
+          separator.style.fontWeight = "900";
+          separator.style.whiteSpace = "nowrap";
+          slashLock.appendChild(content);
+          slashLock.appendChild(separator);
+          text.appendChild(slashLock);
+        }
+      } else {
+        text.textContent = segmentText;
+      }
       wrapper.appendChild(text);
       englishFragment.appendChild(wrapper);
       if (index < segments.length - 1) {
-        const separator = document.createElement("span");
-        separator.textContent = " / ";
-        separator.className = "translation-training-highlight-separator";
-        separator.style.color = "#ff4f4f";
-        separator.style.fontWeight = "900";
-        englishFragment.appendChild(separator);
+        englishFragment.appendChild(document.createElement("br"));
       }
     });
     elements.translationTrainingEnglishText.innerHTML = "";
@@ -7205,43 +7297,46 @@
     elements.translationTrainingOptionList.innerHTML = "";
     elements.translationTrainingOptionList.classList.add("translation-training-option-list");
 
-    const availableWidth = elements.translationTrainingOptionList.clientWidth || window.innerWidth || 360;
     const optionShell = document.createElement("div");
     optionShell.className = "translation-training-option-shell";
     const selectionGroups = Array.isArray(currentPart?.selectionGroups) ? currentPart.selectionGroups : [];
     const meaningColumns = buildTranslationTrainingMeaningColumns(currentPart);
-    const { topRow, mainRow } = splitTranslationTrainingColumnRows(meaningColumns, availableWidth);
-    const currentPartSolved = selectionGroups.every((group) => training.partSelections[training.currentPartIndex]?.[group.key]?.isCorrect === true);
+    const partIndex = Number(training.currentPartIndex) || 0;
+    const currentPartSolved = isTranslationTrainingPartSolved(training, currentPart, partIndex);
 
-    if (topRow.length) {
-      const topRowContainer = document.createElement("div");
-      topRowContainer.className = "translation-training-option-top-row";
-      topRow.forEach((column) => {
-        const fixedWrap = document.createElement("div");
-        fixedWrap.className = "translation-training-selection-column translation-training-selection-column--fixed";
-        fixedWrap.appendChild(createTranslationTrainingFixedCard(column.text, currentPartSolved));
-        topRowContainer.appendChild(fixedWrap);
-      });
-      elements.translationTrainingOptionList.appendChild(topRowContainer);
-    }
-
-    const mainColumnCount = Math.max(1, mainRow.length);
-    optionShell.style.gridTemplateColumns = `repeat(${mainColumnCount}, minmax(0, 1fr))`;
-
-    mainRow.forEach((columnDef) => {
+    let renderedGroupCount = 0;
+    meaningColumns.forEach((columnDef) => {
       const column = document.createElement("div");
       column.className = "translation-training-selection-column";
 
       if (columnDef.type === "fixed") {
         column.classList.add("translation-training-selection-column--fixed");
-        column.appendChild(createTranslationTrainingFixedCard(columnDef.text, currentPartSolved));
+        const isTapped = Boolean(training.partFixedTaps?.[partIndex]?.[columnDef.key]);
+        column.appendChild(createTranslationTrainingFixedCard(columnDef.text, {
+          isCompleted: isTapped,
+          onTap: () => handleTranslationTrainingFixedSelect(columnDef.key)
+        }));
         optionShell.appendChild(column);
         return;
       }
 
+      column.classList.add("translation-training-selection-column--group");
+      if (renderedGroupCount > 0) {
+        const divider = document.createElement("div");
+        divider.className = "translation-training-group-divider";
+        divider.setAttribute("aria-hidden", "true");
+        optionShell.appendChild(divider);
+      }
       const group = columnDef.group;
       const groupIndex = columnDef.groupIndex;
       const solvedSelection = training.partSelections[training.currentPartIndex]?.[group.key];
+      const groupOptions = Array.isArray(group?.options) ? group.options.map((option) => String(option || "")) : [];
+      const longestOptionLength = groupOptions.reduce((maxLength, option) => Math.max(maxLength, option.length), 0);
+      const groupWidthRem = Math.min(18, Math.max(11.5, longestOptionLength * 0.62 + 2));
+      const estimatedLines = Math.min(4, Math.max(1, Math.ceil(longestOptionLength / 12)));
+      const groupMinHeightPx = 38 + (estimatedLines - 1) * 18;
+      column.style.setProperty("--tt-group-width", `${groupWidthRem}rem`);
+      column.style.setProperty("--tt-group-min-height", `${groupMinHeightPx}px`);
 
       group.options.forEach((optionText, optionIndex) => {
         const button = document.createElement("button");
@@ -7273,6 +7368,7 @@
         column.appendChild(button);
       });
       optionShell.appendChild(column);
+      renderedGroupCount += 1;
     });
 
     elements.translationTrainingOptionList.appendChild(optionShell);
@@ -7327,7 +7423,7 @@
     const question = training.questions[training.questionIndex];
     if (!question) return;
     const currentPart = question.parts[training.currentPartIndex];
-    const isCurrentPartSolved = (currentPart?.selectionGroups || []).every((group) => training.partSelections[training.currentPartIndex]?.[group.key]?.isCorrect === true);
+    const isCurrentPartSolved = isTranslationTrainingPartSolved(training, currentPart, Number(training.currentPartIndex) || 0);
     if (!isCurrentPartSolved) return;
     if (training.currentPartIndex + 1 < question.parts.length) {
       training.currentPartIndex += 1;

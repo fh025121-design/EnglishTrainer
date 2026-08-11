@@ -3742,7 +3742,7 @@
           fixedPhrases: [],
           selectionGroups: [
             { key: "if", prompt: "接続", correctIndex: 0, options: ["もし", "なぜなら", "しかし"] },
-            { key: "there-was", prompt: "存在", correctIndex: 0, options: ["別のイベントがあれば", "別のイベントがあったら", "別のイベントを見つけたら"] }
+            { key: "there-was", prompt: "存在", correctIndex: 0, options: ["別のイベントがあれば", "別のイベントで", "別のイベントに"] }
           ]
         }
       ]
@@ -3883,7 +3883,8 @@
       completedSelections: [],
       builtJapanese: "",
       answeredGroupKeys: [],
-      partSelections: {}
+      partSelections: {},
+      partFixedTaps: {}
     };
   }
 
@@ -3897,7 +3898,8 @@
       completedSelections: [],
       builtJapanese: "",
       answeredGroupKeys: [],
-      partSelections: {}
+      partSelections: {},
+      partFixedTaps: {}
     };
   }
 
