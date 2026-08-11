@@ -11677,7 +11677,7 @@ function prepareSession(mode, options = {}) {
   } else if (mode === "phrase-spiral") {
     beginSessionPhase(state.session, "phase1", questions, { showIntro: false });
   } else if (mode === "challenge") {
-    beginSessionPhase(state.session, "phase3", questions, { showIntro: true });
+    beginSessionPhase(state.session, "phase3", questions, { showIntro: !options.skipPhaseIntro });
   } else if (mode === "level-focus") {
     beginSessionPhase(state.session, "phase3", questions, { showIntro: !options.skipPhaseIntro });
   } else {
@@ -13434,7 +13434,7 @@ function bindEvents() {
     trainingCompleteContinueBtn.addEventListener("click", () => {
       pendingTrainingCompleteContext = null;
       deferGameTicketRewardModal = false;
-      prepareSession("challenge", { forceNewSession: true, skipChallengePromo: true });
+      prepareSession("challenge", { forceNewSession: true, skipChallengePromo: true, skipPhaseIntro: true });
     });
   }
 
