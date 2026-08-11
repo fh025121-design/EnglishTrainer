@@ -3274,9 +3274,10 @@
         },
         {
           text: "They learned that the mall would open",
-          fixedPhrases: ["二人は知った", "モールが開くと"],
+          fixedPhrases: ["二人は", "モールが開くと"],
+          layoutOrder: ["f0", "g0", "f1"],
           selectionGroups: [
-            { key: "would-open", prompt: "時制", correctIndex: 0, options: ["30分後に開く", "30分後に開いた", "30分後に開くだろう"] }
+            { key: "learned", prompt: "時制", correctIndex: 0, options: ["知った", "忘れた", "思った"] }
           ]
         },
         {
@@ -3466,10 +3467,10 @@
         },
         {
           text: "he noticed that he could understand much more.",
-          fixedPhrases: ["彼は気づいた"],
+          fixedPhrases: ["彼は", "もっと理解できるようになったと"],
+          layoutOrder: ["f0", "g0", "f1"],
           selectionGroups: [
-            { key: "that", prompt: "接続", correctIndex: 0, options: ["もっと理解できるようになったと", "英語が難しいと", "勉強をやめたと"] },
-            { key: "could-understand", prompt: "助動詞", correctIndex: 0, options: ["もっと理解できた", "少ししか理解できなかった", "全く理解できなかった"] }
+            { key: "noticed", prompt: "時制", correctIndex: 0, options: ["気づいた", "思った", "忘れた"] }
           ]
         },
         {
@@ -3589,9 +3590,9 @@
       parts: [
         {
           text: "Sota was going to play soccer",
-          fixedPhrases: ["ソウタは", "サッカーをする予定だった"],
+          fixedPhrases: ["ソウタは"],
           selectionGroups: [
-            { key: "was-going-to", prompt: "予定", correctIndex: 0, options: ["～するつもりだった", "～した", "～できる"] }
+            { key: "was-going-to", prompt: "予定", correctIndex: 0, options: ["サッカーをする予定だった", "サッカーをしていた", "サッカーをした"] }
           ]
         },
         {
