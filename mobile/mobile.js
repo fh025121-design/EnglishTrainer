@@ -13,6 +13,8 @@
   const HOME_ACCOUNT_SON_ALIAS = "RRR";
   const MOBILE_STORAGE_KEY = "englishTrainerMobile_state_v1";
   const MOBILE_WORD_ORDER_STATS_STORAGE_KEY = "englishTrainerMobileWordOrderStats_v1";
+  const MOBILE_WORD_ORDER_STATS_LEGACY_OWNER_UID_KEY = "englishTrainerMobileWordOrderStatsOwnerUid_v1";
+  const MOBILE_WORD_ORDER_STATS_PENDING_SYNC_STORAGE_KEY = "english-trainer-mobile-word-order-stats-pending-sync-v1";
   const SPEAKING_PROGRESS_KEY = "englishTrainerSpeakingProgress";
   const SPEAKING_RECENT_PROGRESS_KEY = "englishTrainerSpeakingRecentProgress_v1";
   const SPEAKING_REVIEW_STATS_KEY = "englishTrainerSpeakingReviewStats_v1";
@@ -68,6 +70,12 @@
   let mobilePointSyncInFlight = null;
   let mobilePointSyncQueued = false;
   let mobilePointSyncUnsubscribe = null;
+  let wordOrderStatsCache = null;
+  let wordOrderStatsSyncCurrentUid = "";
+  let wordOrderStatsSyncReady = false;
+  let wordOrderStatsSyncInFlight = null;
+  let wordOrderStatsSyncQueued = false;
+  let wordOrderStatsSyncUnsubscribe = null;
 
   function formatPointValue(value) {
     return `${new Intl.NumberFormat("ja-JP").format(Math.max(0, Math.floor(Number(value) || 0)))}P`;
@@ -623,6 +631,185 @@
       scheduleMobilePointStateSync();
     }
     return nextState;
+  }
+
+  function refreshWordOrderUiAfterSync() {
+    if (state.currentScreen === "wordOrderTrainingScreen" && !state.wordOrderTraining) {
+      renderWordOrderDayRangeProgress();
+    }
+  }
+
+  function handleWordOrderStatsSyncRemoteSnapshot(snapshot) {
+    if (!snapshot?.ok || !snapshot.exists || !snapshot.statsMap) {
+      return;
+    }
+    const uid = String(snapshot.uid || "").trim();
+    const incoming = sanitizeWordOrderStatsMap(snapshot.statsMap);
+    const current = loadWordOrderStatsMap({ targetUid: uid, forceReload: true });
+    const merged = mergeWordOrderStatsMapByMax(current, incoming);
+    if (!areWordOrderStatsMapsEqual(current, merged)) {
+      saveWordOrderStatsMap(merged, { targetUid: uid, skipSync: true });
+      refreshWordOrderUiAfterSync();
+    }
+
+    const pending = loadMobilePendingWordOrderStatsForSync();
+    if (!pending || pending.uid !== uid) {
+      return;
+    }
+    const mergedWithPending = mergeWordOrderStatsMapByMax(incoming, pending.statsMap);
+    if (areWordOrderStatsMapsEqual(mergedWithPending, incoming)) {
+      clearMobilePendingWordOrderStatsForSync();
+      return;
+    }
+    saveMobilePendingWordOrderStatsForSync(uid, mergedWithPending);
+    scheduleWordOrderStatsSync(mergedWithPending, { uid });
+  }
+
+  async function initializeWordOrderStatsSyncForCurrentUser(options = {}) {
+    const force = options?.force === true;
+    const uid = getCurrentWordOrderStatsUid();
+    if (!uid) {
+      wordOrderStatsSyncCurrentUid = "";
+      wordOrderStatsSyncReady = false;
+      wordOrderStatsCache = null;
+      if (typeof wordOrderStatsSyncUnsubscribe === "function") {
+        wordOrderStatsSyncUnsubscribe();
+      }
+      wordOrderStatsSyncUnsubscribe = null;
+      return false;
+    }
+
+    if (!force && wordOrderStatsSyncReady && wordOrderStatsSyncCurrentUid === uid) {
+      return true;
+    }
+
+    if (typeof wordOrderStatsSyncUnsubscribe === "function") {
+      wordOrderStatsSyncUnsubscribe();
+    }
+    wordOrderStatsSyncUnsubscribe = null;
+
+    const localBaseline = loadWordOrderStatsMap({ targetUid: uid, forceReload: true });
+    const loadRemote = window.loadMobileWordOrderStatsFromFirestore;
+    if (typeof loadRemote !== "function") {
+      wordOrderStatsSyncCurrentUid = uid;
+      wordOrderStatsSyncReady = false;
+      return false;
+    }
+
+    let remoteResult = null;
+    try {
+      remoteResult = await loadRemote({ targetUid: uid });
+    } catch (_error) {
+      remoteResult = null;
+    }
+
+    if (remoteResult?.ok && remoteResult.exists && remoteResult.statsMap) {
+      const merged = mergeWordOrderStatsMapByMax(localBaseline, remoteResult.statsMap);
+      saveWordOrderStatsMap(merged, { targetUid: uid, skipSync: true });
+      wordOrderStatsSyncCurrentUid = uid;
+      wordOrderStatsSyncReady = true;
+      refreshWordOrderUiAfterSync();
+    } else {
+      const saveRemote = window.saveMobileWordOrderStatsToFirestore;
+      if (typeof saveRemote === "function") {
+        const bootstrapResult = await saveRemote(localBaseline, {
+          targetUid: uid,
+          allowCreate: true,
+          sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
+          sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+        }).catch(() => null);
+        if (bootstrapResult?.ok && bootstrapResult.saved && bootstrapResult.statsMap) {
+          saveWordOrderStatsMap(bootstrapResult.statsMap, { targetUid: uid, skipSync: true });
+          clearMobilePendingWordOrderStatsForSync();
+          wordOrderStatsSyncCurrentUid = uid;
+          wordOrderStatsSyncReady = true;
+          refreshWordOrderUiAfterSync();
+        } else {
+          wordOrderStatsSyncCurrentUid = uid;
+          wordOrderStatsSyncReady = false;
+        }
+      } else {
+        wordOrderStatsSyncCurrentUid = uid;
+        wordOrderStatsSyncReady = false;
+      }
+    }
+
+    const subscribeRemote = window.subscribeMobileWordOrderStatsFromFirestore;
+    if (typeof subscribeRemote === "function") {
+      wordOrderStatsSyncUnsubscribe = subscribeRemote((snapshot) => {
+        handleWordOrderStatsSyncRemoteSnapshot(snapshot);
+      }, { targetUid: uid });
+    }
+
+    if (wordOrderStatsSyncReady) {
+      await flushWordOrderStatsSync();
+    }
+    return wordOrderStatsSyncReady;
+  }
+
+  async function flushWordOrderStatsSync() {
+    if (wordOrderStatsSyncInFlight) {
+      wordOrderStatsSyncQueued = true;
+      return wordOrderStatsSyncInFlight;
+    }
+
+    wordOrderStatsSyncInFlight = (async () => {
+      do {
+        wordOrderStatsSyncQueued = false;
+        const uid = getCurrentWordOrderStatsUid();
+        if (!uid || !wordOrderStatsSyncReady || wordOrderStatsSyncCurrentUid !== uid) {
+          break;
+        }
+
+        const saveRemote = window.saveMobileWordOrderStatsToFirestore;
+        if (typeof saveRemote !== "function") {
+          break;
+        }
+
+        const pending = loadMobilePendingWordOrderStatsForSync();
+        const sourceStats = pending?.uid === uid
+          ? pending.statsMap
+          : loadWordOrderStatsMap({ targetUid: uid, forceReload: true });
+        saveMobilePendingWordOrderStatsForSync(uid, sourceStats);
+
+        const result = await saveRemote(sourceStats, {
+          targetUid: uid,
+          allowCreate: true,
+          sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
+          sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+        }).catch(() => null);
+
+        if (!result?.ok || !result.saved) {
+          break;
+        }
+
+        if (result.statsMap) {
+          saveWordOrderStatsMap(result.statsMap, { targetUid: uid, skipSync: true });
+          refreshWordOrderUiAfterSync();
+        }
+        clearMobilePendingWordOrderStatsForSync();
+      } while (wordOrderStatsSyncQueued);
+    })();
+
+    try {
+      await wordOrderStatsSyncInFlight;
+    } finally {
+      wordOrderStatsSyncInFlight = null;
+    }
+  }
+
+  function scheduleWordOrderStatsSync(statsMap, options = {}) {
+    const uid = String(options?.uid || getCurrentWordOrderStatsUid() || "").trim();
+    const normalized = sanitizeWordOrderStatsMap(statsMap);
+    if (!uid) {
+      return;
+    }
+    saveMobilePendingWordOrderStatsForSync(uid, normalized);
+    if (!wordOrderStatsSyncReady || wordOrderStatsSyncCurrentUid !== uid) {
+      initializeWordOrderStatsSyncForCurrentUser().catch(() => false);
+      return;
+    }
+    flushWordOrderStatsSync().catch(() => undefined);
   }
 
   function getMobilePointState() {
@@ -2741,6 +2928,7 @@
   let mobileLearningHistoryFlushPromise = null;
   let mobileFirestoreSdkPromise = null;
   let mobileAuthLastStatus = "pending";
+  let mobileAuthLastUid = "";
   let mobileAuthListenerBound = false;
 
   const state = {
@@ -6532,14 +6720,52 @@
     Object.entries(source).forEach(([questionId, value]) => {
       const key = String(questionId || "").trim();
       if (!key) return;
-      next[key] = sanitizeWordOrderStatsEntry(value);
+      next[key] = sanitizeWordOrderStatsEntry(value || {});
     });
     return next;
   }
 
-  function loadWordOrderStatsMap() {
+  function mergeWordOrderStatsMapByMax(baseMap, incomingMap) {
+    const merged = sanitizeWordOrderStatsMap(baseMap);
+    const incoming = sanitizeWordOrderStatsMap(incomingMap);
+    Object.entries(incoming).forEach(([questionId, incomingEntry]) => {
+      const current = sanitizeWordOrderStatsEntry(merged[questionId] || {});
+      merged[questionId] = {
+        attempts: Math.max(current.attempts, incomingEntry.attempts),
+        correct: Math.max(current.correct, incomingEntry.correct)
+      };
+    });
+    return sanitizeWordOrderStatsMap(merged);
+  }
+
+  function areWordOrderStatsMapsEqual(left, right) {
+    const normalizedLeft = sanitizeWordOrderStatsMap(left);
+    const normalizedRight = sanitizeWordOrderStatsMap(right);
+    const leftKeys = Object.keys(normalizedLeft);
+    const rightKeys = Object.keys(normalizedRight);
+    if (leftKeys.length !== rightKeys.length) return false;
+    for (const key of leftKeys) {
+      const a = sanitizeWordOrderStatsEntry(normalizedLeft[key] || {});
+      const b = sanitizeWordOrderStatsEntry(normalizedRight[key] || {});
+      if (a.attempts !== b.attempts || a.correct !== b.correct) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function getCurrentWordOrderStatsUid() {
+    return String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+  }
+
+  function getScopedWordOrderStatsStorageKey(uid = "") {
+    const safeUid = String(uid || "").trim();
+    return safeUid ? `${MOBILE_WORD_ORDER_STATS_STORAGE_KEY}:${safeUid}` : MOBILE_WORD_ORDER_STATS_STORAGE_KEY;
+  }
+
+  function loadWordOrderStatsMapFromStorageKey(storageKey) {
     try {
-      const raw = window.localStorage.getItem(MOBILE_WORD_ORDER_STATS_STORAGE_KEY);
+      const raw = window.localStorage.getItem(String(storageKey || "").trim());
       if (!raw) return createDefaultWordOrderStatsMap();
       return sanitizeWordOrderStatsMap(JSON.parse(raw));
     } catch (_error) {
@@ -6547,9 +6773,81 @@
     }
   }
 
-  function saveWordOrderStatsMap(statsMap) {
+  function saveWordOrderStatsMapToStorageKey(storageKey, statsMap) {
+    const key = String(storageKey || "").trim();
+    if (!key) return createDefaultWordOrderStatsMap();
     const normalized = sanitizeWordOrderStatsMap(statsMap);
-    window.localStorage.setItem(MOBILE_WORD_ORDER_STATS_STORAGE_KEY, JSON.stringify(normalized));
+    window.localStorage.setItem(key, JSON.stringify(normalized));
+    return normalized;
+  }
+
+  function loadMobilePendingWordOrderStatsForSync() {
+    try {
+      const raw = window.localStorage.getItem(MOBILE_WORD_ORDER_STATS_PENDING_SYNC_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const uid = String(parsed?.uid || "").trim();
+      const statsMap = sanitizeWordOrderStatsMap(parsed?.statsMap);
+      if (!uid || !Object.keys(statsMap).length) return null;
+      return { uid, statsMap };
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function saveMobilePendingWordOrderStatsForSync(uid, statsMap) {
+    const safeUid = String(uid || "").trim();
+    const normalized = sanitizeWordOrderStatsMap(statsMap);
+    if (!safeUid || !Object.keys(normalized).length) {
+      window.localStorage.removeItem(MOBILE_WORD_ORDER_STATS_PENDING_SYNC_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(MOBILE_WORD_ORDER_STATS_PENDING_SYNC_STORAGE_KEY, JSON.stringify({ uid: safeUid, statsMap: normalized }));
+  }
+
+  function clearMobilePendingWordOrderStatsForSync() {
+    window.localStorage.removeItem(MOBILE_WORD_ORDER_STATS_PENDING_SYNC_STORAGE_KEY);
+  }
+
+  function loadWordOrderStatsMap(options = {}) {
+    const targetUid = options?.targetUid !== undefined
+      ? String(options.targetUid || "").trim()
+      : getCurrentWordOrderStatsUid();
+    if (wordOrderStatsCache && String(wordOrderStatsCache.uid || "") === targetUid && !options?.forceReload) {
+      return sanitizeWordOrderStatsMap(wordOrderStatsCache.statsMap);
+    }
+
+    const scopedKey = getScopedWordOrderStatsStorageKey(targetUid);
+    let scoped = loadWordOrderStatsMapFromStorageKey(scopedKey);
+
+    if (targetUid && !Object.keys(scoped).length) {
+      const legacy = loadWordOrderStatsMapFromStorageKey(MOBILE_WORD_ORDER_STATS_STORAGE_KEY);
+      const legacyOwnerUid = String(window.localStorage.getItem(MOBILE_WORD_ORDER_STATS_LEGACY_OWNER_UID_KEY) || "").trim();
+      const canAdoptLegacy = Object.keys(legacy).length > 0 && (!legacyOwnerUid || legacyOwnerUid === targetUid);
+      if (canAdoptLegacy) {
+        scoped = legacy;
+        saveWordOrderStatsMapToStorageKey(scopedKey, scoped);
+        window.localStorage.setItem(MOBILE_WORD_ORDER_STATS_LEGACY_OWNER_UID_KEY, targetUid);
+      }
+    }
+
+    const normalized = sanitizeWordOrderStatsMap(scoped);
+    wordOrderStatsCache = { uid: targetUid, statsMap: normalized };
+    return normalized;
+  }
+
+  function saveWordOrderStatsMap(statsMap, options = {}) {
+    const targetUid = options?.targetUid !== undefined
+      ? String(options.targetUid || "").trim()
+      : getCurrentWordOrderStatsUid();
+    const normalized = sanitizeWordOrderStatsMap(statsMap);
+    const scopedKey = getScopedWordOrderStatsStorageKey(targetUid);
+    saveWordOrderStatsMapToStorageKey(scopedKey, normalized);
+    wordOrderStatsCache = { uid: targetUid, statsMap: normalized };
+
+    if (targetUid && options?.skipSync !== true) {
+      scheduleWordOrderStatsSync(normalized, { uid: targetUid });
+    }
     return normalized;
   }
 
@@ -7612,14 +7910,17 @@
 
   function applyMobileAuthState(user) {
     const nextStatus = user ? "logged-in" : "logged-out";
-    if (nextStatus === mobileAuthLastStatus) return;
+    const nextUid = String(user?.uid || "").trim();
+    if (nextStatus === mobileAuthLastStatus && nextUid === mobileAuthLastUid) return;
     mobileAuthLastStatus = nextStatus;
+    mobileAuthLastUid = nextUid;
     if (user) {
       refreshMobileFamilyIdentityCache()
         .catch(() => false)
         .finally(() => {
           flushMobilePendingLearningHistoryEntries().catch(() => 0);
           initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
+          initializeWordOrderStatsSyncForCurrentUser({ force: true }).catch(() => false);
         });
       renderHome();
       return;
@@ -7630,6 +7931,13 @@
     mobilePointSyncUnsubscribe = null;
     mobilePointSyncCurrentUid = "";
     mobilePointSyncReady = false;
+    if (typeof wordOrderStatsSyncUnsubscribe === "function") {
+      wordOrderStatsSyncUnsubscribe();
+    }
+    wordOrderStatsSyncUnsubscribe = null;
+    wordOrderStatsSyncCurrentUid = "";
+    wordOrderStatsSyncReady = false;
+    wordOrderStatsCache = null;
     flushMobilePendingLearningHistoryEntries().catch(() => 0);
   }
 
@@ -7647,17 +7955,20 @@
       : (authState.user || null);
     if (authState.status === "logged-in" || currentUser) {
       mobileAuthLastStatus = "logged-in";
+      mobileAuthLastUid = String(currentUser?.uid || "").trim();
       refreshMobileFamilyIdentityCache()
         .catch(() => false)
         .finally(() => {
           flushMobilePendingLearningHistoryEntries().catch(() => 0);
           initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
+          initializeWordOrderStatsSyncForCurrentUser({ force: true }).catch(() => false);
         });
       renderHome();
       return;
     }
     if (authState.status === "logged-out") {
       mobileAuthLastStatus = "logged-out";
+      mobileAuthLastUid = "";
     }
   }
 
@@ -10209,6 +10520,7 @@
     window.addEventListener("online", () => {
       flushMobilePendingLearningHistoryEntries().catch(() => 0);
       scheduleMobilePointStateSync();
+      scheduleWordOrderStatsSync(loadWordOrderStatsMap());
     });
   }
 

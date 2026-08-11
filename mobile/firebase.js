@@ -33,6 +33,9 @@ const firestore = getFirestore(app);
 const MOBILE_POINT_SYNC_DOC_COLLECTION = "mobileSync";
 const MOBILE_POINT_SYNC_DOC_ID = "pointStateV1";
 const MOBILE_POINT_SYNC_SCHEMA_VERSION = 1;
+const MOBILE_WORD_ORDER_SYNC_DOC_COLLECTION = "mobileSync";
+const MOBILE_WORD_ORDER_SYNC_DOC_ID = "wordOrderStatsV1";
+const MOBILE_WORD_ORDER_SYNC_SCHEMA_VERSION = 1;
 
 window.MobileFirebaseAuthState = {
   status: "pending",
@@ -489,6 +492,175 @@ function subscribeMobilePointStateFromFirestore(onChange, options = {}) {
   });
 }
 
+function sanitizeWordOrderStatsEntry(value) {
+  const attempts = Math.max(0, Math.floor(Number(value?.attempts) || 0));
+  const correct = Math.max(0, Math.min(attempts, Math.floor(Number(value?.correct) || 0)));
+  return { attempts, correct };
+}
+
+function sanitizeWordOrderStatsMap(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const next = {};
+  Object.entries(source).forEach(([questionId, entry]) => {
+    const key = String(questionId || "").trim();
+    if (!key) return;
+    next[key] = sanitizeWordOrderStatsEntry(entry || {});
+  });
+  return next;
+}
+
+function mergeWordOrderStatsMapByMax(baseMap, incomingMap) {
+  const merged = sanitizeWordOrderStatsMap(baseMap);
+  const incoming = sanitizeWordOrderStatsMap(incomingMap);
+  Object.entries(incoming).forEach(([questionId, incomingEntry]) => {
+    const current = sanitizeWordOrderStatsEntry(merged[questionId] || {});
+    merged[questionId] = {
+      attempts: Math.max(current.attempts, incomingEntry.attempts),
+      correct: Math.max(current.correct, incomingEntry.correct)
+    };
+  });
+  return sanitizeWordOrderStatsMap(merged);
+}
+
+function getMobileWordOrderStatsDocRef(targetUid = "") {
+  const uid = String(targetUid || auth.currentUser?.uid || "").trim();
+  if (!uid) return null;
+  return doc(firestore, "users", uid, MOBILE_WORD_ORDER_SYNC_DOC_COLLECTION, MOBILE_WORD_ORDER_SYNC_DOC_ID);
+}
+
+function normalizeMobileWordOrderStatsDoc(docData) {
+  const source = docData && typeof docData === "object" ? docData : {};
+  return {
+    statsMap: sanitizeWordOrderStatsMap(source.statsMap),
+    updatedAtMs: sanitizePointNumber(source.updatedAtMs),
+    sourceDeviceId: String(source.sourceDeviceId || "").trim(),
+    sourceDeviceName: String(source.sourceDeviceName || "").trim(),
+    schemaVersion: sanitizePointNumber(source.schemaVersion) || MOBILE_WORD_ORDER_SYNC_SCHEMA_VERSION
+  };
+}
+
+async function loadMobileWordOrderStatsFromFirestore(options = {}) {
+  const targetUid = String(options?.targetUid || auth.currentUser?.uid || "").trim();
+  const ref = getMobileWordOrderStatsDocRef(targetUid);
+  if (!ref || !targetUid) {
+    return { ok: false, exists: false, uid: targetUid, statsMap: null };
+  }
+
+  try {
+    const snapshot = await getDoc(ref);
+    if (!snapshot.exists()) {
+      return { ok: true, exists: false, uid: targetUid, statsMap: null };
+    }
+    const normalized = normalizeMobileWordOrderStatsDoc(snapshot.data());
+    return {
+      ok: true,
+      exists: true,
+      uid: targetUid,
+      statsMap: normalized.statsMap,
+      updatedAtMs: normalized.updatedAtMs,
+      sourceDeviceId: normalized.sourceDeviceId,
+      sourceDeviceName: normalized.sourceDeviceName,
+      schemaVersion: normalized.schemaVersion
+    };
+  } catch (error) {
+    console.error("Failed to load mobile word order stats from Firestore", error);
+    return { ok: false, exists: false, uid: targetUid, statsMap: null, error };
+  }
+}
+
+async function saveMobileWordOrderStatsToFirestore(statsMap, options = {}) {
+  const user = auth.currentUser;
+  const targetUid = String(options?.targetUid || user?.uid || "").trim();
+  const ref = getMobileWordOrderStatsDocRef(targetUid);
+  if (!ref || !targetUid || !statsMap || typeof statsMap !== "object") {
+    return { ok: false, saved: false, exists: false, uid: targetUid };
+  }
+
+  const allowCreate = options?.allowCreate === true;
+  const normalizedIncoming = sanitizeWordOrderStatsMap(statsMap);
+  const sourceDeviceId = String(options?.sourceDeviceId || "").trim();
+  const sourceDeviceName = String(options?.sourceDeviceName || "").trim();
+
+  try {
+    const result = await runTransaction(firestore, async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      const existsBefore = snapshot.exists();
+      if (!existsBefore && !allowCreate) {
+        return {
+          saved: false,
+          existsBefore,
+          skipped: "missing-remote",
+          statsMap: null
+        };
+      }
+
+      const currentStatsMap = existsBefore
+        ? normalizeMobileWordOrderStatsDoc(snapshot.data()).statsMap
+        : {};
+      const mergedStatsMap = mergeWordOrderStatsMapByMax(currentStatsMap, normalizedIncoming);
+
+      transaction.set(ref, {
+        uid: targetUid,
+        statsMap: mergedStatsMap,
+        sourceDeviceId,
+        sourceDeviceName,
+        schemaVersion: MOBILE_WORD_ORDER_SYNC_SCHEMA_VERSION,
+        updatedAtMs: Date.now(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      return {
+        saved: true,
+        existsBefore,
+        statsMap: mergedStatsMap
+      };
+    });
+
+    return {
+      ok: true,
+      saved: Boolean(result?.saved),
+      exists: Boolean(result?.existsBefore),
+      uid: targetUid,
+      skipped: result?.skipped || "",
+      statsMap: result?.statsMap || null
+    };
+  } catch (error) {
+    console.error("Failed to save mobile word order stats to Firestore", error);
+    return { ok: false, saved: false, exists: false, uid: targetUid, error };
+  }
+}
+
+function subscribeMobileWordOrderStatsFromFirestore(onChange, options = {}) {
+  if (typeof onChange !== "function") {
+    return () => {};
+  }
+  const targetUid = String(options?.targetUid || auth.currentUser?.uid || "").trim();
+  const ref = getMobileWordOrderStatsDocRef(targetUid);
+  if (!ref || !targetUid) {
+    return () => {};
+  }
+
+  return onSnapshot(ref, (snapshot) => {
+    if (!snapshot.exists()) {
+      onChange({ ok: true, exists: false, uid: targetUid, statsMap: null });
+      return;
+    }
+    const normalized = normalizeMobileWordOrderStatsDoc(snapshot.data());
+    onChange({
+      ok: true,
+      exists: true,
+      uid: targetUid,
+      statsMap: normalized.statsMap,
+      updatedAtMs: normalized.updatedAtMs,
+      sourceDeviceId: normalized.sourceDeviceId,
+      sourceDeviceName: normalized.sourceDeviceName,
+      schemaVersion: normalized.schemaVersion
+    });
+  }, (error) => {
+    onChange({ ok: false, exists: false, uid: targetUid, statsMap: null, error });
+  });
+}
+
 async function initMobileFirebaseAuthUi() {
   bindAuthUi();
   setLoginBusy(false);
@@ -529,6 +701,9 @@ window.saveMobileLearningHistoryToFirestore = saveMobileLearningHistoryToFiresto
 window.loadMobilePointStateFromFirestore = loadMobilePointStateFromFirestore;
 window.saveMobilePointStateToFirestore = saveMobilePointStateToFirestore;
 window.subscribeMobilePointStateFromFirestore = subscribeMobilePointStateFromFirestore;
+window.loadMobileWordOrderStatsFromFirestore = loadMobileWordOrderStatsFromFirestore;
+window.saveMobileWordOrderStatsToFirestore = saveMobileWordOrderStatsToFirestore;
+window.subscribeMobileWordOrderStatsFromFirestore = subscribeMobileWordOrderStatsFromFirestore;
 window.getMobileFirebaseCurrentUser = () => auth.currentUser;
 window.MobileFirebase = Object.freeze({ app, auth, firestore });
 window.MobileFirebaseReady = initMobileFirebaseAuthUi();
