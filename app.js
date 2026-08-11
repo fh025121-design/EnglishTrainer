@@ -6187,6 +6187,8 @@ function openTrainingCompleteScreen(options = {}) {
   const dailySummaryText = document.getElementById("trainingCompleteDailySummaryText");
   const lifetimeSummaryText = document.getElementById("trainingCompleteLifetimeSummaryText");
   const balanceText = document.getElementById("trainingCompleteBalanceText");
+  const homeBtn = document.getElementById("trainingCompleteHomeBtn");
+  const continueBtn = document.getElementById("trainingCompleteContinueBtn");
   if (!titleText || !earnedText || !balanceText || !dailySummaryText || !lifetimeSummaryText) {
     renderHome();
     showScreen("homeScreen", { recordHistory: false });
@@ -6201,6 +6203,16 @@ function openTrainingCompleteScreen(options = {}) {
   titleText.textContent = interrupted
     ? `⚠️ ${modeLabel} 途中で終了しました`
     : `🎉 ${modeLabel} おつかれさまでした！`;
+
+  const shouldShowChallengeContinue = !interrupted && String(options.mode || "") === "challenge";
+  if (homeBtn) {
+    homeBtn.textContent = shouldShowChallengeContinue ? "終わり" : "ホームへ戻る";
+    homeBtn.classList.toggle("primary-btn", shouldShowChallengeContinue);
+    homeBtn.classList.toggle("secondary-btn", !shouldShowChallengeContinue);
+  }
+  if (continueBtn) {
+    continueBtn.classList.toggle("hidden", !shouldShowChallengeContinue);
+  }
 
   if (unlockText) {
     const unlockedDay = Math.max(0, Number(options.unlockedDayNotice?.day) || 0);
@@ -13124,6 +13136,15 @@ function bindEvents() {
   if (trainingCompleteHomeBtn) {
     trainingCompleteHomeBtn.addEventListener("click", () => {
       closeTrainingCompleteScreenToHome();
+    });
+  }
+
+  const trainingCompleteContinueBtn = document.getElementById("trainingCompleteContinueBtn");
+  if (trainingCompleteContinueBtn) {
+    trainingCompleteContinueBtn.addEventListener("click", () => {
+      pendingTrainingCompleteContext = null;
+      deferGameTicketRewardModal = false;
+      prepareSession("challenge", { forceNewSession: true });
     });
   }
 
