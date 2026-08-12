@@ -5791,6 +5791,18 @@ function shouldAwardRandomGameTicket(chance) {
 }
 
 let pendingChallengeTicketChanceQueue = [];
+let shownGameTicketRewardIds = new Set();
+
+function isGameTicketRewardAlreadyShown(ticket) {
+  if (!ticket || !ticket.id) return false;
+  return shownGameTicketRewardIds.has(String(ticket.id));
+}
+
+function markGameTicketRewardShown(ticket) {
+  if (ticket && ticket.id) {
+    shownGameTicketRewardIds.add(String(ticket.id));
+  }
+}
 
 function showChallengeTicketChanceScreen() {
   const modal = document.getElementById("challengeTicketChanceModal");
@@ -5879,20 +5891,36 @@ function queueChallengeSpecialDrawForThresholdCrossing(dayKey, previousChallenge
       current.result = result.outcome;
       current.awardedMinutes = result.minutes;
 
+      let awardedTicket = null;
       if (result.minutes > 0) {
-        const ticket = awardChallengeGameTicket(store, result.minutes, {
+        awardedTicket = awardChallengeGameTicket(store, result.minutes, {
           type: "random",
           historyLabel: result.minutes === 30 ? "過去の間違い 特別抽選 30分券" : "過去の間違い 特別抽選 60分券"
         });
-        if (ticket && typeof showGameTicketModal === "function") {
+      }
+
+      if (awardedTicket && typeof showGameTicketModal === "function") {
+        const displayId = String(awardedTicket.id || "");
+        if (!displayId || !isGameTicketRewardAlreadyShown(awardedTicket)) {
+          if (displayId) {
+            markGameTicketRewardShown(awardedTicket);
+          }
           setTimeout(() => {
-            showGameTicketModal(ticket);
+            if (displayId && isGameTicketRewardAlreadyShown(awardedTicket)) {
+              showGameTicketModal(awardedTicket);
+            } else if (!displayId) {
+              showGameTicketModal(awardedTicket);
+            }
           }, 500);
         }
       } else if (typeof showGameTicketModal === "function") {
-        setTimeout(() => {
-          showGameTicketModal({ minutes: 0, type: "miss" });
-        }, 500);
+        const missTicket = { id: `challenge-special-miss-${dayKeyText}-${threshold}`, minutes: 0, type: "miss" };
+        if (!isGameTicketRewardAlreadyShown(missTicket)) {
+          markGameTicketRewardShown(missTicket);
+          setTimeout(() => {
+            showGameTicketModal(missTicket);
+          }, 500);
+        }
       }
       persistGameTicketState();
     });
@@ -6416,6 +6444,10 @@ function hideLevelUpModal() {
 }
 
 function showGameTicketModal(ticket) {
+  if (!ticket || (ticket.id && isGameTicketRewardAlreadyShown(ticket))) return;
+  if (ticket && ticket.id) {
+    markGameTicketRewardShown(ticket);
+  }
   if (!isDesktopGameTicketEnabled()) return;
   const modal = document.getElementById("gameTicketModal");
   const titleText = document.getElementById("gameTicketTitle");
@@ -6559,7 +6591,7 @@ function showPendingGameTicketModalIfAny() {
   if (!isDesktopGameTicketEnabled()) return;
   const store = ensureGameTicketState();
   const pending = Array.isArray(store.pendingRewards) ? store.pendingRewards[0] : null;
-  if (!pending) return;
+  if (!pending || isGameTicketRewardAlreadyShown(pending)) return;
   showGameTicketModal(pending);
 }
 

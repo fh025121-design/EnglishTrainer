@@ -3,9 +3,41 @@ const fs = require("fs");
 const vm = require("vm");
 
 const appCode = fs.readFileSync(require("path").join(__dirname, "..", "app.js"), "utf8");
+const createModalElement = () => ({
+  classList: {
+    add() {},
+    remove() {},
+    contains() { return false; },
+    toggle() {}
+  },
+  setAttribute() {},
+  getAttribute() { return null; },
+  addEventListener() {},
+  textContent: "",
+  value: "",
+  innerHTML: ""
+});
 const documentStub = {
   body: { dataset: {} },
-  getElementById() { return null; },
+  getElementById(id) {
+    const map = {
+      gameTicketModal: createModalElement(),
+      gameTicketTitle: createModalElement(),
+      gameTicketMinutesText: createModalElement(),
+      gameTicketBodyText: createModalElement(),
+      gameTicketIntroText: createModalElement(),
+      gameTicketThirtyPoster: createModalElement(),
+      gameTicketPosterValue: createModalElement(),
+      gameTicketPosterTicketValue: createModalElement(),
+      gameTicketPosterCaption: createModalElement(),
+      challengeTicketChanceModal: createModalElement(),
+      challengeTicketChanceStartBtn: createModalElement(),
+      trainingCompleteScreen: createModalElement(),
+      homeScreen: createModalElement(),
+      exchangeTicketScreen: createModalElement()
+    };
+    return map[id] || null;
+  },
   querySelectorAll() { return []; },
   querySelector() { return null; },
   addEventListener() {}
@@ -63,6 +95,9 @@ assert.strictEqual(fixedAugust12Draw.outcome, "miss", "P141 on 2026-08-12 should
 assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 221).minutes, 30, "P221 on 2026-08-12 should be a fixed 30-minute ticket");
 assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 261).minutes, 60, "P261 on 2026-08-12 should be a fixed 60-minute ticket");
 assert.strictEqual(context.sanitizeChallengeTicketSpecialState({ processed: false, result: "miss", awardedMinutes: 0, queued: true }).queued, true, "queued special draws should survive reload state sanitization");
+context.showGameTicketModal({ id: "reward-dup-1", minutes: 30, type: "random" });
+context.showGameTicketModal({ id: "reward-dup-1", minutes: 30, type: "random" });
+assert.strictEqual(context.isGameTicketRewardAlreadyShown({ id: "reward-dup-1" }), true, "a reward ID should only display once");
 const thresholdPassResult = context.queueChallengeSpecialDrawForThresholdCrossing("2026-08-12", 138, 141, context.ensureGameTicketState());
 assert.strictEqual(Array.isArray(thresholdPassResult), true, "crossing the threshold should queue a special draw");
 assert.strictEqual(thresholdPassResult.length, 1, "crossing the threshold should queue exactly one draw");
@@ -137,5 +172,7 @@ assert.ok(firebaseSource.includes("translationTrainingPointsByDate"), "mobile Fi
 assert.ok(firebaseSource.includes("sanitizePointDayMap(source.translationTrainingPointsByDate)"), "mobile Firebase point state should sanitize the translation-training point map");
 assert.ok(firebaseSource.includes("sumPointMap(next.translationTrainingPointsByDate)"), "mobile Firebase hydration should include translation-training totals in daily summary totals");
 assert.ok(firebaseSource.includes("mergePointDayMapByMax(base.translationTrainingPointsByDate, incoming.translationTrainingPointsByDate)"), "mobile Firebase merge logic should preserve translation-training points across syncs");
+assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 221).outcome, "30", "P221 fixed result should remain 30");
+assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 261).outcome, "60", "P261 fixed result should remain 60");
 
 console.log("point-state tests passed");
