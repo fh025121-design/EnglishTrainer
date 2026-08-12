@@ -5791,19 +5791,50 @@ function shouldAwardRandomGameTicket(chance) {
   return Math.random() < safeChance;
 }
 
+let pendingChallengeTicketChanceQueue = [];
+
 function showChallengeTicketChanceScreen() {
   const modal = document.getElementById("challengeTicketChanceModal");
+  const startBtn = document.getElementById("challengeTicketChanceStartBtn");
   if (!modal) return false;
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
+  if (startBtn) {
+    startBtn.classList.remove("hidden");
+    startBtn.disabled = false;
+  }
   return true;
 }
 
 function hideChallengeTicketChanceScreen() {
   const modal = document.getElementById("challengeTicketChanceModal");
-  if (!modal) return;
-  modal.classList.add("hidden");
-  modal.setAttribute("aria-hidden", "true");
+  const startBtn = document.getElementById("challengeTicketChanceStartBtn");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+  }
+  if (startBtn) {
+    startBtn.classList.add("hidden");
+    startBtn.disabled = true;
+  }
+}
+
+function queueChallengeTicketChance(drawAction) {
+  if (typeof drawAction !== "function") return false;
+  pendingChallengeTicketChanceQueue.push({ action: drawAction });
+  showChallengeTicketChanceScreen();
+  return true;
+}
+
+function executePendingChallengeTicketChance() {
+  const next = pendingChallengeTicketChanceQueue.shift();
+  if (!next || typeof next.action !== "function") {
+    hideChallengeTicketChanceScreen();
+    return false;
+  }
+  hideChallengeTicketChanceScreen();
+  next.action();
+  return true;
 }
 
 function resolveChallengeSpecialDrawResult(dayKey, threshold) {
@@ -5859,33 +5890,37 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
     if (!specialState || specialState.processed) return;
     if (challengePoints < threshold) return;
     const result = resolveChallengeSpecialDrawResult(today, threshold);
-    specialState.processed = true;
-    specialState.result = result.outcome;
-    specialState.awardedMinutes = result.minutes;
-    mutated = true;
     if (result.shouldShowChanceScreen) {
-      showChallengeTicketChanceScreen();
-      setTimeout(() => {
-        hideChallengeTicketChanceScreen();
-      }, 450);
-    }
-    if (result.minutes > 0) {
-      const ticket = awardChallengeGameTicket(store, result.minutes, {
-        type: "random",
-        historyLabel: result.minutes === 30 ? "過去の間違い 特別抽選 30分券" : "過去の間違い 特別抽選 60分券"
+      queueChallengeTicketChance(() => {
+        const state = getChallengeTicketDailyState(store, today, { create: true });
+        const current = state.special?.[key];
+        if (!current || current.processed) return;
+        current.processed = true;
+        current.result = result.outcome;
+        current.awardedMinutes = result.minutes;
+        mutated = true;
+        if (result.minutes > 0) {
+          const ticket = awardChallengeGameTicket(store, result.minutes, {
+            type: "random",
+            historyLabel: result.minutes === 30 ? "過去の間違い 特別抽選 30分券" : "過去の間違い 特別抽選 60分券"
+          });
+          if (ticket) {
+            earnedTickets.push(ticket);
+          }
+          if (typeof showGameTicketModal === "function") {
+            setTimeout(() => {
+              showGameTicketModal(ticket);
+            }, 500);
+          }
+        } else if (typeof showGameTicketModal === "function") {
+          setTimeout(() => {
+            showGameTicketModal({ minutes: 0, type: "miss" });
+          }, 500);
+        }
+        if (mutated) {
+          persistGameTicketState();
+        }
       });
-      if (ticket) {
-        earnedTickets.push(ticket);
-      }
-      if (typeof showGameTicketModal === "function") {
-        setTimeout(() => {
-          showGameTicketModal(ticket);
-        }, 500);
-      }
-    } else if (typeof showGameTicketModal === "function") {
-      setTimeout(() => {
-        showGameTicketModal({ minutes: 0, type: "miss" });
-      }, 500);
     }
   };
 
@@ -5907,33 +5942,36 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
 
   if (rescueEligible) {
     const rescue = resolveChallengeSpecialDrawResult(today, 261);
-    dailyState.special.p261.processed = true;
-    dailyState.special.p261.result = rescue.outcome;
-    dailyState.special.p261.awardedMinutes = rescue.minutes;
-    mutated = true;
     if (rescue.shouldShowChanceScreen) {
-      showChallengeTicketChanceScreen();
-      setTimeout(() => {
-        hideChallengeTicketChanceScreen();
-      }, 450);
-    }
-    if (rescue.minutes > 0) {
-      const rescueTicket = awardChallengeGameTicket(store, rescue.minutes, {
-        type: "random",
-        historyLabel: rescue.minutes === 60 ? "過去の間違い P261救済 60分券" : "過去の間違い P261救済 30分券"
+      queueChallengeTicketChance(() => {
+        const rescueState = getChallengeTicketDailyState(store, today, { create: true }).special?.p261;
+        if (!rescueState || rescueState.processed) return;
+        rescueState.processed = true;
+        rescueState.result = rescue.outcome;
+        rescueState.awardedMinutes = rescue.minutes;
+        mutated = true;
+        if (rescue.minutes > 0) {
+          const rescueTicket = awardChallengeGameTicket(store, rescue.minutes, {
+            type: "random",
+            historyLabel: rescue.minutes === 60 ? "過去の間違い P261救済 60分券" : "過去の間違い P261救済 30分券"
+          });
+          if (rescueTicket) {
+            earnedTickets.push(rescueTicket);
+          }
+          if (typeof showGameTicketModal === "function") {
+            setTimeout(() => {
+              showGameTicketModal(rescueTicket);
+            }, 500);
+          }
+        } else if (typeof showGameTicketModal === "function") {
+          setTimeout(() => {
+            showGameTicketModal({ minutes: 0, type: "miss" });
+          }, 500);
+        }
+        if (mutated) {
+          persistGameTicketState();
+        }
       });
-      if (rescueTicket) {
-        earnedTickets.push(rescueTicket);
-      }
-      if (typeof showGameTicketModal === "function") {
-        setTimeout(() => {
-          showGameTicketModal(rescueTicket);
-        }, 500);
-      }
-    } else if (typeof showGameTicketModal === "function") {
-      setTimeout(() => {
-        showGameTicketModal({ minutes: 0, type: "miss" });
-      }, 500);
     }
   }
 
@@ -13661,6 +13699,13 @@ function bindEvents() {
   if (levelUpCloseBtn) {
     levelUpCloseBtn.addEventListener("click", () => {
       hideLevelUpModal();
+    });
+  }
+
+  const challengeTicketChanceStartBtn = document.getElementById("challengeTicketChanceStartBtn");
+  if (challengeTicketChanceStartBtn) {
+    challengeTicketChanceStartBtn.addEventListener("click", () => {
+      executePendingChallengeTicketChance();
     });
   }
 
