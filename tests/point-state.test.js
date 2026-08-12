@@ -174,6 +174,25 @@ assert.strictEqual(context.sanitizeChallengeTicketSpecialState({ processed: fals
 context.showGameTicketModal({ id: "reward-dup-1", minutes: 30, type: "random" });
 context.showGameTicketModal({ id: "reward-dup-1", minutes: 30, type: "random" });
 assert.strictEqual(context.isGameTicketRewardAlreadyShown({ id: "reward-dup-1" }), true, "a reward ID should only display once");
+const pendingReplayStore = context.ensureGameTicketState();
+pendingReplayStore.inventory = [];
+pendingReplayStore.earnedHistory = [];
+pendingReplayStore.pendingRewards = [
+  { id: "reward-queued-1", minutes: 5, queuedAt: Date.now(), type: "random" },
+  { id: "reward-queued-2", minutes: 15, queuedAt: Date.now() + 1, type: "random" }
+];
+context.shownGameTicketRewardIds = new Set(["reward-queued-1"]);
+context.showPendingGameTicketModalIfAny();
+assert.strictEqual(
+  pendingReplayStore.pendingRewards.some((reward) => String(reward.id) === "reward-queued-1"),
+  false,
+  "already displayed queued rewards should be removed from the pending queue before re-show"
+);
+assert.strictEqual(
+  pendingReplayStore.pendingRewards.some((reward) => String(reward.id) === "reward-queued-2"),
+  true,
+  "only undisplayed queued rewards should remain in the pending queue"
+);
 const thresholdPassResult = context.queueChallengeSpecialDrawForThresholdCrossing("2026-08-12", 138, 141, context.ensureGameTicketState());
 assert.strictEqual(Array.isArray(thresholdPassResult), true, "crossing the threshold should queue a special draw");
 assert.strictEqual(thresholdPassResult.length, 1, "crossing the threshold should queue exactly one draw");

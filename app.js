@@ -7647,6 +7647,11 @@ function closeTrainingCompleteScreenToHome() {
 function dismissCurrentGameTicketReward() {
   const store = ensureGameTicketState();
   if (Array.isArray(store.pendingRewards) && store.pendingRewards.length) {
+    const firstReward = store.pendingRewards[0];
+    if (firstReward && firstReward.id) {
+      markGameTicketRewardShown(firstReward);
+      removeShownPendingGameTicketRewards(store);
+    }
     store.pendingRewards.shift();
   }
   const modal = document.getElementById("gameTicketModal");
