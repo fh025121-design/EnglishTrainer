@@ -57,6 +57,10 @@ assert.strictEqual(
 const irregularBucket = context.getLearningHistoryModeBucket({ mode: "不規則動詞特訓" });
 assert.strictEqual(irregularBucket.key, "irregularVerb", "irregular-verb should have its own history bucket key");
 assert.strictEqual(irregularBucket.label, "不規則動詞特訓", "irregular-verb should have its own history bucket label");
+const fixedAugust12Draw = context.resolveChallengeSpecialDrawResult("2026-08-12", 141);
+assert.strictEqual(fixedAugust12Draw.outcome, "miss", "P141 on 2026-08-12 should be a fixed miss");
+assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 221).minutes, 30, "P221 on 2026-08-12 should be a fixed 30-minute ticket");
+assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 261).minutes, 60, "P261 on 2026-08-12 should be a fixed 60-minute ticket");
 assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: true, isCorrect: true, isReviewSession: false }), true, "first-attempt correct answers should award training points");
 assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: false, isCorrect: true, isReviewSession: false }), false, "corrected retry answers should not award training points");
 assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: true, isCorrect: true, isReviewSession: true }), false, "review answers should not award training points");

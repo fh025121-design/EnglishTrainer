@@ -76,19 +76,21 @@ const makeStore = (day, challengePoints) => {
 
 const result = {};
 
-let store = makeStore('2026-08-13', 141);
+let store = makeStore('2026-08-12', 141);
 result.P141 = context.processChallengeGameTicketAwards(store);
-result.P141State = store.challengeTicketStateByDate['2026-08-13'].special;
+context.executePendingChallengeTicketChance();
+result.P141State = store.challengeTicketStateByDate['2026-08-12'].special;
 result.P141Inventory = store.inventory.map((t) => t.minutes);
 
-store = makeStore('2026-08-13', 221);
+store = makeStore('2026-08-12', 221);
 result.P221 = context.processChallengeGameTicketAwards(store);
-result.P221State = store.challengeTicketStateByDate['2026-08-13'].special;
+context.executePendingChallengeTicketChance();
+result.P221State = store.challengeTicketStateByDate['2026-08-12'].special;
 result.P221Inventory = store.inventory.map((t) => t.minutes);
 
-store = makeStore('2026-08-13', 261);
+store = makeStore('2026-08-12', 261);
 store.challengeTicketStateByDate = {
-  '2026-08-13': {
+  '2026-08-12': {
     special: {
       p141: { processed: true, result: 'miss', awardedMinutes: 0 },
       p221: { processed: true, result: '30', awardedMinutes: 30 },
@@ -97,12 +99,14 @@ store.challengeTicketStateByDate = {
   }
 };
 result.P261 = context.processChallengeGameTicketAwards(store);
-result.P261State = store.challengeTicketStateByDate['2026-08-13'].special;
+context.executePendingChallengeTicketChance();
+result.P261State = store.challengeTicketStateByDate['2026-08-12'].special;
 result.P261Inventory = store.inventory.map((t) => t.minutes);
 
-store = makeStore('2026-08-14', 141);
+store = makeStore('2026-08-13', 141);
 result.Normal = context.processChallengeGameTicketAwards(store);
-result.NormalState = store.challengeTicketStateByDate['2026-08-14'].special;
+context.executePendingChallengeTicketChance();
+result.NormalState = store.challengeTicketStateByDate['2026-08-13'].special;
 result.NormalInventory = store.inventory.map((t) => t.minutes);
 
 console.log(JSON.stringify(result, null, 2));

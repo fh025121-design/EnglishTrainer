@@ -5839,7 +5839,7 @@ function executePendingChallengeTicketChance() {
 
 function resolveChallengeSpecialDrawResult(dayKey, threshold) {
   const dateKey = String(dayKey || todayKey());
-  if (dateKey === "2026-08-13") {
+  if (dateKey === "2026-08-12") {
     if (threshold === 141) return { outcome: "miss", minutes: 0, shouldShowChanceScreen: true };
     if (threshold === 221) return { outcome: "30", minutes: 30, shouldShowChanceScreen: true };
     if (threshold === 261) return { outcome: "60", minutes: 60, shouldShowChanceScreen: true };
@@ -5936,7 +5936,7 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
     processSpecialDraw(221, "p221");
   }
 
-  const rescueEligible = today === "2026-08-13"
+  const rescueEligible = today === "2026-08-12"
     ? (!dailyState.special?.p261?.processed)
     : (!dailyState.special?.p261?.processed && challengePoints >= 261 && !hasP141Win && !hasP221Win && dailyState.special?.p141?.processed && dailyState.special?.p221?.processed && dailyState.special?.p141?.result === "miss" && dailyState.special?.p221?.result === "miss");
 
