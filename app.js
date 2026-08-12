@@ -291,6 +291,37 @@ function createDefaultGameTicketEventConfig() {
   ];
 }
 
+function normalizeStoredImageReference(value) {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (!text) return "";
+  if (text.startsWith("data:image/") || text.startsWith("blob:") || /^https?:\/\//i.test(text) || text.startsWith("//")) {
+    return text;
+  }
+  if (/^[a-zA-Z]:[\\/]/.test(text) || text.startsWith("file://") || text.startsWith("/")) {
+    return "";
+  }
+  return "";
+}
+
+function readImageFileAsDataUrl(file) {
+  return new Promise((resolve) => {
+    if (!file || typeof file === "string") {
+      resolve("");
+      return;
+    }
+    if (typeof FileReader === "undefined") {
+      resolve("");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve(normalizeStoredImageReference(String(reader.result || "")));
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+}
+
 function createDefaultGameTicketConfig() {
   return {
     normalRules: createDefaultGameTicketRuleConfig(),
@@ -377,8 +408,8 @@ function sanitizeGameTicketConfig(value) {
   const defaultTicketImages = createDefaultGameTicketConfig().ticketImages;
   const ticketImages = source.ticketImages && typeof source.ticketImages === "object"
     ? {
-      30: typeof source.ticketImages[30] === "string" ? source.ticketImages[30] : defaultTicketImages[30],
-      60: typeof source.ticketImages[60] === "string" ? source.ticketImages[60] : defaultTicketImages[60]
+      30: normalizeStoredImageReference(source.ticketImages[30]) || defaultTicketImages[30],
+      60: normalizeStoredImageReference(source.ticketImages[60]) || defaultTicketImages[60]
     }
     : { ...defaultTicketImages };
   const dailyGrantCapByMinutes = source.dailyGrantCapByMinutes && typeof source.dailyGrantCapByMinutes === "object"
@@ -390,15 +421,25 @@ function sanitizeGameTicketConfig(value) {
     }
     : { ...createDefaultGameTicketConfig().dailyGrantCapByMinutes };
   const eventStartImages = source.eventStartImages && typeof source.eventStartImages === "object"
-    ? Object.fromEntries(Object.entries(source.eventStartImages).map(([key, value]) => [String(key), typeof value === "string" ? value : ""]))
+    ? Object.fromEntries(Object.entries(source.eventStartImages)
+      .map(([key, value]) => [String(key), normalizeStoredImageReference(value)])
+      .filter(([, imageValue]) => Boolean(imageValue)))
     : {};
+  const eventConfigWithFallbacks = events.map((event) => {
+    const safeEventId = String(event.id || "");
+    const fallbackImage = safeEventId && eventStartImages[safeEventId] ? eventStartImages[safeEventId] : "";
+    return {
+      ...event,
+      startImage: normalizeStoredImageReference(event.startImage || fallbackImage) || ""
+    };
+  });
   return {
     normalRules,
-    events,
+    events: eventConfigWithFallbacks,
     dailyCap: Math.max(1, Math.round(Number(source.dailyCap) || 2)),
     dailyGrantCapByMinutes,
     ticketImages,
-    challengeAnnouncementImage: typeof source.challengeAnnouncementImage === "string" ? source.challengeAnnouncementImage : "",
+    challengeAnnouncementImage: normalizeStoredImageReference(source.challengeAnnouncementImage) || "",
     eventStartImages,
     modeLabels: source.modeLabels && typeof source.modeLabels === "object"
       ? {
@@ -506,11 +547,15 @@ function parseGameTicketSettingsFromUi() {
   const config = getGameTicketConfig();
   const ruleRows = [...document.querySelectorAll("[data-game-ticket-rule-row]")];
   const eventCards = [...document.querySelectorAll("[data-game-ticket-event-card]")];
-  const challengeAnnouncementImage = String(document.getElementById("gameTicketAnnouncementImageInput")?.value || "").trim();
+  const challengeAnnouncementValue = document.getElementById("gameTicketAnnouncementImageValue");
+  const thirtyImageValue = document.getElementById("gameTicketThirtyImageValue");
+  const sixtyImageValue = document.getElementById("gameTicketSixtyImageValue");
+  const challengeAnnouncementImage = normalizeStoredImageReference(challengeAnnouncementValue?.value || "");
   const eventStartImages = {};
   eventCards.forEach((card) => {
     const eventId = String(card.dataset.eventId || "").trim();
-    const imageValue = String(card.querySelector('[data-field="startImage"]')?.value || "").trim();
+    const hiddenInput = card.querySelector('[data-field="startImage"]');
+    const imageValue = normalizeStoredImageReference(hiddenInput?.value || "");
     if (eventId && imageValue) {
       eventStartImages[eventId] = imageValue;
     }
@@ -583,8 +628,8 @@ function parseGameTicketSettingsFromUi() {
     normalRules,
     events,
     ticketImages: {
-      30: String(document.getElementById("gameTicketThirtyImageInput")?.value || "").trim(),
-      60: String(document.getElementById("gameTicketSixtyImageInput")?.value || "").trim()
+      30: normalizeStoredImageReference(thirtyImageValue?.value || "") || "",
+      60: normalizeStoredImageReference(sixtyImageValue?.value || "") || ""
     },
     dailyGrantCapByMinutes: {
       5: Math.max(0, Number(document.getElementById("gameTicketDailyCap5Input")?.value ?? config.dailyGrantCapByMinutes?.[5] ?? 20) || 0),
@@ -607,8 +652,11 @@ function renderGameTicketSettingsUi() {
   const rulesTableBody = document.getElementById("gameTicketRuleTableBody");
   const eventList = document.getElementById("gameTicketEventList");
   const announcementImageInput = document.getElementById("gameTicketAnnouncementImageInput");
+  const announcementImageValue = document.getElementById("gameTicketAnnouncementImageValue");
   const thirtyImageInput = document.getElementById("gameTicketThirtyImageInput");
+  const thirtyImageValue = document.getElementById("gameTicketThirtyImageValue");
   const sixtyImageInput = document.getElementById("gameTicketSixtyImageInput");
+  const sixtyImageValue = document.getElementById("gameTicketSixtyImageValue");
   const cap5Input = document.getElementById("gameTicketDailyCap5Input");
   const cap15Input = document.getElementById("gameTicketDailyCap15Input");
   const cap30Input = document.getElementById("gameTicketDailyCap30Input");
@@ -620,9 +668,31 @@ function renderGameTicketSettingsUi() {
   const minutesOptions = [5, 15, 30, 60].map((minutes) => `<option value="${minutes}">${minutes}分</option>`).join("");
   const rewardMinutesOptions = [5, 15, 30, 60].map((minutes) => `<option value="${minutes}">${minutes}分券</option>`).join("");
 
-  if (announcementImageInput) announcementImageInput.value = String(config.challengeAnnouncementImage || "");
-  if (thirtyImageInput) thirtyImageInput.value = String(config.ticketImages?.[30] || "");
-  if (sixtyImageInput) sixtyImageInput.value = String(config.ticketImages?.[60] || "");
+  const imageSlotMarkup = (labelText, value, fileInputId, valueInputId) => `
+    <div class="settings-image-picker" data-image-slot>
+      <input id="${fileInputId}" type="file" accept="image/*" data-image-file-input aria-label="${escapeHtml(labelText)}" />
+      <div class="settings-image-actions">
+        <button type="button" class="secondary-btn compact-btn" data-action="change-image">画像を変更</button>
+        <button type="button" class="ghost-btn compact-btn" data-action="clear-image">画像を削除</button>
+      </div>
+      <img class="settings-image-preview${value ? "" : " hidden"}" src="${escapeHtml(value || "")}" alt="${escapeHtml(labelText)}" data-image-preview />
+      <input id="${valueInputId}" type="hidden" data-image-value value="${escapeHtml(value || "")}" />
+    </div>
+  `;
+
+  if (announcementImageInput) {
+    announcementImageInput.outerHTML = imageSlotMarkup("特訓開始時イベント告知画像", String(config.challengeAnnouncementImage || ""), "gameTicketAnnouncementImageInput", "gameTicketAnnouncementImageValue");
+  }
+  if (thirtyImageInput) {
+    thirtyImageInput.outerHTML = imageSlotMarkup("30分券画像", String(config.ticketImages?.[30] || ""), "gameTicketThirtyImageInput", "gameTicketThirtyImageValue");
+  }
+  if (sixtyImageInput) {
+    sixtyImageInput.outerHTML = imageSlotMarkup("60分券画像", String(config.ticketImages?.[60] || ""), "gameTicketSixtyImageInput", "gameTicketSixtyImageValue");
+  }
+
+  if (announcementImageValue) announcementImageValue.value = String(config.challengeAnnouncementImage || "");
+  if (thirtyImageValue) thirtyImageValue.value = String(config.ticketImages?.[30] || "");
+  if (sixtyImageValue) sixtyImageValue.value = String(config.ticketImages?.[60] || "");
   if (cap5Input) cap5Input.value = String(config.dailyGrantCapByMinutes?.[5] ?? 20);
   if (cap15Input) cap15Input.value = String(config.dailyGrantCapByMinutes?.[15] ?? 20);
   if (cap30Input) cap30Input.value = String(config.dailyGrantCapByMinutes?.[30] ?? 10);
@@ -674,7 +744,7 @@ function renderGameTicketSettingsUi() {
     const missPercent = Math.max(0, Math.round((1 - total) * 100));
     const isConsecutiveChallenge = String(event.type || "draw") === "consecutiveCorrect";
     return `
-      <div class="settings-game-ticket-event-card" data-game-ticket-event-card data-event-id="${event.id || ""}" data-event-name="${escapeHtml(String(event.name || "イベント"))}">
+      <div class="settings-game-ticket-event-card${isConsecutiveChallenge ? " is-consecutive-challenge" : ""}" data-game-ticket-event-card data-event-id="${event.id || ""}" data-event-name="${escapeHtml(String(event.name || "イベント"))}">
         <div class="settings-game-ticket-event-header">
           <input type="text" data-field="name" value="${escapeHtml(String(event.name || "イベント"))}" />
           <button type="button" class="ghost-btn compact-btn" data-action="remove-event">削除</button>
@@ -702,22 +772,30 @@ function renderGameTicketSettingsUi() {
             <span>有効</span>
             <input type="checkbox" data-field="enabled" ${event.enabled ? "checked" : ""} />
           </label>
-          <label>
-            <span>開始前画像URL</span>
-            <input type="text" data-field="startImage" value="${escapeHtml(String(event.startImage || ""))}" placeholder="https://..." />
+          <label class="settings-game-ticket-image-field">
+            <span>開始前画像</span>
+            <div class="settings-image-picker" data-image-slot>
+              <input type="file" accept="image/*" data-field="startImageFile" data-image-file-input aria-label="開始前画像" />
+              <div class="settings-image-actions">
+                <button type="button" class="secondary-btn compact-btn" data-action="change-image">画像を変更</button>
+                <button type="button" class="ghost-btn compact-btn" data-action="clear-image">画像を削除</button>
+              </div>
+              <img class="settings-image-preview${event.startImage ? "" : " hidden"}" src="${escapeHtml(String(event.startImage || ""))}" alt="開始前画像" data-image-preview />
+              <input type="hidden" data-field="startImage" data-image-value value="${escapeHtml(String(event.startImage || ""))}" />
+            </div>
           </label>
-          ${isConsecutiveChallenge ? `
+          <div class="settings-game-ticket-consecutive-fields" data-consecutive-fields ${isConsecutiveChallenge ? "" : "hidden"}>
             <label>
-              <span>最大問題数</span>
+              <span>最大連続正解数</span>
               <input type="number" data-field="maxQuestions" value="${Number(event.maxQuestions) || 5}" min="1" step="1" />
             </label>
             <label>
-              <span>1問正解時のチケット</span>
+              <span>1問正解ごとの報酬</span>
               <select data-field="rewardMinutes">${rewardMinutesOptions}</select>
             </label>
-          ` : ""}
+          </div>
         </div>
-        <div class="settings-game-ticket-outcome-list">
+        <div class="settings-game-ticket-outcome-list${isConsecutiveChallenge ? " hidden" : ""}">
           <p class="settings-game-ticket-outcome-title">当選内容</p>
           ${(event.outcomes || []).map((outcome) => `
             <label class="settings-game-ticket-outcome-row">
@@ -737,6 +815,47 @@ function renderGameTicketSettingsUi() {
     `;
   }).join("");
 
+  const bindSingleImageSelector = (container, onValueChange) => {
+    if (!container) return;
+    const fileInput = container.querySelector('[data-image-file-input]');
+    const preview = container.querySelector('[data-image-preview]');
+    const valueInput = container.querySelector('[data-image-value]');
+    const clearBtn = container.querySelector('[data-action="clear-image"]');
+    const changeBtn = container.querySelector('[data-action="change-image"]');
+    const applyValue = (nextValue) => {
+      const safeValue = normalizeStoredImageReference(nextValue || "") || "";
+      if (valueInput) valueInput.value = safeValue;
+      if (preview) {
+        preview.src = safeValue || "";
+        preview.classList.toggle("hidden", !safeValue);
+      }
+      if (typeof onValueChange === "function") onValueChange(safeValue);
+    };
+    if (fileInput) {
+      fileInput.addEventListener("change", async (event) => {
+        const file = event.target?.files?.[0];
+        const nextValue = await readImageFileAsDataUrl(file);
+        applyValue(nextValue);
+      });
+    }
+    if (changeBtn && fileInput) {
+      changeBtn.addEventListener("click", () => fileInput.click());
+    }
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        if (fileInput) fileInput.value = "";
+        applyValue("");
+      });
+    }
+    const currentValue = normalizeStoredImageReference(valueInput?.value || "") || "";
+    if (preview) {
+      preview.src = currentValue;
+      preview.classList.toggle("hidden", !currentValue);
+    }
+  };
+
+  document.querySelectorAll("[data-image-slot]").forEach((slot) => bindSingleImageSelector(slot));
+
   eventList.querySelectorAll("[data-game-ticket-event-card]").forEach((card) => {
     const event = (config.events || []).find((entry) => String(entry.id || "") === String(card.dataset.eventId || "")) || {};
     const eventTypeSelect = card.querySelector('[data-field="eventType"]');
@@ -747,6 +866,8 @@ function renderGameTicketSettingsUi() {
     if (maxQuestionsInput) maxQuestionsInput.value = String(Number(event.maxQuestions) || 5);
     const startImageInput = card.querySelector('[data-field="startImage"]');
     if (startImageInput) startImageInput.value = String(event.startImage || "");
+    const startImageSlot = card.querySelector('[data-image-slot]');
+    if (startImageSlot) bindSingleImageSelector(startImageSlot);
     card.querySelector('[data-field="targetTraining"]').value = normalizeGameTicketTargetTraining(event.targetTraining || "challenge");
     card.querySelector('[data-field="enabled"]').checked = Boolean(event.enabled !== false);
     const missValue = card.querySelector('[data-field="missPercent"]');
@@ -787,6 +908,33 @@ function renderGameTicketSettingsUi() {
       missText.textContent = `${Math.max(0, 100 - totalPercent)}%`;
     }
   };
+
+  const syncEventTypeVisibility = (card) => {
+    const eventTypeSelect = card.querySelector('[data-field="eventType"]');
+    const isConsecutive = String(eventTypeSelect?.value || "draw") === "consecutiveCorrect";
+    const outcomeList = card.querySelector('.settings-game-ticket-outcome-list');
+    const consecutiveFields = card.querySelector('[data-consecutive-fields]');
+    if (outcomeList) {
+      outcomeList.classList.toggle("hidden", isConsecutive);
+    }
+    if (consecutiveFields) {
+      consecutiveFields.toggleAttribute("hidden", !isConsecutive);
+      consecutiveFields.hidden = !isConsecutive;
+    }
+  };
+
+  eventList.querySelectorAll('[data-field="eventType"]').forEach((select) => {
+    const card = select.closest("[data-game-ticket-event-card]");
+    if (card) {
+      syncEventTypeVisibility(card);
+    }
+    select.addEventListener("change", () => {
+      const currentCard = select.closest("[data-game-ticket-event-card]");
+      if (currentCard) {
+        syncEventTypeVisibility(currentCard);
+      }
+    });
+  });
 
   eventList.querySelectorAll('[data-field="outcomePercent"]').forEach((input) => {
     input.addEventListener("input", (event) => {

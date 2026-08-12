@@ -348,15 +348,39 @@
                 <div class="settings-game-ticket-form-grid">
                   <label>
                     <span>特訓開始時イベント告知画像</span>
-                    <input id="gameTicketAnnouncementImageInput" type="text" placeholder="https://example.com/image.png" />
+                    <div class="settings-image-picker" data-image-slot>
+                      <input id="gameTicketAnnouncementImageInput" type="file" accept="image/*" data-image-file-input aria-label="特訓開始時イベント告知画像" />
+                      <div class="settings-image-actions">
+                        <button type="button" class="secondary-btn compact-btn" data-action="change-image">画像を変更</button>
+                        <button type="button" class="ghost-btn compact-btn" data-action="clear-image">画像を削除</button>
+                      </div>
+                      <img class="settings-image-preview hidden" src="" alt="特訓開始時イベント告知画像" data-image-preview />
+                      <input id="gameTicketAnnouncementImageValue" type="hidden" data-image-value value="" />
+                    </div>
                   </label>
                   <label>
                     <span>30分券画像</span>
-                    <input id="gameTicketThirtyImageInput" type="text" placeholder="https://example.com/30.png" />
+                    <div class="settings-image-picker" data-image-slot>
+                      <input id="gameTicketThirtyImageInput" type="file" accept="image/*" data-image-file-input aria-label="30分券画像" />
+                      <div class="settings-image-actions">
+                        <button type="button" class="secondary-btn compact-btn" data-action="change-image">画像を変更</button>
+                        <button type="button" class="ghost-btn compact-btn" data-action="clear-image">画像を削除</button>
+                      </div>
+                      <img class="settings-image-preview hidden" src="" alt="30分券画像" data-image-preview />
+                      <input id="gameTicketThirtyImageValue" type="hidden" data-image-value value="" />
+                    </div>
                   </label>
                   <label>
                     <span>60分券画像</span>
-                    <input id="gameTicketSixtyImageInput" type="text" placeholder="https://example.com/60.png" />
+                    <div class="settings-image-picker" data-image-slot>
+                      <input id="gameTicketSixtyImageInput" type="file" accept="image/*" data-image-file-input aria-label="60分券画像" />
+                      <div class="settings-image-actions">
+                        <button type="button" class="secondary-btn compact-btn" data-action="change-image">画像を変更</button>
+                        <button type="button" class="ghost-btn compact-btn" data-action="clear-image">画像を削除</button>
+                      </div>
+                      <img class="settings-image-preview hidden" src="" alt="60分券画像" data-image-preview />
+                      <input id="gameTicketSixtyImageValue" type="hidden" data-image-value value="" />
+                    </div>
                   </label>
                 </div>
               </div>

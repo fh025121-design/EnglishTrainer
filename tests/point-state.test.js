@@ -121,6 +121,53 @@ capConfig.dailyGrantCapByMinutes[5] = originalCap5;
 const irregularBucket = context.getLearningHistoryModeBucket({ mode: "不規則動詞特訓" });
 assert.strictEqual(irregularBucket.key, "irregularVerb", "irregular-verb should have its own history bucket key");
 assert.strictEqual(irregularBucket.label, "不規則動詞特訓", "irregular-verb should have its own history bucket label");
+const settingsContainer = {
+  innerHTML: "",
+  querySelectorAll() { return []; },
+  querySelector() { return null; }
+};
+context.document = {
+  ...documentStub,
+  getElementById(id) {
+    if (id === "gameTicketRuleTableBody") return { innerHTML: "", querySelectorAll() { return []; }, querySelector() { return null; } };
+    if (id === "gameTicketEventList") return settingsContainer;
+    if (id === "gameTicketAnnouncementImageInput") return { replaceWith() {} };
+    if (id === "gameTicketThirtyImageInput") return { replaceWith() {} };
+    if (id === "gameTicketSixtyImageInput") return { replaceWith() {} };
+    if (id === "gameTicketDailyCap5Input") return { value: "20" };
+    if (id === "gameTicketDailyCap15Input") return { value: "20" };
+    if (id === "gameTicketDailyCap30Input") return { value: "10" };
+    if (id === "gameTicketDailyCap60Input") return { value: "10" };
+    return documentStub.getElementById(id);
+  },
+  querySelectorAll() { return []; },
+  querySelector() { return null; }
+};
+context.state = { settings: { gameTicketConfig: {
+  normalRules: [],
+  events: [{
+    id: "challenge-seq-1",
+    name: "連続正解チャレンジ",
+    type: "consecutiveCorrect",
+    targetTraining: "challenge",
+    threshold: 100,
+    enabled: true,
+    startImage: "",
+    maxQuestions: 5,
+    rewardMinutes: 5,
+    outcomes: []
+  }],
+  dailyGrantCapByMinutes: { 5: 20, 15: 20, 30: 10, 60: 10 },
+  challengeAnnouncementImage: "",
+  eventStartImages: {},
+  ticketImages: { 30: "", 60: "" },
+  modeLabels: { challenge: "過去の間違い", weakFocus: "苦手特訓", other: "その他の特訓" },
+  dailyCap: 2
+} } };
+context.renderGameTicketSettingsUi();
+assert.ok(!settingsContainer.innerHTML.includes('data-field="outcomePercent"'), "consecutive-correct events should hide draw outcomes");
+assert.ok(settingsContainer.innerHTML.includes('maxQuestions'), "consecutive-correct events should show maxQuestions");
+assert.ok(settingsContainer.innerHTML.includes('rewardMinutes'), "consecutive-correct events should show rewardMinutes selection");
 const currentGameTicketConfig = context.getGameTicketConfig();
 const eventA = (currentGameTicketConfig.events || []).find((event) => Number(event.threshold) === 141 && String(event.targetTraining || "challenge") === "challenge");
 assert.ok(eventA, "current gameTicketConfig should include the A event for 141P");
@@ -171,6 +218,17 @@ const rollResultAtMiss = (() => {
 assert.strictEqual(rollResultAtMiss.outcome, "miss", "roll 0.80 should resolve to miss for the current config");
 assert.strictEqual(rollResultAtMiss.minutes, 0, "roll 0.80 should award zero minutes for the current config");
 assert.strictEqual(context.sanitizeChallengeTicketSpecialState({ processed: false, result: "miss", awardedMinutes: 0, queued: true }).queued, true, "queued special draws should survive reload state sanitization");
+assert.strictEqual(context.normalizeStoredImageReference("data:image/png;base64,AAAA"), "data:image/png;base64,AAAA", "data URLs should be preserved as stored image references");
+assert.strictEqual(context.normalizeStoredImageReference("https://example.com/image.png"), "https://example.com/image.png", "legacy remote image URLs should remain valid image references");
+assert.strictEqual(context.normalizeStoredImageReference("C:/fake/image.png"), "", "local filesystem paths should not be saved as image references");
+const imageConfig = context.sanitizeGameTicketConfig({
+  ticketImages: { 30: "data:image/png;base64,BBBB", 60: "http://example.com/60.png" },
+  challengeAnnouncementImage: "data:image/png;base64,CCCC",
+  eventStartImages: { eventA: "data:image/png;base64,DDDD" }
+});
+assert.strictEqual(imageConfig.ticketImages[30], "data:image/png;base64,BBBB", "data URL ticket images should be preserved");
+assert.strictEqual(imageConfig.challengeAnnouncementImage, "data:image/png;base64,CCCC", "data URL announcement images should be preserved");
+assert.strictEqual(imageConfig.eventStartImages.eventA, "data:image/png;base64,DDDD", "event-specific image references should be preserved");
 context.showGameTicketModal({ id: "reward-dup-1", minutes: 30, type: "random" });
 context.showGameTicketModal({ id: "reward-dup-1", minutes: 30, type: "random" });
 assert.strictEqual(context.isGameTicketRewardAlreadyShown({ id: "reward-dup-1" }), true, "a reward ID should only display once");
