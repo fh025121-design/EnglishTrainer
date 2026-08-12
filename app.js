@@ -450,8 +450,7 @@ function buildGameTicketRuleSelectOptions(modeLabels) {
   const labels = modeLabels && typeof modeLabels === "object" ? modeLabels : createDefaultGameTicketConfig().modeLabels;
   return [
     { value: "challenge", label: labels.challenge || "過去の間違い" },
-    { value: "weakFocus", label: labels.weakFocus || "苦手特訓" },
-    { value: "other", label: labels.other || "その他の特訓" }
+    { value: "weakFocus", label: labels.weakFocus || "苦手特訓" }
   ];
 }
 
@@ -13977,6 +13976,7 @@ function bindEvents() {
   const trainingChimePresetButtons = [...document.querySelectorAll("[data-training-chime-preset]")];
   const addGameTicketRuleBtn = document.getElementById("addGameTicketRuleBtn");
   const addGameTicketEventBtn = document.getElementById("addGameTicketEventBtn");
+  const openGameTicketSettingsScreenBtn = document.getElementById("openGameTicketSettingsScreenBtn");
   const gameTicketSettingsSaveBtn = document.getElementById("gameTicketSettingsSaveBtn");
   const typingControls = [
     typingAudioRepeatSelect,
@@ -13986,6 +13986,12 @@ function bindEvents() {
     typingDelayAudioToInputSelect,
     typingDelayJudgeToNextSelect
   ];
+
+  if (openGameTicketSettingsScreenBtn) {
+    openGameTicketSettingsScreenBtn.addEventListener("click", () => {
+      showScreen("gameTicketSettingsScreen");
+    });
+  }
 
   if (addGameTicketRuleBtn) {
     addGameTicketRuleBtn.addEventListener("click", () => {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
-    <link rel="stylesheet" href="styles.css?v=20260812-0110" />
+    <link rel="stylesheet" href="styles.css?v=20260812-0220" />
   </head>
   <body class="auth-pending">
     <div id="loginScreen" class="login-shell" aria-live="polite">
@@ -31,7 +31,7 @@
     <div class="app-shell">
       <header class="topbar">
         <div class="topbar-title">
-          <h1>English Typing Trainer for PC <span id="pcHomeAccountAlias" class="title-account-tag hidden"></span><span class="title-family-tag">Self Support PJR</span><span class="title-version-tag">Ver 2026/08/12 02:15</span></h1>
+          <h1>English Typing Trainer for PC <span id="pcHomeAccountAlias" class="title-account-tag hidden"></span><span class="title-family-tag">Self Support PJR</span><span class="title-version-tag">Ver 2026/08/12 02:20</span></h1>
           <p class="subtext">タイピングで単語・熟語を定着させよう</p>
         </div>
         <div class="topbar-actions">
@@ -275,39 +275,9 @@
             </div>
             <div class="settings-typing-wrap" aria-label="ゲームチケット設定">
               <h3 class="settings-section-title">ゲームチケット設定</h3>
-              <div class="settings-game-ticket-panel">
-                <div class="settings-game-ticket-section">
-                  <div class="settings-game-ticket-header-row">
-                    <h4>通常チケット</h4>
-                    <button id="addGameTicketRuleBtn" class="secondary-btn compact-btn" type="button">＋ 条件を追加</button>
-                  </div>
-                  <div class="settings-game-ticket-table-wrap">
-                    <table class="settings-game-ticket-table">
-                      <thead>
-                        <tr>
-                          <th>対象特訓</th>
-                          <th>ポイント</th>
-                          <th>確率</th>
-                          <th>チケット</th>
-                          <th>有効</th>
-                          <th>削除</th>
-                        </tr>
-                      </thead>
-                      <tbody id="gameTicketRuleTableBody"></tbody>
-                    </table>
-                  </div>
-                </div>
-                <div class="settings-game-ticket-section">
-                  <div class="settings-game-ticket-header-row">
-                    <h4>イベント設定</h4>
-                    <button id="addGameTicketEventBtn" class="secondary-btn compact-btn" type="button">＋ イベントを追加</button>
-                  </div>
-                  <div id="gameTicketEventList" class="settings-game-ticket-event-list"></div>
-                </div>
-                <div class="settings-game-ticket-actions">
-                  <button id="gameTicketSettingsSaveBtn" class="primary-btn" type="button">ゲームチケット設定を保存</button>
-                </div>
-              </div>
+              <button id="openGameTicketSettingsScreenBtn" class="panel-link-btn settings-submenu-btn" type="button">
+                ゲームチケット設定 <span aria-hidden="true">＞</span>
+              </button>
             </div>
             <div class="settings-backup-wrap" aria-label="学習記録バックアップ操作">
               <button id="backupLearningDataBtn" class="secondary-btn settings-backup-btn" type="button">💾 学習記録をバックアップ</button>
@@ -328,6 +298,52 @@
             </div>
             <div class="settings-danger-wrap">
               <button id="openResetLearningDataModalBtn" class="secondary-btn settings-reset-btn" type="button">学習記録をすべて初期化</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="gameTicketSettingsScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true" type="button">← 設定に戻る</button>
+            <div>
+              <p class="eyebrow">設定</p>
+              <h2>ゲームチケット設定</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel">
+            <div class="settings-game-ticket-panel">
+              <div class="settings-game-ticket-section">
+                <div class="settings-game-ticket-header-row">
+                  <h4>通常チケット</h4>
+                  <button id="addGameTicketRuleBtn" class="secondary-btn compact-btn" type="button">＋ 条件を追加</button>
+                </div>
+                <div class="settings-game-ticket-table-wrap">
+                  <table class="settings-game-ticket-table">
+                    <thead>
+                      <tr>
+                        <th>対象特訓</th>
+                        <th>ポイント</th>
+                        <th>確率</th>
+                        <th>チケット</th>
+                        <th>有効</th>
+                        <th>削除</th>
+                      </tr>
+                    </thead>
+                    <tbody id="gameTicketRuleTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="settings-game-ticket-section">
+                <div class="settings-game-ticket-header-row">
+                  <h4>イベント設定</h4>
+                  <button id="addGameTicketEventBtn" class="secondary-btn compact-btn" type="button">＋ イベントを追加</button>
+                </div>
+                <div id="gameTicketEventList" class="settings-game-ticket-event-list"></div>
+              </div>
+              <div class="settings-game-ticket-actions">
+                <button id="gameTicketSettingsSaveBtn" class="primary-btn" type="button">ゲームチケット設定を保存</button>
+              </div>
             </div>
           </div>
         </section>

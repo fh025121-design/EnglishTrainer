@@ -318,8 +318,16 @@ p {
   padding: 8px 10px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(17, 24, 39, 0.88);
   color: var(--text);
+  color-scheme: dark;
+}
+
+.settings-typing-field select option,
+.settings-game-ticket-table select option,
+.settings-game-ticket-event-card select option {
+  background: rgba(17, 24, 39, 0.98);
+  color: #f8fafc;
 }
 
 .settings-typing-field select:focus {
@@ -460,8 +468,9 @@ p {
   min-height: 36px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(17, 24, 39, 0.88);
   color: var(--text);
+  color-scheme: dark;
   padding: 6px 8px;
 }
 
@@ -1074,6 +1083,18 @@ p {
   font-weight: 700;
   padding: 0;
   cursor: pointer;
+}
+
+.settings-submenu-btn {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .panel-pill {
