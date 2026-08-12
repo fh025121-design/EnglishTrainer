@@ -5937,7 +5937,7 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
   }
 
   const rescueEligible = today === "2026-08-12"
-    ? (!dailyState.special?.p261?.processed)
+    ? (!dailyState.special?.p261?.processed && challengePoints >= 261)
     : (!dailyState.special?.p261?.processed && challengePoints >= 261 && !hasP141Win && !hasP221Win && dailyState.special?.p141?.processed && dailyState.special?.p221?.processed && dailyState.special?.p141?.result === "miss" && dailyState.special?.p221?.result === "miss");
 
   if (rescueEligible) {
