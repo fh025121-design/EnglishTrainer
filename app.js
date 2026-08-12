@@ -8117,7 +8117,11 @@ function renderGameTicketHomePanel() {
 
   const store = syncGameTicketState();
   const activeTickets = getActiveGameTickets(store);
+  const ticketKinds = [5, 10, 15, 30, 60];
   const grouped = new Map();
+  ticketKinds.forEach((minutes) => {
+    grouped.set(String(minutes), { minutes, count: 0, earliestExpiry: Number.MAX_SAFE_INTEGER });
+  });
   activeTickets.forEach((ticket) => {
     const key = String(ticket.minutes);
     const current = grouped.get(key) || { minutes: ticket.minutes, count: 0, earliestExpiry: ticket.expiresAt };
@@ -8129,16 +8133,14 @@ function renderGameTicketHomePanel() {
   const groupedRows = [...grouped.values()].sort((a, b) => b.minutes - a.minutes);
   const totalMinutes = activeTickets.reduce((sum, ticket) => sum + ticket.minutes, 0);
   totalText.textContent = `合計 ${totalMinutes}分`;
-  inventoryList.innerHTML = groupedRows.length
-    ? groupedRows.map((entry) => `
-        <li>
-          <button class="game-ticket-entry-btn" type="button" data-ticket-minutes="${entry.minutes}">
-            <span class="game-ticket-entry-main">${entry.minutes}分券 × ${entry.count}枚</span>
-            <span class="game-ticket-entry-meta">あと${getRemainingTicketDays(entry.earliestExpiry)}日</span>
-          </button>
-        </li>
-      `).join("")
-    : '<li class="empty-state">使えるチケットはまだありません</li>';
+  inventoryList.innerHTML = groupedRows.map((entry) => `
+      <li>
+        <button class="game-ticket-entry-btn" type="button" data-ticket-minutes="${entry.minutes}">
+          <span class="game-ticket-entry-main">${entry.minutes}分券 × ${entry.count}枚</span>
+          <span class="game-ticket-entry-meta">${entry.count > 0 ? `あと${getRemainingTicketDays(entry.earliestExpiry)}日` : "0枚"}</span>
+        </button>
+      </li>
+    `).join("");
 
   const usageMap = new Map();
   (store.usageHistory || [])
