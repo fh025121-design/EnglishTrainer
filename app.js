@@ -5698,7 +5698,6 @@ function syncGameTicketState() {
     return store;
   }
   if (store.lastProcessedDate === currentDate) {
-    processChallengeGameTicketAwards(store);
     if (mutated) {
       persistGameTicketState();
     }
@@ -5717,7 +5716,6 @@ function syncGameTicketState() {
   store.dailyEarnedCount = 0;
   store.lastProcessedDate = currentDate;
   mutated = true;
-  processChallengeGameTicketAwards(store);
   if (mutated) {
     persistGameTicketState();
   }
@@ -5852,13 +5850,72 @@ function resolveChallengeSpecialDrawResult(dayKey, threshold) {
   return { outcome: "miss", minutes: 0, shouldShowChanceScreen: true };
 }
 
-function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
+function queueChallengeSpecialDrawForThresholdCrossing(dayKey, previousChallengePoints, nextChallengePoints, store = ensureGameTicketState()) {
+  const previousPoints = Math.max(0, Number(previousChallengePoints) || 0);
+  const nextPoints = Math.max(0, Number(nextChallengePoints) || 0);
+  if (!store || previousPoints === nextPoints) return [];
+
+  const thresholds = [141, 221, 261];
+  const queuedKeys = [];
+  const dayKeyText = String(dayKey || getPointTodayKey());
+  const dailyState = getChallengeTicketDailyState(store, dayKeyText, { create: true });
+
+  thresholds.forEach((threshold) => {
+    const key = threshold === 141 ? "p141" : threshold === 221 ? "p221" : "p261";
+    const specialState = dailyState.special?.[key];
+    if (!specialState || specialState.processed || specialState.queued) return;
+    if (previousPoints >= threshold || nextPoints < threshold) return;
+
+    const result = resolveChallengeSpecialDrawResult(dayKeyText, threshold);
+    if (!result.shouldShowChanceScreen) return;
+
+    specialState.queued = true;
+    queueChallengeTicketChance(() => {
+      const latestState = getChallengeTicketDailyState(store, dayKeyText, { create: true });
+      const current = latestState.special?.[key];
+      if (!current || current.processed) return;
+      current.queued = false;
+      current.processed = true;
+      current.result = result.outcome;
+      current.awardedMinutes = result.minutes;
+
+      if (result.minutes > 0) {
+        const ticket = awardChallengeGameTicket(store, result.minutes, {
+          type: "random",
+          historyLabel: result.minutes === 30 ? "過去の間違い 特別抽選 30分券" : "過去の間違い 特別抽選 60分券"
+        });
+        if (ticket && typeof showGameTicketModal === "function") {
+          setTimeout(() => {
+            showGameTicketModal(ticket);
+          }, 500);
+        }
+      } else if (typeof showGameTicketModal === "function") {
+        setTimeout(() => {
+          showGameTicketModal({ minutes: 0, type: "miss" });
+        }, 500);
+      }
+      persistGameTicketState();
+    });
+    queuedKeys.push(key);
+  });
+
+  return queuedKeys;
+}
+
+function processChallengeGameTicketAwards(store = ensureGameTicketState(), dayKey = getPointTodayKey(), previousChallengePoints = null, nextChallengePoints = null) {
   if (!isDesktopGameTicketEnabled()) return [];
+  const safeStore = store || ensureGameTicketState();
+  const resolvedDayKey = String(dayKey || getPointTodayKey());
   const pointState = getPointState();
   hydratePointDaySnapshots(pointState);
-  const today = getPointTodayKey();
-  const challengePoints = Math.max(0, Number(pointState.dailyEarnedByModeByDate?.[today]?.challenge) || 0);
-  const dailyState = getChallengeTicketDailyState(store, today, { create: true });
+  const currentChallengePoints = Math.max(0, Number(pointState.dailyEarnedByModeByDate?.[resolvedDayKey]?.challenge) || 0);
+  const previousPoints = Number.isFinite(Number(previousChallengePoints))
+    ? Math.max(0, Number(previousChallengePoints))
+    : 0;
+  const nextPoints = Number.isFinite(Number(nextChallengePoints))
+    ? Math.max(0, Number(nextChallengePoints))
+    : currentChallengePoints;
+  const dailyState = getChallengeTicketDailyState(safeStore, resolvedDayKey, { create: true });
   const earnedTickets = [];
   let mutated = false;
 
@@ -5867,13 +5924,13 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
     for (const threshold of thresholds) {
       const thresholdKey = String(threshold);
       if (tierState[thresholdKey]) continue;
-      if (challengePoints < threshold) break;
+      if (previousPoints >= threshold || nextPoints < threshold) continue;
       tierState[thresholdKey] = true;
       mutated = true;
       const isFinalThreshold = thresholds[thresholds.length - 1] === threshold;
       const shouldAward = (guaranteeFinal && isFinalThreshold) || Math.random() < chance;
       if (shouldAward) {
-        const ticket = awardChallengeGameTicket(store, minutes, {
+        const ticket = awardChallengeGameTicket(safeStore, minutes, {
           type: "random",
           historyLabel
         });
@@ -5886,109 +5943,8 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
     }
   };
 
-  const processSpecialDraw = (threshold, key) => {
-    const specialState = dailyState.special?.[key];
-    if (!specialState || specialState.processed || specialState.queued) return;
-    if (challengePoints < threshold) return;
-    const result = resolveChallengeSpecialDrawResult(today, threshold);
-    if (!result.shouldShowChanceScreen) return;
-
-    specialState.queued = true;
-    mutated = true;
-    queueChallengeTicketChance(() => {
-      const state = getChallengeTicketDailyState(store, today, { create: true });
-      const current = state.special?.[key];
-      if (!current || current.processed) return;
-      current.queued = false;
-      current.processed = true;
-      current.result = result.outcome;
-      current.awardedMinutes = result.minutes;
-      mutated = true;
-      if (result.minutes > 0) {
-        const ticket = awardChallengeGameTicket(store, result.minutes, {
-          type: "random",
-          historyLabel: result.minutes === 30 ? "過去の間違い 特別抽選 30分券" : "過去の間違い 特別抽選 60分券"
-        });
-        if (ticket) {
-          earnedTickets.push(ticket);
-        }
-        if (typeof showGameTicketModal === "function") {
-          setTimeout(() => {
-            showGameTicketModal(ticket);
-          }, 500);
-        }
-      } else if (typeof showGameTicketModal === "function") {
-        setTimeout(() => {
-          showGameTicketModal({ minutes: 0, type: "miss" });
-        }, 500);
-      }
-      if (mutated) {
-        persistGameTicketState();
-      }
-    });
-  };
-
   awardTicketForTier(dailyState.fiveMinute, [90, 120, 153, 180], 5, 0.5, "過去の間違い 5分券", true);
   awardTicketForTier(dailyState.fifteenA, [84, 132, 183, 210], 15, 0.5, "過去の間違い 15分券A", true);
-
-  const hasP141Win = dailyState.special?.p141?.result === "30" || dailyState.special?.p141?.result === "60";
-  const hasP221Win = dailyState.special?.p221?.result === "30" || dailyState.special?.p221?.result === "60";
-  if (!dailyState.special?.p141?.processed && challengePoints >= 141) {
-    processSpecialDraw(141, "p141");
-  }
-  if (!dailyState.special?.p221?.processed && challengePoints >= 221) {
-    processSpecialDraw(221, "p221");
-  }
-
-  const rescueEligible = today === "2026-08-12"
-    ? (!dailyState.special?.p261?.processed && challengePoints >= 261)
-    : (!dailyState.special?.p261?.processed && challengePoints >= 261 && !hasP141Win && !hasP221Win && dailyState.special?.p141?.processed && dailyState.special?.p221?.processed && dailyState.special?.p141?.result === "miss" && dailyState.special?.p221?.result === "miss");
-
-  if (rescueEligible) {
-    const rescueState = dailyState.special?.p261;
-    if (!rescueState || rescueState.processed || rescueState.queued) {
-      return earnedTickets;
-    }
-
-    const rescue = resolveChallengeSpecialDrawResult(today, 261);
-    if (!rescue.shouldShowChanceScreen) {
-      return earnedTickets;
-    }
-
-    rescueState.queued = true;
-    mutated = true;
-    queueChallengeTicketChance(() => {
-      const state = getChallengeTicketDailyState(store, today, { create: true });
-      const rescueState = state.special?.p261;
-      if (!rescueState || rescueState.processed) return;
-      rescueState.queued = false;
-      rescueState.processed = true;
-      rescueState.result = rescue.outcome;
-      rescueState.awardedMinutes = rescue.minutes;
-      mutated = true;
-      if (rescue.minutes > 0) {
-        const rescueTicket = awardChallengeGameTicket(store, rescue.minutes, {
-          type: "random",
-          historyLabel: rescue.minutes === 60 ? "過去の間違い P261救済 60分券" : "過去の間違い P261救済 30分券"
-        });
-        if (rescueTicket) {
-          earnedTickets.push(rescueTicket);
-        }
-        if (typeof showGameTicketModal === "function") {
-          setTimeout(() => {
-            showGameTicketModal(rescueTicket);
-          }, 500);
-        }
-      } else if (typeof showGameTicketModal === "function") {
-        setTimeout(() => {
-          showGameTicketModal({ minutes: 0, type: "miss" });
-        }, 500);
-      }
-      if (mutated) {
-        persistGameTicketState();
-      }
-    });
-  }
 
   if (mutated) {
     persistGameTicketState();
@@ -7826,6 +7782,10 @@ function awardPointsForTrainingMode(mode) {
   const earned = Math.max(0, Math.min(rewardBase, remainingMode));
   if (!earned) return 0;
 
+  const previousChallengePoints = modeKey === "challenge"
+    ? Math.max(0, Number(pointState.dailyEarnedByModeByDate?.[todayKey]?.challenge) || 0)
+    : 0;
+
   pointState.balance += earned;
   pointState.totalEarned = Math.max(0, Number(pointState.totalEarned) || 0) + earned;
   pointState.dailyEarnedByDate[todayKey] = todayEarned + earned;
@@ -7839,10 +7799,12 @@ function awardPointsForTrainingMode(mode) {
   pointState.dailyEarnedByModeByDate[todayKey] = todayModeRow;
   savePointState(pointState);
   if (modeKey === "challenge") {
-    const challengeTickets = processChallengeGameTicketAwards();
+    const nextChallengePoints = previousChallengePoints + earned;
+    const challengeTickets = processChallengeGameTicketAwards(ensureGameTicketState(), todayKey, previousChallengePoints, nextChallengePoints);
     if (Array.isArray(challengeTickets) && challengeTickets.length) {
       showImmediateGameTicketReward(challengeTickets[0]);
     }
+    queueChallengeSpecialDrawForThresholdCrossing(todayKey, previousChallengePoints, nextChallengePoints, ensureGameTicketState());
   }
   const exchangeScreen = document.getElementById("exchangeTicketScreen");
   if (exchangeScreen && exchangeScreen.classList.contains("active")) {

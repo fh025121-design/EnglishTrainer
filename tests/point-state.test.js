@@ -13,6 +13,7 @@ const documentStub = {
 const context = {
   window: {
     ENGLISH_TRAINER_RELEASE_INFO: { releaseHistory: [] },
+    innerWidth: 1200,
     addEventListener() {},
     removeEventListener() {},
     requestAnimationFrame(callback) { callback && callback(); return 0; }
@@ -62,6 +63,38 @@ assert.strictEqual(fixedAugust12Draw.outcome, "miss", "P141 on 2026-08-12 should
 assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 221).minutes, 30, "P221 on 2026-08-12 should be a fixed 30-minute ticket");
 assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 261).minutes, 60, "P261 on 2026-08-12 should be a fixed 60-minute ticket");
 assert.strictEqual(context.sanitizeChallengeTicketSpecialState({ processed: false, result: "miss", awardedMinutes: 0, queued: true }).queued, true, "queued special draws should survive reload state sanitization");
+const thresholdPassResult = context.queueChallengeSpecialDrawForThresholdCrossing("2026-08-12", 138, 141, context.ensureGameTicketState());
+assert.strictEqual(Array.isArray(thresholdPassResult), true, "crossing the threshold should queue a special draw");
+assert.strictEqual(thresholdPassResult.length, 1, "crossing the threshold should queue exactly one draw");
+assert.strictEqual(thresholdPassResult[0], "p141", "P141 should be queued when challenge points cross the threshold");
+const unchangedThresholdResult = context.queueChallengeSpecialDrawForThresholdCrossing("2026-08-12", 150, 150, context.ensureGameTicketState());
+assert.strictEqual(Array.isArray(unchangedThresholdResult), true, "re-rendering with the same total should keep the queue empty");
+assert.strictEqual(unchangedThresholdResult.length, 0, "unchanged challenge totals should not trigger a new draw");
+const challengeTicketStore = context.ensureGameTicketState();
+challengeTicketStore.challengeTicketStateByDate = {};
+const pointStateForThresholds = context.getPointState();
+const todayThresholdKey = context.getPointTodayKey();
+pointStateForThresholds.dailyEarnedByModeByDate[todayThresholdKey] = {
+  ...pointStateForThresholds.dailyEarnedByModeByDate[todayThresholdKey],
+  challenge: 89
+};
+context.savePointState(pointStateForThresholds);
+const originalRandom = Math.random;
+Math.random = () => 0;
+const firstThresholdAward = context.processChallengeGameTicketAwards(challengeTicketStore, todayThresholdKey, 89, 90);
+assert.strictEqual(Array.isArray(firstThresholdAward), true, "crossing a threshold should produce a challenge ticket award list");
+assert.strictEqual(firstThresholdAward.length, 1, "P90 should produce one 5-minute challenge ticket once");
+const repeatedThresholdAward = context.processChallengeGameTicketAwards(challengeTicketStore, todayThresholdKey, 90, 90);
+assert.strictEqual(Array.isArray(repeatedThresholdAward), true, "re-evaluating the same challenge total should return an array");
+assert.strictEqual(repeatedThresholdAward.length, 0, "re-evaluating the same challenge total should not award again");
+assert.strictEqual(context.processChallengeGameTicketAwards(challengeTicketStore, todayThresholdKey, 90, 120).length, 0, "P120 should not award a second 5-minute ticket after one is already won");
+const fifteenTicketStore = context.ensureGameTicketState();
+fifteenTicketStore.challengeTicketStateByDate = {};
+const fifteenThresholdAward = context.processChallengeGameTicketAwards(fifteenTicketStore, todayThresholdKey, 131, 132);
+assert.strictEqual(Array.isArray(fifteenThresholdAward), true, "crossing P132 should trigger a 15-minute A award array");
+assert.strictEqual(fifteenThresholdAward.length, 1, "crossing P132 should trigger a single 15-minute A award once");
+assert.strictEqual(context.processChallengeGameTicketAwards(fifteenTicketStore, todayThresholdKey, 132, 132).length, 0, "re-evaluating P132 without a new threshold crossing should not fire again");
+Math.random = originalRandom;
 assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: true, isCorrect: true, isReviewSession: false }), true, "first-attempt correct answers should award training points");
 assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: false, isCorrect: true, isReviewSession: false }), false, "corrected retry answers should not award training points");
 assert.strictEqual(context.shouldAwardTrainingPointForAnswerAttempt({ isFirstAttempt: true, isCorrect: true, isReviewSession: true }), false, "review answers should not award training points");
