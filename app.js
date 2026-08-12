@@ -535,26 +535,45 @@ function renderGameTicketSettingsUi() {
   const targetTrainingHtml = options.map((option) => `<option value="${option.value}">${option.label}</option>`).join("");
   const minutesOptions = [5, 15, 30, 60].map((minutes) => `<option value="${minutes}">${minutes}分</option>`).join("");
 
-  rulesTableBody.innerHTML = (config.normalRules || []).map((rule) => `
-    <tr data-game-ticket-rule-row data-rule-id="${rule.id || ""}" data-rule-name="${escapeHtml(String(rule.name || "チケット"))}">
-      <td>
-        <select data-field="targetTraining">${targetTrainingHtml}</select>
+  const pointsDefinitionText = "＊当日特訓P：その日の対象特訓だけで獲得した累計ポイントです。他の学習モードのポイントや総保有ポイントは含みません。日付が変わると0から再計算されます。";
+  const thresholdNoteText = "＊設定Pと完全一致しなくても、そのPを通過した時点で判定されます。";
+  rulesTableBody.innerHTML = `
+    <tr class="settings-game-ticket-definition-row">
+      <td colspan="6">
+        <div class="settings-game-ticket-definition-block">
+          <p class="settings-game-ticket-definition-text">${pointsDefinitionText}</p>
+          <p class="settings-game-ticket-definition-text settings-game-ticket-definition-note">${thresholdNoteText}</p>
+        </div>
       </td>
-      <td><input type="number" data-field="threshold" value="${Number(rule.threshold) || 0}" min="0" step="1" /></td>
-      <td><input type="number" data-field="chancePercent" value="${chanceToPercent(rule.chance)}" min="0" max="100" step="1" />%</td>
-      <td>
-        <select data-field="minutes">${minutesOptions}</select>
-      </td>
-      <td><input type="checkbox" data-field="enabled" ${rule.enabled ? "checked" : ""} /></td>
-      <td><button type="button" class="ghost-btn compact-btn" data-action="remove-rule">削除</button></td>
     </tr>
-  `).join("");
+    ${(config.normalRules || []).map((rule) => `
+      <tr data-game-ticket-rule-row data-rule-id="${rule.id || ""}" data-rule-name="${escapeHtml(String(rule.name || "チケット"))}">
+        <td>
+          <select data-field="targetTraining">${targetTrainingHtml}</select>
+        </td>
+        <td><input type="number" data-field="threshold" value="${Number(rule.threshold) || 0}" min="0" step="1" /></td>
+        <td><input type="number" data-field="chancePercent" value="${chanceToPercent(rule.chance)}" min="0" max="100" step="1" />%</td>
+        <td>
+          <select data-field="minutes">${minutesOptions}</select>
+        </td>
+        <td><input type="checkbox" data-field="enabled" ${rule.enabled ? "checked" : ""} /></td>
+        <td><button type="button" class="ghost-btn compact-btn" data-action="remove-rule">削除</button></td>
+      </tr>
+    `).join("")}
+  `;
 
   rulesTableBody.querySelectorAll("[data-game-ticket-rule-row]").forEach((row) => {
     const rule = (config.normalRules || []).find((entry) => String(entry.id || "") === String(row.dataset.ruleId || "")) || {};
     row.querySelector('[data-field="targetTraining"]').value = normalizeGameTicketTargetTraining(rule.targetTraining || "challenge");
     row.querySelector('[data-field="minutes"]').value = String(rule.minutes || 5);
     row.querySelector('[data-field="enabled"]').checked = Boolean(rule.enabled !== false);
+  });
+
+  const noteRows = rulesTableBody.querySelectorAll(".settings-game-ticket-definition-row");
+  noteRows.forEach((row) => {
+    const labelCell = row.querySelector("td");
+    if (!labelCell) return;
+    labelCell.colSpan = 6;
   });
 
   eventList.innerHTML = (config.events || []).map((event) => {
@@ -572,7 +591,7 @@ function renderGameTicketSettingsUi() {
             <select data-field="targetTraining">${targetTrainingHtml}</select>
           </label>
           <label>
-            <span>必要ポイント</span>
+            <span>当日特訓P</span>
             <div class="settings-game-ticket-inline-input">
               <input type="number" data-field="threshold" value="${Number(event.threshold) || 0}" min="0" step="1" />
               <span>P</span>

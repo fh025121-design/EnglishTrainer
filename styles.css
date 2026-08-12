@@ -418,13 +418,16 @@ p {
 .settings-game-ticket-panel {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .settings-game-ticket-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .settings-game-ticket-header-row {
@@ -447,17 +450,48 @@ p {
 .settings-game-ticket-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 620px;
+  min-width: 520px;
+  table-layout: fixed;
 }
 
 .settings-game-ticket-table th,
 .settings-game-ticket-table td {
-  padding: 8px 6px;
+  padding: 6px 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   text-align: left;
   vertical-align: middle;
   color: var(--text);
-  font-size: 0.8rem;
+  font-size: 0.76rem;
+}
+
+.settings-game-ticket-field-label {
+  display: none;
+}
+
+.settings-game-ticket-definition-row td {
+  padding: 0;
+  border: none;
+}
+
+.settings-game-ticket-definition-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 10px;
+  border-radius: 10px;
+  background: rgba(94, 214, 214, 0.06);
+  border: 1px solid rgba(94, 214, 214, 0.18);
+}
+
+.settings-game-ticket-definition-text {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.settings-game-ticket-definition-note {
+  color: var(--muted);
 }
 
 .settings-game-ticket-table input,
@@ -465,13 +499,13 @@ p {
 .settings-game-ticket-event-card input,
 .settings-game-ticket-event-card select {
   width: 100%;
-  min-height: 36px;
-  border-radius: 10px;
+  min-height: 32px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: rgba(17, 24, 39, 0.88);
   color: var(--text);
   color-scheme: dark;
-  padding: 6px 8px;
+  padding: 5px 7px;
 }
 
 .settings-game-ticket-table input[type="checkbox"],
@@ -484,34 +518,35 @@ p {
 .settings-game-ticket-event-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .settings-game-ticket-event-card {
-  padding: 12px;
+  padding: 10px 10px 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .settings-game-ticket-event-header {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .settings-game-ticket-event-header input {
   flex: 1;
+  min-width: 0;
 }
 
 .settings-game-ticket-event-fields {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
 }
 
 .settings-game-ticket-event-fields label,
@@ -519,9 +554,13 @@ p {
 .settings-game-ticket-outcome-title {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 0.8rem;
+  gap: 4px;
+  font-size: 0.72rem;
   color: var(--muted);
+}
+
+.settings-game-ticket-event-fields label {
+  min-width: 0;
 }
 
 .settings-game-ticket-checkbox-row {
@@ -541,7 +580,7 @@ p {
 .settings-game-ticket-outcome-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .settings-game-ticket-outcome-row {
@@ -549,24 +588,47 @@ p {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  border-radius: 10px;
+  font-size: 0.76rem;
+  color: var(--text);
+}
+
+.settings-game-ticket-outcome-title {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.settings-game-ticket-outcome-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
 }
 
 .settings-game-ticket-miss-row {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 .settings-game-ticket-empty {
   margin: 0;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
 .settings-game-ticket-actions {
   margin-top: 4px;
+}
+
+#gameTicketSettingsScreen,
+#gameTicketSettingsScreen.active {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
 }
 
 .compact-btn {
@@ -990,6 +1052,7 @@ p {
   padding-right: 6px;
 }
 
+#gameTicketSettingsScreen.active,
 #adminLearningHistoryScreen.active {
   overflow-y: auto;
   padding-right: 6px;
