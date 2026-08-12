@@ -452,6 +452,13 @@ function sanitizeGameTicketConfig(value) {
   };
 }
 
+function getUiGameTicketConfig() {
+  const stateCandidate = typeof globalThis !== "undefined" ? globalThis.state : undefined;
+  const sourceState = stateCandidate && stateCandidate.settings && stateCandidate.settings.gameTicketConfig ? stateCandidate : state;
+  const sourceConfig = sourceState?.settings?.gameTicketConfig || state.settings?.gameTicketConfig || createDefaultGameTicketConfig();
+  return sanitizeGameTicketConfig(sourceConfig);
+}
+
 function getGameTicketConfig() {
   state.settings.gameTicketConfig = sanitizeGameTicketConfig(state.settings?.gameTicketConfig);
   return state.settings.gameTicketConfig;
@@ -587,31 +594,35 @@ function parseGameTicketSettingsFromUi() {
   }).filter(Boolean);
 
   const events = eventCards.map((card) => {
-    const outcomeInputs = [...card.querySelectorAll('[data-field="outcomePercent"]')];
-    const outcomes = outcomeInputs.map((input) => {
-      const minutes = Number(input.dataset.outcomeMinutes || 0);
-      const chancePercent = Number(input.value || 0);
-      return { minutes, chance: percentToChance(chancePercent) };
-    }).filter((entry) => Number.isFinite(entry.minutes) && entry.minutes >= 0);
-
-    const totalPercent = outcomes.reduce((sum, outcome) => sum + Math.max(0, Number(outcome.chance) || 0) * 100, 0);
-    if (totalPercent > 100) {
-      throw new Error(`イベントの当選確率合計が100%を超えています: ${card.dataset.eventName || "イベント"}`);
-    }
-
+    const typeSelect = card.querySelector('[data-field="eventType"]');
+    const eventType = typeSelect?.value || "draw";
     const nameInput = card.querySelector('[data-field="name"]');
     const targetSelect = card.querySelector('[data-field="targetTraining"]');
     const thresholdInput = card.querySelector('[data-field="threshold"]');
     const enabledInput = card.querySelector('[data-field="enabled"]');
-
-    const typeSelect = card.querySelector('[data-field="eventType"]');
     const maxQuestionsInput = card.querySelector('[data-field="maxQuestions"]');
     const rewardMinutesSelect = card.querySelector('[data-field="rewardMinutes"]');
     const startImageInput = card.querySelector('[data-field="startImage"]');
+
+    let outcomes = [];
+    if (eventType === "draw") {
+      const outcomeInputs = [...card.querySelectorAll('[data-field="outcomePercent"]')];
+      outcomes = outcomeInputs.map((input) => {
+        const minutes = Number(input.dataset.outcomeMinutes || 0);
+        const chancePercent = Number(input.value || 0);
+        return { minutes, chance: percentToChance(chancePercent) };
+      }).filter((entry) => Number.isFinite(entry.minutes) && entry.minutes >= 0);
+
+      const totalPercent = outcomes.reduce((sum, outcome) => sum + Math.max(0, Number(outcome.chance) || 0) * 100, 0);
+      if (totalPercent > 100) {
+        throw new Error(`イベントの当選確率合計が100%を超えています: ${card.dataset.eventName || "イベント"}`);
+      }
+    }
+
     const eventConfig = sanitizeGameTicketConfigEvent({
       id: card.dataset.eventId || undefined,
       name: nameInput?.value || "イベント",
-      type: typeSelect?.value || "draw",
+      type: eventType,
       targetTraining: targetSelect?.value || "challenge",
       threshold: Number(thresholdInput?.value ?? 0),
       enabled: Boolean(enabledInput?.checked),
@@ -648,7 +659,7 @@ function parseGameTicketSettingsFromUi() {
 }
 
 function renderGameTicketSettingsUi() {
-  const config = getGameTicketConfig();
+  const config = getUiGameTicketConfig();
   const rulesTableBody = document.getElementById("gameTicketRuleTableBody");
   const eventList = document.getElementById("gameTicketEventList");
   const announcementImageInput = document.getElementById("gameTicketAnnouncementImageInput");
@@ -743,6 +754,36 @@ function renderGameTicketSettingsUi() {
     const total = (event.outcomes || []).reduce((sum, outcome) => sum + (Number(outcome?.chance) || 0), 0);
     const missPercent = Math.max(0, Math.round((1 - total) * 100));
     const isConsecutiveChallenge = String(event.type || "draw") === "consecutiveCorrect";
+    const drawOutcomeMarkup = isConsecutiveChallenge ? "" : `
+      <div class="settings-game-ticket-outcome-list">
+        <p class="settings-game-ticket-outcome-title">当選内容</p>
+        ${(event.outcomes || []).map((outcome) => `
+          <label class="settings-game-ticket-outcome-row">
+            <span>${Number(outcome?.minutes) || 0}分券</span>
+            <div class="settings-game-ticket-inline-input">
+              <input type="number" data-field="outcomePercent" data-outcome-minutes="${Number(outcome?.minutes) || 0}" value="${chanceToPercent(outcome?.chance)}" min="0" max="100" step="1" />
+              <span>%</span>
+            </div>
+          </label>
+        `).join("") || "<p class='settings-game-ticket-empty'>当選内容がありません。</p>"}
+        <div class="settings-game-ticket-outcome-row settings-game-ticket-miss-row">
+          <span>ハズレ</span>
+          <strong data-field="missPercent">${missPercent}%</strong>
+        </div>
+      </div>
+    `;
+    const consecutiveFieldsMarkup = isConsecutiveChallenge ? `
+      <div class="settings-game-ticket-consecutive-fields" data-consecutive-fields>
+        <label>
+          <span>最大連続正解数</span>
+          <input type="number" data-field="maxQuestions" value="${Number(event.maxQuestions) || 5}" min="1" step="1" />
+        </label>
+        <label>
+          <span>1問正解ごとの報酬</span>
+          <select data-field="rewardMinutes">${rewardMinutesOptions}</select>
+        </label>
+      </div>
+    ` : "";
     return `
       <div class="settings-game-ticket-event-card${isConsecutiveChallenge ? " is-consecutive-challenge" : ""}" data-game-ticket-event-card data-event-id="${event.id || ""}" data-event-name="${escapeHtml(String(event.name || "イベント"))}">
         <div class="settings-game-ticket-event-header">
@@ -784,35 +825,9 @@ function renderGameTicketSettingsUi() {
               <input type="hidden" data-field="startImage" data-image-value value="${escapeHtml(String(event.startImage || ""))}" />
             </div>
           </label>
-          <div class="settings-game-ticket-consecutive-fields" data-consecutive-fields ${isConsecutiveChallenge ? "" : "hidden"}>
-            <label>
-              <span>最大連続正解数</span>
-              <input type="number" data-field="maxQuestions" value="${Number(event.maxQuestions) || 5}" min="1" step="1" />
-            </label>
-            <label>
-              <span>1問正解ごとの報酬</span>
-              <select data-field="rewardMinutes">${rewardMinutesOptions}</select>
-            </label>
-          </div>
+          ${consecutiveFieldsMarkup}
         </div>
-        ${isConsecutiveChallenge ? "" : `
-        <div class="settings-game-ticket-outcome-list">
-          <p class="settings-game-ticket-outcome-title">当選内容</p>
-          ${(event.outcomes || []).map((outcome) => `
-            <label class="settings-game-ticket-outcome-row">
-              <span>${Number(outcome?.minutes) || 0}分券</span>
-              <div class="settings-game-ticket-inline-input">
-                <input type="number" data-field="outcomePercent" data-outcome-minutes="${Number(outcome?.minutes) || 0}" value="${chanceToPercent(outcome?.chance)}" min="0" max="100" step="1" />
-                <span>%</span>
-              </div>
-            </label>
-          `).join("") || "<p class='settings-game-ticket-empty'>当選内容がありません。</p>"}
-          <div class="settings-game-ticket-outcome-row settings-game-ticket-miss-row">
-            <span>ハズレ</span>
-            <strong data-field="missPercent">${missPercent}%</strong>
-          </div>
-        </div>
-        `}
+        ${drawOutcomeMarkup}
       </div>
     `;
   }).join("");
