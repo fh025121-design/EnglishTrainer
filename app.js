@@ -404,6 +404,266 @@ function getModeKeyFromLabel(label) {
   if (normalized.includes("その他")) return "other";
   return "challenge";
 }
+
+function normalizeGameTicketTargetTraining(value) {
+  return ["challenge", "weakFocus", "other"].includes(String(value || "")) ? String(value) : "challenge";
+}
+
+function chanceToPercent(chanceValue) {
+  return Math.round(clampProbability(Number(chanceValue) || 0) * 100);
+}
+
+function percentToChance(percentValue) {
+  const value = Number(percentValue);
+  if (!Number.isFinite(value)) return 0;
+  return clampProbability(value / 100);
+}
+
+function buildDefaultGameTicketRuleEntry() {
+  return {
+    id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: "チケット",
+    targetTraining: "challenge",
+    threshold: 90,
+    minutes: 5,
+    chance: 0.5,
+    enabled: true,
+    dailyCap: 1
+  };
+}
+
+function buildDefaultGameTicketEventEntry() {
+  return {
+    id: `event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: "＜新規イベント＞",
+    targetTraining: "challenge",
+    threshold: 141,
+    enabled: true,
+    outcomes: [
+      { minutes: 30, chance: 0.3 },
+      { minutes: 60, chance: 0.1 }
+    ]
+  };
+}
+
+function buildGameTicketRuleSelectOptions(modeLabels) {
+  const labels = modeLabels && typeof modeLabels === "object" ? modeLabels : createDefaultGameTicketConfig().modeLabels;
+  return [
+    { value: "challenge", label: labels.challenge || "過去の間違い" },
+    { value: "weakFocus", label: labels.weakFocus || "苦手特訓" },
+    { value: "other", label: labels.other || "その他の特訓" }
+  ];
+}
+
+function parseGameTicketSettingsFromUi() {
+  const config = getGameTicketConfig();
+  const ruleRows = [...document.querySelectorAll("[data-game-ticket-rule-row]")];
+  const eventCards = [...document.querySelectorAll("[data-game-ticket-event-card]")];
+
+  const normalRules = ruleRows.map((row) => {
+    const thresholdInput = row.querySelector('[data-field="threshold"]');
+    const chanceInput = row.querySelector('[data-field="chancePercent"]');
+    const minuteSelect = row.querySelector('[data-field="minutes"]');
+    const targetSelect = row.querySelector('[data-field="targetTraining"]');
+    const enabledInput = row.querySelector('[data-field="enabled"]');
+
+    const threshold = Number(thresholdInput?.value ?? 0);
+    const chancePercent = Number(chanceInput?.value ?? 0);
+    const minutes = Number(minuteSelect?.value ?? 5);
+    const targetTraining = targetSelect?.value || "challenge";
+    const enabled = Boolean(enabledInput?.checked);
+
+    return sanitizeGameTicketConfigRule({
+      id: row.dataset.ruleId || undefined,
+      name: row.dataset.ruleName || "チケット",
+      targetTraining,
+      threshold,
+      minutes,
+      chance: percentToChance(chancePercent),
+      enabled,
+      dailyCap: 1
+    });
+  }).filter(Boolean);
+
+  const events = eventCards.map((card) => {
+    const outcomeInputs = [...card.querySelectorAll('[data-field="outcomePercent"]')];
+    const outcomes = outcomeInputs.map((input) => {
+      const minutes = Number(input.dataset.outcomeMinutes || 0);
+      const chancePercent = Number(input.value || 0);
+      return { minutes, chance: percentToChance(chancePercent) };
+    }).filter((entry) => Number.isFinite(entry.minutes) && entry.minutes >= 0);
+
+    const totalPercent = outcomes.reduce((sum, outcome) => sum + Math.max(0, Number(outcome.chance) || 0) * 100, 0);
+    if (totalPercent > 100) {
+      throw new Error(`イベントの当選確率合計が100%を超えています: ${card.dataset.eventName || "イベント"}`);
+    }
+
+    const nameInput = card.querySelector('[data-field="name"]');
+    const targetSelect = card.querySelector('[data-field="targetTraining"]');
+    const thresholdInput = card.querySelector('[data-field="threshold"]');
+    const enabledInput = card.querySelector('[data-field="enabled"]');
+
+    const eventConfig = sanitizeGameTicketConfigEvent({
+      id: card.dataset.eventId || undefined,
+      name: nameInput?.value || "イベント",
+      targetTraining: targetSelect?.value || "challenge",
+      threshold: Number(thresholdInput?.value ?? 0),
+      enabled: Boolean(enabledInput?.checked),
+      outcomes
+    });
+    return eventConfig;
+  }).filter(Boolean);
+
+  const merged = sanitizeGameTicketConfig({
+    ...config,
+    normalRules,
+    events,
+    dailyCap: Math.max(1, Number(config.dailyCap) || 2)
+  });
+  if (!merged.normalRules.length && !merged.events.length) {
+    return sanitizeGameTicketConfig(createDefaultGameTicketConfig());
+  }
+  return merged;
+}
+
+function renderGameTicketSettingsUi() {
+  const config = getGameTicketConfig();
+  const rulesTableBody = document.getElementById("gameTicketRuleTableBody");
+  const eventList = document.getElementById("gameTicketEventList");
+  if (!rulesTableBody || !eventList) return;
+
+  const options = buildGameTicketRuleSelectOptions(config.modeLabels);
+  const targetTrainingHtml = options.map((option) => `<option value="${option.value}">${option.label}</option>`).join("");
+  const minutesOptions = [5, 15, 30, 60].map((minutes) => `<option value="${minutes}">${minutes}分</option>`).join("");
+
+  rulesTableBody.innerHTML = (config.normalRules || []).map((rule) => `
+    <tr data-game-ticket-rule-row data-rule-id="${rule.id || ""}" data-rule-name="${escapeHtml(String(rule.name || "チケット"))}">
+      <td>
+        <select data-field="targetTraining">${targetTrainingHtml}</select>
+      </td>
+      <td><input type="number" data-field="threshold" value="${Number(rule.threshold) || 0}" min="0" step="1" /></td>
+      <td><input type="number" data-field="chancePercent" value="${chanceToPercent(rule.chance)}" min="0" max="100" step="1" />%</td>
+      <td>
+        <select data-field="minutes">${minutesOptions}</select>
+      </td>
+      <td><input type="checkbox" data-field="enabled" ${rule.enabled ? "checked" : ""} /></td>
+      <td><button type="button" class="ghost-btn compact-btn" data-action="remove-rule">削除</button></td>
+    </tr>
+  `).join("");
+
+  rulesTableBody.querySelectorAll("[data-game-ticket-rule-row]").forEach((row) => {
+    const rule = (config.normalRules || []).find((entry) => String(entry.id || "") === String(row.dataset.ruleId || "")) || {};
+    row.querySelector('[data-field="targetTraining"]').value = normalizeGameTicketTargetTraining(rule.targetTraining || "challenge");
+    row.querySelector('[data-field="minutes"]').value = String(rule.minutes || 5);
+    row.querySelector('[data-field="enabled"]').checked = Boolean(rule.enabled !== false);
+  });
+
+  eventList.innerHTML = (config.events || []).map((event) => {
+    const total = (event.outcomes || []).reduce((sum, outcome) => sum + (Number(outcome?.chance) || 0), 0);
+    const missPercent = Math.max(0, Math.round((1 - total) * 100));
+    return `
+      <div class="settings-game-ticket-event-card" data-game-ticket-event-card data-event-id="${event.id || ""}" data-event-name="${escapeHtml(String(event.name || "イベント"))}">
+        <div class="settings-game-ticket-event-header">
+          <input type="text" data-field="name" value="${escapeHtml(String(event.name || "イベント"))}" />
+          <button type="button" class="ghost-btn compact-btn" data-action="remove-event">削除</button>
+        </div>
+        <div class="settings-game-ticket-event-fields">
+          <label>
+            <span>対象特訓</span>
+            <select data-field="targetTraining">${targetTrainingHtml}</select>
+          </label>
+          <label>
+            <span>必要ポイント</span>
+            <div class="settings-game-ticket-inline-input">
+              <input type="number" data-field="threshold" value="${Number(event.threshold) || 0}" min="0" step="1" />
+              <span>P</span>
+            </div>
+          </label>
+          <label class="settings-game-ticket-checkbox-row">
+            <span>有効</span>
+            <input type="checkbox" data-field="enabled" ${event.enabled ? "checked" : ""} />
+          </label>
+        </div>
+        <div class="settings-game-ticket-outcome-list">
+          <p class="settings-game-ticket-outcome-title">当選内容</p>
+          ${(event.outcomes || []).map((outcome) => `
+            <label class="settings-game-ticket-outcome-row">
+              <span>${Number(outcome?.minutes) || 0}分券</span>
+              <div class="settings-game-ticket-inline-input">
+                <input type="number" data-field="outcomePercent" data-outcome-minutes="${Number(outcome?.minutes) || 0}" value="${chanceToPercent(outcome?.chance)}" min="0" max="100" step="1" />
+                <span>%</span>
+              </div>
+            </label>
+          `).join("") || "<p class='settings-game-ticket-empty'>当選内容がありません。</p>"}
+          <div class="settings-game-ticket-outcome-row settings-game-ticket-miss-row">
+            <span>ハズレ</span>
+            <strong data-field="missPercent">${missPercent}%</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  eventList.querySelectorAll("[data-game-ticket-event-card]").forEach((card) => {
+    const event = (config.events || []).find((entry) => String(entry.id || "") === String(card.dataset.eventId || "")) || {};
+    card.querySelector('[data-field="targetTraining"]').value = normalizeGameTicketTargetTraining(event.targetTraining || "challenge");
+    card.querySelector('[data-field="enabled"]').checked = Boolean(event.enabled !== false);
+    const missValue = card.querySelector('[data-field="missPercent"]');
+    if (missValue) {
+      const total = (event.outcomes || []).reduce((sum, outcome) => sum + (Number(outcome?.chance) || 0), 0);
+      missValue.textContent = `${Math.max(0, Math.round((1 - total) * 100))}%`;
+    }
+  });
+
+  rulesTableBody.querySelectorAll("[data-action='remove-rule']").forEach((button) => {
+    button.addEventListener("click", () => {
+      const row = button.closest("[data-game-ticket-rule-row]");
+      if (!row) return;
+      const id = String(row.dataset.ruleId || "");
+      const existing = getGameTicketConfig().normalRules || [];
+      const nextRules = existing.filter((rule) => String(rule.id || "") !== id);
+      state.settings.gameTicketConfig = sanitizeGameTicketConfig({ ...getGameTicketConfig(), normalRules: nextRules });
+      renderGameTicketSettingsUi();
+    });
+  });
+
+  eventList.querySelectorAll("[data-action='remove-event']").forEach((button) => {
+    button.addEventListener("click", () => {
+      const card = button.closest("[data-game-ticket-event-card]");
+      if (!card) return;
+      const id = String(card.dataset.eventId || "");
+      const existing = getGameTicketConfig().events || [];
+      const nextEvents = existing.filter((event) => String(event.id || "") !== id);
+      state.settings.gameTicketConfig = sanitizeGameTicketConfig({ ...getGameTicketConfig(), events: nextEvents });
+      renderGameTicketSettingsUi();
+    });
+  });
+
+  const syncOutcomeRowDisplay = (card) => {
+    const totalPercent = [...card.querySelectorAll('[data-field="outcomePercent"]')].reduce((sum, input) => sum + Math.max(0, Number(input.value || 0)), 0);
+    const missText = card.querySelector('[data-field="missPercent"]');
+    if (missText) {
+      missText.textContent = `${Math.max(0, 100 - totalPercent)}%`;
+    }
+  };
+
+  eventList.querySelectorAll('[data-field="outcomePercent"]').forEach((input) => {
+    input.addEventListener("input", (event) => {
+      const card = event.target.closest("[data-game-ticket-event-card]");
+      if (card) {
+        syncOutcomeRowDisplay(card);
+      }
+    });
+  });
+}
+
+function saveGameTicketSettingsFromUi() {
+  const config = parseGameTicketSettingsFromUi();
+  state.settings.gameTicketConfig = config;
+  saveState();
+  renderGameTicketSettingsUi();
+  return config;
+}
 const GAME_TICKET_DAY_MS = 24 * 60 * 60 * 1000;
 const POINT_SYSTEM_STORAGE_KEY = "english-trainer-pc-points-v1";
 const POINT_SYSTEM_CONFIG = Object.freeze({
@@ -13715,9 +13975,9 @@ function bindEvents() {
   const trainingChimePickerModal = document.getElementById("trainingChimePickerModal");
   const trainingChimePickerCurrentText = document.getElementById("trainingChimePickerCurrentText");
   const trainingChimePresetButtons = [...document.querySelectorAll("[data-training-chime-preset]")];
-  const gameTicketSettingsEditor = document.getElementById("gameTicketSettingsEditor");
+  const addGameTicketRuleBtn = document.getElementById("addGameTicketRuleBtn");
+  const addGameTicketEventBtn = document.getElementById("addGameTicketEventBtn");
   const gameTicketSettingsSaveBtn = document.getElementById("gameTicketSettingsSaveBtn");
-  const gameTicketSettingsResetBtn = document.getElementById("gameTicketSettingsResetBtn");
   const typingControls = [
     typingAudioRepeatSelect,
     typingAudioRateSelect,
@@ -13727,45 +13987,35 @@ function bindEvents() {
     typingDelayJudgeToNextSelect
   ];
 
-  if (gameTicketSettingsEditor) {
-    const syncGameTicketConfigEditor = () => {
+  if (addGameTicketRuleBtn) {
+    addGameTicketRuleBtn.addEventListener("click", () => {
       const config = getGameTicketConfig();
-      gameTicketSettingsEditor.value = JSON.stringify(config, null, 2);
-    };
+      const nextRules = [...(config.normalRules || []), buildDefaultGameTicketRuleEntry()];
+      state.settings.gameTicketConfig = sanitizeGameTicketConfig({ ...config, normalRules: nextRules });
+      renderGameTicketSettingsUi();
+    });
+  }
 
-    gameTicketSettingsEditor.addEventListener("change", () => {
+  if (addGameTicketEventBtn) {
+    addGameTicketEventBtn.addEventListener("click", () => {
+      const config = getGameTicketConfig();
+      const nextEvents = [...(config.events || []), buildDefaultGameTicketEventEntry()];
+      state.settings.gameTicketConfig = sanitizeGameTicketConfig({ ...config, events: nextEvents });
+      renderGameTicketSettingsUi();
+    });
+  }
+
+  if (gameTicketSettingsSaveBtn) {
+    gameTicketSettingsSaveBtn.addEventListener("click", () => {
       try {
-        const parsed = JSON.parse(gameTicketSettingsEditor.value || "{}");
-        state.settings.gameTicketConfig = sanitizeGameTicketConfig(parsed);
-        saveState();
+        saveGameTicketSettingsFromUi();
       } catch (error) {
-        console.warn("Invalid game ticket config JSON", error);
+        alert(error?.message || "ゲームチケット設定に不正な値が含まれています。");
       }
     });
-
-    if (gameTicketSettingsSaveBtn) {
-      gameTicketSettingsSaveBtn.addEventListener("click", () => {
-        try {
-          const parsed = JSON.parse(gameTicketSettingsEditor.value || "{}");
-          state.settings.gameTicketConfig = sanitizeGameTicketConfig(parsed);
-          saveState();
-          syncGameTicketConfigEditor();
-        } catch (error) {
-          console.warn("Invalid game ticket config JSON", error);
-        }
-      });
-    }
-
-    if (gameTicketSettingsResetBtn) {
-      gameTicketSettingsResetBtn.addEventListener("click", () => {
-        state.settings.gameTicketConfig = sanitizeGameTicketConfig(createDefaultGameTicketConfig());
-        saveState();
-        syncGameTicketConfigEditor();
-      });
-    }
-
-    syncGameTicketConfigEditor();
   }
+
+  renderGameTicketSettingsUi();
 
   if (typingControls.every((control) => Boolean(control))) {
     const delayValues = Array.from({ length: 11 }, (_, index) => (index / 10).toFixed(1));

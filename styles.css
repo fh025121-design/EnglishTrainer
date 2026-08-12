@@ -407,6 +407,165 @@ p {
   font-size: 0.8rem;
 }
 
+.settings-game-ticket-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-game-ticket-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-game-ticket-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.settings-game-ticket-header-row h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.settings-game-ticket-table-wrap {
+  overflow-x: auto;
+}
+
+.settings-game-ticket-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 620px;
+}
+
+.settings-game-ticket-table th,
+.settings-game-ticket-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  vertical-align: middle;
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.settings-game-ticket-table input,
+.settings-game-ticket-table select,
+.settings-game-ticket-event-card input,
+.settings-game-ticket-event-card select {
+  width: 100%;
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  padding: 6px 8px;
+}
+
+.settings-game-ticket-table input[type="checkbox"],
+.settings-game-ticket-event-card input[type="checkbox"] {
+  width: 18px;
+  min-height: 18px;
+  accent-color: var(--accent);
+}
+
+.settings-game-ticket-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-game-ticket-event-card {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-game-ticket-event-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.settings-game-ticket-event-header input {
+  flex: 1;
+}
+
+.settings-game-ticket-event-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.settings-game-ticket-event-fields label,
+.settings-game-ticket-outcome-row,
+.settings-game-ticket-outcome-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.settings-game-ticket-checkbox-row {
+  justify-content: center;
+}
+
+.settings-game-ticket-inline-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-game-ticket-inline-input input {
+  flex: 1;
+}
+
+.settings-game-ticket-outcome-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-game-ticket-outcome-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.settings-game-ticket-miss-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
+}
+
+.settings-game-ticket-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.settings-game-ticket-actions {
+  margin-top: 4px;
+}
+
+.compact-btn {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
 .settings-studycore-wrap {
   margin-top: 14px;
   margin-bottom: 14px;

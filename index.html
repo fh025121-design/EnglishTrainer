@@ -275,11 +275,38 @@
             </div>
             <div class="settings-typing-wrap" aria-label="ゲームチケット設定">
               <h3 class="settings-section-title">ゲームチケット設定</h3>
-              <p class="settings-studycore-note">対象特訓・ポイント・確率・チケット時間・1日上限を設定できます。JSONで保存されます。</p>
-              <textarea id="gameTicketSettingsEditor" class="settings-update-password-input" rows="20" style="width:100%; min-height: 300px; resize: vertical;"></textarea>
-              <div class="settings-backup-wrap" aria-label="ゲームチケット設定操作">
-                <button id="gameTicketSettingsSaveBtn" class="secondary-btn settings-backup-btn" type="button">ゲームチケット設定を保存</button>
-                <button id="gameTicketSettingsResetBtn" class="ghost-btn settings-backup-btn" type="button">初期設定に戻す</button>
+              <div class="settings-game-ticket-panel">
+                <div class="settings-game-ticket-section">
+                  <div class="settings-game-ticket-header-row">
+                    <h4>通常チケット</h4>
+                    <button id="addGameTicketRuleBtn" class="secondary-btn compact-btn" type="button">＋ 条件を追加</button>
+                  </div>
+                  <div class="settings-game-ticket-table-wrap">
+                    <table class="settings-game-ticket-table">
+                      <thead>
+                        <tr>
+                          <th>対象特訓</th>
+                          <th>ポイント</th>
+                          <th>確率</th>
+                          <th>チケット</th>
+                          <th>有効</th>
+                          <th>削除</th>
+                        </tr>
+                      </thead>
+                      <tbody id="gameTicketRuleTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="settings-game-ticket-section">
+                  <div class="settings-game-ticket-header-row">
+                    <h4>イベント設定</h4>
+                    <button id="addGameTicketEventBtn" class="secondary-btn compact-btn" type="button">＋ イベントを追加</button>
+                  </div>
+                  <div id="gameTicketEventList" class="settings-game-ticket-event-list"></div>
+                </div>
+                <div class="settings-game-ticket-actions">
+                  <button id="gameTicketSettingsSaveBtn" class="primary-btn" type="button">ゲームチケット設定を保存</button>
+                </div>
               </div>
             </div>
             <div class="settings-backup-wrap" aria-label="学習記録バックアップ操作">
