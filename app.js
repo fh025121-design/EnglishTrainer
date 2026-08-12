@@ -2513,6 +2513,7 @@ function createDefaultGameTicketStats() {
     earnedHistory: [],
     usageHistory: [],
     pendingRewards: [],
+    shownRewardIds: [],
     dailyGrantByMinutes: {},
     challengeTicketStateByDate: {}
   };
@@ -4803,6 +4804,9 @@ function sanitizeGameTicketStats(value) {
     pendingRewards: Array.isArray(source.pendingRewards)
       ? source.pendingRewards.map(sanitizeGameTicketRewardEntry).filter(Boolean)
       : [],
+    shownRewardIds: Array.isArray(source.shownRewardIds)
+      ? [...new Set(source.shownRewardIds.map((id) => String(id)).filter((id) => id))].slice(-200)
+      : [],
     dailyGrantByMinutes,
     challengeTicketStateByDate: source.challengeTicketStateByDate && typeof source.challengeTicketStateByDate === "object"
       ? Object.fromEntries(
@@ -6262,8 +6266,12 @@ function isDesktopGameTicketEnabled() {
 
 function ensureGameTicketState() {
   if (!state?.stats) return createDefaultGameTicketStats();
-  state.stats.gameTickets = sanitizeGameTicketStats(state.stats.gameTickets);
-  return state.stats.gameTickets;
+  const current = state.stats.gameTickets || createDefaultGameTicketStats();
+  const safeStore = sanitizeGameTicketStats(current);
+  Object.keys(current).forEach((key) => delete current[key]);
+  Object.assign(current, safeStore);
+  state.stats.gameTickets = current;
+  return current;
 }
 
 function getGameTicketDailyGrantCounters(store, dayKey = todayKey(), options = {}) {
@@ -6538,14 +6546,70 @@ function shouldAwardRandomGameTicket(chance) {
 let pendingChallengeTicketChanceQueue = [];
 let shownGameTicketRewardIds = new Set();
 
-function isGameTicketRewardAlreadyShown(ticket) {
-  if (!ticket || !ticket.id) return false;
-  return shownGameTicketRewardIds.has(String(ticket.id));
+function getShownGameTicketRewardIdSet(store = ensureGameTicketState()) {
+  const stateStore = store || ensureGameTicketState();
+  const merged = new Set(Array.isArray(stateStore?.shownRewardIds)
+    ? stateStore.shownRewardIds.map((id) => String(id)).filter(Boolean)
+    : []);
+  const seedSet = (value) => {
+    if (!value) return;
+    if (value instanceof Set) {
+      for (const id of value) merged.add(String(id));
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((id) => merged.add(String(id)));
+    }
+  };
+  seedSet(shownGameTicketRewardIds);
+  if (typeof globalThis !== "undefined") seedSet(globalThis.shownGameTicketRewardIds);
+  if (typeof window !== "undefined") seedSet(window.shownGameTicketRewardIds);
+  shownGameTicketRewardIds = merged;
+  if (typeof globalThis !== "undefined") {
+    globalThis.shownGameTicketRewardIds = merged;
+  }
+  if (typeof window !== "undefined") {
+    window.shownGameTicketRewardIds = merged;
+  }
+  if (stateStore) {
+    stateStore.shownRewardIds = Array.from(merged).slice(-200);
+  }
+  return merged;
 }
 
-function markGameTicketRewardShown(ticket) {
+function isGameTicketRewardAlreadyShown(ticket, store = ensureGameTicketState()) {
+  if (!ticket || !ticket.id) return false;
+  return getShownGameTicketRewardIdSet(store).has(String(ticket.id));
+}
+
+function markGameTicketRewardShown(ticket, store = ensureGameTicketState()) {
   if (ticket && ticket.id) {
-    shownGameTicketRewardIds.add(String(ticket.id));
+    const set = getShownGameTicketRewardIdSet(store);
+    set.add(String(ticket.id));
+    shownGameTicketRewardIds = set;
+    if (typeof globalThis !== "undefined") {
+      globalThis.shownGameTicketRewardIds = set;
+    }
+    if (typeof window !== "undefined") {
+      window.shownGameTicketRewardIds = set;
+    }
+    if (store) {
+      store.shownRewardIds = Array.from(set).slice(-200);
+    }
+  }
+}
+
+function removeShownPendingGameTicketRewards(store = ensureGameTicketState()) {
+  if (!store || !Array.isArray(store.pendingRewards)) return;
+  const set = getShownGameTicketRewardIdSet(store);
+  const beforeLength = store.pendingRewards.length;
+  const filtered = store.pendingRewards.filter((reward) => {
+    if (!reward || !reward.id) return true;
+    return !set.has(String(reward.id));
+  });
+  if (beforeLength !== filtered.length) {
+    store.pendingRewards = filtered;
+    markGameTicketSyncDirty();
   }
 }
 
@@ -7317,10 +7381,11 @@ function showChallengeEventAnnouncementImage(eventConfig, onContinue) {
   };
 }
 
-function showGameTicketModal(ticket) {
-  if (!ticket || (ticket.id && isGameTicketRewardAlreadyShown(ticket))) return;
+function showGameTicketModal(ticket, store = ensureGameTicketState()) {
+  if (!ticket || (ticket.id && isGameTicketRewardAlreadyShown(ticket, store))) return;
   if (ticket && ticket.id) {
-    markGameTicketRewardShown(ticket);
+    markGameTicketRewardShown(ticket, store);
+    removeShownPendingGameTicketRewards(store);
   }
   if (!isDesktopGameTicketEnabled()) return;
   const modal = document.getElementById("gameTicketModal");
@@ -7467,12 +7532,13 @@ function showImmediateGameTicketReward(ticket) {
 }
 
 function showPendingGameTicketModalIfAny() {
+  const store = ensureGameTicketState();
+  removeShownPendingGameTicketRewards(store);
   if (deferGameTicketRewardModal) return;
   if (!isDesktopGameTicketEnabled()) return;
-  const store = ensureGameTicketState();
   const pending = Array.isArray(store.pendingRewards) ? store.pendingRewards[0] : null;
-  if (!pending || isGameTicketRewardAlreadyShown(pending)) return;
-  showGameTicketModal(pending);
+  if (!pending || isGameTicketRewardAlreadyShown(pending, store)) return;
+  showGameTicketModal(pending, store);
 }
 
 function getTrainingCompletionModeLabel(mode) {
@@ -7649,10 +7715,12 @@ function dismissCurrentGameTicketReward() {
   if (Array.isArray(store.pendingRewards) && store.pendingRewards.length) {
     const firstReward = store.pendingRewards[0];
     if (firstReward && firstReward.id) {
-      markGameTicketRewardShown(firstReward);
+      markGameTicketRewardShown(firstReward, store);
       removeShownPendingGameTicketRewards(store);
     }
-    store.pendingRewards.shift();
+    if (store.pendingRewards.length) {
+      store.pendingRewards.shift();
+    }
   }
   const modal = document.getElementById("gameTicketModal");
   if (modal) {
