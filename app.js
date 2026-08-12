@@ -2938,7 +2938,44 @@ function getPcLearningHistorySummaryRowLabel(entry, options = {}) {
 }
 
 function getLearningHistoryModeBucket(modeOrEntry) {
-  return window.LearningHistoryDisplayShared?.getPcModeBucket(modeOrEntry) || { key: "mode:不明", label: "不明" };
+  const sharedBucket = window.LearningHistoryDisplayShared?.getPcModeBucket(modeOrEntry);
+  if (sharedBucket && typeof sharedBucket === "object" && sharedBucket.key) {
+    return sharedBucket;
+  }
+
+  const entryLike = modeOrEntry && typeof modeOrEntry === "object" ? modeOrEntry : null;
+  const mode = entryLike ? entryLike.mode : modeOrEntry;
+  const rawMode = String(mode || "").trim();
+  const lowered = rawMode.toLowerCase();
+
+  if (!rawMode) {
+    return { key: "mode:不明", label: "不明" };
+  }
+  if (rawMode === "Day" || rawMode === "Day学習" || rawMode === "normal" || lowered === "normal") {
+    return { key: "day", label: "Day学習" };
+  }
+  if (rawMode === "追加特訓" || rawMode === "extraTraining" || lowered === "extratraining" || lowered === "extra-training") {
+    return { key: "extra", label: "追加特訓" };
+  }
+  if (rawMode === "過去の間違い" || rawMode === "challenge" || rawMode === "review" || lowered === "review") {
+    return { key: "review", label: "過去の間違い" };
+  }
+  if (rawMode === "前置詞特訓" || rawMode === "preposition" || rawMode === "preposition-training" || lowered === "preposition-training") {
+    return { key: "preposition", label: "前置詞特訓" };
+  }
+  if (rawMode === "応答文特訓" || rawMode === "response" || rawMode === "response-training" || lowered === "response-training") {
+    return { key: "response", label: "応答文特訓" };
+  }
+  if (rawMode === "不規則動詞特訓" || rawMode === "irregular-verb" || rawMode === "irregular-verb-training" || lowered === "irregular-verb-training") {
+    return { key: "irregularVerb", label: "不規則動詞特訓" };
+  }
+  if (rawMode.includes("熟語") || lowered.includes("phrase") || lowered.includes("idiom")) {
+    return { key: "phrase", label: "熟語特訓" };
+  }
+  if (rawMode.includes("単語") || lowered.includes("word")) {
+    return { key: "word", label: "単語特訓" };
+  }
+  return { key: `mode:${rawMode}`, label: rawMode };
 }
 
 function getLearningHistoryModeGroup(mode) {
@@ -5845,6 +5882,10 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
           showGameTicketModal(ticket);
         }, 500);
       }
+    } else if (typeof showGameTicketModal === "function") {
+      setTimeout(() => {
+        showGameTicketModal({ minutes: 0, type: "miss" });
+      }, 500);
     }
   };
 
@@ -5889,6 +5930,10 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
           showGameTicketModal(rescueTicket);
         }, 500);
       }
+    } else if (typeof showGameTicketModal === "function") {
+      setTimeout(() => {
+        showGameTicketModal({ minutes: 0, type: "miss" });
+      }, 500);
     }
   }
 
@@ -6369,17 +6414,25 @@ function showGameTicketModal(ticket) {
   const bodyText = document.getElementById("gameTicketBodyText");
   const introText = document.getElementById("gameTicketIntroText");
   const thirtyPoster = document.getElementById("gameTicketThirtyPoster");
+  const posterValue = document.getElementById("gameTicketPosterValue");
+  const posterTicketValue = document.getElementById("gameTicketPosterTicketValue");
+  const posterCaption = document.getElementById("gameTicketPosterCaption");
   if (!modal || !titleText || !minutesText || !bodyText || !introText || !thirtyPoster) return;
   const minutes = Math.max(0, Math.floor(Number(ticket?.minutes) || 0));
   const isThirtyMinuteTicket = minutes === 30;
   const isSixtyMinuteTicket = minutes === 60;
-  modal.classList.toggle("ticket-reward-card-30", isThirtyMinuteTicket);
-  thirtyPoster.classList.toggle("hidden", !isThirtyMinuteTicket);
-  thirtyPoster.setAttribute("aria-hidden", isThirtyMinuteTicket ? "false" : "true");
-  titleText.classList.toggle("hidden", isThirtyMinuteTicket);
-  minutesText.classList.toggle("ticket-reward-30-minutes", isThirtyMinuteTicket);
-  bodyText.classList.toggle("ticket-reward-30-get", isThirtyMinuteTicket);
-  introText.classList.toggle("hidden", isThirtyMinuteTicket);
+  const isMissTicket = ticket && ticket.type === "miss" || minutes === 0;
+  const shouldUsePoster = isThirtyMinuteTicket || isSixtyMinuteTicket;
+  modal.classList.toggle("ticket-reward-card-30", shouldUsePoster);
+  thirtyPoster.classList.toggle("hidden", !shouldUsePoster);
+  thirtyPoster.setAttribute("aria-hidden", shouldUsePoster ? "false" : "true");
+  titleText.classList.toggle("hidden", shouldUsePoster || isMissTicket);
+  minutesText.classList.toggle("ticket-reward-30-minutes", shouldUsePoster);
+  bodyText.classList.toggle("ticket-reward-30-get", shouldUsePoster);
+  introText.classList.toggle("hidden", shouldUsePoster || isMissTicket);
+  if (posterValue) posterValue.textContent = String(minutes);
+  if (posterTicketValue) posterTicketValue.textContent = String(minutes);
+  if (posterCaption) posterCaption.textContent = `${minutes}分券を獲得しました！`;
   if (ticket.type === "streakBonus") {
     titleText.textContent = "🔥 連続学習ボーナス";
     minutesText.textContent = `${minutes}分券を獲得しました！`;
@@ -6388,7 +6441,12 @@ function showGameTicketModal(ticket) {
     titleText.textContent = "🎉 初回ボーナス！ 追加特訓を3回達成しました";
     minutesText.textContent = "ゲームチケット 5分券を獲得！";
     bodyText.textContent = "";
-  } else if (isThirtyMinuteTicket) {
+  } else if (isMissTicket) {
+    titleText.textContent = "😵 はずれ";
+    minutesText.textContent = "今回ははずれました";
+    bodyText.textContent = "また挑戦して、次はラッキーを狙いましょう。";
+    introText.textContent = "";
+  } else if (shouldUsePoster) {
     titleText.textContent = "";
     minutesText.textContent = "";
     bodyText.textContent = "";
@@ -6401,10 +6459,10 @@ function showGameTicketModal(ticket) {
     minutesText.textContent = `${minutes}分券を獲得しました！`;
     bodyText.textContent = "追加特訓、よく頑張りました。";
   }
-  introText.textContent = isThirtyMinuteTicket ? "" : "📷 スクリーンショットを撮って、保護者に見せましょう。";
+  introText.textContent = shouldUsePoster || isMissTicket ? "" : "📷 スクリーンショットを撮って、保護者に見せましょう。";
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
-  if (isThirtyMinuteTicket) {
+  if (shouldUsePoster) {
     playGameTicketThirtyFanfare();
   }
 }
@@ -6676,6 +6734,12 @@ function dismissCurrentGameTicketReward() {
     modal.setAttribute("aria-hidden", "true");
   }
   persistGameTicketState();
+  if (state?.session && state.session.mode === "challenge") {
+    const currentChallengeSession = state.session;
+    if (currentChallengeSession && currentChallengeSession.isSessionCompleted === false && !currentChallengeSession.isFinishingSession) {
+      currentChallengeSession.awaitingChallengeTicketResume = false;
+    }
+  }
   showPendingGameTicketModalIfAny();
 }
 
