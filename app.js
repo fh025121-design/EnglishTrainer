@@ -795,7 +795,8 @@ function renderGameTicketSettingsUi() {
             </label>
           </div>
         </div>
-        <div class="settings-game-ticket-outcome-list${isConsecutiveChallenge ? " hidden" : ""}">
+        ${isConsecutiveChallenge ? "" : `
+        <div class="settings-game-ticket-outcome-list">
           <p class="settings-game-ticket-outcome-title">当選内容</p>
           ${(event.outcomes || []).map((outcome) => `
             <label class="settings-game-ticket-outcome-row">
@@ -811,6 +812,7 @@ function renderGameTicketSettingsUi() {
             <strong data-field="missPercent">${missPercent}%</strong>
           </div>
         </div>
+        `}
       </div>
     `;
   }).join("");
