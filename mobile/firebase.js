@@ -229,6 +229,7 @@ function createDefaultMobilePointState() {
     reviewSpeakingPointsByDate: {},
     reviewSpeakingCountByDate: {},
     wordOrderPointsByDate: {},
+    translationTrainingPointsByDate: {},
     dailyEarnedByDate: {},
     dailyEarnedByModeByDate: {},
     todayEarned: 0,
@@ -268,6 +269,7 @@ function sanitizeMobilePointState(value) {
     reviewSpeakingPointsByDate: sanitizePointDayMap(source.reviewSpeakingPointsByDate),
     reviewSpeakingCountByDate: sanitizePointDayMap(source.reviewSpeakingCountByDate),
     wordOrderPointsByDate: sanitizePointDayMap(source.wordOrderPointsByDate),
+    translationTrainingPointsByDate: sanitizePointDayMap(source.translationTrainingPointsByDate),
     dailyEarnedByDate: sanitizePointDayMap(source.dailyEarnedByDate),
     dailyEarnedByModeByDate: sanitizePointModeMapByDay(source.dailyEarnedByModeByDate),
     todayEarned: sanitizePointNumber(source.todayEarned),
@@ -287,18 +289,21 @@ function hydrateMobilePointState(state) {
   const todayFromDedicated =
     sanitizePointNumber(next.homeworkSpeakingPointsByDate?.[todayKey]) +
     sanitizePointNumber(next.reviewSpeakingPointsByDate?.[todayKey]) +
-    sanitizePointNumber(next.wordOrderPointsByDate?.[todayKey]);
+    sanitizePointNumber(next.wordOrderPointsByDate?.[todayKey]) +
+    sanitizePointNumber(next.translationTrainingPointsByDate?.[todayKey]);
   const previousFromDedicated =
     sanitizePointNumber(next.homeworkSpeakingPointsByDate?.[previousKey]) +
     sanitizePointNumber(next.reviewSpeakingPointsByDate?.[previousKey]) +
-    sanitizePointNumber(next.wordOrderPointsByDate?.[previousKey]);
+    sanitizePointNumber(next.wordOrderPointsByDate?.[previousKey]) +
+    sanitizePointNumber(next.translationTrainingPointsByDate?.[previousKey]);
   const todayFromLegacy = sanitizePointNumber(next.dailyEarnedByDate?.[todayKey]);
   const previousFromLegacy = sanitizePointNumber(next.dailyEarnedByDate?.[previousKey]);
 
   const dedicatedTotal =
     sumPointMap(next.homeworkSpeakingPointsByDate) +
     sumPointMap(next.reviewSpeakingPointsByDate) +
-    sumPointMap(next.wordOrderPointsByDate);
+    sumPointMap(next.wordOrderPointsByDate) +
+    sumPointMap(next.translationTrainingPointsByDate);
   const legacyTotal = sumPointMap(next.dailyEarnedByDate);
 
   next.todayEarned = Math.max(next.todayEarned, todayFromDedicated, todayFromLegacy);
@@ -339,6 +344,7 @@ function mergeMobilePointStateByMax(baseState, incomingState) {
     reviewSpeakingPointsByDate: mergePointDayMapByMax(base.reviewSpeakingPointsByDate, incoming.reviewSpeakingPointsByDate),
     reviewSpeakingCountByDate: mergePointDayMapByMax(base.reviewSpeakingCountByDate, incoming.reviewSpeakingCountByDate),
     wordOrderPointsByDate: mergePointDayMapByMax(base.wordOrderPointsByDate, incoming.wordOrderPointsByDate),
+    translationTrainingPointsByDate: mergePointDayMapByMax(base.translationTrainingPointsByDate, incoming.translationTrainingPointsByDate),
     dailyEarnedByDate: mergePointDayMapByMax(base.dailyEarnedByDate, incoming.dailyEarnedByDate),
     dailyEarnedByModeByDate: mergePointModeMapByDayMax(base.dailyEarnedByModeByDate, incoming.dailyEarnedByModeByDate),
     todayEarned: Math.max(base.todayEarned, incoming.todayEarned),

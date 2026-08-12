@@ -123,4 +123,10 @@ assert.strictEqual(
   "exchange page breakdown should show each training item separately"
 );
 
+const firebaseSource = fs.readFileSync(require("path").join(__dirname, "..", "mobile", "firebase.js"), "utf8");
+assert.ok(firebaseSource.includes("translationTrainingPointsByDate"), "mobile Firebase point state should include the translation-training map");
+assert.ok(firebaseSource.includes("sanitizePointDayMap(source.translationTrainingPointsByDate)"), "mobile Firebase point state should sanitize the translation-training point map");
+assert.ok(firebaseSource.includes("sumPointMap(next.translationTrainingPointsByDate)"), "mobile Firebase hydration should include translation-training totals in daily summary totals");
+assert.ok(firebaseSource.includes("mergePointDayMapByMax(base.translationTrainingPointsByDate, incoming.translationTrainingPointsByDate)"), "mobile Firebase merge logic should preserve translation-training points across syncs");
+
 console.log("point-state tests passed");
