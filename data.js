@@ -374,7 +374,7 @@
   { id: "D15-P03", day: 15, type: "phrase", japanese: "～に親切である", answer: "be kind to", hint: "", similar: [] },
   { id: "D15-P04", day: 15, type: "phrase", japanese: "夕食を食べる", answer: "have dinner", hint: "", similar: [] },
   { id: "D15-P05", day: 15, type: "phrase", japanese: "楽しく過ごす", answer: "have a good time", hint: "", similar: [] },
-  { id: "D16-W01", day: 16, type: "word", japanese: "朝食", answer: "brekfast", hint: "", similar: [] },
+  { id: "D16-W01", day: 16, type: "word", japanese: "朝食", answer: "breakfast", hint: "", similar: [] },
   { id: "D16-W02", day: 16, type: "word", japanese: "昼食", answer: "lunch", hint: "", similar: [] },
   { id: "D16-W03", day: 16, type: "word", japanese: "夕食", answer: "dinner", hint: "", similar: [] },
   { id: "D16-W04", day: 16, type: "word", japanese: "野菜", answer: "vegetable", hint: "", similar: [] },
