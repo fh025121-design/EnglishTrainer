@@ -4758,11 +4758,26 @@ function sanitizeGameTicketStats(value) {
   const dailyGrantByMinutes = source.dailyGrantByMinutes && typeof source.dailyGrantByMinutes === "object"
     ? Object.fromEntries(Object.entries(source.dailyGrantByMinutes).map(([dayKey, dayCounts]) => {
       const normalized = dayCounts && typeof dayCounts === "object" ? dayCounts : {};
+      const scopedTargetEntries = normalized.__scoped && typeof normalized.__scoped === "object"
+        ? Object.fromEntries(Object.entries(normalized.__scoped).map(([targetKey, nested]) => {
+          const scopedEntry = nested && typeof nested === "object" ? nested : {};
+          const targetP = scopedEntry.targetP && typeof scopedEntry.targetP === "object" ? scopedEntry.targetP : {};
+          return [String(targetKey), {
+            targetP: {
+              5: Math.max(0, Number(targetP[5]) || 0),
+              15: Math.max(0, Number(targetP[15]) || 0),
+              30: Math.max(0, Number(targetP[30]) || 0),
+              60: Math.max(0, Number(targetP[60]) || 0)
+            }
+          }];
+        }))
+        : {};
       return [String(dayKey), {
         5: Math.max(0, Number(normalized[5]) || 0),
         15: Math.max(0, Number(normalized[15]) || 0),
         30: Math.max(0, Number(normalized[30]) || 0),
-        60: Math.max(0, Number(normalized[60]) || 0)
+        60: Math.max(0, Number(normalized[60]) || 0),
+        __scoped: Object.keys(scopedTargetEntries).length ? scopedTargetEntries : {}
       }];
     }))
     : {};
@@ -6251,24 +6266,31 @@ function ensureGameTicketState() {
   return state.stats.gameTickets;
 }
 
-function getGameTicketDailyGrantCounters(store, dayKey = todayKey()) {
+function getGameTicketDailyGrantCounters(store, dayKey = todayKey(), options = {}) {
   const safeStore = sanitizeGameTicketStats(store || ensureGameTicketState());
   const grantDayKey = String(dayKey || todayKey());
   const dayCounts = safeStore.dailyGrantByMinutes?.[grantDayKey] && typeof safeStore.dailyGrantByMinutes[grantDayKey] === "object"
     ? safeStore.dailyGrantByMinutes[grantDayKey]
     : {};
+  const scope = options && typeof options === "object" ? options : {};
+  const targetTraining = typeof scope.targetTraining === "string" && scope.targetTraining ? scope.targetTraining : null;
+  const derivedFromTargetTrainingPoints = Boolean(scope.derivedFromTargetTrainingPoints);
+  const scopedTargetCounts = targetTraining && derivedFromTargetTrainingPoints && dayCounts.__scoped && dayCounts.__scoped[targetTraining]
+    ? (dayCounts.__scoped[targetTraining].targetP || {})
+    : {};
+  const countsSource = targetTraining && derivedFromTargetTrainingPoints ? scopedTargetCounts : dayCounts;
   return {
     dateKey: grantDayKey,
     counts: {
-      5: Math.max(0, Number(dayCounts[5]) || 0),
-      15: Math.max(0, Number(dayCounts[15]) || 0),
-      30: Math.max(0, Number(dayCounts[30]) || 0),
-      60: Math.max(0, Number(dayCounts[60]) || 0)
+      5: Math.max(0, Number(countsSource[5]) || 0),
+      15: Math.max(0, Number(countsSource[15]) || 0),
+      30: Math.max(0, Number(countsSource[30]) || 0),
+      60: Math.max(0, Number(countsSource[60]) || 0)
     }
   };
 }
 
-function canGrantNewGameTicketForDay(store, minutes, dayKey = todayKey()) {
+function canGrantNewGameTicketForDay(store, minutes, dayKey = todayKey(), options = {}) {
   const safeMinutes = Math.max(0, Number(minutes) || 0);
   if (!Number.isFinite(safeMinutes) || safeMinutes <= 0) return false;
   const config = getGameTicketConfig();
@@ -6276,22 +6298,44 @@ function canGrantNewGameTicketForDay(store, minutes, dayKey = todayKey()) {
   if (cap <= 0) return false;
   const grantDayKey = String(dayKey || todayKey());
   const safeStore = sanitizeGameTicketStats(store || ensureGameTicketState());
-  const counts = safeStore.dailyGrantByMinutes?.[grantDayKey] && typeof safeStore.dailyGrantByMinutes[grantDayKey] === "object"
+  const dayCounts = safeStore.dailyGrantByMinutes?.[grantDayKey] && typeof safeStore.dailyGrantByMinutes[grantDayKey] === "object"
     ? safeStore.dailyGrantByMinutes[grantDayKey]
     : {};
+  const scope = options && typeof options === "object" ? options : {};
+  const targetTraining = typeof scope.targetTraining === "string" && scope.targetTraining ? scope.targetTraining : null;
+  const derivedFromTargetTrainingPoints = Boolean(scope.derivedFromTargetTrainingPoints);
+  const counts = targetTraining && derivedFromTargetTrainingPoints && dayCounts.__scoped && dayCounts.__scoped[targetTraining]
+    ? (dayCounts.__scoped[targetTraining].targetP || {})
+    : dayCounts;
   return (Math.max(0, Number(counts[safeMinutes]) || 0)) < cap;
 }
 
-function registerGameTicketDailyGrant(store, minutes, dayKey = todayKey()) {
+function registerGameTicketDailyGrant(store, minutes, dayKey = todayKey(), options = {}) {
   const safeMinutes = Math.max(0, Number(minutes) || 0);
   if (!Number.isFinite(safeMinutes) || safeMinutes <= 0) return false;
-  const safeStore = sanitizeGameTicketStats(store || ensureGameTicketState());
+  const liveStore = store || ensureGameTicketState();
+  const safeStore = sanitizeGameTicketStats(liveStore);
   const grantDayKey = String(dayKey || todayKey());
+  const scope = options && typeof options === "object" ? options : {};
+  const targetTraining = typeof scope.targetTraining === "string" && scope.targetTraining ? scope.targetTraining : null;
+  const derivedFromTargetTrainingPoints = Boolean(scope.derivedFromTargetTrainingPoints);
   safeStore.dailyGrantByMinutes = safeStore.dailyGrantByMinutes && typeof safeStore.dailyGrantByMinutes === "object" ? safeStore.dailyGrantByMinutes : {};
   safeStore.dailyGrantByMinutes[grantDayKey] = safeStore.dailyGrantByMinutes[grantDayKey] && typeof safeStore.dailyGrantByMinutes[grantDayKey] === "object"
     ? safeStore.dailyGrantByMinutes[grantDayKey]
     : {};
-  safeStore.dailyGrantByMinutes[grantDayKey][safeMinutes] = Math.max(0, Number(safeStore.dailyGrantByMinutes[grantDayKey][safeMinutes]) || 0) + 1;
+  const dayCounts = safeStore.dailyGrantByMinutes[grantDayKey];
+  dayCounts[safeMinutes] = Math.max(0, Number(dayCounts[safeMinutes]) || 0) + 1;
+  if (targetTraining && derivedFromTargetTrainingPoints) {
+    dayCounts.__scoped = dayCounts.__scoped && typeof dayCounts.__scoped === "object" ? dayCounts.__scoped : {};
+    dayCounts.__scoped[targetTraining] = dayCounts.__scoped[targetTraining] && typeof dayCounts.__scoped[targetTraining] === "object"
+      ? dayCounts.__scoped[targetTraining]
+      : {};
+    dayCounts.__scoped[targetTraining].targetP = dayCounts.__scoped[targetTraining].targetP && typeof dayCounts.__scoped[targetTraining].targetP === "object"
+      ? dayCounts.__scoped[targetTraining].targetP
+      : {};
+    dayCounts.__scoped[targetTraining].targetP[safeMinutes] = Math.max(0, Number(dayCounts.__scoped[targetTraining].targetP[safeMinutes]) || 0) + 1;
+  }
+  liveStore.dailyGrantByMinutes = safeStore.dailyGrantByMinutes;
   return true;
 }
 
@@ -6331,7 +6375,12 @@ function createGameTicketInventoryEntry(minutes, source) {
 
 function awardChallengeGameTicket(store, minutes, meta = {}) {
   if (!store) return null;
-  return awardGameTicket(store, minutes, "random", meta, { countAsDailyEarned: false });
+  const grantMeta = {
+    ...meta,
+    targetTraining: typeof meta.targetTraining === "string" && meta.targetTraining ? meta.targetTraining : "challenge",
+    derivedFromTargetTrainingPoints: meta.derivedFromTargetTrainingPoints !== false
+  };
+  return awardGameTicket(store, minutes, "random", grantMeta, { countAsDailyEarned: false });
 }
 
 function pruneExpiredGameTickets(store) {
@@ -6429,16 +6478,25 @@ function awardGameTicket(store, minutes, source, meta = {}, options = {}) {
   const safeMinutes = Math.max(0, Math.round(Number(minutes) || 0));
   const allowedMinutes = [5, 15, 30, 60];
   const config = getGameTicketConfig();
-  if (allowedMinutes.includes(safeMinutes)) {
+  const targetTraining = typeof meta.targetTraining === "string" && meta.targetTraining ? meta.targetTraining : null;
+  const derivedFromTargetTrainingPoints = Boolean(meta.derivedFromTargetTrainingPoints);
+  const isTargetTrainingGrant = Boolean(targetTraining) && derivedFromTargetTrainingPoints === true;
+  if (allowedMinutes.includes(safeMinutes) && isTargetTrainingGrant) {
     const dayKey = todayKey();
-    if (!canGrantNewGameTicketForDay(store, safeMinutes, dayKey)) {
+    if (!canGrantNewGameTicketForDay(store, safeMinutes, dayKey, {
+      targetTraining,
+      derivedFromTargetTrainingPoints: true
+    })) {
       return null;
     }
   }
   const ticket = createGameTicketInventoryEntry(safeMinutes, source);
   store.inventory.push(ticket);
   if (allowedMinutes.includes(safeMinutes)) {
-    registerGameTicketDailyGrant(store, safeMinutes, todayKey());
+    registerGameTicketDailyGrant(store, safeMinutes, todayKey(), {
+      targetTraining,
+      derivedFromTargetTrainingPoints: isTargetTrainingGrant
+    });
   }
   markGameTicketSyncDirty();
   if (source === "random" && options.countAsDailyEarned !== false) {

@@ -97,6 +97,27 @@ const dailyCapStore = context.ensureGameTicketState();
 dailyCapStore.dailyGrantByMinutes = { "2026-08-13": { 5: 20 } };
 assert.strictEqual(context.canGrantNewGameTicketForDay(dailyCapStore, 5), false, "grants should stop when the 5-minute daily cap is reached");
 assert.strictEqual(context.canGrantNewGameTicketForDay(dailyCapStore, 15), true, "different ticket types should keep independent daily caps");
+const capConfig = context.getGameTicketConfig();
+const originalCap5 = capConfig.dailyGrantCapByMinutes[5];
+capConfig.dailyGrantCapByMinutes[5] = 1;
+const targetedCapStore = context.ensureGameTicketState();
+targetedCapStore.dailyGrantByMinutes = {};
+context.registerGameTicketDailyGrant(targetedCapStore, 5, "2026-08-13", { targetTraining: "challenge", derivedFromTargetTrainingPoints: true });
+assert.strictEqual(
+  context.canGrantNewGameTicketForDay(targetedCapStore, 5, "2026-08-13", { targetTraining: "challenge", derivedFromTargetTrainingPoints: true }),
+  false,
+  "same target-training-origin grant should count toward the daily cap"
+);
+const nonTargetCapStore = context.ensureGameTicketState();
+nonTargetCapStore.dailyGrantByMinutes = {};
+context.registerGameTicketDailyGrant(nonTargetCapStore, 5, "2026-08-13", { targetTraining: "challenge", derivedFromTargetTrainingPoints: true });
+context.registerGameTicketDailyGrant(nonTargetCapStore, 5, "2026-08-13", { targetTraining: "normal", derivedFromTargetTrainingPoints: false });
+assert.strictEqual(
+  context.canGrantNewGameTicketForDay(nonTargetCapStore, 5, "2026-08-13", { targetTraining: "challenge", derivedFromTargetTrainingPoints: true }),
+  false,
+  "non-target grant paths should not increase the challenge-cap count"
+);
+capConfig.dailyGrantCapByMinutes[5] = originalCap5;
 const irregularBucket = context.getLearningHistoryModeBucket({ mode: "不規則動詞特訓" });
 assert.strictEqual(irregularBucket.key, "irregularVerb", "irregular-verb should have its own history bucket key");
 assert.strictEqual(irregularBucket.label, "不規則動詞特訓", "irregular-verb should have its own history bucket label");
