@@ -87,13 +87,68 @@ assert.strictEqual(
   JSON.stringify([5, 10, 15, 60]),
   "game tickets should include a 60-minute option alongside the existing ticket durations"
 );
+const config = context.getGameTicketConfig();
+assert.strictEqual(Boolean(config.ticketImages), true, "game ticket config should include ticket image settings");
+assert.strictEqual(config.ticketImages[30], "", "30-minute ticket image should default to an empty string");
+assert.strictEqual(config.ticketImages[60], "", "60-minute ticket image should default to an empty string");
+assert.strictEqual(typeof config.dailyGrantCapByMinutes, "object", "daily grant cap settings should exist");
+assert.strictEqual(config.dailyGrantCapByMinutes[5], 20, "5-minute cap should default to the configured per-day value");
+const dailyCapStore = context.ensureGameTicketState();
+dailyCapStore.dailyGrantByMinutes = { "2026-08-13": { 5: 20 } };
+assert.strictEqual(context.canGrantNewGameTicketForDay(dailyCapStore, 5), false, "grants should stop when the 5-minute daily cap is reached");
+assert.strictEqual(context.canGrantNewGameTicketForDay(dailyCapStore, 15), true, "different ticket types should keep independent daily caps");
 const irregularBucket = context.getLearningHistoryModeBucket({ mode: "不規則動詞特訓" });
 assert.strictEqual(irregularBucket.key, "irregularVerb", "irregular-verb should have its own history bucket key");
 assert.strictEqual(irregularBucket.label, "不規則動詞特訓", "irregular-verb should have its own history bucket label");
-const fixedAugust12Draw = context.resolveChallengeSpecialDrawResult("2026-08-12", 141);
-assert.strictEqual(fixedAugust12Draw.outcome, "miss", "P141 on 2026-08-12 should be a fixed miss");
-assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 221).minutes, 30, "P221 on 2026-08-12 should be a fixed 30-minute ticket");
-assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 261).minutes, 60, "P261 on 2026-08-12 should be a fixed 60-minute ticket");
+const currentGameTicketConfig = context.getGameTicketConfig();
+const eventA = (currentGameTicketConfig.events || []).find((event) => Number(event.threshold) === 141 && String(event.targetTraining || "challenge") === "challenge");
+assert.ok(eventA, "current gameTicketConfig should include the A event for 141P");
+assert.strictEqual(eventA.enabled, true, "event A should be enabled in the current config");
+assert.strictEqual(eventA.outcomes[0].minutes, 30, "event A should award a 30-minute ticket");
+assert.strictEqual(eventA.outcomes[0].chance, 0.3, "event A should award 30 minutes with 30% chance");
+assert.strictEqual(eventA.outcomes[1].minutes, 60, "event A should award a 60-minute ticket");
+assert.strictEqual(eventA.outcomes[1].chance, 0.1, "event A should award 60 minutes with 10% chance");
+assert.strictEqual(eventA.outcomes[2].minutes, 0, "event A should include a miss outcome");
+assert.strictEqual(eventA.outcomes[2].chance, 0.6, "event A should include a miss outcome with 60% chance");
+const eventB = (currentGameTicketConfig.events || []).find((event) => Number(event.threshold) === 261 && String(event.targetTraining || "challenge") === "challenge");
+assert.ok(eventB, "current gameTicketConfig should include the B event for 261P");
+assert.strictEqual(eventB.enabled, true, "event B should be enabled in the current config");
+assert.strictEqual(eventB.outcomes[0].minutes, 60, "event B should award a 60-minute ticket");
+assert.strictEqual(eventB.outcomes[0].chance, 1, "event B should award 60 minutes with 100% chance");
+const rollResultAtThirty = (() => {
+  const originalMath = context.Math || Math;
+  const originalRandom = originalMath.random.bind(originalMath);
+  const patchedMath = Object.create(originalMath);
+  patchedMath.random = () => 0.10;
+  context.Math = patchedMath;
+  const result = context.resolveChallengeSpecialDrawResult("2026-08-13", 141);
+  context.Math = originalMath;
+  return result;
+})();
+assert.strictEqual(rollResultAtThirty.outcome, "30", "roll 0.10 should resolve to the 30-minute outcome for the current config");
+assert.strictEqual(rollResultAtThirty.minutes, 30, "roll 0.10 should award 30 minutes for the current config");
+const rollResultAtSixty = (() => {
+  const originalMath = context.Math || Math;
+  const patchedMath = Object.create(originalMath);
+  patchedMath.random = () => 0.35;
+  context.Math = patchedMath;
+  const result = context.resolveChallengeSpecialDrawResult("2026-08-13", 141);
+  context.Math = originalMath;
+  return result;
+})();
+assert.strictEqual(rollResultAtSixty.outcome, "60", "roll 0.35 should resolve to the 60-minute outcome for the current config");
+assert.strictEqual(rollResultAtSixty.minutes, 60, "roll 0.35 should award 60 minutes for the current config");
+const rollResultAtMiss = (() => {
+  const originalMath = context.Math || Math;
+  const patchedMath = Object.create(originalMath);
+  patchedMath.random = () => 0.80;
+  context.Math = patchedMath;
+  const result = context.resolveChallengeSpecialDrawResult("2026-08-13", 141);
+  context.Math = originalMath;
+  return result;
+})();
+assert.strictEqual(rollResultAtMiss.outcome, "miss", "roll 0.80 should resolve to miss for the current config");
+assert.strictEqual(rollResultAtMiss.minutes, 0, "roll 0.80 should award zero minutes for the current config");
 assert.strictEqual(context.sanitizeChallengeTicketSpecialState({ processed: false, result: "miss", awardedMinutes: 0, queued: true }).queued, true, "queued special draws should survive reload state sanitization");
 context.showGameTicketModal({ id: "reward-dup-1", minutes: 30, type: "random" });
 context.showGameTicketModal({ id: "reward-dup-1", minutes: 30, type: "random" });
@@ -172,7 +227,4 @@ assert.ok(firebaseSource.includes("translationTrainingPointsByDate"), "mobile Fi
 assert.ok(firebaseSource.includes("sanitizePointDayMap(source.translationTrainingPointsByDate)"), "mobile Firebase point state should sanitize the translation-training point map");
 assert.ok(firebaseSource.includes("sumPointMap(next.translationTrainingPointsByDate)"), "mobile Firebase hydration should include translation-training totals in daily summary totals");
 assert.ok(firebaseSource.includes("mergePointDayMapByMax(base.translationTrainingPointsByDate, incoming.translationTrainingPointsByDate)"), "mobile Firebase merge logic should preserve translation-training points across syncs");
-assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 221).outcome, "30", "P221 fixed result should remain 30");
-assert.strictEqual(context.resolveChallengeSpecialDrawResult("2026-08-12", 261).outcome, "60", "P261 fixed result should remain 60");
-
 console.log("point-state tests passed");

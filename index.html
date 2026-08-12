@@ -341,6 +341,48 @@
                 </div>
                 <div id="gameTicketEventList" class="settings-game-ticket-event-list"></div>
               </div>
+              <div class="settings-game-ticket-section">
+                <div class="settings-game-ticket-header-row">
+                  <h4>イベント告知・券画像</h4>
+                </div>
+                <div class="settings-game-ticket-form-grid">
+                  <label>
+                    <span>特訓開始時イベント告知画像</span>
+                    <input id="gameTicketAnnouncementImageInput" type="text" placeholder="https://example.com/image.png" />
+                  </label>
+                  <label>
+                    <span>30分券画像</span>
+                    <input id="gameTicketThirtyImageInput" type="text" placeholder="https://example.com/30.png" />
+                  </label>
+                  <label>
+                    <span>60分券画像</span>
+                    <input id="gameTicketSixtyImageInput" type="text" placeholder="https://example.com/60.png" />
+                  </label>
+                </div>
+              </div>
+              <div class="settings-game-ticket-section">
+                <div class="settings-game-ticket-header-row">
+                  <h4>券種別 1日の最大付与枚数</h4>
+                </div>
+                <div class="settings-game-ticket-form-grid compact-grid">
+                  <label>
+                    <span>5分券</span>
+                    <input id="gameTicketDailyCap5Input" type="number" min="0" value="20" />
+                  </label>
+                  <label>
+                    <span>15分券</span>
+                    <input id="gameTicketDailyCap15Input" type="number" min="0" value="20" />
+                  </label>
+                  <label>
+                    <span>30分券</span>
+                    <input id="gameTicketDailyCap30Input" type="number" min="0" value="10" />
+                  </label>
+                  <label>
+                    <span>60分券</span>
+                    <input id="gameTicketDailyCap60Input" type="number" min="0" value="10" />
+                  </label>
+                </div>
+              </div>
               <div class="settings-game-ticket-actions">
                 <button id="gameTicketSettingsSaveBtn" class="primary-btn" type="button">ゲームチケット設定を保存</button>
               </div>
