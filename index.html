@@ -273,6 +273,15 @@
                 </div>
               </div>
             </div>
+            <div class="settings-typing-wrap" aria-label="ゲームチケット設定">
+              <h3 class="settings-section-title">ゲームチケット設定</h3>
+              <p class="settings-studycore-note">対象特訓・ポイント・確率・チケット時間・1日上限を設定できます。JSONで保存されます。</p>
+              <textarea id="gameTicketSettingsEditor" class="settings-update-password-input" rows="20" style="width:100%; min-height: 300px; resize: vertical;"></textarea>
+              <div class="settings-backup-wrap" aria-label="ゲームチケット設定操作">
+                <button id="gameTicketSettingsSaveBtn" class="secondary-btn settings-backup-btn" type="button">ゲームチケット設定を保存</button>
+                <button id="gameTicketSettingsResetBtn" class="ghost-btn settings-backup-btn" type="button">初期設定に戻す</button>
+              </div>
+            </div>
             <div class="settings-backup-wrap" aria-label="学習記録バックアップ操作">
               <button id="backupLearningDataBtn" class="secondary-btn settings-backup-btn" type="button">💾 学習記録をバックアップ</button>
               <button id="restoreLearningDataBtn" class="secondary-btn settings-backup-btn" type="button">📂 学習記録を復元</button>

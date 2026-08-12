@@ -250,6 +250,160 @@ const GAME_TICKET_CONFIG = {
   streakBonusRepeatInterval: 30,
   streakBonusRepeatMinutes: 30
 };
+
+function createDefaultGameTicketRuleConfig() {
+  return [
+    { id: "rule-five-90", name: "5分券", targetTraining: "challenge", threshold: 90, minutes: 5, chance: 0.5, enabled: true, dailyCap: 1 },
+    { id: "rule-five-120", name: "5分券", targetTraining: "challenge", threshold: 120, minutes: 5, chance: 0.5, enabled: true, dailyCap: 1 },
+    { id: "rule-five-153", name: "5分券", targetTraining: "challenge", threshold: 153, minutes: 5, chance: 0.5, enabled: true, dailyCap: 1 },
+    { id: "rule-five-180", name: "5分券", targetTraining: "challenge", threshold: 180, minutes: 5, chance: 1.0, enabled: true, dailyCap: 1 },
+    { id: "rule-fifteen-84", name: "15分券A", targetTraining: "challenge", threshold: 84, minutes: 15, chance: 0.5, enabled: true, dailyCap: 1 },
+    { id: "rule-fifteen-132", name: "15分券A", targetTraining: "challenge", threshold: 132, minutes: 15, chance: 0.5, enabled: true, dailyCap: 1 },
+    { id: "rule-fifteen-183", name: "15分券A", targetTraining: "challenge", threshold: 183, minutes: 15, chance: 0.5, enabled: true, dailyCap: 1 },
+    { id: "rule-fifteen-210", name: "15分券A", targetTraining: "challenge", threshold: 210, minutes: 15, chance: 1.0, enabled: true, dailyCap: 1 }
+  ];
+}
+
+function createDefaultGameTicketEventConfig() {
+  return [
+    {
+      id: "event-a-special",
+      name: "＜A＞特別抽選",
+      targetTraining: "challenge",
+      threshold: 141,
+      enabled: true,
+      outcomes: [
+        { minutes: 30, chance: 0.3 },
+        { minutes: 60, chance: 0.1 },
+        { minutes: 0, chance: 0.6 }
+      ]
+    },
+    {
+      id: "event-b-rescue",
+      name: "＜B＞救済イベント",
+      targetTraining: "challenge",
+      threshold: 261,
+      enabled: true,
+      outcomes: [
+        { minutes: 60, chance: 1.0 }
+      ]
+    }
+  ];
+}
+
+function createDefaultGameTicketConfig() {
+  return {
+    normalRules: createDefaultGameTicketRuleConfig(),
+    events: createDefaultGameTicketEventConfig(),
+    dailyCap: 2,
+    modeLabels: {
+      challenge: "過去の間違い",
+      weakFocus: "苦手特訓",
+      other: "その他の特訓"
+    }
+  };
+}
+
+function sanitizeGameTicketConfigRule(value) {
+  if (!value || typeof value !== "object") return null;
+  const threshold = Math.max(0, Number(value.threshold) || 0);
+  const minutes = Math.max(0, Number(value.minutes) || 0);
+  const chance = clampProbability(Number(value.chance) || 0);
+  if (!Number.isFinite(threshold) || threshold <= 0 || !Number.isFinite(minutes) || minutes <= 0) return null;
+  return {
+    id: typeof value.id === "string" && value.id ? value.id : `rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: typeof value.name === "string" && value.name ? value.name : "チケット",
+    targetTraining: typeof value.targetTraining === "string" && value.targetTraining ? value.targetTraining : "challenge",
+    threshold,
+    minutes,
+    chance,
+    enabled: Boolean(value.enabled),
+    dailyCap: Math.max(1, Math.round(Number(value.dailyCap) || 1))
+  };
+}
+
+function sanitizeGameTicketConfigEvent(value) {
+  if (!value || typeof value !== "object") return null;
+  const threshold = Math.max(0, Number(value.threshold) || 0);
+  const outcomes = Array.isArray(value.outcomes) ? value.outcomes.map((outcome) => {
+    const minutes = Math.max(0, Number(outcome?.minutes) || 0);
+    const chance = clampProbability(Number(outcome?.chance) || 0);
+    if (!Number.isFinite(minutes) || minutes < 0 || !Number.isFinite(chance) || chance <= 0) return null;
+    return { minutes, chance };
+  }).filter(Boolean) : [];
+  if (!Number.isFinite(threshold) || threshold <= 0 || !outcomes.length) return null;
+  const totalChance = outcomes.reduce((sum, outcome) => sum + (Number(outcome.chance) || 0), 0);
+  if (totalChance <= 0) return null;
+  return {
+    id: typeof value.id === "string" && value.id ? value.id : `event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: typeof value.name === "string" && value.name ? value.name : "イベント",
+    targetTraining: typeof value.targetTraining === "string" && value.targetTraining ? value.targetTraining : "challenge",
+    threshold,
+    enabled: Boolean(value.enabled),
+    outcomes: outcomes.map((outcome) => ({ minutes: Math.round(outcome.minutes), chance: clampProbability(outcome.chance) }))
+  };
+}
+
+function sanitizeGameTicketConfig(value) {
+  const source = value && typeof value === "object" ? value : createDefaultGameTicketConfig();
+  const normalRules = Array.isArray(source.normalRules)
+    ? source.normalRules.map(sanitizeGameTicketConfigRule).filter(Boolean)
+    : createDefaultGameTicketRuleConfig();
+  const events = Array.isArray(source.events)
+    ? source.events.map(sanitizeGameTicketConfigEvent).filter(Boolean)
+    : createDefaultGameTicketEventConfig();
+  return {
+    normalRules,
+    events,
+    dailyCap: Math.max(1, Math.round(Number(source.dailyCap) || 2)),
+    modeLabels: source.modeLabels && typeof source.modeLabels === "object"
+      ? {
+        challenge: typeof source.modeLabels.challenge === "string" ? source.modeLabels.challenge : "過去の間違い",
+        weakFocus: typeof source.modeLabels.weakFocus === "string" ? source.modeLabels.weakFocus : "苦手特訓",
+        other: typeof source.modeLabels.other === "string" ? source.modeLabels.other : "その他の特訓"
+      }
+      : createDefaultGameTicketConfig().modeLabels,
+    lastUpdatedAt: Number.isFinite(Number(source.lastUpdatedAt)) ? Number(source.lastUpdatedAt) : Date.now()
+  };
+}
+
+function getGameTicketConfig() {
+  state.settings.gameTicketConfig = sanitizeGameTicketConfig(state.settings?.gameTicketConfig);
+  return state.settings.gameTicketConfig;
+}
+
+function resolveConfiguredEventDrawResult(eventConfig, dayKey) {
+  const options = Array.isArray(eventConfig?.outcomes) ? eventConfig.outcomes : [];
+  if (!options.length) return { outcome: "miss", minutes: 0 };
+  const roll = Math.random();
+  let cursor = 0;
+  for (const outcome of options) {
+    cursor += clampProbability(Number(outcome?.chance) || 0);
+    if (roll <= cursor) {
+      return { outcome: outcome.minutes > 0 ? String(outcome.minutes) : "miss", minutes: Math.max(0, Number(outcome.minutes) || 0), shouldShowChanceScreen: true };
+    }
+  }
+  return { outcome: "miss", minutes: 0, shouldShowChanceScreen: true };
+}
+
+function getEnabledGameTicketRulesForMode(targetTrainingMode) {
+  const mode = String(targetTrainingMode || "challenge");
+  const config = getGameTicketConfig();
+  return (config.normalRules || []).filter((rule) => rule.enabled && String(rule.targetTraining || "challenge") === mode);
+}
+
+function getEnabledGameTicketEventsForMode(targetTrainingMode) {
+  const mode = String(targetTrainingMode || "challenge");
+  const config = getGameTicketConfig();
+  return (config.events || []).filter((event) => event.enabled && String(event.targetTraining || "challenge") === mode);
+}
+
+function getModeKeyFromLabel(label) {
+  const normalized = String(label || "").trim();
+  if (normalized.includes("苦手")) return "weakFocus";
+  if (normalized.includes("その他")) return "other";
+  return "challenge";
+}
 const GAME_TICKET_DAY_MS = 24 * 60 * 60 * 1000;
 const POINT_SYSTEM_STORAGE_KEY = "english-trainer-pc-points-v1";
 const POINT_SYSTEM_CONFIG = Object.freeze({
@@ -5850,6 +6004,16 @@ function executePendingChallengeTicketChance() {
 
 function resolveChallengeSpecialDrawResult(dayKey, threshold) {
   const dateKey = String(dayKey || todayKey());
+  const config = getGameTicketConfig();
+  const matchingEvent = (config.events || []).find((event) => {
+    if (!event.enabled || String(event.targetTraining || "challenge") !== "challenge") return false;
+    return Number(event.threshold) === Number(threshold);
+  });
+  if (matchingEvent) {
+    const eventResult = resolveConfiguredEventDrawResult(matchingEvent, dateKey);
+    return { ...eventResult, shouldShowChanceScreen: true };
+  }
+
   if (dateKey === "2026-08-12") {
     if (threshold === 141) return { outcome: "miss", minutes: 0, shouldShowChanceScreen: true };
     if (threshold === 221) return { outcome: "30", minutes: 30, shouldShowChanceScreen: true };
@@ -5971,8 +6135,39 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState(), dayKe
     }
   };
 
-  awardTicketForTier(dailyState.fiveMinute, [90, 120, 153, 180], 5, 0.5, "過去の間違い 5分券", true);
-  awardTicketForTier(dailyState.fifteenA, [84, 132, 183, 210], 15, 0.5, "過去の間違い 15分券A", true);
+  const configuredRules = getEnabledGameTicketRulesForMode("challenge");
+  if (configuredRules.length) {
+    configuredRules.forEach((rule) => {
+      if (!rule || !Number.isFinite(Number(rule.threshold))) return;
+      const threshold = Number(rule.threshold);
+      const tierState = threshold === 90 || threshold === 120 || threshold === 153 || threshold === 180
+        ? dailyState.fiveMinute
+        : threshold === 84 || threshold === 132 || threshold === 183 || threshold === 210
+          ? dailyState.fifteenA
+          : null;
+      if (!tierState) return;
+      const thresholdKey = String(threshold);
+      if (tierState[thresholdKey]) return;
+      if (previousPoints >= threshold || nextPoints < threshold) return;
+      tierState[thresholdKey] = true;
+      const isFinalThreshold = Number(rule.threshold) === Math.max(...(configuredRules.map((entry) => Number(entry.threshold)).filter(Number.isFinite)));
+      const shouldAward = (isFinalThreshold && rule.chance >= 1) || Math.random() < clampProbability(rule.chance);
+      if (shouldAward) {
+        const createdTicket = awardChallengeGameTicket(safeStore, Number(rule.minutes), {
+          type: "random",
+          historyLabel: `${rule.name || "過去の間違い"} ${Number(rule.minutes)}分券`
+        });
+        if (createdTicket) {
+          tierState.awarded = true;
+          earnedTickets.push(createdTicket);
+        }
+      }
+      mutated = true;
+    });
+  } else {
+    awardTicketForTier(dailyState.fiveMinute, [90, 120, 153, 180], 5, 0.5, "過去の間違い 5分券", true);
+    awardTicketForTier(dailyState.fifteenA, [84, 132, 183, 210], 15, 0.5, "過去の間違い 15分券A", true);
+  }
 
   if (mutated) {
     persistGameTicketState();
@@ -13520,6 +13715,9 @@ function bindEvents() {
   const trainingChimePickerModal = document.getElementById("trainingChimePickerModal");
   const trainingChimePickerCurrentText = document.getElementById("trainingChimePickerCurrentText");
   const trainingChimePresetButtons = [...document.querySelectorAll("[data-training-chime-preset]")];
+  const gameTicketSettingsEditor = document.getElementById("gameTicketSettingsEditor");
+  const gameTicketSettingsSaveBtn = document.getElementById("gameTicketSettingsSaveBtn");
+  const gameTicketSettingsResetBtn = document.getElementById("gameTicketSettingsResetBtn");
   const typingControls = [
     typingAudioRepeatSelect,
     typingAudioRateSelect,
@@ -13528,6 +13726,46 @@ function bindEvents() {
     typingDelayAudioToInputSelect,
     typingDelayJudgeToNextSelect
   ];
+
+  if (gameTicketSettingsEditor) {
+    const syncGameTicketConfigEditor = () => {
+      const config = getGameTicketConfig();
+      gameTicketSettingsEditor.value = JSON.stringify(config, null, 2);
+    };
+
+    gameTicketSettingsEditor.addEventListener("change", () => {
+      try {
+        const parsed = JSON.parse(gameTicketSettingsEditor.value || "{}");
+        state.settings.gameTicketConfig = sanitizeGameTicketConfig(parsed);
+        saveState();
+      } catch (error) {
+        console.warn("Invalid game ticket config JSON", error);
+      }
+    });
+
+    if (gameTicketSettingsSaveBtn) {
+      gameTicketSettingsSaveBtn.addEventListener("click", () => {
+        try {
+          const parsed = JSON.parse(gameTicketSettingsEditor.value || "{}");
+          state.settings.gameTicketConfig = sanitizeGameTicketConfig(parsed);
+          saveState();
+          syncGameTicketConfigEditor();
+        } catch (error) {
+          console.warn("Invalid game ticket config JSON", error);
+        }
+      });
+    }
+
+    if (gameTicketSettingsResetBtn) {
+      gameTicketSettingsResetBtn.addEventListener("click", () => {
+        state.settings.gameTicketConfig = sanitizeGameTicketConfig(createDefaultGameTicketConfig());
+        saveState();
+        syncGameTicketConfigEditor();
+      });
+    }
+
+    syncGameTicketConfigEditor();
+  }
 
   if (typingControls.every((control) => Boolean(control))) {
     const delayValues = Array.from({ length: 11 }, (_, index) => (index / 10).toFixed(1));
