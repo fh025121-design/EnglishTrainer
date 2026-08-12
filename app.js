@@ -235,9 +235,10 @@ const GAME_TICKET_CONFIG = {
   lateTrainingChance: 0.03,
   afterFirstWinChance: 0.02,
   ticketOptions: [
-    { minutes: 5, weight: 70 },
+    { minutes: 5, weight: 60 },
     { minutes: 10, weight: 20 },
-    { minutes: 15, weight: 10 }
+    { minutes: 15, weight: 15 },
+    { minutes: 60, weight: 5 }
   ],
   streakBonusMilestones: [
     { days: 20, minutes: 30 },
@@ -1975,7 +1976,12 @@ function createDefaultChallengeTicketDailyState() {
     fifteenA: createChallengeTicketThresholdState([84, 132, 183, 210]),
     fifteenB: createChallengeTicketThresholdState([150, 192, 240]),
     thirty: createChallengeTicketThresholdState([126, 201, 249]),
-    rescue: { processed: false, awarded: false }
+    rescue: { processed: false, awarded: false },
+    special: {
+      p141: { processed: false, result: "miss", awardedMinutes: 0 },
+      p221: { processed: false, result: "miss", awardedMinutes: 0 },
+      p261: { processed: false, result: "miss", awardedMinutes: 0 }
+    }
   };
 }
 
@@ -1988,8 +1994,19 @@ function sanitizeChallengeTicketThresholdState(value, thresholds) {
   return state;
 }
 
+function sanitizeChallengeTicketSpecialState(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const result = String(source.result || "miss").trim().toLowerCase();
+  return {
+    processed: Boolean(source.processed),
+    result: result === "30" ? "30" : result === "60" ? "60" : "miss",
+    awardedMinutes: Math.max(0, Math.round(Number(source.awardedMinutes) || 0))
+  };
+}
+
 function sanitizeChallengeTicketDailyState(value) {
   const source = value && typeof value === "object" ? value : {};
+  const specialSource = source.special && typeof source.special === "object" ? source.special : {};
   return {
     fiveMinute: sanitizeChallengeTicketThresholdState(source.fiveMinute, [90, 120, 153, 180]),
     fifteenA: sanitizeChallengeTicketThresholdState(source.fifteenA, [84, 132, 183, 210]),
@@ -1998,6 +2015,11 @@ function sanitizeChallengeTicketDailyState(value) {
     rescue: {
       processed: Boolean(source.rescue?.processed),
       awarded: Boolean(source.rescue?.awarded)
+    },
+    special: {
+      p141: sanitizeChallengeTicketSpecialState(specialSource.p141),
+      p221: sanitizeChallengeTicketSpecialState(specialSource.p221),
+      p261: sanitizeChallengeTicketSpecialState(specialSource.p261)
     }
   };
 }
@@ -5732,6 +5754,35 @@ function shouldAwardRandomGameTicket(chance) {
   return Math.random() < safeChance;
 }
 
+function showChallengeTicketChanceScreen() {
+  const modal = document.getElementById("challengeTicketChanceModal");
+  if (!modal) return false;
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  return true;
+}
+
+function hideChallengeTicketChanceScreen() {
+  const modal = document.getElementById("challengeTicketChanceModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function resolveChallengeSpecialDrawResult(dayKey, threshold) {
+  const dateKey = String(dayKey || todayKey());
+  if (dateKey === "2026-08-13") {
+    if (threshold === 141) return { outcome: "miss", minutes: 0, shouldShowChanceScreen: true };
+    if (threshold === 221) return { outcome: "30", minutes: 30, shouldShowChanceScreen: true };
+    if (threshold === 261) return { outcome: "60", minutes: 60, shouldShowChanceScreen: true };
+  }
+
+  const roll = Math.random();
+  if (roll < 0.30) return { outcome: "30", minutes: 30, shouldShowChanceScreen: true };
+  if (roll < 0.40) return { outcome: "60", minutes: 60, shouldShowChanceScreen: true };
+  return { outcome: "miss", minutes: 0, shouldShowChanceScreen: true };
+}
+
 function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
   if (!isDesktopGameTicketEnabled()) return [];
   const pointState = getPointState();
@@ -5766,25 +5817,77 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState()) {
     }
   };
 
+  const processSpecialDraw = (threshold, key) => {
+    const specialState = dailyState.special?.[key];
+    if (!specialState || specialState.processed) return;
+    if (challengePoints < threshold) return;
+    const result = resolveChallengeSpecialDrawResult(today, threshold);
+    specialState.processed = true;
+    specialState.result = result.outcome;
+    specialState.awardedMinutes = result.minutes;
+    mutated = true;
+    if (result.shouldShowChanceScreen) {
+      showChallengeTicketChanceScreen();
+      setTimeout(() => {
+        hideChallengeTicketChanceScreen();
+      }, 450);
+    }
+    if (result.minutes > 0) {
+      const ticket = awardChallengeGameTicket(store, result.minutes, {
+        type: "random",
+        historyLabel: result.minutes === 30 ? "過去の間違い 特別抽選 30分券" : "過去の間違い 特別抽選 60分券"
+      });
+      if (ticket) {
+        earnedTickets.push(ticket);
+      }
+      if (typeof showGameTicketModal === "function") {
+        setTimeout(() => {
+          showGameTicketModal(ticket);
+        }, 500);
+      }
+    }
+  };
+
   awardTicketForTier(dailyState.fiveMinute, [90, 120, 153, 180], 5, 0.5, "過去の間違い 5分券", true);
   awardTicketForTier(dailyState.fifteenA, [84, 132, 183, 210], 15, 0.5, "過去の間違い 15分券A", true);
-  awardTicketForTier(dailyState.fifteenB, [150, 192, 240], 15, 1 / 6, "過去の間違い 15分券B");
-  awardTicketForTier(dailyState.thirty, [126, 201, 249], 30, 1 / 5, "過去の間違い 30分券");
 
-  if (!dailyState.rescue.processed && challengePoints >= 273) {
-    dailyState.rescue.processed = true;
+  const hasP141Win = dailyState.special?.p141?.result === "30" || dailyState.special?.p141?.result === "60";
+  const hasP221Win = dailyState.special?.p221?.result === "30" || dailyState.special?.p221?.result === "60";
+  if (!dailyState.special?.p141?.processed && challengePoints >= 141) {
+    processSpecialDraw(141, "p141");
+  }
+  if (!dailyState.special?.p221?.processed && challengePoints >= 221) {
+    processSpecialDraw(221, "p221");
+  }
+
+  const rescueEligible = today === "2026-08-13"
+    ? (!dailyState.special?.p261?.processed)
+    : (!dailyState.special?.p261?.processed && challengePoints >= 261 && !hasP141Win && !hasP221Win && dailyState.special?.p141?.processed && dailyState.special?.p221?.processed && dailyState.special?.p141?.result === "miss" && dailyState.special?.p221?.result === "miss");
+
+  if (rescueEligible) {
+    const rescue = resolveChallengeSpecialDrawResult(today, 261);
+    dailyState.special.p261.processed = true;
+    dailyState.special.p261.result = rescue.outcome;
+    dailyState.special.p261.awardedMinutes = rescue.minutes;
     mutated = true;
-    const rescueEligible = !dailyState.fifteenB.awarded && !dailyState.thirty.awarded;
-    if (rescueEligible) {
-      const rescueMinutes = Math.random() < 0.5 ? 15 : 30;
-      const rescueLabel = rescueMinutes === 15 ? "過去の間違い P273救済 15分券" : "過去の間違い P273救済 30分券";
-      const rescueTicket = awardChallengeGameTicket(store, rescueMinutes, {
+    if (rescue.shouldShowChanceScreen) {
+      showChallengeTicketChanceScreen();
+      setTimeout(() => {
+        hideChallengeTicketChanceScreen();
+      }, 450);
+    }
+    if (rescue.minutes > 0) {
+      const rescueTicket = awardChallengeGameTicket(store, rescue.minutes, {
         type: "random",
-        historyLabel: rescueLabel
+        historyLabel: rescue.minutes === 60 ? "過去の間違い P261救済 60分券" : "過去の間違い P261救済 30分券"
       });
       if (rescueTicket) {
-        dailyState.rescue.awarded = true;
         earnedTickets.push(rescueTicket);
+      }
+      if (typeof showGameTicketModal === "function") {
+        setTimeout(() => {
+          showGameTicketModal(rescueTicket);
+        }, 500);
       }
     }
   }
@@ -6267,7 +6370,9 @@ function showGameTicketModal(ticket) {
   const introText = document.getElementById("gameTicketIntroText");
   const thirtyPoster = document.getElementById("gameTicketThirtyPoster");
   if (!modal || !titleText || !minutesText || !bodyText || !introText || !thirtyPoster) return;
-  const isThirtyMinuteTicket = Math.max(0, Math.floor(Number(ticket?.minutes) || 0)) === 30;
+  const minutes = Math.max(0, Math.floor(Number(ticket?.minutes) || 0));
+  const isThirtyMinuteTicket = minutes === 30;
+  const isSixtyMinuteTicket = minutes === 60;
   modal.classList.toggle("ticket-reward-card-30", isThirtyMinuteTicket);
   thirtyPoster.classList.toggle("hidden", !isThirtyMinuteTicket);
   thirtyPoster.setAttribute("aria-hidden", isThirtyMinuteTicket ? "false" : "true");
@@ -6277,7 +6382,7 @@ function showGameTicketModal(ticket) {
   introText.classList.toggle("hidden", isThirtyMinuteTicket);
   if (ticket.type === "streakBonus") {
     titleText.textContent = "🔥 連続学習ボーナス";
-    minutesText.textContent = `${ticket.minutes}分券を獲得しました！`;
+    minutesText.textContent = `${minutes}分券を獲得しました！`;
     bodyText.textContent = `${ticket.streakDays}日連続達成、おめでとう！`;
   } else if (ticket.type === "firstBonus") {
     titleText.textContent = "🎉 初回ボーナス！ 追加特訓を3回達成しました";
@@ -6287,9 +6392,13 @@ function showGameTicketModal(ticket) {
     titleText.textContent = "";
     minutesText.textContent = "";
     bodyText.textContent = "";
+  } else if (isSixtyMinuteTicket) {
+    titleText.textContent = "🏆 60分券・超レア";
+    minutesText.textContent = "60分券を獲得しました！";
+    bodyText.textContent = "特別抽選を突破しました。";
   } else {
     titleText.textContent = "🎫 ゲームチケット";
-    minutesText.textContent = `${ticket.minutes}分券を獲得しました！`;
+    minutesText.textContent = `${minutes}分券を獲得しました！`;
     bodyText.textContent = "追加特訓、よく頑張りました。";
   }
   introText.textContent = isThirtyMinuteTicket ? "" : "📷 スクリーンショットを撮って、保護者に見せましょう。";

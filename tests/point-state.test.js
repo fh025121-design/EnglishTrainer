@@ -48,6 +48,12 @@ assert.strictEqual(sanitized.dailyEarnedByModeByDate["2026-08-09"].idiom, 3, "id
 assert.strictEqual(sanitized.dailyEarnedByModeByDate["2026-08-09"]["irregular-verb"], 2, "irregular-verb points should be preserved");
 assert.strictEqual(context.inferPointModeFromLearningHistoryEntry("phrase-spiral"), "idiom", "phrase-spiral should map to the idiom point mode");
 assert.strictEqual(context.normalizeLearningMode("irregular-verb-training"), "不規則動詞特訓", "irregular-verb should normalize to a learning-history mode");
+const gameTicketMinutes = vm.runInContext("GAME_TICKET_CONFIG.ticketOptions.map((entry) => entry.minutes)", context);
+assert.strictEqual(
+  JSON.stringify(gameTicketMinutes),
+  JSON.stringify([5, 10, 15, 60]),
+  "game tickets should include a 60-minute option alongside the existing ticket durations"
+);
 const irregularBucket = context.getLearningHistoryModeBucket({ mode: "不規則動詞特訓" });
 assert.strictEqual(irregularBucket.key, "irregularVerb", "irregular-verb should have its own history bucket key");
 assert.strictEqual(irregularBucket.label, "不規則動詞特訓", "irregular-verb should have its own history bucket label");
