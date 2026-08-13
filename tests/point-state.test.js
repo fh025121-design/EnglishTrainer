@@ -87,6 +87,8 @@ assert.strictEqual(
   JSON.stringify([5, 10, 15, 60]),
   "game tickets should include a 60-minute option alongside the existing ticket durations"
 );
+const loadedState = context.loadState();
+assert.ok(loadedState.settings.gameTicketConfig, "loaded state should include gameTicketConfig");
 const config = context.getGameTicketConfig();
 assert.strictEqual(Boolean(config.ticketImages), true, "game ticket config should include ticket image settings");
 assert.strictEqual(config.ticketImages[30], "", "30-minute ticket image should default to an empty string");

@@ -10883,6 +10883,7 @@ const defaultState = {
     type: "all",
     typingConfig: sanitizeTypingConfig(),
     trainingCorrectChimePreset: TRAINING_CORRECT_CHIME_DEFAULT_PRESET,
+    gameTicketConfig: createDefaultGameTicketConfig(),
     dayStudy: {
       day: 1,
       type: "all"
@@ -10934,6 +10935,7 @@ function loadState() {
       ...mergedState.settings,
       ...(parsed.settings || {})
     };
+    mergedState.settings.gameTicketConfig = sanitizeGameTicketConfig(mergedState.settings.gameTicketConfig || parsed.settings?.gameTicketConfig || createDefaultGameTicketConfig());
     mergedState.settings.typingConfig = sanitizeTypingConfig(mergedState.settings.typingConfig);
     mergedState.settings.trainingCorrectChimePreset = sanitizeTrainingCorrectChimePreset(mergedState.settings.trainingCorrectChimePreset);
     mergedState.stats = {
@@ -11005,6 +11007,7 @@ function loadState() {
 
 function buildPersistedStateSnapshot() {
   const snapshot = structuredClone(state);
+  snapshot.settings.gameTicketConfig = sanitizeGameTicketConfig(snapshot.settings?.gameTicketConfig || createDefaultGameTicketConfig());
   snapshot.stats.savedNormalSession = null;
   snapshot.stats.normalDayProgressByDay = sanitizeNormalDayProgressByDay(snapshot.stats?.normalDayProgressByDay);
   snapshot.stats.extraTrainingDailyCounter = sanitizeExtraTrainingDailyCounter(snapshot.stats?.extraTrainingDailyCounter);
