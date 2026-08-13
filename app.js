@@ -6941,11 +6941,12 @@ function queueChallengeSpecialDrawForThresholdCrossing(dayKey, previousChallenge
           : "miss";
         finalEntry.awardedMinutes = Math.max(0, Number(result?.minutes) || 0);
         specialState[key] = finalEntry;
-        if (finalEntry.awardedMinutes > 0) {
-          awardGameTicket(safeStore, finalEntry.awardedMinutes, "random", {
-            type: "random",
-            historyLabel: `過去の間違い 特別抽選 ${finalEntry.awardedMinutes}分券`
-          });
+        const shouldAwardLegacyChallengeTicket = Number(finalEntry.awardedMinutes) > 0 && Number(finalEntry.awardedMinutes) < 5;
+        if (finalEntry.awardedMinutes > 0 && !shouldAwardLegacyChallengeTicket) {
+          finalEntry.awardedMinutes = 0;
+        }
+        if (shouldAwardLegacyChallengeTicket) {
+          finalEntry.awardedMinutes = 0;
         }
         persistGameTicketState();
       });
@@ -7002,6 +7003,9 @@ function processChallengeEventThresholdCrossings(dayKey, previousChallengePoints
 
 function processCompletedTicketTraining(options = {}) {
   if (!isDesktopGameTicketEnabled()) return [];
+  if (String(options.trainingType || "") === "challenge") {
+    return [];
+  }
   const store = syncGameTicketState();
   store.dailyTrainingCount += 1;
   markGameTicketSyncDirty();
