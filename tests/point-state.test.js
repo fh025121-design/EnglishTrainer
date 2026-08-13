@@ -302,34 +302,33 @@ pendingReplayStore.pendingRewards = [
   { id: "reward-queued-2", minutes: 15, queuedAt: Date.now() + 1, type: "random" }
 ];
 context.shownGameTicketRewardIds = new Set(["reward-queued-1"]);
-context.showPendingGameTicketModalIfAny();
-assert.strictEqual(
-  pendingReplayStore.pendingRewards.some((reward) => String(reward.id) === "reward-queued-1"),
-  false,
-  "already displayed queued rewards should be removed from the pending queue before re-show"
-);
-assert.strictEqual(
-  pendingReplayStore.pendingRewards.some((reward) => String(reward.id) === "reward-queued-2"),
-  true,
-  "only undisplayed queued rewards should remain in the pending queue"
-);
+vm.runInContext(`
+  globalThis.__pendingReplayModalCalls__ = { count: 0 };
+  globalThis.__pendingReplayOriginalShowGameTicketModal__ = showGameTicketModal;
+  showGameTicketModal = (...args) => {
+    globalThis.__pendingReplayModalCalls__.count += 1;
+    return globalThis.__pendingReplayOriginalShowGameTicketModal__(...args);
+  };
+  showPendingGameTicketModalIfAny();
+`, context);
+assert.strictEqual(vm.runInContext("globalThis.__pendingReplayModalCalls__.count", context), 0, "legacy pendingRewards should be ignored and never re-trigger a delayed reward modal");
 const zeroPointPendingStore = context.ensureGameTicketState();
 zeroPointPendingStore.pendingRewards = [{ id: "reward-zero-1", minutes: 5, queuedAt: Date.now(), type: "random" }];
 const zeroPointModalCalls = { count: 0 };
 const originalShowGameTicketModal = vm.runInContext("showGameTicketModal", context);
 vm.runInContext(`
   globalThis.__zeroPointModalCalls__ = { count: 0 };
-  const originalShowGameTicketModal = showGameTicketModal;
+  globalThis.__zeroPointOriginalShowGameTicketModal__ = showGameTicketModal;
   showGameTicketModal = (...args) => {
     globalThis.__zeroPointModalCalls__.count += 1;
-    return originalShowGameTicketModal(...args);
+    return globalThis.__zeroPointOriginalShowGameTicketModal__(...args);
   };
   pendingTrainingCompleteContext = { showTicketAfter: true, earnedPoints: 0 };
   showPendingGameTicketModalIfAny();
 `, context);
 assert.strictEqual(vm.runInContext("globalThis.__zeroPointModalCalls__.count", context), 0, "zero-point challenge completion should not auto-open a ticket modal for a pending reward");
 vm.runInContext(`
-  showGameTicketModal = originalShowGameTicketModal;
+  showGameTicketModal = globalThis.__zeroPointOriginalShowGameTicketModal__ || showGameTicketModal;
   pendingTrainingCompleteContext = null;
 `, context);
 const thresholdPassResult = context.queueChallengeSpecialDrawForThresholdCrossing("2026-08-12", 138, 141, context.ensureGameTicketState());

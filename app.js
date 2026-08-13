@@ -6695,16 +6695,10 @@ function pickGameTicketMinutes() {
 
 function queueGameTicketReward(store, ticket, meta = {}) {
   if (!store || !ticket) return;
-  const reward = sanitizeGameTicketRewardEntry({
-    id: ticket.id,
-    type: meta.type || ticket.source,
-    minutes: ticket.minutes,
-    streakDays: meta.streakDays,
-    queuedAt: Date.now()
-  });
-  if (!reward) return;
-  store.pendingRewards.push(reward);
-  markGameTicketSyncDirty();
+  if (Array.isArray(store.pendingRewards)) {
+    store.pendingRewards = [];
+    markGameTicketSyncDirty();
+  }
 }
 
 function awardGameTicket(store, minutes, source, meta = {}, options = {}) {
@@ -6750,7 +6744,9 @@ function awardGameTicket(store, minutes, source, meta = {}, options = {}) {
       store.earnedHistory = store.earnedHistory.slice(0, 240);
     }
   }
-  queueGameTicketReward(store, ticket, { ...meta, type: source });
+  if (typeof document !== "undefined") {
+    showGameTicketModal(ticket, store);
+  }
   return ticket;
 }
 
@@ -7659,13 +7655,11 @@ function canAutoShowGameTicketRewardFromCurrentFlow() {
 
 function showPendingGameTicketModalIfAny() {
   const store = ensureGameTicketState();
-  removeShownPendingGameTicketRewards(store);
-  if (deferGameTicketRewardModal) return;
-  if (!isDesktopGameTicketEnabled()) return;
-  if (!canAutoShowGameTicketRewardFromCurrentFlow()) return;
-  const pending = Array.isArray(store.pendingRewards) ? store.pendingRewards[0] : null;
-  if (!pending || isGameTicketRewardAlreadyShown(pending, store)) return;
-  showGameTicketModal(pending, store);
+  if (store && Array.isArray(store.pendingRewards)) {
+    store.pendingRewards = [];
+    markGameTicketSyncDirty();
+  }
+  return false;
 }
 
 function getTrainingCompletionModeLabel(mode) {
@@ -7834,22 +7828,13 @@ function closeTrainingCompleteScreenToHome() {
   if (typeof context?.onAfterHome === "function") {
     context.onAfterHome();
   }
-  if (context?.showTicketAfter && Number(context?.earnedPoints || 0) > 0) {
-    showPendingGameTicketModalIfAny();
-  }
 }
 
 function dismissCurrentGameTicketReward() {
   const store = ensureGameTicketState();
-  if (Array.isArray(store.pendingRewards) && store.pendingRewards.length) {
-    const firstReward = store.pendingRewards[0];
-    if (firstReward && firstReward.id) {
-      markGameTicketRewardShown(firstReward, store);
-      removeShownPendingGameTicketRewards(store);
-    }
-    if (store.pendingRewards.length) {
-      store.pendingRewards.shift();
-    }
+  if (store && Array.isArray(store.pendingRewards)) {
+    store.pendingRewards = [];
+    markGameTicketSyncDirty();
   }
   const modal = document.getElementById("gameTicketModal");
   if (modal) {
@@ -7863,7 +7848,6 @@ function dismissCurrentGameTicketReward() {
       currentChallengeSession.awaitingChallengeTicketResume = false;
     }
   }
-  showPendingGameTicketModalIfAny();
 }
 
 let gameTicketSyncMetaCache = null;
@@ -13816,7 +13800,6 @@ function showResultScreen(summary = state.stats.lastResultSummary) {
     updateResultActionSelection(null);
   }
   showScreen("resultScreen");
-  showPendingGameTicketModalIfAny();
   syncKeyboardNavigationUI(true);
 }
 
@@ -14345,7 +14328,6 @@ function finishSession() {
         session.awaitingWeakFocusDecision = true;
         renderWeakFocusDecisionPanel(session);
         saveState();
-        showPendingGameTicketModalIfAny();
         return;
       }
       session.awaitingWeakFocusDecision = false;
@@ -15617,7 +15599,6 @@ function init() {
   renderHome();
   renderProgress();
   showScreen("homeScreen", { recordHistory: false });
-  showPendingGameTicketModalIfAny();
   flushPendingSessionNotice();
   if (itemsSynced) {
     console.info("Vocabulary data synced with latest data.js");
