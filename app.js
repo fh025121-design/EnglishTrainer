@@ -10887,7 +10887,10 @@ function loadState() {
       ...mergedState.settings,
       ...(parsed.settings || {})
     };
-    mergedState.settings.gameTicketConfig = sanitizeGameTicketConfig(mergedState.settings.gameTicketConfig || parsed.settings?.gameTicketConfig || createDefaultGameTicketConfig());
+    const savedGameTicketConfig = parsed.settings?.gameTicketConfig && typeof parsed.settings.gameTicketConfig === "object"
+      ? parsed.settings.gameTicketConfig
+      : mergedState.settings.gameTicketConfig || createDefaultGameTicketConfig();
+    mergedState.settings.gameTicketConfig = sanitizeGameTicketConfig(savedGameTicketConfig);
     mergedState.settings.typingConfig = sanitizeTypingConfig(mergedState.settings.typingConfig);
     mergedState.settings.trainingCorrectChimePreset = sanitizeTrainingCorrectChimePreset(mergedState.settings.trainingCorrectChimePreset);
     mergedState.stats = {

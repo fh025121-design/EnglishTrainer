@@ -405,4 +405,26 @@ assert.ok(firebaseSource.includes("translationTrainingPointsByDate"), "mobile Fi
 assert.ok(firebaseSource.includes("sanitizePointDayMap(source.translationTrainingPointsByDate)"), "mobile Firebase point state should sanitize the translation-training point map");
 assert.ok(firebaseSource.includes("sumPointMap(next.translationTrainingPointsByDate)"), "mobile Firebase hydration should include translation-training totals in daily summary totals");
 assert.ok(firebaseSource.includes("mergePointDayMapByMax(base.translationTrainingPointsByDate, incoming.translationTrainingPointsByDate)"), "mobile Firebase merge logic should preserve translation-training points across syncs");
+
+const persistedDisabledConfig = {
+  normalRules: [{ id: "rule-off-1", name: "OFFルール", targetTraining: "challenge", threshold: 147, minutes: 5, chance: 0.5, enabled: false, dailyCap: 1 }],
+  events: [{ id: "event-off-1", name: "OFFイベント", type: "draw", targetTraining: "challenge", threshold: 193, enabled: false, startImage: "", maxQuestions: 5, rewardMinutes: 5, outcomes: [{ minutes: 30, chance: 1.0 }] }],
+  dailyCap: 2,
+  dailyGrantCapByMinutes: { 5: 20, 15: 20, 30: 10, 60: 10 },
+  ticketImages: { 30: "", 60: "" },
+  challengeAnnouncementImage: "",
+  eventStartImages: {},
+  modeLabels: { challenge: "過去の間違い", weakFocus: "苦手特訓", other: "その他の特訓" }
+};
+context.state = {
+  settings: { gameTicketConfig: persistedDisabledConfig },
+  stats: { completedSessions: [], dailyPerformanceByDate: {}, studyTimeByDate: {}, dailyStatsByDate: {}, previousSessionWeakQuestionIds: [], pendingSessionNotice: "", unlockedDayMax: 1, gameTickets: context.createDefaultGameTicketStats(), trainingProfiles: context.createDefaultTrainingProfiles(), prepositionTraining: context.createDefaultPrepositionTrainingStats(), normalDayProgressByDay: {}, extraTrainingDailyCounter: context.createDefaultExtraTrainingDailyCounter() },
+  review: { records: {} },
+  items: context.buildVocabularyItems(),
+  session: null
+};
+context.saveState();
+const reloadedDisabledState = context.loadState();
+assert.strictEqual(reloadedDisabledState.settings.gameTicketConfig.normalRules[0].enabled, false, "disabled rules should remain OFF after save/load");
+assert.strictEqual(reloadedDisabledState.settings.gameTicketConfig.events[0].enabled, false, "disabled events should remain OFF after save/load");
 console.log("point-state tests passed");
