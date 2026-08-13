@@ -100,6 +100,22 @@ assert.strictEqual(
   JSON.stringify([5, 10, 15, 60]),
   "game tickets should include a 60-minute option alongside the existing ticket durations"
 );
+const keyedStorage = {
+  data: {
+    "english-trainer-state-v1": JSON.stringify({ settings: { gameTicketConfig: context.createDefaultGameTicketConfig() }, stats: { completedSessions: [], gameTickets: context.createDefaultGameTicketStats(), trainingProfiles: context.createDefaultTrainingProfiles(), prepositionTraining: context.createDefaultPrepositionTrainingStats(), normalDayProgressByDay: {}, extraTrainingDailyCounter: context.createDefaultExtraTrainingDailyCounter() }, review: { records: {} }, items: context.buildVocabularyItems(), session: null }),
+    "english-trainer-state-v1-test-user": JSON.stringify({ settings: { gameTicketConfig: { normalRules: [{ id: "rule-1", name: "テスト", targetTraining: "challenge", threshold: 90, minutes: 5, chance: 0.5, enabled: false, dailyCap: 1 }], events: [{ id: "event-1", name: "イベント", type: "draw", targetTraining: "challenge", threshold: 141, enabled: false, startImage: "", maxQuestions: 5, rewardMinutes: 5, outcomes: [{ minutes: 30, chance: 1.0 }] }], dailyCap: 2, dailyGrantCapByMinutes: { 5: 20, 15: 20, 30: 10, 60: 10 }, ticketImages: { 30: "", 60: "" }, challengeAnnouncementImage: "", eventStartImages: {}, modeLabels: { challenge: "過去の間違い", weakFocus: "苦手特訓", other: "その他の特訓" } } }, stats: { completedSessions: [], gameTickets: context.createDefaultGameTicketStats(), trainingProfiles: context.createDefaultTrainingProfiles(), prepositionTraining: context.createDefaultPrepositionTrainingStats(), normalDayProgressByDay: {}, extraTrainingDailyCounter: context.createDefaultExtraTrainingDailyCounter() }, review: { records: {} }, items: context.buildVocabularyItems(), session: null })
+  }
+};
+context.localStorage = {
+  getItem(key) { return Object.prototype.hasOwnProperty.call(keyedStorage.data, key) ? keyedStorage.data[key] : null; },
+  setItem(key, value) { keyedStorage.data[key] = String(value); },
+  removeItem(key) { delete keyedStorage.data[key]; },
+  key(index) { return Object.keys(keyedStorage.data)[index] || null; },
+  get length() { return Object.keys(keyedStorage.data).length; }
+};
+const stateFromScopedKey = context.loadState();
+assert.strictEqual(stateFromScopedKey.settings.gameTicketConfig.normalRules[0].enabled, false, "scoped user state should override the generic fallback state on reload");
+assert.strictEqual(stateFromScopedKey.settings.gameTicketConfig.events[0].enabled, false, "scoped user event state should override the generic fallback state on reload");
 const storage = {
   data: {}
 };

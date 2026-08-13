@@ -10873,12 +10873,39 @@ const defaultState = {
   session: null
 };
 
+function resolveAvailableStateStorageKeys() {
+  const storageKeys = [];
+  const directScopedKey = getScopedLocalStorageKey(STORAGE_KEY);
+  if (directScopedKey) {
+    storageKeys.push(directScopedKey);
+  }
+  try {
+    if (typeof localStorage !== "undefined" && typeof localStorage.length === "number" && typeof localStorage.key === "function") {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (typeof key === "string" && key.startsWith(`${STORAGE_KEY}-`) && !storageKeys.includes(key)) {
+          storageKeys.push(key);
+        }
+      }
+    }
+  } catch (_error) {
+    // localStorage enumeration may be unavailable in some browser contexts.
+  }
+  if (!storageKeys.includes(STORAGE_KEY)) {
+    storageKeys.push(STORAGE_KEY);
+  }
+  return [...new Set(storageKeys)];
+}
+
 function loadState() {
   const freshState = structuredClone(defaultState);
   try {
-    const storageKey = getScopedLocalStorageKey(STORAGE_KEY) || STORAGE_KEY;
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) return freshState;
+    const storageKeyCandidates = resolveAvailableStateStorageKeys();
+    let raw = null;
+    for (const storageKey of storageKeyCandidates) {
+      raw = localStorage.getItem(storageKey);
+      if (raw) break;
+    }
     if (!raw) return freshState;
 
     const parsed = JSON.parse(raw);
