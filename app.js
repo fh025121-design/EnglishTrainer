@@ -6473,8 +6473,16 @@ function isDesktopGameTicketEnabled() {
 }
 
 function ensureGameTicketState() {
-  if (!state?.stats) return createDefaultGameTicketStats();
-  const current = state.stats.gameTickets || createDefaultGameTicketStats();
+  if (!state || typeof state !== "object") {
+    return createDefaultGameTicketStats();
+  }
+  if (!state.stats || typeof state.stats !== "object") {
+    state.stats = {};
+  }
+  if (!state.stats.gameTickets || typeof state.stats.gameTickets !== "object") {
+    state.stats.gameTickets = createDefaultGameTicketStats();
+  }
+  const current = state.stats.gameTickets;
   const safeStore = sanitizeGameTicketStats(current);
   Object.keys(current).forEach((key) => delete current[key]);
   Object.assign(current, safeStore);
@@ -6806,6 +6814,9 @@ function markGameTicketRewardShown(ticket, store = ensureGameTicketState()) {
     }
     if (store) {
       store.shownRewardIds = Array.from(set).slice(-200);
+      if (Array.isArray(store.pendingRewards)) {
+        store.pendingRewards = store.pendingRewards.filter((reward) => !(reward && reward.id && String(reward.id) === String(ticket.id)));
+      }
     }
   }
 }
@@ -6887,7 +6898,56 @@ function resolveChallengeSpecialDrawResult(dayKey, threshold) {
 }
 
 function queueChallengeSpecialDrawForThresholdCrossing(dayKey, previousChallengePoints, nextChallengePoints, store = ensureGameTicketState()) {
-  return [];
+  const safeStore = store || ensureGameTicketState();
+  const resolvedDayKey = String(dayKey || getPointTodayKey() || todayKey());
+  const dailyState = getChallengeTicketDailyState(safeStore, resolvedDayKey, { create: true });
+  const specialState = dailyState.special && typeof dailyState.special === "object" ? dailyState.special : {};
+  const previousPoints = Number.isFinite(Number(previousChallengePoints)) ? Math.max(0, Number(previousChallengePoints)) : 0;
+  const nextPoints = Number.isFinite(Number(nextChallengePoints)) ? Math.max(0, Number(nextChallengePoints)) : previousPoints;
+  const queuedKeys = [];
+  const specialThresholds = [
+    { key: "p141", threshold: 141 },
+    { key: "p221", threshold: 221 },
+    { key: "p261", threshold: 261 }
+  ];
+
+  specialThresholds.forEach(({ key, threshold }) => {
+    const entry = specialState[key] && typeof specialState[key] === "object"
+      ? sanitizeChallengeTicketSpecialState(specialState[key])
+      : sanitizeChallengeTicketSpecialState({ processed: false, queued: false, result: "miss", awardedMinutes: 0 });
+    if (entry.processed || entry.queued) return;
+    if (previousPoints >= threshold || nextPoints < threshold) return;
+
+    entry.queued = true;
+    specialState[key] = entry;
+    queuedKeys.push(key);
+
+    if (typeof queueChallengeTicketChance === "function") {
+      queueChallengeTicketChance(() => {
+        const result = resolveChallengeSpecialDrawResult(resolvedDayKey, threshold);
+        const finalEntry = specialState[key] && typeof specialState[key] === "object"
+          ? sanitizeChallengeTicketSpecialState(specialState[key])
+          : sanitizeChallengeTicketSpecialState({ processed: false, queued: true, result: "miss", awardedMinutes: 0 });
+        finalEntry.processed = true;
+        finalEntry.queued = false;
+        finalEntry.result = String(result?.outcome || "miss").toLowerCase() === "30" || String(result?.outcome || "miss").toLowerCase() === "60"
+          ? String(result.outcome)
+          : "miss";
+        finalEntry.awardedMinutes = Math.max(0, Number(result?.minutes) || 0);
+        specialState[key] = finalEntry;
+        if (finalEntry.awardedMinutes > 0) {
+          awardGameTicket(safeStore, finalEntry.awardedMinutes, "random", {
+            type: "random",
+            historyLabel: `過去の間違い 特別抽選 ${finalEntry.awardedMinutes}分券`
+          });
+        }
+        persistGameTicketState();
+      });
+    }
+  });
+
+  dailyState.special = specialState;
+  return queuedKeys;
 }
 
 function processChallengeGameTicketAwards(store = ensureGameTicketState(), dayKey = getPointTodayKey(), previousChallengePoints = null, nextChallengePoints = null) {
