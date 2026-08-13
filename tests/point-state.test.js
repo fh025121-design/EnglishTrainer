@@ -2,7 +2,8 @@ const assert = require("assert");
 const fs = require("fs");
 const vm = require("vm");
 
-const appCode = fs.readFileSync(require("path").join(__dirname, "..", "app.js"), "utf8");
+const appCode = fs.readFileSync(require("path").join(__dirname, "..", "app.js"), "utf8")
+  .replace(/\ninit\(\);\s*$/, "\n");
 const createModalElement = () => ({
   classList: {
     add() {},
@@ -45,10 +46,22 @@ const documentStub = {
 const context = {
   window: {
     ENGLISH_TRAINER_RELEASE_INFO: { releaseHistory: [] },
+    PcFirebaseAuthState: { status: "logged-out", user: null },
     innerWidth: 1200,
     addEventListener() {},
     removeEventListener() {},
-    requestAnimationFrame(callback) { callback && callback(); return 0; }
+    requestAnimationFrame(callback) { callback && callback(); return 0; },
+    getFirebaseCurrentUser() { return null; },
+    watchFamilyDocument() { return () => {}; },
+    watchLearningHistoryEntriesFromFirestore() { return () => {}; },
+    loadPointStateFromFirestore: async () => ({ exists: false, data: null }),
+    savePointStateToFirestore: async () => true,
+    loadGameTicketsFromFirestore: async () => ({ exists: false, data: null }),
+    saveGameTicketsToFirestore: async () => true,
+    loadStudyCoreFromFirestore: async () => ({ exists: false, data: null }),
+    saveStudyCoreToFirestore: async () => true,
+    deleteStudyCoreBackupFromFirestore: async () => true,
+    loadStudyCoreBackupsFromFirestore: async () => ({ backups: [] })
   },
   document: documentStub,
   localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
@@ -87,8 +100,53 @@ assert.strictEqual(
   JSON.stringify([5, 10, 15, 60]),
   "game tickets should include a 60-minute option alongside the existing ticket durations"
 );
+const storage = {
+  data: {}
+};
+context.localStorage = {
+  getItem(key) { return Object.prototype.hasOwnProperty.call(storage.data, key) ? storage.data[key] : null; },
+  setItem(key, value) { storage.data[key] = String(value); },
+  removeItem(key) { delete storage.data[key]; }
+};
+const persistableState = {
+  settings: {
+    gameTicketConfig: {
+      normalRules: [{ id: "rule-1", name: "テスト", targetTraining: "challenge", threshold: 30, minutes: 15, chance: 0.5, enabled: true, dailyCap: 1 }],
+      events: [{ id: "event-1", name: "イベント", type: "draw", targetTraining: "challenge", threshold: 50, enabled: true, startImage: "", maxQuestions: 5, rewardMinutes: 15, outcomes: [{ minutes: 30, chance: 0.5 }, { minutes: 60, chance: 0.2 }] }],
+      dailyCap: 2,
+      dailyGrantCapByMinutes: { 5: 20, 15: 20, 30: 10, 60: 10 },
+      ticketImages: { 30: "", 60: "" },
+      challengeAnnouncementImage: "announce.png",
+      eventStartImages: {},
+      modeLabels: { challenge: "過去の間違い", weakFocus: "苦手特訓", other: "その他の特訓" }
+    },
+    typingConfig: context.sanitizeTypingConfig(),
+    trainingCorrectChimePreset: context.TRAINING_CORRECT_CHIME_DEFAULT_PRESET
+  },
+  stats: {
+    completedSessions: [],
+    dailyPerformanceByDate: {},
+    studyTimeByDate: {},
+    dailyStatsByDate: {},
+    previousSessionWeakQuestionIds: [],
+    pendingSessionNotice: "",
+    unlockedDayMax: 1,
+    gameTickets: context.createDefaultGameTicketStats(),
+    trainingProfiles: context.createDefaultTrainingProfiles(),
+    prepositionTraining: context.createDefaultPrepositionTrainingStats(),
+    normalDayProgressByDay: {},
+    extraTrainingDailyCounter: context.createDefaultExtraTrainingDailyCounter()
+  },
+  review: { records: {} },
+  items: context.buildVocabularyItems(),
+  session: null
+};
+context.obj = persistableState;
+vm.runInContext("state = obj;", context);
+context.saveState();
 const loadedState = context.loadState();
 assert.ok(loadedState.settings.gameTicketConfig, "loaded state should include gameTicketConfig");
+assert.strictEqual(loadedState.settings.gameTicketConfig.challengeAnnouncementImage, "announce.png", "state should survive a save/load cycle without a Firebase UID");
 const config = context.getGameTicketConfig();
 assert.strictEqual(Boolean(config.ticketImages), true, "game ticket config should include ticket image settings");
 assert.strictEqual(config.ticketImages[30], "", "30-minute ticket image should default to an empty string");
@@ -145,6 +203,7 @@ context.document = {
   querySelectorAll() { return []; },
   querySelector() { return null; }
 };
+const baselineGameTicketConfig = context.createDefaultGameTicketConfig();
 context.state = { settings: { gameTicketConfig: {
   normalRules: [],
   events: [{
@@ -170,6 +229,7 @@ context.renderGameTicketSettingsUi();
 assert.ok(!settingsContainer.innerHTML.includes('data-field="outcomePercent"'), "consecutive-correct events should hide draw outcomes");
 assert.ok(settingsContainer.innerHTML.includes('maxQuestions'), "consecutive-correct events should show maxQuestions");
 assert.ok(settingsContainer.innerHTML.includes('rewardMinutes'), "consecutive-correct events should show rewardMinutes selection");
+context.state = { settings: { gameTicketConfig: baselineGameTicketConfig } };
 const currentGameTicketConfig = context.getGameTicketConfig();
 const eventA = (currentGameTicketConfig.events || []).find((event) => Number(event.threshold) === 141 && String(event.targetTraining || "challenge") === "challenge");
 assert.ok(eventA, "current gameTicketConfig should include the A event for 141P");
