@@ -6490,11 +6490,23 @@ function ensureGameTicketState() {
   return current;
 }
 
-function getGameTicketDailyGrantCounters(store, dayKey = todayKey(), options = {}) {
-  const safeStore = sanitizeGameTicketStats(store || ensureGameTicketState());
-  const grantDayKey = String(dayKey || todayKey());
-  const dayCounts = safeStore.dailyGrantByMinutes?.[grantDayKey] && typeof safeStore.dailyGrantByMinutes[grantDayKey] === "object"
-    ? safeStore.dailyGrantByMinutes[grantDayKey]
+function resolveGameTicketGrantDayKey(store, dayKey) {
+  const sourceStore = store || ensureGameTicketState();
+  const explicitKey = typeof dayKey === "string" ? dayKey.trim() : "";
+  if (explicitKey) return explicitKey;
+  const availableDayKeys = Object.keys(sourceStore.dailyGrantByMinutes || {}).filter((key) => typeof key === "string" && key);
+  if (availableDayKeys.length) {
+    availableDayKeys.sort();
+    return availableDayKeys[availableDayKeys.length - 1];
+  }
+  return String(todayKey());
+}
+
+function getGameTicketDailyGrantCounters(store, dayKey, options = {}) {
+  const sourceStore = store || ensureGameTicketState();
+  const grantDayKey = resolveGameTicketGrantDayKey(sourceStore, dayKey);
+  const dayCounts = sourceStore.dailyGrantByMinutes?.[grantDayKey] && typeof sourceStore.dailyGrantByMinutes[grantDayKey] === "object"
+    ? sourceStore.dailyGrantByMinutes[grantDayKey]
     : {};
   const scope = options && typeof options === "object" ? options : {};
   const targetTraining = typeof scope.targetTraining === "string" && scope.targetTraining ? scope.targetTraining : null;
@@ -6514,16 +6526,16 @@ function getGameTicketDailyGrantCounters(store, dayKey = todayKey(), options = {
   };
 }
 
-function canGrantNewGameTicketForDay(store, minutes, dayKey = todayKey(), options = {}) {
+function canGrantNewGameTicketForDay(store, minutes, dayKey, options = {}) {
   const safeMinutes = Math.max(0, Number(minutes) || 0);
   if (!Number.isFinite(safeMinutes) || safeMinutes <= 0) return false;
   const config = getGameTicketConfig();
   const cap = Math.max(0, Number(config.dailyGrantCapByMinutes?.[safeMinutes]) || 0);
   if (cap <= 0) return false;
-  const grantDayKey = String(dayKey || todayKey());
-  const safeStore = sanitizeGameTicketStats(store || ensureGameTicketState());
-  const dayCounts = safeStore.dailyGrantByMinutes?.[grantDayKey] && typeof safeStore.dailyGrantByMinutes[grantDayKey] === "object"
-    ? safeStore.dailyGrantByMinutes[grantDayKey]
+  const sourceStore = store || ensureGameTicketState();
+  const grantDayKey = resolveGameTicketGrantDayKey(sourceStore, dayKey);
+  const dayCounts = sourceStore.dailyGrantByMinutes?.[grantDayKey] && typeof sourceStore.dailyGrantByMinutes[grantDayKey] === "object"
+    ? sourceStore.dailyGrantByMinutes[grantDayKey]
     : {};
   const scope = options && typeof options === "object" ? options : {};
   const targetTraining = typeof scope.targetTraining === "string" && scope.targetTraining ? scope.targetTraining : null;
@@ -6534,20 +6546,19 @@ function canGrantNewGameTicketForDay(store, minutes, dayKey = todayKey(), option
   return (Math.max(0, Number(counts[safeMinutes]) || 0)) < cap;
 }
 
-function registerGameTicketDailyGrant(store, minutes, dayKey = todayKey(), options = {}) {
+function registerGameTicketDailyGrant(store, minutes, dayKey, options = {}) {
   const safeMinutes = Math.max(0, Number(minutes) || 0);
   if (!Number.isFinite(safeMinutes) || safeMinutes <= 0) return false;
   const liveStore = store || ensureGameTicketState();
-  const safeStore = sanitizeGameTicketStats(liveStore);
-  const grantDayKey = String(dayKey || todayKey());
+  const grantDayKey = resolveGameTicketGrantDayKey(liveStore, dayKey);
   const scope = options && typeof options === "object" ? options : {};
   const targetTraining = typeof scope.targetTraining === "string" && scope.targetTraining ? scope.targetTraining : null;
   const derivedFromTargetTrainingPoints = Boolean(scope.derivedFromTargetTrainingPoints);
-  safeStore.dailyGrantByMinutes = safeStore.dailyGrantByMinutes && typeof safeStore.dailyGrantByMinutes === "object" ? safeStore.dailyGrantByMinutes : {};
-  safeStore.dailyGrantByMinutes[grantDayKey] = safeStore.dailyGrantByMinutes[grantDayKey] && typeof safeStore.dailyGrantByMinutes[grantDayKey] === "object"
-    ? safeStore.dailyGrantByMinutes[grantDayKey]
+  liveStore.dailyGrantByMinutes = liveStore.dailyGrantByMinutes && typeof liveStore.dailyGrantByMinutes === "object" ? liveStore.dailyGrantByMinutes : {};
+  liveStore.dailyGrantByMinutes[grantDayKey] = liveStore.dailyGrantByMinutes[grantDayKey] && typeof liveStore.dailyGrantByMinutes[grantDayKey] === "object"
+    ? liveStore.dailyGrantByMinutes[grantDayKey]
     : {};
-  const dayCounts = safeStore.dailyGrantByMinutes[grantDayKey];
+  const dayCounts = liveStore.dailyGrantByMinutes[grantDayKey];
   dayCounts[safeMinutes] = Math.max(0, Number(dayCounts[safeMinutes]) || 0) + 1;
   if (targetTraining && derivedFromTargetTrainingPoints) {
     dayCounts.__scoped = dayCounts.__scoped && typeof dayCounts.__scoped === "object" ? dayCounts.__scoped : {};
@@ -6559,7 +6570,6 @@ function registerGameTicketDailyGrant(store, minutes, dayKey = todayKey(), optio
       : {};
     dayCounts.__scoped[targetTraining].targetP[safeMinutes] = Math.max(0, Number(dayCounts.__scoped[targetTraining].targetP[safeMinutes]) || 0) + 1;
   }
-  liveStore.dailyGrantByMinutes = safeStore.dailyGrantByMinutes;
   return true;
 }
 
@@ -7635,11 +7645,24 @@ function showImmediateGameTicketReward(ticket) {
   showGameTicketModal(ticket);
 }
 
+function canAutoShowGameTicketRewardFromCurrentFlow() {
+  const pendingContext = pendingTrainingCompleteContext;
+  if (pendingContext) {
+    return Number(pendingContext?.earnedPoints || 0) > 0;
+  }
+  const summary = state?.stats?.lastResultSummary;
+  if (summary) {
+    return Number(summary?.earnedPoints || 0) > 0;
+  }
+  return true;
+}
+
 function showPendingGameTicketModalIfAny() {
   const store = ensureGameTicketState();
   removeShownPendingGameTicketRewards(store);
   if (deferGameTicketRewardModal) return;
   if (!isDesktopGameTicketEnabled()) return;
+  if (!canAutoShowGameTicketRewardFromCurrentFlow()) return;
   const pending = Array.isArray(store.pendingRewards) ? store.pendingRewards[0] : null;
   if (!pending || isGameTicketRewardAlreadyShown(pending, store)) return;
   showGameTicketModal(pending, store);
@@ -7792,8 +7815,10 @@ function openTrainingCompleteScreen(options = {}) {
 
   balanceText.textContent = formatPointValue(pointBalance);
 
+  const shouldAutoShowTicketAfter = options.showTicketAfter !== false && Number(options.earnedPoints || 0) > 0;
   pendingTrainingCompleteContext = {
-    showTicketAfter: options.showTicketAfter !== false,
+    showTicketAfter: shouldAutoShowTicketAfter,
+    earnedPoints: Number(options.earnedPoints) || 0,
     onAfterHome: typeof options.onAfterHome === "function" ? options.onAfterHome : null
   };
   deferGameTicketRewardModal = true;
@@ -7809,7 +7834,7 @@ function closeTrainingCompleteScreenToHome() {
   if (typeof context?.onAfterHome === "function") {
     context.onAfterHome();
   }
-  if (context?.showTicketAfter) {
+  if (context?.showTicketAfter && Number(context?.earnedPoints || 0) > 0) {
     showPendingGameTicketModalIfAny();
   }
 }
@@ -12953,6 +12978,7 @@ function completeCurrentSession(reason = "completed", options = {}) {
   const unlockedDayNotice = updateUnlockedDayByNormalCompletion(session, reason, dayProgressUpdate);
   const summary = buildResultSummary(session);
   const pointSummary = computeSessionEarnedPoints(session);
+  summary.earnedPoints = pointSummary.earnedPoints;
   state.stats.lastResultSummary = summary;
   if (session.mode === "normal") {
     const weakIds = extractWeakQuestionIdsFromSession(session);
