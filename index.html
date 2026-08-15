@@ -31,7 +31,7 @@
     <div class="app-shell">
       <header class="topbar">
         <div class="topbar-title">
-          <h1>English Typing Trainer for PC <span id="pcHomeAccountAlias" class="title-account-tag hidden"></span><span class="title-family-tag">Self Support PJR</span><span class="title-version-tag">Ver 2026/08/13 00:55</span></h1>
+          <h1>English Typing Trainer for PC <span id="pcHomeAccountAlias" class="title-account-tag hidden"></span><span class="title-family-tag">Self Support PJR</span><span class="title-version-tag">Ver 2026/08/15 00:05</span></h1>
           <p class="subtext">タイピングで単語・熟語を定着させよう</p>
         </div>
         <div class="topbar-actions">
@@ -542,6 +542,50 @@
           </div>
           <div class="panel day-catalog-panel">
             <div id="trainingMenuCards" class="training-menu-grid"></div>
+          </div>
+        </section>
+
+        <section id="grammarMenuScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p class="eyebrow">文法</p>
+              <h2>Unitを選ぶ</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="panel day-catalog-panel">
+            <div id="grammarUnitList" class="training-menu-grid"></div>
+          </div>
+        </section>
+
+        <section id="grammarPracticeScreen" class="screen">
+          <div class="screen-header">
+            <button class="ghost-btn back-nav-btn" data-back="true">← 戻る</button>
+            <div>
+              <p id="grammarPracticeEyebrow" class="eyebrow">文法</p>
+              <h2 id="grammarPracticeTitle">Unit 1</h2>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+          </div>
+          <div class="question-stage">
+            <div class="panel question-card" id="grammarPracticeCard">
+              <div class="question-meta">
+                <span id="grammarPracticePhaseText" class="phase-progress-text">POINT</span>
+                <span id="grammarPracticeCounterText">1 / 4</span>
+              </div>
+              <div class="question-copy">
+                <p id="grammarPracticePrompt" class="meaning-text"></p>
+              </div>
+              <div id="grammarChoiceList" class="grammar-choice-list"></div>
+              <div id="grammarWordOrderWrap" class="grammar-order-wrap hidden"></div>
+              <form id="grammarAnswerForm" class="answer-form hidden">
+                <input id="grammarAnswerInput" class="answer-input" type="text" autocomplete="off" spellcheck="false" placeholder="英語を入力" />
+                <button id="grammarAnswerBtn" class="primary-btn mobile-answer-btn" type="submit">答える</button>
+              </form>
+              <div id="grammarFeedbackBox" class="feedback-box hidden"></div>
+              <button id="grammarNextBtn" class="primary-btn hidden" type="button">次へ</button>
+            </div>
           </div>
         </section>
 
@@ -1333,10 +1377,11 @@
     <script src="preposition-data.js?v=20260812-0120"></script>
     <script src="response-data.js?v=20260812-0120"></script>
     <script src="irregular-verbs.js?v=20260812-0120"></script>
-    <script src="release-info.js?v=20260812-0120"></script>
-    <script src="training-menu-config.js?v=20260812-0120"></script>
-    <script src="learning-history-display-shared.js?v=20260812-0120"></script>
-    <script src="app.js?v=20260812-0120"></script>
+    <script src="grammar-data.js?v=20260815-0005"></script>
+    <script src="release-info.js?v=20260815-0005"></script>
+    <script src="training-menu-config.js?v=20260815-0005"></script>
+    <script src="learning-history-display-shared.js?v=20260815-0005"></script>
+    <script src="app.js?v=20260815-0005"></script>
     <script type="module" src="firebase.js?v=20260812-0120"></script>
   </body>
 </html>

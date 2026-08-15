@@ -23,6 +23,9 @@
     if (normalized === "phrase-spiral" || normalized === "idiom" || normalized === "phrase") {
       candidates.push("idiom");
     }
+    if (normalized === "grammar") {
+      candidates.push("grammar");
+    }
     if (normalized === "challenge" || normalized === "review" || normalized === "past-mistakes") {
       candidates.push("challenge");
     }
@@ -48,6 +51,15 @@
 
   function getTrainingMenuCards(pointConfig = {}, pointSummaryMap = {}) {
     return [
+      {
+        id: "trainingGrammarBtn",
+        key: "grammar",
+        title: "文法",
+        icon: "🧠",
+        mode: "grammar",
+        isReady: true,
+        pointLabel: "Unit 1 可"
+      },
       {
         id: "trainingIdiomBtn",
         key: "idiom",

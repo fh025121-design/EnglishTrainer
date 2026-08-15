@@ -31,6 +31,7 @@ const irregularCard = cards.find((card) => card.key === "irregular-verb");
 const challengeCard = cards.find((card) => card.key === "challenge");
 const prepositionCard = cards.find((card) => card.key === "preposition");
 const idiomCard = cards.find((card) => card.key === "idiom");
+const grammarCard = cards.find((card) => card.key === "grammar");
 const instantCard = cards.find((card) => card.key === "instant-composition");
 
 assert.ok(irregularCard, "should include irregular-verb card");
@@ -39,6 +40,9 @@ assert.ok(challengeCard, "should include challenge card");
 assert.strictEqual(challengeCard.icon, "🎯");
 assert.strictEqual(prepositionCard.icon, "🧭");
 assert.strictEqual(idiomCard.icon, "📖");
+assert.ok(grammarCard, "should include grammar card");
+assert.strictEqual(grammarCard.title, "文法");
+assert.strictEqual(grammarCard.icon, "🧠");
 assert.strictEqual(instantCard.icon, "⚡");
 assert.strictEqual(challengeCard.pointLabel, "本日 28P / 300P");
 assert.strictEqual(challengeCard.pointDetail, undefined);
