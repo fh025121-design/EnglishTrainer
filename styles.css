@@ -2734,6 +2734,14 @@ select {
   color: var(--text);
   font-size: clamp(18px, calc(36px * var(--pc-ui-scale)), 36px);
   min-height: clamp(44px, calc(58px * var(--pc-ui-scale)), 58px);
+  text-decoration: none;
+}
+
+.answer-input::placeholder {
+  text-decoration: none;
+  -webkit-text-decoration: none;
+  text-underline-offset: 0;
+  text-decoration-line: none;
 }
 
 .answer-input:focus {
@@ -2826,10 +2834,10 @@ select {
   justify-content: center;
   align-self: flex-start;
   margin: 0;
-  padding: 7px 12px;
+  padding: 11px 20px;
   border-radius: 999px;
-  font-size: 0.88rem;
-  font-weight: 800;
+  font-size: clamp(1.1rem, 1.8vw, 1.8rem);
+  font-weight: 900;
   letter-spacing: 0.02em;
   color: #ffffff;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
@@ -2837,10 +2845,132 @@ select {
 
 .type-badge.word {
   background: linear-gradient(135deg, #2f7cf6, #4da3ff);
+  font-size: clamp(1.4rem, 2.4vw, 2.3rem);
+  padding: 12px 22px;
 }
 
 .type-badge.phrase {
   background: linear-gradient(135deg, #ff8a00, #ffb347);
+  box-shadow: 0 10px 22px rgba(255, 138, 0, 0.28);
+  font-size: clamp(1.4rem, 2.4vw, 2.3rem);
+  padding: 12px 22px;
+}
+
+.answer-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 280px;
+  min-height: clamp(44px, calc(58px * var(--pc-ui-scale)), 58px);
+}
+
+.answer-input {
+  flex: 1 1 280px;
+  padding: calc(10px * var(--pc-ui-scale)) calc(14px * var(--pc-ui-scale));
+  border-radius: calc(14px * var(--pc-ui-scale));
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-bottom: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: clamp(18px, calc(36px * var(--pc-ui-scale)), 36px);
+  min-height: clamp(44px, calc(58px * var(--pc-ui-scale)), 58px);
+  position: relative;
+  z-index: 2;
+}
+
+.answer-input-wrap.has-phrase-guide .answer-input {
+  padding-right: clamp(12rem, 27vw, 18rem);
+}
+
+.phrase-input-guide {
+  position: absolute;
+  left: calc(12px * var(--pc-ui-scale));
+  right: calc(12px * var(--pc-ui-scale));
+  bottom: 10px;
+  top: auto;
+  transform: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  z-index: 3;
+  pointer-events: none;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  opacity: 1;
+  visibility: visible;
+}
+
+.phrase-guide-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  gap: 10px;
+  color: #ffffff;
+  font-size: clamp(1.05rem, 1.7vw, 1.45rem);
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  text-shadow: 0 0 0 rgba(255, 255, 255, 0), 0 0 0 rgba(255, 255, 255, 0);
+}
+
+.phrase-guide-blank {
+  display: inline-block;
+  width: 2.4cm;
+  min-width: 2.4cm;
+  max-width: 2.4cm;
+  text-align: center;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.9);
+  line-height: 1.1;
+  padding-bottom: 2px;
+  font-weight: 900;
+  color: #ffffff;
+  text-decoration: none;
+  box-sizing: border-box;
+  transform: translateY(-1px);
+}
+
+.phrase-meaning-guide {
+  margin-top: 8px;
+  text-align: center;
+  color: #ffffff;
+}
+
+.phrase-meaning-guide .phrase-guide-blank {
+  border-bottom: none;
+}
+
+.phrase-meaning-guide .phrase-guide-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: clamp(18px, calc(32px * var(--pc-ui-scale)), 32px);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.phrase-meaning-guide .phrase-guide-blank {
+  width: 3.2cm;
+  min-width: 3.2cm;
+  max-width: 3.2cm;
+  border-bottom-width: 2px;
+}
+
+.answer-input-wrap.has-phrase-guide .phrase-input-guide {
+  display: flex;
+}
+
+.answer-input-wrap:not(.has-phrase-guide) .phrase-input-guide {
+  display: none;
+}
+
+.answer-input-wrap.has-phrase-guide .answer-input {
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .meaning-text {
@@ -2869,12 +2999,13 @@ select {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   font-size: 0.9rem;
+  color: #ffffff;
 }
 
 .similar-hints ul {
   margin: 6px 0 0;
   padding-left: 16px;
-  color: var(--muted);
+  color: #ffffff;
 }
 
 .similar-hints li + li {
@@ -2882,7 +3013,7 @@ select {
 }
 
 .similar-hints strong {
-  color: var(--text);
+  color: #ffffff;
 }
 
 .answer-panel {

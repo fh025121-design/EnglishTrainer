@@ -6841,7 +6841,12 @@ function removeShownPendingGameTicketRewards(store = ensureGameTicketState()) {
   }
 }
 
+function isChallengeSpecialDrawEnabled() {
+  return false;
+}
+
 function showChallengeTicketChanceScreen() {
+  if (!isChallengeSpecialDrawEnabled()) return false;
   const modal = document.getElementById("challengeTicketChanceModal");
   const startBtn = document.getElementById("challengeTicketChanceStartBtn");
   if (!modal) return false;
@@ -6868,6 +6873,7 @@ function hideChallengeTicketChanceScreen() {
 }
 
 function queueChallengeTicketChance(drawAction) {
+  if (!isChallengeSpecialDrawEnabled()) return false;
   if (typeof drawAction !== "function") return false;
   pendingChallengeTicketChanceQueue.push({ action: drawAction });
   showChallengeTicketChanceScreen();
@@ -6886,6 +6892,9 @@ function executePendingChallengeTicketChance() {
 }
 
 function resolveChallengeSpecialDrawResult(dayKey, threshold) {
+  if (!isChallengeSpecialDrawEnabled()) {
+    return { outcome: "miss", minutes: 0, shouldShowChanceScreen: false };
+  }
   const dateKey = String(dayKey || todayKey());
   const config = getGameTicketConfig();
   const matchingEvent = (config.events || []).find((event) => {
@@ -6904,6 +6913,7 @@ function resolveChallengeSpecialDrawResult(dayKey, threshold) {
 }
 
 function queueChallengeSpecialDrawForThresholdCrossing(dayKey, previousChallengePoints, nextChallengePoints, store = ensureGameTicketState()) {
+  if (!isChallengeSpecialDrawEnabled()) return [];
   const safeStore = store || ensureGameTicketState();
   const resolvedDayKey = String(dayKey || getPointTodayKey() || todayKey());
   const dailyState = getChallengeTicketDailyState(safeStore, resolvedDayKey, { create: true });
@@ -11716,6 +11726,27 @@ function buildAcceptedPhraseAnswers(tokenMeta) {
   return accepted;
 }
 
+function getPhraseWordGuideCount(question) {
+  if (!question) return 0;
+  const rawAnswer = String(question.answer || question.english || "").trim();
+  if (!rawAnswer) return 0;
+  return rawAnswer.split(/\s+/).filter(Boolean).length;
+}
+
+function getPhraseSequenceMarkers(count) {
+  const circledDigits = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩", "⑪", "⑫", "⑬", "⑭", "⑮", "⑯", "⑰", "⑱", "⑲", "⑳"];
+  const safeCount = Math.max(0, Number(count) || 0);
+  return Array.from({ length: safeCount }, (_, index) => circledDigits[index] || String(index + 1));
+}
+
+function renderPhraseInputGuide(question) {
+  if (!question || question.type !== "phrase") return "";
+  const count = getPhraseWordGuideCount(question);
+  if (!count) return "";
+  const blanks = Array.from({ length: count }, () => '<span class="phrase-guide-blank"></span>');
+  return `<span class="phrase-guide-wrap">${blanks.join(" ")}</span>`;
+}
+
 function buildPhraseTypingSpec(question) {
   if (!question || question.type !== "phrase") return null;
   const rawAnswer = String(question.answer || question.english || "").trim();
@@ -11771,11 +11802,7 @@ function formatJapaneseQuestionText(question) {
 }
 
 function getQuestionPromptText(question) {
-  const phraseSpec = buildPhraseTypingSpec(question);
-  if (!phraseSpec) {
-    return formatJapaneseQuestionText(question);
-  }
-  return `${formatJapaneseQuestionText(question)} (${phraseSpec.display})`;
+  return formatJapaneseQuestionText(question);
 }
 
 function isCorrectAnswerForQuestion(question, normalizedInput) {
@@ -13579,6 +13606,9 @@ function renderQuestionSession() {
   const questionCounter = document.getElementById("questionCounter");
   const questionPhaseText = document.getElementById("questionPhaseText");
   const questionTypeBadge = document.getElementById("questionTypeBadge");
+  const questionPhraseGuide = document.getElementById("questionPhraseInputGuide");
+  const questionMeaningGuide = document.getElementById("questionMeaningGuide");
+  const questionInputWrap = questionCard.querySelector(".answer-input-wrap");
   const meaningText = document.getElementById("meaningText");
   const questionHintText = document.getElementById("questionHintText");
   const similarHints = document.getElementById("similarHints");
@@ -13594,6 +13624,29 @@ function renderQuestionSession() {
   if (questionPhaseText) questionPhaseText.textContent = formatPhaseProgressText(session);
   questionTypeBadge.textContent = question.type === "phrase" ? "熟語で答える" : "単語で答える";
   questionTypeBadge.className = `type-badge ${question.type === "phrase" ? "phrase" : "word"}`;
+  const updatePhraseGuideVisibility = () => {
+    const shouldShowGuide = question.type === "phrase" && String(input.value || "").trim().length === 0;
+    if (questionPhraseGuide) {
+      const phraseGuideHtml = renderPhraseInputGuide(question);
+      questionPhraseGuide.innerHTML = phraseGuideHtml || "";
+      questionPhraseGuide.classList.toggle("hidden", !shouldShowGuide || !phraseGuideHtml);
+    }
+    if (questionMeaningGuide) {
+      const phraseGuideHtml = renderPhraseInputGuide(question);
+      const count = getPhraseWordGuideCount(question);
+      if (phraseGuideHtml && count) {
+        const markers = getPhraseSequenceMarkers(count).join(" ");
+        questionMeaningGuide.innerHTML = `<span class="phrase-guide-wrap">（ ${markers} ）</span>`;
+      } else {
+        questionMeaningGuide.innerHTML = "";
+      }
+      questionMeaningGuide.classList.toggle("hidden", !shouldShowGuide || !phraseGuideHtml);
+    }
+    if (questionInputWrap) {
+      questionInputWrap.classList.toggle("has-phrase-guide", shouldShowGuide);
+    }
+  };
+  updatePhraseGuideVisibility();
   meaningText.textContent = getQuestionPromptText(question);
   const hintText = String(question.hint || "").trim();
   if (questionHintText) {
@@ -13609,7 +13662,11 @@ function renderQuestionSession() {
   nextQuestionBtn.classList.add("hidden");
   input.value = "";
   input.disabled = false;
-  input.placeholder = question.type === "phrase" ? "空欄の英語だけ入力" : "英語を入力してください";
+  input.placeholder = "空欄の英語だけ入力";
+  updatePhraseGuideVisibility();
+  input.oninput = () => {
+    updatePhraseGuideVisibility();
+  };
   const submitCurrentAnswer = () => {
     submitAnswer(question, input.value, feedbackBox, nextQuestionBtn, questionCard);
   };
@@ -13661,6 +13718,9 @@ function renderReviewSession() {
   const reviewCounter = document.getElementById("reviewCounter");
   const reviewPhaseText = document.getElementById("reviewPhaseText");
   const reviewTypeBadge = document.getElementById("reviewTypeBadge");
+  const reviewPhraseGuide = document.getElementById("reviewPhraseInputGuide");
+  const reviewMeaningGuide = document.getElementById("reviewMeaningGuide");
+  const reviewInputWrap = reviewCard.querySelector(".answer-input-wrap");
   const reviewMeaningText = document.getElementById("reviewMeaningText");
   const reviewHintText = document.getElementById("reviewHintText");
   const reviewSimilarHints = document.getElementById("reviewSimilarHints");
@@ -13676,6 +13736,29 @@ function renderReviewSession() {
   if (reviewPhaseText) reviewPhaseText.textContent = formatPhaseProgressText(session);
   reviewTypeBadge.textContent = question.type === "phrase" ? "熟語で答える" : "単語で答える";
   reviewTypeBadge.className = `type-badge ${question.type === "phrase" ? "phrase" : "word"}`;
+  const updateReviewPhraseGuideVisibility = () => {
+    const shouldShowGuide = question.type === "phrase" && String(input.value || "").trim().length === 0;
+    if (reviewPhraseGuide) {
+      const phraseGuideHtml = renderPhraseInputGuide(question);
+      reviewPhraseGuide.innerHTML = phraseGuideHtml || "";
+      reviewPhraseGuide.classList.toggle("hidden", !shouldShowGuide || !phraseGuideHtml);
+    }
+    if (reviewMeaningGuide) {
+      const phraseGuideHtml = renderPhraseInputGuide(question);
+      const count = getPhraseWordGuideCount(question);
+      if (phraseGuideHtml && count) {
+        const markers = getPhraseSequenceMarkers(count).join(" ");
+        reviewMeaningGuide.innerHTML = `<span class="phrase-guide-wrap">（ ${markers} ）</span>`;
+      } else {
+        reviewMeaningGuide.innerHTML = "";
+      }
+      reviewMeaningGuide.classList.toggle("hidden", !shouldShowGuide || !phraseGuideHtml);
+    }
+    if (reviewInputWrap) {
+      reviewInputWrap.classList.toggle("has-phrase-guide", shouldShowGuide);
+    }
+  };
+  updateReviewPhraseGuideVisibility();
   reviewMeaningText.textContent = getQuestionPromptText(question);
   const reviewHintTextValue = String(question.hint || "").trim();
   if (reviewHintText) {
@@ -13691,7 +13774,11 @@ function renderReviewSession() {
   reviewNextBtn.classList.add("hidden");
   input.value = "";
   input.disabled = false;
-  input.placeholder = question.type === "phrase" ? "空欄の英語だけ入力" : "英語を入力してください";
+  input.placeholder = "空欄の英語だけ入力";
+  updateReviewPhraseGuideVisibility();
+  input.oninput = () => {
+    updateReviewPhraseGuideVisibility();
+  };
   const submitCurrentAnswer = () => {
     submitAnswer(question, input.value, reviewFeedbackBox, reviewNextBtn, reviewCard);
   };

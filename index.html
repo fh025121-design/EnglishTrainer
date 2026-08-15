@@ -882,6 +882,7 @@
               </div>
               <div class="question-copy">
                 <p id="meaningText" class="meaning-text"></p>
+                <div id="questionMeaningGuide" class="phrase-meaning-guide hidden" aria-live="polite"></div>
                 <p id="questionHintText" class="question-hint-text hidden"></p>
                 <div id="similarHints" class="similar-hints hidden"></div>
               </div>
@@ -889,7 +890,10 @@
                 <div id="questionTypeBadge" class="type-badge word">単語で答える</div>
                 <h3 class="input-label">英語を入力してください</h3>
                 <form class="answer-form">
-                  <input class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="英語を入力してください" />
+                  <div class="answer-input-wrap">
+                    <div id="questionPhraseInputGuide" class="phrase-input-guide hidden" aria-live="polite"></div>
+                    <input class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="英語を入力してください" />
+                  </div>
                   <button class="primary-btn mobile-answer-btn" type="button">答える</button>
                 </form>
                 <div class="helper-row">
@@ -907,6 +911,7 @@
               </div>
               <div class="question-copy">
                 <p id="reviewMeaningText" class="meaning-text"></p>
+                <div id="reviewMeaningGuide" class="phrase-meaning-guide hidden" aria-live="polite"></div>
                 <p id="reviewHintText" class="question-hint-text hidden"></p>
                 <div id="reviewSimilarHints" class="similar-hints hidden"></div>
               </div>
@@ -914,7 +919,10 @@
                 <div id="reviewTypeBadge" class="type-badge word">単語で答える</div>
                 <h3 class="input-label">英語を入力してください</h3>
                 <form class="answer-form">
-                  <input class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="英語を入力してください" />
+                  <div class="answer-input-wrap">
+                    <div id="reviewPhraseInputGuide" class="phrase-input-guide hidden" aria-live="polite"></div>
+                    <input class="answer-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="英語を入力してください" />
+                  </div>
                   <button class="primary-btn mobile-answer-btn" type="button">答える</button>
                 </form>
                 <div class="helper-row">
