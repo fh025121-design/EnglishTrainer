@@ -7401,6 +7401,14 @@
     renderWordOrderTraining();
   }
 
+  function playWordOrderCorrectChime() {
+    if (typeof Audio !== "function") return false;
+    const audio = new Audio("../assets/sounds/correct-05-3.mp3");
+    audio.preload = "auto";
+    audio.play().catch(() => undefined);
+    return true;
+  }
+
   function submitWordOrderAnswer() {
     const training = state.wordOrderTraining;
     if (!training) return;
@@ -7425,6 +7433,7 @@
       awardWordOrderPoints(1);
       training.feedback = "正解です！";
       training.correctAnswer = "";
+      playWordOrderCorrectChime();
     } else {
       training.incorrectCount += 1;
       training.feedback = "不正解です。";
