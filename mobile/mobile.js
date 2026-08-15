@@ -5993,7 +5993,7 @@
   function isSpeakingLevel1Week(week) {
     const weekNumber = parseWeekNumber(week?.weekId);
     if (!Number.isFinite(weekNumber)) return false;
-    return weekNumber >= 1 && weekNumber <= 7;
+    return weekNumber >= 1 && weekNumber <= 6;
   }
 
   function getSpeakingWeekDisplayName(week) {
@@ -8371,7 +8371,23 @@
     return { text: `${count - 2}周目`, tone: "complete" };
   }
 
+  function hasCurrentSpeakingDayProgress(week, dayKey) {
+    const targetWeekId = String(week?.weekId || "").trim();
+    const targetDayKey = String(dayKey || "").trim();
+    if (!targetWeekId || !targetDayKey) return false;
+    const currentProgress = state.speakingProgress;
+    if (!currentProgress) return false;
+    const currentWeekId = String(currentProgress?.weekId || "").trim();
+    if (currentWeekId !== targetWeekId) return false;
+    const currentDayKey = String(resolveSpeakingProgressDayKey(week, currentProgress) || "").trim();
+    return currentDayKey === targetDayKey;
+  }
+
   function getDayProgressSummaryText(week, dayKey) {
+    if (!hasCurrentSpeakingDayProgress(week, dayKey)) {
+      return formatSpeakingRoundProgressBySpokenCount(0);
+    }
+
     const progress = getStoredSpeakingDayProgress(week.weekId, dayKey);
     if (!progress || !Array.isArray(progress.conversationOrder)) {
       return formatSpeakingRoundProgressBySpokenCount(0);
