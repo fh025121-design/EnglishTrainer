@@ -93,6 +93,7 @@ const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingPrepositionBtn", mode: "preposition-training", isReady: true },
   { id: "trainingResponseBtn", mode: "response-training", isReady: true },
   { id: "trainingIrregularVerbBtn", mode: "irregular-verb-training", isReady: true },
+  { id: "trainingGrammarBtn", mode: "grammar", isReady: true },
   { id: "trainingInstantCompositionBtn", mode: null, isReady: false }
 ]);
 
@@ -104,8 +105,8 @@ function getTrainingMenuCardsForUi() {
   }
   return TRAINING_MENU_ITEMS.map((item) => ({
     ...item,
-    title: item.id === "trainingIdiomBtn" ? "熟語特訓" : item.id === "trainingChallengeBtn" ? "過去の間違いに挑戦" : item.id === "trainingPrepositionBtn" ? "前置詞特訓" : item.id === "trainingResponseBtn" ? "応答文特訓" : item.id === "trainingIrregularVerbBtn" ? "不規則動詞特訓" : "瞬間英作文",
-    icon: item.id === "trainingIdiomBtn" ? "📖" : item.id === "trainingChallengeBtn" ? "🎯" : item.id === "trainingPrepositionBtn" ? "🧭" : item.id === "trainingResponseBtn" ? "🗣️" : item.id === "trainingIrregularVerbBtn" ? "🔄" : "⚡",
+    title: item.id === "trainingIdiomBtn" ? "熟語特訓" : item.id === "trainingChallengeBtn" ? "過去の間違いに挑戦" : item.id === "trainingPrepositionBtn" ? "前置詞特訓" : item.id === "trainingResponseBtn" ? "応答文特訓" : item.id === "trainingIrregularVerbBtn" ? "不規則動詞特訓" : item.id === "trainingGrammarBtn" ? "文法" : "瞬間英作文",
+    icon: item.id === "trainingIdiomBtn" ? "📖" : item.id === "trainingChallengeBtn" ? "🎯" : item.id === "trainingPrepositionBtn" ? "🧭" : item.id === "trainingResponseBtn" ? "🗣️" : item.id === "trainingIrregularVerbBtn" ? "🔄" : item.id === "trainingGrammarBtn" ? "📘" : "⚡",
     mode: item.mode,
     isReady: item.isReady,
     pointLabel: item.isReady ? "ポイントなし" : "準備中"
@@ -222,24 +223,21 @@ function renderGrammarUnitList() {
   const container = document.getElementById("grammarUnitList");
   if (!container) return;
   const units = getGrammarUnitCatalog();
-  container.innerHTML = units.map((unit) => {
-    const disabled = !unit.enabled;
-    return `
-      <button id="grammarUnitBtn-${unit.id}" class="secondary-btn training-menu-card-btn${disabled ? " is-disabled" : ""}" type="button" data-grammar-unit-id="${unit.id}" ${disabled ? "disabled" : ""}>
-        <span class="training-menu-card-top">
-          <span class="training-menu-card-title"><span class="training-menu-card-icon">${escapeHtml(unit.icon || "✦")}</span>${escapeHtml(unit.label || "Unit")}</span>
-          <span class="training-menu-card-chevron">›</span>
-        </span>
-        <span class="training-menu-card-point">${escapeHtml(unit.title || "準備中")}</span>
-        <span class="training-menu-card-detail">${escapeHtml(unit.description || "今後追加予定")}</span>
-      </button>
-    `;
-  }).join("");
+  container.innerHTML = units.map((unit) => `
+    <button id="grammarUnitBtn-${unit.id}" class="secondary-btn training-menu-card-btn${unit.enabled ? "" : " is-disabled"}" type="button" data-grammar-unit-id="${unit.id}" ${unit.enabled ? "" : "disabled"}>
+      <span class="training-menu-card-top">
+        <span class="training-menu-card-title"><span class="training-menu-card-icon">${escapeHtml(unit.icon || "✦")}</span>${escapeHtml(unit.label || "Unit")}</span>
+        <span class="training-menu-card-chevron">›</span>
+      </span>
+      <span class="training-menu-card-point">${escapeHtml(unit.title || "be動詞")}</span>
+      <span class="training-menu-card-detail">${escapeHtml(unit.description || "am / is / are の基本")}</span>
+    </button>
+  `).join("");
 
   container.querySelectorAll("[data-grammar-unit-id]").forEach((button) => {
     button.addEventListener("click", () => {
       const unitId = Number(button.getAttribute("data-grammar-unit-id") || "0");
-      if (!unitId || !getGrammarUnitCatalog().find((unit) => Number(unit.id) === unitId && unit.enabled)) return;
+      if (!unitId) return;
       startGrammarUnit(unitId);
     });
   });
@@ -250,32 +248,69 @@ function openGrammarMenuScreen() {
   showScreen("grammarMenuScreen");
 }
 
-function getGrammarPhaseSteps() {
-  return ["point", "point-summary", "basic", "word-order", "sentence"];
+function getGrammarSectionNames() {
+  return ["point-summary", "point", "practice", "word-order", "sentence", "complete"];
 }
 
-function getGrammarVisibleIndex(session) {
-  if (!session) return 0;
-  return Math.max(0, Number(session.phaseIndex || 0));
+function getGrammarCurrentSectionName(session) {
+  const sections = getGrammarSectionNames();
+  const index = Number(session?.sectionIndex || 0);
+  return sections[Math.max(0, Math.min(index, sections.length - 1))] || "point-summary";
 }
 
-function getGrammarCurrentPhase(session) {
-  const steps = getGrammarPhaseSteps();
-  const index = getGrammarVisibleIndex(session);
-  return steps[index] || "point";
+function getGrammarCurrentPointGroup(session) {
+  const legacyGroups = Array.isArray(session?.lesson?.pointGroups) ? session.lesson.pointGroups : [];
+  if (!legacyGroups.length) return null;
+  const index = Math.max(0, Math.min(Number(session?.pointGroupIndex || 0), legacyGroups.length - 1));
+  return legacyGroups[index] || null;
+}
+
+function getGrammarSectionQuestions(lesson, sectionName) {
+  if (!lesson) return [];
+  if (sectionName === "point") {
+    if (Array.isArray(lesson.pointQuestions) && lesson.pointQuestions.length) return lesson.pointQuestions;
+    if (Array.isArray(lesson.pointGroups)) {
+      return lesson.pointGroups.flatMap((group) => Array.isArray(group.questions) ? group.questions : []);
+    }
+    return [];
+  }
+  if (sectionName === "practice") return Array.isArray(lesson.practiceQuestions) ? lesson.practiceQuestions : [];
+  if (sectionName === "word-order") return Array.isArray(lesson.wordOrderQuestions) ? lesson.wordOrderQuestions : [];
+  if (sectionName === "sentence") return Array.isArray(lesson.sentenceQuestions) ? lesson.sentenceQuestions : [];
+  return [];
+}
+
+function getGrammarCurrentQuestion(session) {
+  if (!session || !session.lesson) return null;
+  const sectionName = getGrammarCurrentSectionName(session);
+  const questions = getGrammarSectionQuestions(session.lesson, sectionName);
+  if (!questions.length) return null;
+  const index = Math.max(0, Math.min(Number(session?.questionIndex || 0), questions.length - 1));
+  return questions[index] || null;
+}
+
+function getGrammarLessonSummaryText(lesson) {
+  if (!lesson) return "";
+  if (Array.isArray(lesson.pointSummary)) return lesson.pointSummary.join("\n");
+  if (typeof lesson.pointSummary === "string" && lesson.pointSummary.trim()) return lesson.pointSummary;
+  if (Array.isArray(lesson.pointGroups) && lesson.pointGroups.length) {
+    const firstGroup = lesson.pointGroups[0];
+    if (firstGroup && typeof firstGroup.summaryPoint === "string") return firstGroup.summaryPoint;
+  }
+  return lesson.pointText || "";
 }
 
 function setGrammarFeedback(message, isSuccess, extraLines = []) {
   const box = document.getElementById("grammarFeedbackBox");
   if (!box) return;
-  const renderedLines = [];
-  if (message) renderedLines.push({ type: "message", text: message });
+  const rendered = [];
+  if (message) rendered.push({ type: "message", text: message });
   if (Array.isArray(extraLines) && extraLines.length) {
-    renderedLines.push(...extraLines.map((line) => ({ type: line === "POINT" ? "point-label" : "point-text", text: line })));
+    rendered.push(...extraLines.map((line) => ({ type: line === "POINT" ? "point-label" : "point-text", text: line })));
   }
-  box.innerHTML = renderedLines.map((line) => {
-    const className = line.type === "point-label" ? "feedback-point-label" : line.type === "point-text" ? "feedback-point-text" : "feedback-message";
-    return `<div class="${className}">${escapeHtml(line.text)}</div>`;
+  box.innerHTML = rendered.map((entry) => {
+    const className = entry.type === "point-label" ? "feedback-point-label" : entry.type === "point-text" ? "feedback-point-text" : "feedback-message";
+    return `<div class="${className}">${escapeHtml(entry.text)}</div>`;
   }).join("");
   box.classList.remove("success", "error", "hidden");
   box.classList.toggle("success", Boolean(isSuccess));
@@ -289,33 +324,142 @@ function hideGrammarFeedback() {
   box.classList.remove("success", "error");
 }
 
-function getGrammarCurrentStepQuestion(session) {
-  const phase = getGrammarCurrentPhase(session);
-  const lesson = session.lesson;
-  if (phase === "point") {
-    const questions = lesson?.pointQuestions || [];
-    return questions[Math.min(Number(session.currentQuestionIndex || 0), questions.length - 1)] || null;
-  }
-  if (phase === "basic") {
-    const questions = lesson?.basicQuestions || [];
-    return questions[Math.min(Number(session.currentQuestionIndex || 0), questions.length - 1)] || null;
-  }
-  if (phase === "word-order") {
-    const questions = lesson?.wordOrderQuestions || [];
-    return questions[Math.min(Number(session.currentQuestionIndex || 0), questions.length - 1)] || null;
-  }
-  if (phase === "sentence") {
-    const questions = lesson?.sentenceQuestions || [];
-    return questions[Math.min(Number(session.currentQuestionIndex || 0), questions.length - 1)] || null;
-  }
-  return null;
-}
-
 function isGrammarAnswerAccepted(expected, actual) {
   const normalize = (value) => String(value || "").trim().replace(/[ 　]+/g, "").toLowerCase();
-  const expectedValues = String(expected || "").split(/[／/]/).map(normalize).filter(Boolean);
+  const expectedValues = (Array.isArray(expected) ? expected : String(expected || "").split(/[／/]/)).map((value) => normalize(value)).filter(Boolean);
   const actualValue = normalize(actual);
-  return expectedValues.includes(actualValue) || expectedValues.some((option) => actualValue.includes(option));
+  return expectedValues.some((value) => actualValue === value || actualValue.includes(value));
+}
+
+function getGrammarWordOrderTokens(question) {
+  if (!question) return [];
+  if (Array.isArray(question.words) && question.words.length) {
+    return question.words.map((token) => String(token || "").trim()).filter(Boolean);
+  }
+  const source = Array.isArray(question.answers) ? question.answers[0] : question.answer || question.english || "";
+  return String(source || "").split(/\s+/).filter(Boolean);
+}
+
+function buildGrammarPromptText(question, sectionName) {
+  if (!question) return "問題を読みましょう。";
+
+  if (sectionName === "practice") {
+    const lines = [];
+    if (question.english) lines.push(String(question.english));
+    if (question.japanese) lines.push(String(question.japanese));
+    if (question.prompt && !String(question.prompt).includes(String(question.english || ""))) {
+      lines.push(String(question.prompt));
+    }
+    if (lines.length) return lines.join("\n");
+  }
+
+  if (sectionName === "sentence") {
+    const lines = [];
+    if (question.japanese) lines.push(String(question.japanese));
+    if (question.prompt) lines.push(String(question.prompt));
+    if (lines.length) return lines.join("\n");
+  }
+
+  if (sectionName === "word-order") {
+    const lines = [];
+    if (question.japanese) lines.push(String(question.japanese));
+    if (question.prompt) lines.push(String(question.prompt));
+    if (lines.length) return lines.join("\n");
+  }
+
+  if (question.prompt) return String(question.prompt);
+  if (question.english) return String(question.english);
+  if (question.japanese) return String(question.japanese);
+  return "問題を読みましょう。";
+}
+
+function renderGrammarWordOrderUi(session) {
+  const question = getGrammarCurrentQuestion(session);
+  const wrap = document.getElementById("grammarWordOrderWrap");
+  const choiceList = document.getElementById("grammarChoiceList");
+  const prompt = document.getElementById("grammarPracticePrompt");
+  const answerForm = document.getElementById("grammarAnswerForm");
+  if (!wrap || !question) return;
+
+  if (choiceList) choiceList.innerHTML = "";
+  if (prompt) prompt.textContent = buildGrammarPromptText(question, "word-order");
+  if (answerForm) answerForm.classList.add("hidden");
+
+  const tokens = getGrammarWordOrderTokens(question);
+  const questionKey = String(question.id || question.japanese || question.english || tokens.join("|") || "");
+  if (!Array.isArray(session.wordOrderSelection)) session.wordOrderSelection = [];
+  if (!Array.isArray(session.wordOrderPool) || session.wordOrderQuestionKey !== questionKey) {
+    session.wordOrderQuestionKey = questionKey;
+    session.wordOrderSelection = [];
+    session.wordOrderPool = [...tokens].sort(() => Math.random() - 0.5);
+  }
+
+  const selected = Array.isArray(session.wordOrderSelection) ? session.wordOrderSelection.slice() : [];
+  const pool = Array.isArray(session.wordOrderPool) ? session.wordOrderPool.slice() : [...tokens].sort(() => Math.random() - 0.5);
+  session.wordOrderSelection = selected;
+  session.wordOrderPool = pool;
+
+  wrap.innerHTML = `
+    <section class="study-card conversation-card">
+      <p class="study-type-text">日本語を見て英語カードを正しい順番に並べよう</p>
+      <p class="word-order-prompt-text">${escapeHtml(question.japanese || question.prompt || "日本語を見て英語を並べましょう。")}</p>
+
+      <div class="recognized-block word-order-zone">
+        <p class="recognized-label">あなたの回答</p>
+        <div class="word-order-card-grid">${selected.length ? selected.map((token) => `<button type="button" class="word-order-card-btn word-order-answer-card" disabled>${escapeHtml(token)}</button>`).join("") : '<p class="word-order-card-empty">ここにカードが並びます</p>'}</div>
+      </div>
+
+      <div class="recognized-block word-order-zone">
+        <p class="recognized-label">カード</p>
+        <div class="word-order-card-grid">${pool.length ? pool.map((token) => `<button type="button" class="word-order-card-btn" data-word-order-token="${String(token).replace(/"/g, "&quot;")}">${escapeHtml(token)}</button>`).join("") : '<p class="word-order-card-empty">すべて並べ終わりました</p>'}</div>
+      </div>
+
+      <div class="word-order-actions-row">
+        <button type="button" class="secondary-btn" data-grammar-word-order-undo="true">1語戻る</button>
+        <button type="button" class="secondary-btn" data-grammar-word-order-reset="true">リセット</button>
+        <button type="button" class="primary-btn" data-grammar-word-order-submit="true">答える</button>
+      </div>
+    </section>
+  `;
+
+  wrap.classList.remove("hidden");
+
+  wrap.querySelectorAll("[data-word-order-token]").forEach((button) => {
+    button.onclick = () => {
+      const token = String(button.getAttribute("data-word-order-token") || "");
+      if (!token) return;
+      const poolIndex = session.wordOrderPool.indexOf(token);
+      if (poolIndex >= 0) session.wordOrderPool.splice(poolIndex, 1);
+      session.wordOrderSelection.push(token);
+      renderGrammarWordOrderUi(session);
+    };
+  });
+
+  const undoBtn = wrap.querySelector('[data-grammar-word-order-undo="true"]');
+  if (undoBtn) {
+    undoBtn.onclick = () => {
+      if (!session.wordOrderSelection.length) return;
+      const lastToken = session.wordOrderSelection.pop();
+      if (lastToken) session.wordOrderPool.push(lastToken);
+      renderGrammarWordOrderUi(session);
+    };
+  }
+
+  const resetBtn = wrap.querySelector('[data-grammar-word-order-reset="true"]');
+  if (resetBtn) {
+    resetBtn.onclick = () => {
+      session.wordOrderSelection = [];
+      session.wordOrderPool = [...tokens].sort(() => Math.random() - 0.5);
+      renderGrammarWordOrderUi(session);
+    };
+  }
+
+  const submitBtn = wrap.querySelector('[data-grammar-word-order-submit="true"]');
+  if (submitBtn) {
+    submitBtn.onclick = () => {
+      submitGrammarAnswer();
+    };
+  }
 }
 
 function updateGrammarPracticeUi() {
@@ -323,278 +467,212 @@ function updateGrammarPracticeUi() {
   const phaseText = document.getElementById("grammarPracticePhaseText");
   const counter = document.getElementById("grammarPracticeCounterText");
   const prompt = document.getElementById("grammarPracticePrompt");
-  const choiceList = document.getElementById("grammarChoiceList");
-  const wordOrderWrap = document.getElementById("grammarWordOrderWrap");
   const answerForm = document.getElementById("grammarAnswerForm");
   const answerInput = document.getElementById("grammarAnswerInput");
   const nextBtn = document.getElementById("grammarNextBtn");
-  const practiceTitle = document.getElementById("grammarPracticeTitle");
   const practiceCard = document.getElementById("grammarPracticeCard");
+  const title = document.getElementById("grammarPracticeTitle");
+  const wordOrderWrap = document.getElementById("grammarWordOrderWrap");
+  const choiceList = document.getElementById("grammarChoiceList");
 
   if (!session) return;
+  const section = getGrammarCurrentSectionName(session);
   const unit = getGrammarUnitCatalog().find((entry) => Number(entry.id) === Number(session.unitId));
-  const phase = getGrammarCurrentPhase(session);
-  if (practiceCard) {
-    practiceCard.setAttribute("data-grammar-phase", phase);
-  }
-  if (practiceTitle) {
-    practiceTitle.textContent = `${unit?.label || "Unit 1"} ${unit?.title || "be動詞"}`;
-  }
-  const phaseLabelMap = { point: "POINTチェック", "point-summary": "POINTまとめ", basic: "基本問題", "word-order": "語順", sentence: "短文作成" };
-  if (phaseText) phaseText.textContent = phaseLabelMap[phase] || "POINT";
+  const sectionLabelMap = {
+    "point-summary": "POINTまとめ",
+    point: "POINTチェック",
+    practice: "反復問題",
+    "word-order": "語順",
+    sentence: "短文英作文",
+    complete: "完了"
+  };
 
-  const pointTotal = Math.max(1, (session.lesson?.pointQuestions || []).length);
-  const stepTotal = phase === "point" ? pointTotal : phase === "point-summary" ? 1 : phase === "basic" ? Math.max(1, (session.lesson?.basicQuestions || []).length) : phase === "word-order" ? Math.max(1, (session.lesson?.wordOrderQuestions || []).length) : Math.max(1, (session.lesson?.sentenceQuestions || []).length);
-  const currentNumber = phase === "point" ? Math.min(Number(session.currentQuestionIndex || 0) + 1, pointTotal) : phase === "point-summary" ? 1 : Math.min(Number(session.currentQuestionIndex || 0) + 1, stepTotal);
-  if (counter) counter.textContent = `${currentNumber} / ${stepTotal}`;
+  if (practiceCard) practiceCard.setAttribute("data-grammar-phase", section);
+  if (title) title.textContent = `${unit?.label || "Unit 1"} ${unit?.title || "be動詞"}`;
+  if (phaseText) phaseText.textContent = sectionLabelMap[section] || "完了";
+
+  if (counter) {
+    if (["point", "practice", "word-order", "sentence"].includes(section)) {
+      const questions = getGrammarSectionQuestions(session.lesson, section);
+      const total = Math.max(1, questions.length || 1);
+      counter.textContent = `${Math.min(Number(session.questionIndex || 0) + 1, total)} / ${total}`;
+    } else {
+      counter.textContent = "1 / 1";
+    }
+  }
 
   if (prompt) {
-    if (phase === "point") {
-      const question = getGrammarCurrentStepQuestion(session);
-      prompt.textContent = question?.prompt || "問題を読みましょう。";
-    } else if (phase === "point-summary") {
-      prompt.textContent = session.lesson?.pointText || "be動詞の基本を覚えましょう。";
+    if (section === "point-summary") {
+      prompt.textContent = getGrammarLessonSummaryText(session.lesson);
+    } else if (section === "complete") {
+      prompt.textContent = `${unit?.label || "Unit 1"} 完了`;
     } else {
-      const question = getGrammarCurrentStepQuestion(session);
-      prompt.textContent = question?.prompt || "問題を読みましょう。";
+      const question = getGrammarCurrentQuestion(session);
+      prompt.textContent = buildGrammarPromptText(question, section);
     }
   }
 
-  if (choiceList) {
-    choiceList.innerHTML = "";
-    choiceList.classList.add("hidden");
-  }
-  if (wordOrderWrap) {
-    wordOrderWrap.innerHTML = "";
-    wordOrderWrap.classList.add("hidden");
-  }
+  if (choiceList) choiceList.innerHTML = "";
+  if (wordOrderWrap) wordOrderWrap.classList.add("hidden");
+  if (wordOrderWrap) wordOrderWrap.innerHTML = "";
   if (answerForm) answerForm.classList.add("hidden");
-  if (nextBtn) nextBtn.classList.add("hidden");
+  if (nextBtn) {
+    nextBtn.classList.add("hidden");
+    nextBtn.textContent = "次へ";
+  }
   hideGrammarFeedback();
 
-  if (phase === "point") {
-    if (answerForm) answerForm.classList.remove("hidden");
-    if (answerInput) {
-      const question = getGrammarCurrentStepQuestion(session);
-      const isJapaneseInput = /ひらがなで入力/.test(question?.prompt || "");
-      answerInput.value = "";
-      answerInput.placeholder = isJapaneseInput ? "ひらがな" : "英語を入力";
-      answerInput.setAttribute("data-input-kind", isJapaneseInput ? "japanese" : "english");
-      answerInput.style.width = "";
-      answerInput.style.maxWidth = "";
-      answerInput.style.minWidth = "";
-      answerInput.style.height = "";
-      answerInput.style.minHeight = "";
-      answerInput.style.lineHeight = "";
-      answerInput.style.padding = "";
-      answerInput.style.textAlign = "";
-      answerInput.style.verticalAlign = "";
-      answerInput.style.boxSizing = "";
-      answerInput.focus();
-    }
-    return;
-  }
-
-  if (phase === "point-summary") {
-    if (nextBtn) nextBtn.classList.remove("hidden");
-    return;
-  }
-
-  if (phase === "basic") {
-    const question = getGrammarCurrentStepQuestion(session);
-    if (!question || !choiceList) return;
-    choiceList.classList.remove("hidden");
-    choiceList.innerHTML = question.choices.map((choice) => `
-      <button type="button" class="secondary-btn grammar-choice-btn" data-grammar-choice="${escapeHtml(choice)}">${escapeHtml(choice)}</button>
-    `).join("");
-    choiceList.querySelectorAll("[data-grammar-choice]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const value = String(button.getAttribute("data-grammar-choice") || "");
-        choiceList.querySelectorAll(".grammar-choice-btn").forEach((option) => option.classList.remove("is-selected"));
-        button.classList.add("is-selected");
-        const isCorrect = value === question.answer;
-        setGrammarFeedback(isCorrect ? "正解！" : `不正解。正解は ${question.answer} です。`, isCorrect);
-        if (nextBtn) nextBtn.classList.remove("hidden");
-      });
-    });
-    return;
-  }
-
-  if (phase === "word-order") {
-    const question = getGrammarCurrentStepQuestion(session);
-    if (!question || !wordOrderWrap) return;
-    wordOrderWrap.classList.remove("hidden");
-    const selected = Array.isArray(session.selectedWords) ? session.selectedWords : [];
-    const buttonMarkup = question.words.map((word, index) => {
-      const chosen = selected.includes(word) && selected.indexOf(word) >= 0;
-      return `<button type="button" class="secondary-btn grammar-order-word${chosen ? " is-selected" : ""}" data-grammar-word="${escapeHtml(word)}" ${chosen ? "disabled" : ""}>${escapeHtml(word)}</button>`;
-    }).join("");
-    wordOrderWrap.innerHTML = `
-      <div class="grammar-order-selected">${selected.length ? selected.map((word) => `<span class="grammar-order-pill">${escapeHtml(word)}</span>`).join("") : "<span class=\"grammar-order-placeholder\">語を選んで並べましょう</span>"}</div>
-      <div class="grammar-order-list">${buttonMarkup}</div>
-    `;
-    wordOrderWrap.querySelectorAll("[data-grammar-word]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const word = String(button.getAttribute("data-grammar-word") || "");
-        if (!word) return;
-        const words = Array.isArray(session.selectedWords) ? session.selectedWords.slice() : [];
-        if (words.includes(word)) return;
-        words.push(word);
-        session.selectedWords = words;
-        updateGrammarPracticeUi();
-      });
-    });
-    const selectedWords = Array.isArray(session.selectedWords) ? session.selectedWords : [];
+  if (section === "point-summary") {
     if (nextBtn) {
+      nextBtn.textContent = "POINTチェックへ";
       nextBtn.classList.remove("hidden");
-      nextBtn.textContent = selectedWords.length === question.words.length ? "次へ" : "並べ終えて確認";
     }
     return;
   }
 
-  if (phase === "sentence") {
+  if (section === "word-order") {
+    renderGrammarWordOrderUi(session);
+    return;
+  }
+
+  if (["point", "practice", "sentence"].includes(section)) {
+    const question = getGrammarCurrentQuestion(session);
     if (answerForm) answerForm.classList.remove("hidden");
     if (answerInput) {
       answerInput.value = "";
+      answerInput.placeholder = question?.inputHint || "英語を入力";
       answerInput.focus();
     }
-    if (nextBtn) nextBtn.classList.add("hidden");
+    return;
+  }
+
+  if (nextBtn) {
+    nextBtn.textContent = "ホームへ戻る";
+    nextBtn.classList.remove("hidden");
   }
 }
 
 function startGrammarUnit(unitId) {
   const unit = getGrammarUnitCatalog().find((entry) => Number(entry.id) === Number(unitId));
-  if (!unit || !unit.enabled) return;
-  const lesson = getGrammarLessonByUnitId(unit.id);
-  if (!lesson) return;
+  const lesson = getGrammarLessonByUnitId(unitId);
+  if (!unit || !unit.enabled || !lesson) return;
+
   grammarTrainingSession = {
-    unitId: unit.id,
+    unitId: Number(unitId),
     lesson,
-    phaseIndex: 0,
-    currentQuestionIndex: 0,
-    selectedWords: [],
+    sectionIndex: 0,
+    pointGroupIndex: 0,
+    questionIndex: 0,
     completed: false
   };
+
   showScreen("grammarPracticeScreen");
   updateGrammarPracticeUi();
 }
 
 function moveToNextGrammarStep() {
-  if (!grammarTrainingSession) return;
-  const phase = getGrammarCurrentPhase(grammarTrainingSession);
-  const lesson = grammarTrainingSession.lesson;
+  const session = grammarTrainingSession;
+  if (!session) return;
 
-  if (phase === "point") {
-    const total = (lesson?.pointQuestions || []).length;
-    const nextIndex = Number(grammarTrainingSession.currentQuestionIndex || 0) + 1;
-    if (nextIndex < total) {
-      grammarTrainingSession.currentQuestionIndex = nextIndex;
-      updateGrammarPracticeUi();
-      return;
-    }
-    grammarTrainingSession.phaseIndex = 1;
-    grammarTrainingSession.currentQuestionIndex = 0;
-    grammarTrainingSession.selectedWords = [];
+  const section = getGrammarCurrentSectionName(session);
+
+  if (section === "point-summary") {
+    session.sectionIndex = 1;
+    session.questionIndex = 0;
     updateGrammarPracticeUi();
     return;
   }
 
-  if (phase === "point-summary") {
-    grammarTrainingSession.phaseIndex = 2;
-    grammarTrainingSession.currentQuestionIndex = 0;
-    grammarTrainingSession.selectedWords = [];
+  if (section === "point") {
+    const questions = getGrammarSectionQuestions(session.lesson, "point");
+    const total = questions.length || 1;
+    if (Number(session.questionIndex || 0) < total - 1) {
+      session.questionIndex += 1;
+      updateGrammarPracticeUi();
+      return;
+    }
+    session.sectionIndex = 2;
+    session.questionIndex = 0;
     updateGrammarPracticeUi();
     return;
   }
 
-  if (phase === "basic") {
-    const total = (lesson?.basicQuestions || []).length;
-    grammarTrainingSession.currentQuestionIndex = Math.min(Number(grammarTrainingSession.currentQuestionIndex || 0) + 1, total - 1);
-    if (Number(grammarTrainingSession.currentQuestionIndex) >= total - 1) {
-      grammarTrainingSession.phaseIndex = 3;
-      grammarTrainingSession.currentQuestionIndex = 0;
-      grammarTrainingSession.selectedWords = [];
+  if (section === "practice") {
+    const questions = getGrammarSectionQuestions(session.lesson, "practice");
+    const total = questions.length || 1;
+    if (Number(session.questionIndex || 0) < total - 1) {
+      session.questionIndex += 1;
       updateGrammarPracticeUi();
       return;
     }
+    session.sectionIndex = 3;
+    session.questionIndex = 0;
     updateGrammarPracticeUi();
     return;
   }
-  if (phase === "word-order") {
-    const total = (lesson?.wordOrderQuestions || []).length;
-    grammarTrainingSession.currentQuestionIndex = Math.min(Number(grammarTrainingSession.currentQuestionIndex || 0) + 1, total - 1);
-    if (Number(grammarTrainingSession.currentQuestionIndex) >= total - 1) {
-      grammarTrainingSession.phaseIndex = 4;
-      grammarTrainingSession.currentQuestionIndex = 0;
-      grammarTrainingSession.selectedWords = [];
+
+  if (section === "word-order") {
+    const questions = getGrammarSectionQuestions(session.lesson, "word-order");
+    const total = questions.length || 1;
+    if (Number(session.questionIndex || 0) < total - 1) {
+      session.questionIndex += 1;
       updateGrammarPracticeUi();
       return;
     }
+    session.sectionIndex = 4;
+    session.questionIndex = 0;
     updateGrammarPracticeUi();
     return;
   }
-  if (phase === "sentence") {
-    const total = (lesson?.sentenceQuestions || []).length;
-    grammarTrainingSession.currentQuestionIndex = Math.min(Number(grammarTrainingSession.currentQuestionIndex || 0) + 1, total - 1);
-    if (Number(grammarTrainingSession.currentQuestionIndex) >= total - 1) {
-      grammarTrainingSession.completed = true;
-      showScreen("homeScreen", { recordHistory: false });
+
+  if (section === "sentence") {
+    const questions = getGrammarSectionQuestions(session.lesson, "sentence");
+    const total = questions.length || 1;
+    if (Number(session.questionIndex || 0) < total - 1) {
+      session.questionIndex += 1;
+      updateGrammarPracticeUi();
       return;
     }
+    session.sectionIndex = 5;
+    session.questionIndex = 0;
     updateGrammarPracticeUi();
+    return;
+  }
+
+  if (section === "complete") {
+    showScreen("homeScreen", { recordHistory: false });
   }
 }
 
 function submitGrammarAnswer() {
-  if (!grammarTrainingSession) return;
-  const phase = getGrammarCurrentPhase(grammarTrainingSession);
-  const question = getGrammarCurrentStepQuestion(grammarTrainingSession);
+  const session = grammarTrainingSession;
+  if (!session) return;
+  const section = getGrammarCurrentSectionName(session);
+  if (!["point", "practice", "word-order", "sentence"].includes(section)) return;
+
+  const question = getGrammarCurrentQuestion(session);
   if (!question) return;
 
-  if (phase === "point") {
+  let answer = "";
+  if (section === "word-order") {
+    answer = Array.isArray(session.wordOrderSelection) ? session.wordOrderSelection.join(" ") : "";
+  } else {
     const input = document.getElementById("grammarAnswerInput");
-    const answer = (input?.value || "").trim();
-    const isCorrect = isGrammarAnswerAccepted(question.answer, answer);
-    if (isCorrect) {
-      setGrammarFeedback("正解！", true);
-    } else {
-      const summaryText = question?.pointText || grammarTrainingSession?.lesson?.pointText || "";
-      const pointLines = summaryText ? ["POINT", summaryText] : [];
-      setGrammarFeedback(`不正解。正解は「${question.answer}」です。`, false, pointLines);
-    }
-    const nextBtn = document.getElementById("grammarNextBtn");
-    if (nextBtn) nextBtn.classList.remove("hidden");
-    return;
+    answer = (input?.value || "").trim();
   }
 
-  if (phase === "basic") {
-    const selected = document.querySelector(".grammar-choice-btn.is-selected");
-    const choice = selected ? selected.getAttribute("data-grammar-choice") : null;
-    const isCorrect = Boolean(choice) && choice === question.answer;
-    setGrammarFeedback(isCorrect ? "正解！" : `不正解。正解は ${question.answer} です。`, isCorrect);
-    const nextBtn = document.getElementById("grammarNextBtn");
-    if (nextBtn) nextBtn.classList.remove("hidden");
-    return;
+  const isCorrect = isGrammarAnswerAccepted(question.answers || question.answer, answer);
+
+  if (isCorrect) {
+    setGrammarFeedback("正解！", true);
+  } else {
+    const summaryText = question.point || session.lesson?.pointText || "";
+    const expectedText = Array.isArray(question.answers) ? question.answers.join("／") : question.answers || question.answer || "";
+    setGrammarFeedback(`不正解。正解は「${expectedText}」です。`, false, ["POINT", summaryText]);
   }
 
-  if (phase === "word-order") {
-    const words = Array.isArray(grammarTrainingSession.selectedWords) ? grammarTrainingSession.selectedWords : [];
-    const english = words.join(" ");
-    const isCorrect = english === question.answer || english === question.answer.replace(/\.$/, "");
-    setGrammarFeedback(isCorrect ? "正解！" : `不正解。正解は ${question.answer} です。`, isCorrect);
-    const nextBtn = document.getElementById("grammarNextBtn");
-    if (nextBtn) nextBtn.classList.remove("hidden");
-    return;
-  }
-
-  if (phase === "sentence") {
-    const input = document.getElementById("grammarAnswerInput");
-    const answer = (input?.value || "").trim();
-    const isCorrect = answer.toLowerCase() === String(question.answer).trim().toLowerCase();
-    setGrammarFeedback(isCorrect ? "正解！" : `不正解。正解は ${question.answer} です。`, isCorrect);
-    const nextBtn = document.getElementById("grammarNextBtn");
-    if (nextBtn) nextBtn.classList.remove("hidden");
-  }
+  const nextBtn = document.getElementById("grammarNextBtn");
+  if (nextBtn) nextBtn.classList.remove("hidden");
 }
 
 const TRAINING_MODE_KIND_MAP = Object.freeze({
@@ -15701,10 +15779,14 @@ function bindEvents() {
 
   const grammarNextBtn = document.getElementById("grammarNextBtn");
   if (grammarNextBtn) {
+    if (grammarNextBtn.dataset.grammarNextBound === "true") {
+      grammarNextBtn.onclick = null;
+    }
+    grammarNextBtn.dataset.grammarNextBound = "true";
     grammarNextBtn.addEventListener("click", () => {
       if (!grammarTrainingSession) return;
-      const phase = getGrammarCurrentPhase(grammarTrainingSession);
-      if (phase === "point" || phase === "point-summary" || phase === "basic" || phase === "word-order" || phase === "sentence") {
+      const section = getGrammarCurrentSectionName(grammarTrainingSession);
+      if (["point-summary", "point", "practice", "word-order", "sentence", "complete"].includes(section)) {
         moveToNextGrammarStep();
       }
     });

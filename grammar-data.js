@@ -31,71 +31,121 @@
 
   const lessonsByUnitId = {
     1: {
+      unitId: 1,
       id: 1,
       title: "be動詞",
-      pointText: "be動詞は am / is / are を使います。\n\n主語によって形が変わるので、\n主語と一緒に覚えましょう。",
+      intro: "be動詞の基本を確認して、短い文で使い方を定着させます。",
+      pointSummary: [
+        "POINT",
+        "・be動詞は am / is / are",
+        "・I → am",
+        "・you → are",
+        "・三人称単数 → is",
+        "・複数 → are",
+        "・否定文は be動詞の後ろに not",
+        "・疑問文は be動詞を主語の前へ"
+      ].join("\n"),
       pointQuestions: [
         {
+          id: "p1",
+          type: "fill",
           prompt: "I am a student.\n私は生徒［　　　］。\nひらがなで入力",
-          answer: "です／だ",
-          pointText: "be動詞は am / is / are を使います。\n\n主語によって形が変わるので、\n主語と一緒に覚えましょう。",
-          explanation: "I am ... は「私は～です」などと訳す。"
+          japanese: "私は生徒です。",
+          answers: ["です", "だ"],
+          inputHint: "ひらがな",
+          point: "be動詞は am / is / are を使います。"
         },
         {
+          id: "p2",
+          type: "fill",
           prompt: "She is in the kitchen.\n彼女は台所［　　　］。\nひらがなで入力",
-          answer: "にいます／にいる",
-          pointText: "be動詞は am / is / are を使います。\n\n主語によって形が変わるので、\n主語と一緒に覚えましょう。",
-          explanation: "be動詞 + in the kitchen は「～にいる」と訳す。"
+          japanese: "彼女は台所にいます。",
+          answers: ["にいます", "にいる"],
+          inputHint: "ひらがな",
+          point: "三人称単数は is を使います。"
         },
         {
+          id: "p3",
+          type: "fill",
           prompt: "My book is on the desk.\n私の本は机の上［　　　］。\nひらがなで入力",
-          answer: "にあります／にある",
-          pointText: "be動詞は am / is / are を使います。\n\n主語によって形が変わるので、\n主語と一緒に覚えましょう。",
-          explanation: "be動詞 + on the desk は「～の上にある」と訳す。"
+          japanese: "私の本は机の上にあります。",
+          answers: ["にあります", "にある"],
+          inputHint: "ひらがな",
+          point: "be動詞は「～にいる」「～にある」などの状態や位置を表します。"
         }
       ],
-      basicQuestions: [
+      practiceQuestions: [
         {
-          prompt: "I ___ a student.",
-          choices: ["am", "is", "are"],
-          answer: "am",
-          explanation: "I には am を使います。"
+          id: "r1",
+          type: "fill",
+          english: "I am tired.",
+          japanese: "私は疲れています。",
+          prompt: "I ___ tired.\n空欄に入る語を入力",
+          answers: ["am"],
+          inputHint: "be動詞",
+          point: "I → am"
         },
         {
-          prompt: "She ___ kind.",
-          choices: ["am", "is", "are"],
-          answer: "is",
-          explanation: "She には is を使います。"
+          id: "r2",
+          type: "fill",
+          english: "You are late.",
+          japanese: "あなたは遅いです。",
+          prompt: "You ___ late.\n空欄に入る語を入力",
+          answers: ["are"],
+          inputHint: "be動詞",
+          point: "you → are"
         },
         {
-          prompt: "We ___ happy.",
-          choices: ["am", "is", "are"],
-          answer: "are",
-          explanation: "We には are を使います。"
+          id: "r3",
+          type: "fill",
+          english: "The dogs are outside.",
+          japanese: "その犬たちは外にいます。",
+          prompt: "The dogs ___ outside.\n空欄に入る語を入力",
+          answers: ["are"],
+          inputHint: "be動詞",
+          point: "複数 → are"
         }
       ],
       wordOrderQuestions: [
         {
-          prompt: "語順を整えて、英文を完成させましょう。",
-          words: ["I", "am", "a", "student"],
-          answer: "I am a student."
+          id: "w1",
+          type: "reorder",
+          english: "I am a student.",
+          japanese: "私は生徒です。",
+          prompt: "語順を整えて英語を完成させましょう。",
+          words: ["I", "am", "a", "student."],
+          answers: ["I am a student."],
+          point: "be動詞の基本形を使う"
         },
         {
-          prompt: "語順を整えて、英文を完成させましょう。",
-          words: ["They", "are", "in", "the", "classroom"],
-          answer: "They are in the classroom."
+          id: "w2",
+          type: "reorder",
+          english: "She is at home.",
+          japanese: "彼女は家にいます。",
+          prompt: "語順を整えて英語を完成させましょう。",
+          words: ["She", "is", "at", "home."],
+          answers: ["She is at home."],
+          point: "三人称単数は is"
         }
       ],
       sentenceQuestions: [
         {
-          prompt: "私は日本人です。",
-          answer: "I am Japanese.",
-          explanation: "日本語の意味に合わせて be動詞を使います。"
+          id: "s1",
+          type: "sentence",
+          japanese: "私は先生です。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["I am a teacher."],
+          inputHint: "英語で全文入力",
+          point: "I → am"
         },
         {
-          prompt: "彼は先生です。",
-          answer: "He is a teacher.",
-          explanation: "He には is を使います。"
+          id: "s2",
+          type: "sentence",
+          japanese: "彼は忙しいです。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["He is busy."],
+          inputHint: "英語で全文入力",
+          point: "He → is"
         }
       ]
     }
@@ -112,13 +162,30 @@
 
   function getGrammarLessonByUnitId(unitId) {
     const id = Number(unitId);
-    return lessonsByUnitId[id] ? {
-      ...lessonsByUnitId[id],
-      pointQuestions: [...(lessonsByUnitId[id].pointQuestions || [])],
-      basicQuestions: [...(lessonsByUnitId[id].basicQuestions || [])],
-      wordOrderQuestions: [...(lessonsByUnitId[id].wordOrderQuestions || [])],
-      sentenceQuestions: [...(lessonsByUnitId[id].sentenceQuestions || [])]
-    } : null;
+    const lesson = lessonsByUnitId[id];
+    if (!lesson) return null;
+
+    const clonedLesson = { ...lesson };
+    if (Array.isArray(lesson.pointGroups)) {
+      clonedLesson.pointGroups = lesson.pointGroups.map((group) => ({
+        ...group,
+        questions: Array.isArray(group.questions) ? group.questions.map((question) => ({ ...question })) : []
+      }));
+    }
+    if (Array.isArray(lesson.pointQuestions)) {
+      clonedLesson.pointQuestions = lesson.pointQuestions.map((question) => ({ ...question }));
+    }
+    if (Array.isArray(lesson.practiceQuestions)) {
+      clonedLesson.practiceQuestions = lesson.practiceQuestions.map((question) => ({ ...question }));
+    }
+    if (Array.isArray(lesson.wordOrderQuestions)) {
+      clonedLesson.wordOrderQuestions = lesson.wordOrderQuestions.map((question) => ({ ...question }));
+    }
+    if (Array.isArray(lesson.sentenceQuestions)) {
+      clonedLesson.sentenceQuestions = lesson.sentenceQuestions.map((question) => ({ ...question }));
+    }
+
+    return clonedLesson;
   }
 
   return {

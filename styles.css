@@ -2743,27 +2743,6 @@ select {
   box-sizing: border-box;
 }
 
-#grammarPracticeCard[data-grammar-phase="point"] #grammarAnswerInput,
-#grammarPracticeCard[data-grammar-phase="sentence"] #grammarAnswerInput {
-  width: min(62vw, 380px) !important;
-  max-width: 380px !important;
-  min-width: 220px !important;
-  height: 44px !important;
-  min-height: 44px !important;
-  line-height: 1.2 !important;
-  padding: 8px 14px !important;
-  text-align: center !important;
-  vertical-align: middle !important;
-  box-sizing: border-box !important;
-  display: block !important;
-}
-
-#grammarPracticeCard[data-grammar-phase="sentence"] #grammarAnswerInput {
-  width: min(70vw, 520px) !important;
-  max-width: 520px !important;
-  min-width: 260px !important;
-}
-
 .answer-input::placeholder {
   text-decoration: none;
   -webkit-text-decoration: none;
@@ -2774,6 +2753,49 @@ select {
 .answer-input:focus {
   outline: 2px solid rgba(94, 214, 214, 0.45);
   outline-offset: 2px;
+}
+
+.word-order-card-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 8px;
+}
+
+.word-order-card-btn {
+  min-width: 44px;
+  min-height: 42px;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(94, 214, 214, 0.14);
+  color: var(--text);
+  font-weight: 800;
+  font-size: 0.96rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.word-order-card-btn:hover {
+  background: rgba(94, 214, 214, 0.2);
+}
+
+.word-order-answer-card {
+  border-color: rgba(123, 108, 255, 0.46);
+  background: rgba(123, 108, 255, 0.16);
+  cursor: default;
+}
+
+.word-order-card-empty {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.92rem;
 }
 
 .hidden {
@@ -2793,6 +2815,12 @@ select {
   position: relative;
   top: -5cm;
   margin-bottom: calc(4px - 5cm);
+}
+
+#grammarPracticePrompt,
+.grammar-word-order-japanese {
+  white-space: pre-line;
+  line-height: 1.7;
 }
 
 #responsePracticeScreen #responseQuestionCard.response-answered {
@@ -2853,190 +2881,6 @@ select {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-}
-
-#grammarPracticeCard {
-  width: min(760px, 100%);
-  min-height: min(360px, 56vh);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  margin: 0 auto;
-  padding: clamp(18px, 3vw, 32px) clamp(18px, 3vw, 36px);
-  gap: 10px;
-}
-
-#grammarPracticeCard .question-meta {
-  width: 100%;
-  padding: 0 8px;
-  margin-bottom: 2px;
-}
-
-#grammarPracticeCard .question-copy {
-  width: 100%;
-  margin: 0;
-  gap: 0;
-}
-
-#grammarPracticePrompt {
-  margin: 0;
-  font-size: clamp(1.8rem, 2.6vw, 2.7rem);
-  line-height: 1.35;
-  letter-spacing: 0.02em;
-  font-weight: 800;
-}
-
-#grammarPracticeCard[data-grammar-phase="point"] {
-  min-height: min(300px, 46vh);
-}
-
-#grammarPracticeCard[data-grammar-phase="point"] .question-copy {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: min(100%, 700px);
-  margin: 0 auto;
-}
-
-#grammarPracticeCard[data-grammar-phase="point"] #grammarPracticePrompt {
-  max-width: 560px;
-  font-size: clamp(1.25rem, 1.9vw, 1.8rem);
-  line-height: 1.55;
-  letter-spacing: 0.01em;
-  font-weight: 700;
-  white-space: pre-line;
-  text-align: center;
-}
-
-#grammarPracticeCard[data-grammar-phase="point"] .answer-form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin-top: 6px;
-}
-
-#grammarPracticeCard[data-grammar-phase="point"] #grammarAnswerInput {
-  width: min(62vw, 380px);
-  max-width: 380px;
-  min-width: 220px;
-  height: 44px !important;
-  min-height: 44px !important;
-  line-height: 1.2;
-  text-align: center;
-  margin: 0 auto;
-  padding: 8px 14px !important;
-}
-
-#grammarPracticeCard[data-grammar-phase="point"] #grammarAnswerBtn {
-  display: none;
-}
-
-#grammarPracticeCard[data-grammar-phase="point"] #grammarNextBtn {
-  min-width: clamp(180px, 22vw, 240px);
-  min-height: clamp(52px, 6vw, 62px);
-  padding: 14px 24px;
-  font-size: clamp(1.05rem, 1.8vw, 1.25rem);
-  font-weight: 800;
-}
-
-.grammar-choice-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  width: min(100%, 620px);
-  margin: 0 auto;
-}
-
-.grammar-choice-btn {
-  min-width: clamp(98px, 16vw, 148px);
-  min-height: clamp(54px, 7vw, 72px);
-  padding: clamp(12px, 1.8vw, 18px) clamp(18px, 2.2vw, 28px);
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  font-size: clamp(1.1rem, 2vw, 1.7rem);
-  font-weight: 800;
-  line-height: 1.2;
-  cursor: pointer;
-  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
-}
-
-.grammar-choice-btn:hover {
-  transform: translateY(-1px);
-  border-color: rgba(94, 214, 214, 0.6);
-}
-
-.grammar-choice-btn.is-selected {
-  background: rgba(94, 214, 214, 0.14);
-  border-color: rgba(94, 214, 214, 0.8);
-  box-shadow: 0 0 0 1px rgba(94, 214, 214, 0.18);
-}
-
-.grammar-order-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
-
-.grammar-order-selected {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.grammar-order-placeholder {
-  color: var(--muted);
-  font-size: 0.95rem;
-}
-
-.grammar-order-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 34px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(94, 214, 214, 0.5);
-  background: rgba(94, 214, 214, 0.1);
-  color: var(--text);
-  font-weight: 700;
-}
-
-.grammar-order-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-
-.grammar-order-word {
-  min-width: 92px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  font-weight: 700;
-}
-
-.grammar-order-word.is-selected {
-  background: rgba(94, 214, 214, 0.14);
-  border-color: rgba(94, 214, 214, 0.7);
 }
 
 .type-badge {
