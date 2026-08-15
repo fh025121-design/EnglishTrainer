@@ -251,7 +251,7 @@ function openGrammarMenuScreen() {
 }
 
 function getGrammarPhaseSteps() {
-  return ["point", "basic", "word-order", "sentence"];
+  return ["point", "point-summary", "basic", "word-order", "sentence"];
 }
 
 function getGrammarVisibleIndex(session) {
@@ -265,10 +265,18 @@ function getGrammarCurrentPhase(session) {
   return steps[index] || "point";
 }
 
-function setGrammarFeedback(message, isSuccess) {
+function setGrammarFeedback(message, isSuccess, extraLines = []) {
   const box = document.getElementById("grammarFeedbackBox");
   if (!box) return;
-  box.textContent = message;
+  const renderedLines = [];
+  if (message) renderedLines.push({ type: "message", text: message });
+  if (Array.isArray(extraLines) && extraLines.length) {
+    renderedLines.push(...extraLines.map((line) => ({ type: line === "POINT" ? "point-label" : "point-text", text: line })));
+  }
+  box.innerHTML = renderedLines.map((line) => {
+    const className = line.type === "point-label" ? "feedback-point-label" : line.type === "point-text" ? "feedback-point-text" : "feedback-message";
+    return `<div class="${className}">${escapeHtml(line.text)}</div>`;
+  }).join("");
   box.classList.remove("success", "error", "hidden");
   box.classList.toggle("success", Boolean(isSuccess));
   box.classList.toggle("error", !isSuccess);
@@ -284,6 +292,10 @@ function hideGrammarFeedback() {
 function getGrammarCurrentStepQuestion(session) {
   const phase = getGrammarCurrentPhase(session);
   const lesson = session.lesson;
+  if (phase === "point") {
+    const questions = lesson?.pointQuestions || [];
+    return questions[Math.min(Number(session.currentQuestionIndex || 0), questions.length - 1)] || null;
+  }
   if (phase === "basic") {
     const questions = lesson?.basicQuestions || [];
     return questions[Math.min(Number(session.currentQuestionIndex || 0), questions.length - 1)] || null;
@@ -299,6 +311,13 @@ function getGrammarCurrentStepQuestion(session) {
   return null;
 }
 
+function isGrammarAnswerAccepted(expected, actual) {
+  const normalize = (value) => String(value || "").trim().replace(/[ 　]+/g, "").toLowerCase();
+  const expectedValues = String(expected || "").split(/[／/]/).map(normalize).filter(Boolean);
+  const actualValue = normalize(actual);
+  return expectedValues.includes(actualValue) || expectedValues.some((option) => actualValue.includes(option));
+}
+
 function updateGrammarPracticeUi() {
   const session = grammarTrainingSession;
   const phaseText = document.getElementById("grammarPracticePhaseText");
@@ -310,23 +329,30 @@ function updateGrammarPracticeUi() {
   const answerInput = document.getElementById("grammarAnswerInput");
   const nextBtn = document.getElementById("grammarNextBtn");
   const practiceTitle = document.getElementById("grammarPracticeTitle");
+  const practiceCard = document.getElementById("grammarPracticeCard");
 
   if (!session) return;
   const unit = getGrammarUnitCatalog().find((entry) => Number(entry.id) === Number(session.unitId));
+  const phase = getGrammarCurrentPhase(session);
+  if (practiceCard) {
+    practiceCard.setAttribute("data-grammar-phase", phase);
+  }
   if (practiceTitle) {
     practiceTitle.textContent = `${unit?.label || "Unit 1"} ${unit?.title || "be動詞"}`;
   }
-
-  const phase = getGrammarCurrentPhase(session);
-  const phaseLabelMap = { point: "POINT", basic: "基本問題", "word-order": "語順", sentence: "短文作成" };
+  const phaseLabelMap = { point: "POINTチェック", "point-summary": "POINTまとめ", basic: "基本問題", "word-order": "語順", sentence: "短文作成" };
   if (phaseText) phaseText.textContent = phaseLabelMap[phase] || "POINT";
 
-  const stepTotal = phase === "point" ? 1 : phase === "basic" ? Math.max(1, (session.lesson?.basicQuestions || []).length) : phase === "word-order" ? Math.max(1, (session.lesson?.wordOrderQuestions || []).length) : Math.max(1, (session.lesson?.sentenceQuestions || []).length);
-  const currentNumber = phase === "point" ? 1 : Math.min(Number(session.currentQuestionIndex || 0) + 1, stepTotal);
+  const pointTotal = Math.max(1, (session.lesson?.pointQuestions || []).length);
+  const stepTotal = phase === "point" ? pointTotal : phase === "point-summary" ? 1 : phase === "basic" ? Math.max(1, (session.lesson?.basicQuestions || []).length) : phase === "word-order" ? Math.max(1, (session.lesson?.wordOrderQuestions || []).length) : Math.max(1, (session.lesson?.sentenceQuestions || []).length);
+  const currentNumber = phase === "point" ? Math.min(Number(session.currentQuestionIndex || 0) + 1, pointTotal) : phase === "point-summary" ? 1 : Math.min(Number(session.currentQuestionIndex || 0) + 1, stepTotal);
   if (counter) counter.textContent = `${currentNumber} / ${stepTotal}`;
 
   if (prompt) {
     if (phase === "point") {
+      const question = getGrammarCurrentStepQuestion(session);
+      prompt.textContent = question?.prompt || "問題を読みましょう。";
+    } else if (phase === "point-summary") {
       prompt.textContent = session.lesson?.pointText || "be動詞の基本を覚えましょう。";
     } else {
       const question = getGrammarCurrentStepQuestion(session);
@@ -347,6 +373,29 @@ function updateGrammarPracticeUi() {
   hideGrammarFeedback();
 
   if (phase === "point") {
+    if (answerForm) answerForm.classList.remove("hidden");
+    if (answerInput) {
+      const question = getGrammarCurrentStepQuestion(session);
+      const isJapaneseInput = /ひらがなで入力/.test(question?.prompt || "");
+      answerInput.value = "";
+      answerInput.placeholder = isJapaneseInput ? "ひらがな" : "英語を入力";
+      answerInput.setAttribute("data-input-kind", isJapaneseInput ? "japanese" : "english");
+      answerInput.style.width = "";
+      answerInput.style.maxWidth = "";
+      answerInput.style.minWidth = "";
+      answerInput.style.height = "";
+      answerInput.style.minHeight = "";
+      answerInput.style.lineHeight = "";
+      answerInput.style.padding = "";
+      answerInput.style.textAlign = "";
+      answerInput.style.verticalAlign = "";
+      answerInput.style.boxSizing = "";
+      answerInput.focus();
+    }
+    return;
+  }
+
+  if (phase === "point-summary") {
     if (nextBtn) nextBtn.classList.remove("hidden");
     return;
   }
@@ -434,19 +483,35 @@ function moveToNextGrammarStep() {
   if (!grammarTrainingSession) return;
   const phase = getGrammarCurrentPhase(grammarTrainingSession);
   const lesson = grammarTrainingSession.lesson;
+
   if (phase === "point") {
+    const total = (lesson?.pointQuestions || []).length;
+    const nextIndex = Number(grammarTrainingSession.currentQuestionIndex || 0) + 1;
+    if (nextIndex < total) {
+      grammarTrainingSession.currentQuestionIndex = nextIndex;
+      updateGrammarPracticeUi();
+      return;
+    }
     grammarTrainingSession.phaseIndex = 1;
     grammarTrainingSession.currentQuestionIndex = 0;
     grammarTrainingSession.selectedWords = [];
     updateGrammarPracticeUi();
     return;
   }
-  const phaseList = getGrammarPhaseSteps();
+
+  if (phase === "point-summary") {
+    grammarTrainingSession.phaseIndex = 2;
+    grammarTrainingSession.currentQuestionIndex = 0;
+    grammarTrainingSession.selectedWords = [];
+    updateGrammarPracticeUi();
+    return;
+  }
+
   if (phase === "basic") {
     const total = (lesson?.basicQuestions || []).length;
     grammarTrainingSession.currentQuestionIndex = Math.min(Number(grammarTrainingSession.currentQuestionIndex || 0) + 1, total - 1);
     if (Number(grammarTrainingSession.currentQuestionIndex) >= total - 1) {
-      grammarTrainingSession.phaseIndex = 2;
+      grammarTrainingSession.phaseIndex = 3;
       grammarTrainingSession.currentQuestionIndex = 0;
       grammarTrainingSession.selectedWords = [];
       updateGrammarPracticeUi();
@@ -459,7 +524,7 @@ function moveToNextGrammarStep() {
     const total = (lesson?.wordOrderQuestions || []).length;
     grammarTrainingSession.currentQuestionIndex = Math.min(Number(grammarTrainingSession.currentQuestionIndex || 0) + 1, total - 1);
     if (Number(grammarTrainingSession.currentQuestionIndex) >= total - 1) {
-      grammarTrainingSession.phaseIndex = 3;
+      grammarTrainingSession.phaseIndex = 4;
       grammarTrainingSession.currentQuestionIndex = 0;
       grammarTrainingSession.selectedWords = [];
       updateGrammarPracticeUi();
@@ -485,6 +550,22 @@ function submitGrammarAnswer() {
   const phase = getGrammarCurrentPhase(grammarTrainingSession);
   const question = getGrammarCurrentStepQuestion(grammarTrainingSession);
   if (!question) return;
+
+  if (phase === "point") {
+    const input = document.getElementById("grammarAnswerInput");
+    const answer = (input?.value || "").trim();
+    const isCorrect = isGrammarAnswerAccepted(question.answer, answer);
+    if (isCorrect) {
+      setGrammarFeedback("正解！", true);
+    } else {
+      const summaryText = question?.pointText || grammarTrainingSession?.lesson?.pointText || "";
+      const pointLines = summaryText ? ["POINT", summaryText] : [];
+      setGrammarFeedback(`不正解。正解は「${question.answer}」です。`, false, pointLines);
+    }
+    const nextBtn = document.getElementById("grammarNextBtn");
+    if (nextBtn) nextBtn.classList.remove("hidden");
+    return;
+  }
 
   if (phase === "basic") {
     const selected = document.querySelector(".grammar-choice-btn.is-selected");
@@ -15623,7 +15704,7 @@ function bindEvents() {
     grammarNextBtn.addEventListener("click", () => {
       if (!grammarTrainingSession) return;
       const phase = getGrammarCurrentPhase(grammarTrainingSession);
-      if (phase === "point" || phase === "basic" || phase === "word-order" || phase === "sentence") {
+      if (phase === "point" || phase === "point-summary" || phase === "basic" || phase === "word-order" || phase === "sentence") {
         moveToNextGrammarStep();
       }
     });

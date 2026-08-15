@@ -33,7 +33,27 @@
     1: {
       id: 1,
       title: "be動詞",
-      pointText: "be動詞は am / is / are を使います。主語によって形が変わるので、主語と一緒に覚えましょう。",
+      pointText: "be動詞は am / is / are を使います。\n\n主語によって形が変わるので、\n主語と一緒に覚えましょう。",
+      pointQuestions: [
+        {
+          prompt: "I am a student.\n私は生徒［　　　］。\nひらがなで入力",
+          answer: "です／だ",
+          pointText: "be動詞は am / is / are を使います。\n\n主語によって形が変わるので、\n主語と一緒に覚えましょう。",
+          explanation: "I am ... は「私は～です」などと訳す。"
+        },
+        {
+          prompt: "She is in the kitchen.\n彼女は台所［　　　］。\nひらがなで入力",
+          answer: "にいます／にいる",
+          pointText: "be動詞は am / is / are を使います。\n\n主語によって形が変わるので、\n主語と一緒に覚えましょう。",
+          explanation: "be動詞 + in the kitchen は「～にいる」と訳す。"
+        },
+        {
+          prompt: "My book is on the desk.\n私の本は机の上［　　　］。\nひらがなで入力",
+          answer: "にあります／にある",
+          pointText: "be動詞は am / is / are を使います。\n\n主語によって形が変わるので、\n主語と一緒に覚えましょう。",
+          explanation: "be動詞 + on the desk は「～の上にある」と訳す。"
+        }
+      ],
       basicQuestions: [
         {
           prompt: "I ___ a student.",
@@ -92,7 +112,13 @@
 
   function getGrammarLessonByUnitId(unitId) {
     const id = Number(unitId);
-    return lessonsByUnitId[id] ? { ...lessonsByUnitId[id], basicQuestions: [...lessonsByUnitId[id].basicQuestions], wordOrderQuestions: [...lessonsByUnitId[id].wordOrderQuestions], sentenceQuestions: [...lessonsByUnitId[id].sentenceQuestions] } : null;
+    return lessonsByUnitId[id] ? {
+      ...lessonsByUnitId[id],
+      pointQuestions: [...(lessonsByUnitId[id].pointQuestions || [])],
+      basicQuestions: [...(lessonsByUnitId[id].basicQuestions || [])],
+      wordOrderQuestions: [...(lessonsByUnitId[id].wordOrderQuestions || [])],
+      sentenceQuestions: [...(lessonsByUnitId[id].sentenceQuestions || [])]
+    } : null;
   }
 
   return {
