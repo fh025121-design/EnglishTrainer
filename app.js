@@ -345,7 +345,6 @@ function buildGrammarPromptText(question, sectionName) {
 
   if (sectionName === "practice") {
     const lines = [];
-    if (question.english) lines.push(String(question.english));
     if (question.japanese) lines.push(String(question.japanese));
     if (question.prompt && !String(question.prompt).includes(String(question.english || ""))) {
       lines.push(String(question.prompt));
