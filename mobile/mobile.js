@@ -8300,11 +8300,44 @@
     elements.recentProgressList.append(fragment);
   }
 
+  function findStoredSpeakingProgressForResume(weekId, recentEntry = null) {
+    const targetWeekId = String(weekId || "").trim();
+    if (!targetWeekId) return null;
+
+    const savedProgressEntries = Object.values(state.speakingDayProgressMap || {})
+      .filter((progress) => String(progress?.weekId || "").trim() === targetWeekId)
+      .map((progress) => sanitizeSpeakingProgress(progress))
+      .filter(Boolean)
+      .sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
+
+    if (!savedProgressEntries.length) return null;
+
+    if (recentEntry && Number.isFinite(Number(recentEntry.dayNumber))) {
+      const targetDayNumber = Number(recentEntry.dayNumber);
+      const matchingDayProgress = savedProgressEntries.find((progress) => {
+        const week = getSpeakingWeek(progress.weekId);
+        if (!week) return false;
+        const dayNumber = getSpeakingDayNumber(week, getSpeakingConversationForProgress(progress, week));
+        return Number.isFinite(dayNumber) && dayNumber === targetDayNumber;
+      });
+      if (matchingDayProgress) return matchingDayProgress;
+    }
+
+    return savedProgressEntries[0];
+  }
+
   function resumeRecentSpeakingProgress(weekId) {
-    const entry = state.recentSpeakingProgress.find((item) => item.weekId === weekId);
-    const progress = sanitizeSpeakingProgress(entry);
+    const entry = state.recentSpeakingProgress.find((item) => item.weekId === weekId) || null;
+    const fallbackProgress = findStoredSpeakingProgressForResume(weekId, entry);
+    const progress = sanitizeSpeakingProgress(entry) || fallbackProgress;
     const week = getSpeakingWeek(progress?.weekId);
-    if (!entry || !progress || !week) {
+    if (!progress || !week) {
+      removeRecentSpeakingProgressByWeek(weekId);
+      renderHome();
+      return;
+    }
+
+    if (!entry && !fallbackProgress) {
       removeRecentSpeakingProgressByWeek(weekId);
       renderHome();
       return;
@@ -8392,12 +8425,23 @@
     return currentDayKey === targetDayKey;
   }
 
-  function getDayProgressSummaryText(week, dayKey) {
-    if (!hasCurrentSpeakingDayProgress(week, dayKey)) {
-      return formatSpeakingRoundProgressBySpokenCount(0);
+  function getStoredSpeakingProgressForDayDisplay(week, dayKey) {
+    const targetWeekId = String(week?.weekId || "").trim();
+    const targetDayKey = String(dayKey || "").trim();
+    if (!targetWeekId || !targetDayKey) return null;
+
+    const currentProgress = state.speakingProgress;
+    const currentWeekMatches = currentProgress && String(currentProgress.weekId || "").trim() === targetWeekId;
+    if (currentWeekMatches && String(resolveSpeakingProgressDayKey(week, currentProgress) || "").trim() === targetDayKey) {
+      return sanitizeSpeakingProgress(currentProgress);
     }
 
-    const progress = getStoredSpeakingDayProgress(week.weekId, dayKey);
+    const storedProgress = getStoredSpeakingDayProgress(targetWeekId, targetDayKey);
+    return storedProgress ? sanitizeSpeakingProgress(storedProgress) : null;
+  }
+
+  function getDayProgressSummaryText(week, dayKey) {
+    const progress = getStoredSpeakingProgressForDayDisplay(week, dayKey);
     if (!progress || !Array.isArray(progress.conversationOrder)) {
       return formatSpeakingRoundProgressBySpokenCount(0);
     }
