@@ -7462,6 +7462,14 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState(), dayKe
   const earnedTickets = [];
   let mutated = false;
 
+  const fixedRuleRewardMinutesByThreshold = {
+    90: 15,
+    147: 0,
+    193: 0,
+    199: 5,
+    240: 0
+  };
+
   const thresholds = getChallengeTicketFixedRuleThresholds();
   thresholds.forEach((threshold) => {
     const thresholdKey = String(threshold);
@@ -7469,9 +7477,15 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState(), dayKe
     if (previousPoints >= threshold || nextPoints < threshold) return;
     fixedRuleState[thresholdKey] = true;
     mutated = true;
-    const createdTicket = awardChallengeGameTicket(safeStore, 5, {
+
+    const rewardMinutes = Math.max(0, Number(fixedRuleRewardMinutesByThreshold[thresholdKey] || 0));
+    if (rewardMinutes <= 0) {
+      return;
+    }
+
+    const createdTicket = awardChallengeGameTicket(safeStore, rewardMinutes, {
       type: "random",
-      historyLabel: "過去の間違い 5分券"
+      historyLabel: `過去の間違い ${rewardMinutes}分券`
     });
     if (createdTicket) {
       earnedTickets.push(createdTicket);
