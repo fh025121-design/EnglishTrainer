@@ -2775,7 +2775,7 @@ select {
   border: 1px solid var(--border);
   background: rgba(94, 214, 214, 0.14);
   color: var(--text);
-  font-weight: 800;
+  font-weight: 400;
   font-size: 0.96rem;
   line-height: 1.2;
   cursor: pointer;
@@ -2794,7 +2794,7 @@ select {
 .word-order-card-empty {
   margin: 0;
   color: var(--muted);
-  font-weight: 700;
+  font-weight: 400;
   font-size: 0.92rem;
 }
 
@@ -3039,6 +3039,20 @@ select {
   line-height: 1.22;
   font-weight: 600;
   text-align: center;
+}
+
+.blank-input-hint {
+  display: inline-block;
+  margin-top: 4px;
+  color: #ffffff;
+  font-size: 0.58em;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+#grammarPracticeScreen .answer-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .question-hint-text {

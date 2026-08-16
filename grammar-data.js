@@ -82,7 +82,7 @@
           japanese: "私は疲れています。",
           prompt: "I ___ tired.\n空欄に入る語を入力",
           answers: ["am"],
-          inputHint: "be動詞",
+          inputHint: "入力する",
           point: "I → am"
         },
         {
@@ -92,7 +92,7 @@
           japanese: "あなたは遅いです。",
           prompt: "You ___ late.\n空欄に入る語を入力",
           answers: ["are"],
-          inputHint: "be動詞",
+          inputHint: "入力する",
           point: "you → are"
         },
         {
@@ -102,7 +102,7 @@
           japanese: "その犬たちは外にいます。",
           prompt: "The dogs ___ outside.\n空欄に入る語を入力",
           answers: ["are"],
-          inputHint: "be動詞",
+          inputHint: "入力する",
           point: "複数 → are"
         }
       ],

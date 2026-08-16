@@ -334,10 +334,22 @@ function isGrammarAnswerAccepted(expected, actual) {
 function getGrammarWordOrderTokens(question) {
   if (!question) return [];
   if (Array.isArray(question.words) && question.words.length) {
-    return question.words.map((token) => String(token || "").trim()).filter(Boolean);
+    return question.words
+      .flatMap((token) => {
+        const text = String(token || "").trim();
+        if (!text) return [];
+        const match = text.match(/^(.*?)([.!?,。！？、,.;:]+)$/u);
+        if (!match) return [text];
+        const core = match[1].trim();
+        const punctuation = match[2];
+        return core ? [core, punctuation] : [punctuation];
+      })
+      .filter(Boolean);
   }
+
   const source = Array.isArray(question.answers) ? question.answers[0] : question.answer || question.english || "";
-  return String(source || "").split(/\s+/).filter(Boolean);
+  const tokens = String(source || "").match(/[A-Za-z0-9]+(?:['’][A-Za-z0-9]+)?|[.!?,。！？、;:]/g) || [];
+  return tokens.map((token) => String(token || "").trim()).filter(Boolean);
 }
 
 function buildGrammarPromptText(question, sectionName) {
@@ -360,10 +372,8 @@ function buildGrammarPromptText(question, sectionName) {
   }
 
   if (sectionName === "word-order") {
-    const lines = [];
-    if (question.japanese) lines.push(String(question.japanese));
-    if (question.prompt) lines.push(String(question.prompt));
-    if (lines.length) return lines.join("\n");
+    if (question.japanese) return String(question.japanese);
+    if (question.prompt) return String(question.prompt);
   }
 
   if (question.prompt) return String(question.prompt);
@@ -381,7 +391,9 @@ function renderGrammarWordOrderUi(session) {
   if (!wrap || !question) return;
 
   if (choiceList) choiceList.innerHTML = "";
-  if (prompt) prompt.textContent = buildGrammarPromptText(question, "word-order");
+  if (prompt) {
+    renderPromptTextWithBlankHint(prompt, buildGrammarPromptText(question, "word-order"));
+  }
   if (answerForm) answerForm.classList.add("hidden");
 
   const tokens = getGrammarWordOrderTokens(question);
@@ -394,24 +406,21 @@ function renderGrammarWordOrderUi(session) {
   }
 
   const selected = Array.isArray(session.wordOrderSelection) ? session.wordOrderSelection.slice() : [];
+  const selectedSet = new Set(selected);
   const pool = Array.isArray(session.wordOrderPool) ? session.wordOrderPool.slice() : [...tokens].sort(() => Math.random() - 0.5);
   session.wordOrderSelection = selected;
   session.wordOrderPool = pool;
 
   wrap.innerHTML = `
     <section class="study-card conversation-card">
-      <p class="study-type-text">日本語を見て英語カードを正しい順番に並べよう</p>
-      <p class="word-order-prompt-text">${escapeHtml(question.japanese || question.prompt || "日本語を見て英語を並べましょう。")}</p>
+      <div class="word-order-card-grid">${selected.length ? selected.map((token) => `<button type="button" class="word-order-card-btn word-order-answer-card" disabled>${escapeHtml(token)}</button>`).join("") : ""}</div>
 
-      <div class="recognized-block word-order-zone">
-        <p class="recognized-label">あなたの回答</p>
-        <div class="word-order-card-grid">${selected.length ? selected.map((token) => `<button type="button" class="word-order-card-btn word-order-answer-card" disabled>${escapeHtml(token)}</button>`).join("") : '<p class="word-order-card-empty">ここにカードが並びます</p>'}</div>
-      </div>
-
-      <div class="recognized-block word-order-zone">
-        <p class="recognized-label">カード</p>
-        <div class="word-order-card-grid">${pool.length ? pool.map((token) => `<button type="button" class="word-order-card-btn" data-word-order-token="${String(token).replace(/"/g, "&quot;")}">${escapeHtml(token)}</button>`).join("") : '<p class="word-order-card-empty">すべて並べ終わりました</p>'}</div>
-      </div>
+      <div class="word-order-card-grid">${pool.length ? pool.map((token) => {
+        if (selectedSet.has(token)) {
+          return '<div class="word-order-card-slot word-order-card-empty" aria-hidden="true"></div>';
+        }
+        return `<button type="button" class="word-order-card-btn" data-word-order-token="${String(token).replace(/"/g, "&quot;")}">${escapeHtml(token)}</button>`;
+      }).join("") : ""}</div>
 
       <div class="word-order-actions-row">
         <button type="button" class="secondary-btn" data-grammar-word-order-undo="true">1語戻る</button>
@@ -426,9 +435,7 @@ function renderGrammarWordOrderUi(session) {
   wrap.querySelectorAll("[data-word-order-token]").forEach((button) => {
     button.onclick = () => {
       const token = String(button.getAttribute("data-word-order-token") || "");
-      if (!token) return;
-      const poolIndex = session.wordOrderPool.indexOf(token);
-      if (poolIndex >= 0) session.wordOrderPool.splice(poolIndex, 1);
+      if (!token || session.wordOrderSelection.includes(token)) return;
       session.wordOrderSelection.push(token);
       renderGrammarWordOrderUi(session);
     };
@@ -438,8 +445,7 @@ function renderGrammarWordOrderUi(session) {
   if (undoBtn) {
     undoBtn.onclick = () => {
       if (!session.wordOrderSelection.length) return;
-      const lastToken = session.wordOrderSelection.pop();
-      if (lastToken) session.wordOrderPool.push(lastToken);
+      session.wordOrderSelection.pop();
       renderGrammarWordOrderUi(session);
     };
   }
@@ -481,7 +487,7 @@ function updateGrammarPracticeUi() {
     "point-summary": "POINTまとめ",
     point: "POINTチェック",
     practice: "反復問題",
-    "word-order": "語順",
+    "word-order": "語順問題",
     sentence: "短文英作文",
     complete: "完了"
   };
@@ -502,12 +508,12 @@ function updateGrammarPracticeUi() {
 
   if (prompt) {
     if (section === "point-summary") {
-      prompt.textContent = getGrammarLessonSummaryText(session.lesson);
+      renderPromptTextWithBlankHint(prompt, getGrammarLessonSummaryText(session.lesson));
     } else if (section === "complete") {
-      prompt.textContent = `${unit?.label || "Unit 1"} 完了`;
+      renderPromptTextWithBlankHint(prompt, `${unit?.label || "Unit 1"} 完了`);
     } else {
       const question = getGrammarCurrentQuestion(session);
-      prompt.textContent = buildGrammarPromptText(question, section);
+      renderPromptTextWithBlankHint(prompt, buildGrammarPromptText(question, section));
     }
   }
 
@@ -529,6 +535,10 @@ function updateGrammarPracticeUi() {
     return;
   }
 
+  if (nextBtn) {
+    nextBtn.classList.add("hidden");
+  }
+
   if (section === "word-order") {
     renderGrammarWordOrderUi(session);
     return;
@@ -536,6 +546,7 @@ function updateGrammarPracticeUi() {
 
   if (["point", "practice", "sentence"].includes(section)) {
     const question = getGrammarCurrentQuestion(session);
+    session.lastAnswerCorrect = false;
     if (answerForm) answerForm.classList.remove("hidden");
     if (answerInput) {
       answerInput.value = "";
@@ -543,6 +554,10 @@ function updateGrammarPracticeUi() {
       answerInput.focus();
     }
     return;
+  }
+
+  if (section === "word-order") {
+    session.lastAnswerCorrect = false;
   }
 
   if (nextBtn) {
@@ -574,6 +589,12 @@ function moveToNextGrammarStep() {
   if (!session) return;
 
   const section = getGrammarCurrentSectionName(session);
+  if (["point", "practice", "word-order", "sentence"].includes(section) && !Boolean(session.lastAnswerCorrect)) {
+    const input = document.getElementById("grammarAnswerInput");
+    if (input) input.focus();
+    setGrammarFeedback("正解を入力してから次へ進んでください。", false);
+    return;
+  }
 
   if (section === "point-summary") {
     session.sectionIndex = 1;
@@ -661,6 +682,7 @@ function submitGrammarAnswer() {
   }
 
   const isCorrect = isGrammarAnswerAccepted(question.answers || question.answer, answer);
+  session.lastAnswerCorrect = Boolean(isCorrect);
 
   if (isCorrect) {
     setGrammarFeedback("正解！", true);
@@ -671,7 +693,13 @@ function submitGrammarAnswer() {
   }
 
   const nextBtn = document.getElementById("grammarNextBtn");
-  if (nextBtn) nextBtn.classList.remove("hidden");
+  if (nextBtn) {
+    if (isCorrect) {
+      nextBtn.classList.remove("hidden");
+    } else {
+      nextBtn.classList.add("hidden");
+    }
+  }
 }
 
 const TRAINING_MODE_KIND_MAP = Object.freeze({
@@ -12297,6 +12325,43 @@ function getQuestionPromptText(question) {
   return formatJapaneseQuestionText(question);
 }
 
+function renderPromptTextWithBlankHint(element, text) {
+  if (!element) return;
+  const source = String(text || "");
+  if (!source) {
+    element.textContent = "";
+    return;
+  }
+
+  const hintPatterns = [
+    "空欄に入る語を入力",
+    "ひらがなで入力",
+    "英語で全文入力",
+    "入力する"
+  ];
+  const hasHintLine = source.split(/\n/).some((line) => hintPatterns.some((pattern) => String(line || "").includes(pattern)));
+
+  if (!hasHintLine) {
+    element.textContent = source;
+    return;
+  }
+
+  const html = source
+    .split(/\n/)
+    .map((line) => {
+      const sanitized = escapeHtml(String(line || ""));
+      if (!sanitized) return "";
+      const isHintLine = hintPatterns.some((pattern) => String(line || "").includes(pattern));
+      return isHintLine
+        ? `<span class="blank-input-hint">${sanitized}</span>`
+        : sanitized;
+    })
+    .filter(Boolean)
+    .join("<br>");
+
+  element.innerHTML = html;
+}
+
 function isCorrectAnswerForQuestion(question, normalizedInput) {
   const phraseSpec = buildPhraseTypingSpec(question);
   if (phraseSpec) {
@@ -14139,7 +14204,7 @@ function renderQuestionSession() {
     }
   };
   updatePhraseGuideVisibility();
-  meaningText.textContent = getQuestionPromptText(question);
+  renderPromptTextWithBlankHint(meaningText, getQuestionPromptText(question));
   const hintText = String(question.hint || "").trim();
   if (questionHintText) {
     questionHintText.classList.toggle("hidden", !hintText);
@@ -14251,7 +14316,7 @@ function renderReviewSession() {
     }
   };
   updateReviewPhraseGuideVisibility();
-  reviewMeaningText.textContent = getQuestionPromptText(question);
+  renderPromptTextWithBlankHint(reviewMeaningText, getQuestionPromptText(question));
   const reviewHintTextValue = String(question.hint || "").trim();
   if (reviewHintText) {
     reviewHintText.classList.toggle("hidden", !reviewHintTextValue);
