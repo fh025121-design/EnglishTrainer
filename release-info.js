@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/16 00:13", note: "モバイル版のみ: 会話練習の保存方式を dayProgress map の merge-safe 化へ修正し、複数Week・複数Dayの進捗が overwrite されないよう保護。W6/W7 を 1周目完了相当の状態へ復元し、既存の有効進捗と future-day ガードを維持したまま、保存・再読込・再開の整合性を回復。バージョン表示と更新履歴も同時に更新。" },
     { version: "2026/08/16 00:12", note: "PC版のみ: POINTチェックの入力指示も、反復問題・短文英作文と同じ小さめ白字スタイルへ統一。『ひらがなで入力』『英語で全文入力』『空欄に入る語を入力』の各案内が同じ blank-input-hint で描画されるよう調整し、バージョン表示と更新履歴も同時に更新。" },
     { version: "2026/08/16 00:11", note: "PC版のみ: 文法 Unit 1 の入力指示を小さく白字へ調整し、入力欄のプレースホルダーを『入力する』へ変更。既存の Unit 1 の流れ・POINT・語順・短文英作文・履歴・ポイント計算は維持し、バージョン表示と更新履歴も同時に更新。" },
     { version: "2026/08/16 00:10", note: "PC版のみ: 文法編の反復問題終了後に語順・短文英作文へ進まない不具合を修正。POINTまとめ・POINTチェック・反復問題の既存正常動作は保持し、practice → word-order → sentence → complete の遷移条件だけを制御し、Next ボタンの判定が過度に早く完了へ飛ばさないよう調整。Unit 共通ひな形の固定順とバージョン表示・更新履歴も同時に更新。" },

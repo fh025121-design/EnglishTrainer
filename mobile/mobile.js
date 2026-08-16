@@ -5087,6 +5087,129 @@
     };
   }
 
+  function mergeSpeakingProgressEntries(baseProgress, incomingProgress) {
+    const base = sanitizeSpeakingProgress(baseProgress) || null;
+    const incoming = sanitizeSpeakingProgress(incomingProgress) || null;
+    if (!incoming) return base;
+    if (!base) return incoming;
+
+    const weekId = String(base.weekId || incoming.weekId || "").trim();
+    const dayKey = String(base.dayKey || incoming.dayKey || "").trim();
+    if (!weekId || !dayKey) return incoming;
+
+    const mergedConversationOrder = [...new Set([
+      ...(Array.isArray(base.conversationOrder) ? base.conversationOrder : []),
+      ...(Array.isArray(incoming.conversationOrder) ? incoming.conversationOrder : [])
+    ])];
+    const mergedCompletedConversationIds = [...new Set([
+      ...(Array.isArray(base.completedConversationIds) ? base.completedConversationIds : []),
+      ...(Array.isArray(incoming.completedConversationIds) ? incoming.completedConversationIds : [])
+    ])];
+
+    const merged = {
+      weekId,
+      dayKey,
+      conversationOrder: mergedConversationOrder,
+      conversationIndex: Math.max(
+        Math.max(0, Number(base.conversationIndex) || 0),
+        Math.max(0, Number(incoming.conversationIndex) || 0)
+      ),
+      lineIndex: Math.max(
+        Math.max(0, Number(base.lineIndex) || 0),
+        Math.max(0, Number(incoming.lineIndex) || 0)
+      ),
+      completedRounds: Math.max(
+        Math.max(0, Number(base.completedRounds) || 0),
+        Math.max(0, Number(incoming.completedRounds) || 0)
+      ),
+      conversationSetCount: Math.max(
+        Math.max(0, Number(base.conversationSetCount) || 0),
+        Math.max(0, Number(incoming.conversationSetCount) || 0)
+      ),
+      completedConversationIds: mergedCompletedConversationIds,
+      phase: (Number(incoming.updatedAt) || 0) >= (Number(base.updatedAt) || 0)
+        ? incoming.phase
+        : base.phase,
+      updatedAt: Math.max(Number(base.updatedAt) || 0, Number(incoming.updatedAt) || 0)
+    };
+
+    return sanitizeSpeakingProgress(merged) || incoming;
+  }
+
+  function mergeSpeakingDayProgressMap(sourceMap) {
+    const normalizedSource = sourceMap && typeof sourceMap === "object" ? sourceMap : {};
+    const merged = {};
+    Object.entries(normalizedSource).forEach(([storageId, rawEntry]) => {
+      const entry = sanitizeStoredSpeakingProgressEntry(rawEntry);
+      if (!entry) return;
+      const normalizedId = buildSpeakingDayProgressId(entry.weekId, entry.dayKey);
+      if (!normalizedId) return;
+      const current = merged[normalizedId] || sanitizeStoredSpeakingProgressEntry(state.speakingDayProgressMap?.[normalizedId] || {});
+      merged[normalizedId] = mergeSpeakingProgressEntries(current, entry);
+    });
+
+    Object.entries(state.speakingDayProgressMap || {}).forEach(([storageId, rawEntry]) => {
+      if (merged[storageId]) return;
+      const entry = sanitizeStoredSpeakingProgressEntry(rawEntry);
+      if (!entry) return;
+      merged[storageId] = entry;
+    });
+
+    return merged;
+  }
+
+  function restoreSpeakingWeekCompletionState(weekId, dayKeys) {
+    const normalizedWeekId = String(weekId || "").trim();
+    if (!normalizedWeekId) return false;
+    const week = getSpeakingWeek(normalizedWeekId);
+    if (!week) return false;
+
+    const normalizedDayKeys = [...new Set((Array.isArray(dayKeys) ? dayKeys : [])
+      .map((dayKey) => String(dayKey || "").trim())
+      .filter((dayKey) => Boolean(dayKey)))];
+    if (!normalizedDayKeys.length) {
+      normalizedDayKeys.push(...getSpeakingOrderedDayKeys(week));
+    }
+    if (!normalizedDayKeys.length) return false;
+
+    let changed = false;
+    normalizedDayKeys.forEach((dayKey) => {
+      const storageId = buildSpeakingDayProgressId(normalizedWeekId, dayKey);
+      const existing = getStoredSpeakingDayProgress(normalizedWeekId, dayKey);
+      const baseProgress = existing ? sanitizeSpeakingProgress(existing) : createSpeakingProgress(normalizedWeekId, [dayKey]);
+      if (!baseProgress) return;
+
+      const conversationIds = getSpeakingPracticeConversationIds(week, [dayKey]);
+      const mergedOrder = [...new Set([...(Array.isArray(baseProgress.conversationOrder) ? baseProgress.conversationOrder : []), ...conversationIds])];
+      const completedIds = [...new Set([...(Array.isArray(baseProgress.completedConversationIds) ? baseProgress.completedConversationIds : []), ...conversationIds])];
+      const targetRounds = getSpeakingTargetRounds(baseProgress);
+      const snapshot = sanitizeSpeakingProgress({
+        ...baseProgress,
+        weekId: normalizedWeekId,
+        dayKey,
+        conversationOrder: mergedOrder,
+        conversationIndex: Math.max(0, Number(baseProgress.conversationIndex) || 0),
+        lineIndex: Math.max(0, Number(baseProgress.lineIndex) || 0),
+        completedRounds: Math.max(Math.max(0, Number(baseProgress.completedRounds) || 0), targetRounds),
+        conversationSetCount: Math.max(Math.max(0, Number(baseProgress.conversationSetCount) || 0), 1),
+        completedConversationIds: completedIds,
+        phase: "conversationComplete",
+        updatedAt: Date.now()
+      });
+      if (!snapshot) return;
+      state.speakingDayProgressMap[storageId] = snapshot;
+      if (state.speakingProgress && state.speakingProgress.weekId === normalizedWeekId && resolveSpeakingProgressDayKey(week, state.speakingProgress) === dayKey) {
+        state.speakingProgress = { ...snapshot };
+      }
+      changed = true;
+    });
+
+    if (changed) {
+      persistSpeakingProgressStore();
+    }
+    return changed;
+  }
+
   function persistSpeakingProgressStore() {
     const snapshot = createEmptySpeakingProgressStore();
     snapshot.dayProgress = { ...state.speakingDayProgressMap };
@@ -5176,11 +5299,28 @@
       const entries = Object.values(state.speakingDayProgressMap);
       if (!entries.length) {
         state.speakingProgress = null;
-        return;
+      } else {
+        entries.sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
+        state.speakingProgress = { ...entries[0] };
+        setActiveSpeakingDayQueue([state.speakingProgress.dayKey], state.speakingProgress.dayKey);
       }
-      entries.sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
-      state.speakingProgress = { ...entries[0] };
-      setActiveSpeakingDayQueue([state.speakingProgress.dayKey], state.speakingProgress.dayKey);
+
+      getSpeakingWeeks().forEach((week) => {
+        const weekId = String(week?.weekId || "").trim();
+        if (!weekId) return;
+        if (weekId !== "W6" && weekId !== "W7") return;
+        restoreSpeakingWeekCompletionState(weekId, getSpeakingOrderedDayKeys(week));
+      });
+
+      if (state.speakingProgress) {
+        const week = getSpeakingWeek(state.speakingProgress.weekId);
+        if (week) {
+          const currentDayKey = resolveSpeakingProgressDayKey(week, state.speakingProgress);
+          if (currentDayKey) {
+            setActiveSpeakingDayQueue([currentDayKey], currentDayKey);
+          }
+        }
+      }
     } catch (_error) {
       state.speakingDayProgressMap = {};
       state.speakingLegacyUnresolvedProgress = null;
@@ -5205,8 +5345,13 @@
     state.speakingProgress.updatedAt = Date.now();
     const storageId = buildSpeakingDayProgressId(state.speakingProgress.weekId, dayKey);
     if (storageId) {
-      state.speakingDayProgressMap[storageId] = sanitizeSpeakingProgress(state.speakingProgress);
+      const currentEntry = state.speakingDayProgressMap[storageId] || null;
+      const nextEntry = mergeSpeakingProgressEntries(currentEntry, state.speakingProgress);
+      if (nextEntry) {
+        state.speakingDayProgressMap[storageId] = nextEntry;
+      }
     }
+    state.speakingDayProgressMap = mergeSpeakingDayProgressMap(state.speakingDayProgressMap);
     persistSpeakingProgressStore();
     upsertRecentSpeakingProgress(state.speakingProgress);
   }

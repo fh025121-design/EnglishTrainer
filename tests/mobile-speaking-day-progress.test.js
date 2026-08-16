@@ -5,6 +5,8 @@ const path = require('path');
 const source = fs.readFileSync(path.join(__dirname, '..', 'mobile', 'mobile.js'), 'utf8');
 assert.ok(/function hasCurrentSpeakingDayProgress\(week, dayKey\)/.test(source), 'Day progress guard should exist');
 assert.ok(/function getDayProgressSummaryText\(week, dayKey\)/.test(source), 'Day summary helper should exist');
+assert.ok(/function mergeSpeakingDayProgressMap\(sourceMap\)/.test(source), 'Progress map merge helper should exist');
+assert.ok(/function restoreSpeakingWeekCompletionState\(weekId, dayKeys\)/.test(source), 'Week completion recovery helper should exist');
 
 const week = {
   weekId: 'W7',
