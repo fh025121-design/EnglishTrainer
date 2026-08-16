@@ -2896,6 +2896,7 @@ select {
   padding: 34px 42px;
   justify-content: flex-start;
   text-align: left;
+  overflow: visible;
 }
 
 #grammarPracticeCard[data-grammar-phase="point-summary"] .question-meta {
@@ -2913,7 +2914,7 @@ select {
 
 .grammar-point-summary-heading {
   width: 100%;
-  margin: 0 0 28px;
+  margin: 0 0 32px;
   color: var(--text);
   font-size: 26px;
   line-height: 1.35;
@@ -3099,7 +3100,7 @@ select {
 }
 
 .grammar-point-summary-main {
-  margin: 0 0 18px;
+  margin: 0 0 32px;
   padding: 0;
   color: var(--text);
   font-size: 20px;
@@ -3118,7 +3119,7 @@ select {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px 14px;
-  margin: 0;
+  margin: 0 0 18px;
 }
 
 .grammar-point-summary-row {
@@ -3161,6 +3162,7 @@ select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   margin-top: 28px;
+  margin-bottom: 0;
 }
 
 .grammar-point-summary-card {
@@ -3237,7 +3239,8 @@ select {
 
 #grammarPracticeCard[data-grammar-phase="point-summary"] #grammarNextBtn {
   align-self: center;
-  margin-top: 28px;
+  margin-top: 34px;
+  margin-bottom: 34px;
   min-width: 260px;
   min-height: 56px;
   font-size: 18px;
