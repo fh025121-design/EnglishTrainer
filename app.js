@@ -320,7 +320,7 @@ function getGrammarPointSummaryContent(lesson) {
   };
 }
 
-function highlightGrammarSummaryText(text, highlightText) {
+function highlightGrammarSummaryText(text, highlightText, className = "grammar-point-summary-highlight") {
   const source = String(text || "");
   const target = String(highlightText || "").trim();
   if (!target || !source.includes(target)) {
@@ -329,7 +329,7 @@ function highlightGrammarSummaryText(text, highlightText) {
   const split = source.split(target);
   return split.map((segment, index) => index === split.length - 1
     ? escapeHtml(segment)
-    : `${escapeHtml(segment)}<span class="grammar-point-summary-highlight">${escapeHtml(target)}</span>`).join("");
+    : `${escapeHtml(segment)}<span class="${className}">${escapeHtml(target)}</span>`).join("");
 }
 
 function renderGrammarPointSummaryContent(element, lesson) {
@@ -340,20 +340,28 @@ function renderGrammarPointSummaryContent(element, lesson) {
     return;
   }
 
+  const mainPointText = String(content.mainPoint || "POINT").trim() || "POINT";
+  const mainPointHtml = highlightGrammarSummaryText(mainPointText, "am / is / are", "grammar-point-summary-accent");
+
   const tableRows = (Array.isArray(content.table) ? content.table : []).map((row) => {
     const key = String(row?.key || "").trim();
     const value = String(row?.value || "").trim();
+    const valueHtml = ["am", "is", "are"].includes(value)
+      ? highlightGrammarSummaryText(value, value, "grammar-point-summary-accent")
+      : escapeHtml(value);
     return `
       <div class="grammar-point-summary-row">
         <span class="grammar-point-summary-key">${escapeHtml(key)}</span>
         <span class="grammar-point-summary-arrow">→</span>
-        <span class="grammar-point-summary-value">${escapeHtml(value)}</span>
+        <span class="grammar-point-summary-value">${valueHtml}</span>
       </div>
     `;
   }).join("");
 
   const exampleBlocks = (Array.isArray(content.examples) ? content.examples : []).map((example) => {
     const label = String(example?.label || "").trim();
+    const labelTone = label === "肯定文" ? "positive" : label === "否定文" ? "negative" : label === "疑問文" ? "question" : "default";
+    const labelSign = label === "肯定文" ? "✓" : label === "否定文" ? "×" : label === "疑問文" ? "?" : "";
     const english = String(example?.english || "").trim();
     const japanese = String(example?.japanese || "").trim();
     const highlight = String(example?.highlight || "").trim();
@@ -366,7 +374,10 @@ function renderGrammarPointSummaryContent(element, lesson) {
 
     return `
       <article class="grammar-point-summary-card">
-        <div class="grammar-point-summary-section-label">${escapeHtml(label)}</div>
+        <div class="grammar-point-summary-section-label grammar-point-summary-label-${labelTone}">
+          <span class="grammar-point-summary-sign">${escapeHtml(labelSign)}</span>
+          <span>${escapeHtml(label)}</span>
+        </div>
         <div class="grammar-point-summary-example english">${englishHtml}</div>
         <div class="grammar-point-summary-example japanese">${noteHtml}</div>
       </article>
@@ -375,7 +386,7 @@ function renderGrammarPointSummaryContent(element, lesson) {
 
   element.innerHTML = `
     <div class="grammar-point-summary-wrapper">
-      <div class="grammar-point-summary-main">${escapeHtml(String(content.mainPoint || "POINT").trim() || "POINT")}</div>
+      <div class="grammar-point-summary-main">${mainPointHtml}</div>
       ${tableRows ? `<div class="grammar-point-summary-table">${tableRows}</div>` : ""}
       <div class="grammar-point-summary-example-grid">${exampleBlocks}</div>
     </div>
