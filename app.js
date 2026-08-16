@@ -300,6 +300,88 @@ function getGrammarLessonSummaryText(lesson) {
   return lesson.pointText || "";
 }
 
+function getGrammarPointSummaryContent(lesson) {
+  if (!lesson) return null;
+  if (lesson.pointSummaryContent && typeof lesson.pointSummaryContent === "object") {
+    return lesson.pointSummaryContent;
+  }
+
+  const rawSummary = getGrammarLessonSummaryText(lesson);
+  if (!rawSummary.trim()) {
+    return null;
+  }
+
+  const summaryLine = String(rawSummary).split(/\n/).map((line) => line.trim()).filter(Boolean)[0] || "POINT";
+  return {
+    mainPoint: summaryLine,
+    table: [],
+    examples: [],
+    noteHighlight: ""
+  };
+}
+
+function highlightGrammarSummaryText(text, highlightText) {
+  const source = String(text || "");
+  const target = String(highlightText || "").trim();
+  if (!target || !source.includes(target)) {
+    return escapeHtml(source);
+  }
+  const split = source.split(target);
+  return split.map((segment, index) => index === split.length - 1
+    ? escapeHtml(segment)
+    : `${escapeHtml(segment)}<span class="grammar-point-summary-highlight">${escapeHtml(target)}</span>`).join("");
+}
+
+function renderGrammarPointSummaryContent(element, lesson) {
+  if (!element) return;
+  const content = getGrammarPointSummaryContent(lesson);
+  if (!content) {
+    renderPromptTextWithBlankHint(element, getGrammarLessonSummaryText(lesson));
+    return;
+  }
+
+  const tableRows = (Array.isArray(content.table) ? content.table : []).map((row) => {
+    const key = String(row?.key || "").trim();
+    const value = String(row?.value || "").trim();
+    return `
+      <div class="grammar-point-summary-row">
+        <span class="grammar-point-summary-key">${escapeHtml(key)}</span>
+        <span class="grammar-point-summary-arrow">→</span>
+        <span class="grammar-point-summary-value">${escapeHtml(value)}</span>
+      </div>
+    `;
+  }).join("");
+
+  const exampleBlocks = (Array.isArray(content.examples) ? content.examples : []).map((example) => {
+    const label = String(example?.label || "").trim();
+    const english = String(example?.english || "").trim();
+    const japanese = String(example?.japanese || "").trim();
+    const highlight = String(example?.highlight || "").trim();
+    const englishHtml = highlight && english.includes(highlight)
+      ? highlightGrammarSummaryText(english, highlight)
+      : escapeHtml(english);
+    const noteHtml = highlight && content.noteHighlight && japanese.includes(content.noteHighlight)
+      ? highlightGrammarSummaryText(japanese, content.noteHighlight)
+      : escapeHtml(japanese);
+
+    return `
+      <article class="grammar-point-summary-card">
+        <div class="grammar-point-summary-section-label">${escapeHtml(label)}</div>
+        <div class="grammar-point-summary-example english">${englishHtml}</div>
+        <div class="grammar-point-summary-example japanese">${noteHtml}</div>
+      </article>
+    `;
+  }).join("");
+
+  element.innerHTML = `
+    <div class="grammar-point-summary-wrapper">
+      <div class="grammar-point-summary-main">${escapeHtml(String(content.mainPoint || "POINT").trim() || "POINT")}</div>
+      ${tableRows ? `<div class="grammar-point-summary-table">${tableRows}</div>` : ""}
+      <div class="grammar-point-summary-example-grid">${exampleBlocks}</div>
+    </div>
+  `;
+}
+
 function setGrammarFeedback(message, isSuccess, extraLines = []) {
   const box = document.getElementById("grammarFeedbackBox");
   if (!box) return;
@@ -506,9 +588,14 @@ function updateGrammarPracticeUi() {
     }
   }
 
+  const summaryTitle = document.getElementById("grammarPointSummaryTitle");
+  if (summaryTitle) {
+    summaryTitle.classList.toggle("hidden", section !== "point-summary");
+  }
+
   if (prompt) {
     if (section === "point-summary") {
-      renderPromptTextWithBlankHint(prompt, getGrammarLessonSummaryText(session.lesson));
+      renderGrammarPointSummaryContent(prompt, session.lesson);
     } else if (section === "complete") {
       renderPromptTextWithBlankHint(prompt, `${unit?.label || "Unit 1"} 完了`);
     } else {

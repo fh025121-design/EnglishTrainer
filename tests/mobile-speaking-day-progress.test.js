@@ -7,6 +7,9 @@ assert.ok(/function hasCurrentSpeakingDayProgress\(week, dayKey\)/.test(source),
 assert.ok(/function getDayProgressSummaryText\(week, dayKey\)/.test(source), 'Day summary helper should exist');
 assert.ok(/function mergeSpeakingDayProgressMap\(sourceMap\)/.test(source), 'Progress map merge helper should exist');
 assert.ok(/function restoreSpeakingWeekCompletionState\(weekId, dayKeys\)/.test(source), 'Week completion recovery helper should exist');
+assert.ok(/normalizedWeekId === "W6" \|\| normalizedWeekId === "W7"/.test(source), 'W6/W7 restore path should be explicitly targeted');
+assert.ok(/restoreRounds\s*=\s*isOneShotRestoreTarget\s*\?\s*1\s*:\s*Math\.max\(/.test(source), 'W6/W7 restore state should be set to one completed round');
+assert.ok(/completedRounds:\s*restoreRounds/.test(source), 'Restored value should feed the completedRounds field');
 
 const week = {
   weekId: 'W7',

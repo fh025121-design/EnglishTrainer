@@ -5172,6 +5172,7 @@
     }
     if (!normalizedDayKeys.length) return false;
 
+    const isOneShotRestoreTarget = normalizedWeekId === "W6" || normalizedWeekId === "W7";
     let changed = false;
     normalizedDayKeys.forEach((dayKey) => {
       const storageId = buildSpeakingDayProgressId(normalizedWeekId, dayKey);
@@ -5181,8 +5182,11 @@
 
       const conversationIds = getSpeakingPracticeConversationIds(week, [dayKey]);
       const mergedOrder = [...new Set([...(Array.isArray(baseProgress.conversationOrder) ? baseProgress.conversationOrder : []), ...conversationIds])];
-      const completedIds = [...new Set([...(Array.isArray(baseProgress.completedConversationIds) ? baseProgress.completedConversationIds : []), ...conversationIds])];
-      const targetRounds = getSpeakingTargetRounds(baseProgress);
+      const completedIds = isOneShotRestoreTarget
+        ? [...new Set(conversationIds)]
+        : [...new Set([...(Array.isArray(baseProgress.completedConversationIds) ? baseProgress.completedConversationIds : []), ...conversationIds])];
+      const restoreRounds = isOneShotRestoreTarget ? 1 : Math.max(Math.max(0, Number(baseProgress.completedRounds) || 0), getSpeakingTargetRounds(baseProgress));
+      const restoreSetCount = isOneShotRestoreTarget ? 1 : Math.max(Math.max(0, Number(baseProgress.conversationSetCount) || 0), 1);
       const snapshot = sanitizeSpeakingProgress({
         ...baseProgress,
         weekId: normalizedWeekId,
@@ -5190,8 +5194,8 @@
         conversationOrder: mergedOrder,
         conversationIndex: Math.max(0, Number(baseProgress.conversationIndex) || 0),
         lineIndex: Math.max(0, Number(baseProgress.lineIndex) || 0),
-        completedRounds: Math.max(Math.max(0, Number(baseProgress.completedRounds) || 0), targetRounds),
-        conversationSetCount: Math.max(Math.max(0, Number(baseProgress.conversationSetCount) || 0), 1),
+        completedRounds: restoreRounds,
+        conversationSetCount: restoreSetCount,
         completedConversationIds: completedIds,
         phase: "conversationComplete",
         updatedAt: Date.now()

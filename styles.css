@@ -2864,6 +2864,53 @@ select {
   margin-top: 6px;
 }
 
+#grammarPracticeScreen .screen-header > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+#grammarPracticeEyebrow,
+#grammarPracticeTitle {
+  margin: 0;
+}
+
+#grammarPracticeTitle {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+#grammarPracticeCard[data-grammar-phase="point-summary"] {
+  width: min(720px, calc(100% - 48px));
+  max-width: 720px;
+  padding: 28px 36px;
+  text-align: left;
+}
+
+#grammarPracticeCard[data-grammar-phase="point-summary"] .question-meta {
+  display: none;
+}
+
+#grammarPracticeCard[data-grammar-phase="point-summary"] .question-copy {
+  align-items: stretch;
+}
+
+#grammarPracticeCard[data-grammar-phase="point-summary"] #grammarPracticePrompt {
+  width: 100%;
+  text-align: left;
+}
+
+.grammar-point-summary-heading {
+  width: 100%;
+  margin: 0 0 14px;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.35;
+  font-weight: 800;
+  text-align: left;
+}
+
 .phase-progress-text {
   display: inline-flex;
   align-items: center;
@@ -3030,6 +3077,155 @@ select {
 
 .answer-input-wrap.has-phrase-guide .answer-input {
   color: rgba(255, 255, 255, 0.86);
+}
+
+.grammar-point-summary-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  text-align: left;
+}
+
+.grammar-point-summary-heading {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.35;
+  font-weight: 800;
+  text-align: left;
+}
+
+.grammar-point-summary-main {
+  margin: 0 0 6px;
+  padding: 0;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 700;
+  text-align: left;
+}
+
+.grammar-point-summary-table {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 0 0 2px;
+}
+
+.grammar-point-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 400;
+  text-align: left;
+}
+
+.grammar-point-summary-key,
+.grammar-point-summary-value {
+  display: inline-block;
+  color: var(--text);
+  text-align: left;
+}
+
+.grammar-point-summary-value {
+  font-weight: 600;
+}
+
+.grammar-point-summary-arrow {
+  display: inline-block;
+  color: var(--text);
+  opacity: 0.8;
+  text-align: center;
+}
+
+.grammar-point-summary-example-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.grammar-point-summary-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 144px;
+  padding: 12px 12px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  text-align: left;
+}
+
+.grammar-point-summary-section-label {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 800;
+  text-align: left;
+}
+
+.grammar-point-summary-example {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+.grammar-point-summary-example.english {
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.grammar-point-summary-example.japanese {
+  margin-top: 7px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.grammar-point-summary-highlight {
+  color: var(--danger);
+  font-weight: 800;
+}
+
+#grammarPracticeCard[data-grammar-phase="point-summary"] #grammarNextBtn {
+  align-self: center;
+  margin-top: 20px;
+  min-width: 200px;
+  min-height: 46px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  #grammarPracticeCard[data-grammar-phase="point-summary"] {
+    width: calc(100% - 28px);
+    padding: 20px 18px;
+  }
+
+  .grammar-point-summary-table {
+    grid-template-columns: 1fr;
+  }
+
+  .grammar-point-summary-example-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .meaning-text {

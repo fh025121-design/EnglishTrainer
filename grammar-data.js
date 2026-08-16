@@ -45,6 +45,35 @@
         "・否定文は be動詞の後ろに not",
         "・疑問文は be動詞を主語の前へ"
       ].join("\n"),
+      pointSummaryContent: {
+        mainPoint: "be動詞は am / is / are を使います。",
+        table: [
+          { key: "I", value: "am" },
+          { key: "you", value: "are" },
+          { key: "he / she / it", value: "is" },
+          { key: "複数", value: "are" }
+        ],
+        examples: [
+          {
+            label: "肯定文",
+            english: "I am a student.",
+            japanese: "私は生徒です。"
+          },
+          {
+            label: "否定文",
+            english: "I am not a student.",
+            japanese: "be動詞の後ろに not",
+            highlight: "not"
+          },
+          {
+            label: "疑問文",
+            english: "Are you a student?",
+            japanese: "be動詞を主語の前へ",
+            highlight: "Are"
+          }
+        ],
+        noteHighlight: "be動詞"
+      },
       pointQuestions: [
         {
           id: "p1",
