@@ -448,30 +448,52 @@ function getGrammarWordOrderTokens(question) {
 function buildGrammarPromptText(question, sectionName) {
   if (!question) return "問題を読みましょう。";
 
-  if (sectionName === "practice") {
-    const lines = [];
-    if (question.japanese) lines.push(String(question.japanese));
-    if (question.prompt && !String(question.prompt).includes(String(question.english || ""))) {
-      lines.push(String(question.prompt));
+  const normalizeLine = (value) => String(value || "").replace(/\r/g, "").trim();
+  const dedupeLines = (lines) => {
+    const seen = new Set();
+    const deduped = [];
+    for (const line of lines) {
+      const normalized = normalizeLine(line);
+      if (!normalized) continue;
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      deduped.push(normalized);
     }
-    if (lines.length) return lines.join("\n");
-  }
+    return deduped;
+  };
 
-  if (sectionName === "sentence") {
-    const lines = [];
-    if (question.japanese) lines.push(String(question.japanese));
-    if (question.prompt) lines.push(String(question.prompt));
-    if (lines.length) return lines.join("\n");
+  const buildPromptFromLines = (baseLines = []) => {
+    const sourceLines = (Array.isArray(baseLines) ? baseLines : []).map((line) => normalizeLine(line)).filter(Boolean);
+    return dedupeLines(sourceLines).join("\n");
+  };
+
+  const questionJapanese = normalizeLine(question.japanese);
+  const questionEnglish = normalizeLine(question.english);
+  const promptLines = question.prompt ? String(question.prompt).replace(/\r/g, "").split(/\n/) : [];
+
+  if (sectionName === "practice" || sectionName === "sentence") {
+    const orderedLines = [];
+    if (questionJapanese) orderedLines.push(questionJapanese);
+
+    const filteredPromptLines = promptLines
+      .map((line) => normalizeLine(line))
+      .filter((line) => Boolean(line))
+      .filter((line) => line !== questionJapanese);
+
+    orderedLines.push(...filteredPromptLines);
+    const result = buildPromptFromLines(orderedLines);
+    if (result) return result;
   }
 
   if (sectionName === "word-order") {
-    if (question.japanese) return String(question.japanese);
-    if (question.prompt) return String(question.prompt);
+    if (questionJapanese) return questionJapanese;
+    if (question.prompt) return String(question.prompt).replace(/\r/g, "");
   }
 
-  if (question.prompt) return String(question.prompt);
-  if (question.english) return String(question.english);
-  if (question.japanese) return String(question.japanese);
+  const promptText = question.prompt ? String(question.prompt).replace(/\r/g, "") : "";
+  if (promptText) return promptText;
+  if (questionEnglish) return questionEnglish;
+  if (questionJapanese) return questionJapanese;
   return "問題を読みましょう。";
 }
 

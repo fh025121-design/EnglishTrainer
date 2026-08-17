@@ -7,7 +7,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   const unitCatalog = [
     { id: 1, label: "Unit 1", title: "be動詞", icon: "🟦", description: "am / is / are の基本", enabled: true },
-    { id: 2, label: "Unit 2", title: "準備中", icon: "🛠️", description: "今後追加予定", enabled: false },
+    { id: 2, label: "Unit 2", title: "一般動詞（1・2人称）", icon: "🎯", description: "一般動詞の基本", enabled: true },
     { id: 3, label: "Unit 3", title: "準備中", icon: "🛠️", description: "今後追加予定", enabled: false },
     { id: 4, label: "Unit 4", title: "準備中", icon: "🛠️", description: "今後追加予定", enabled: false },
     { id: 5, label: "Unit 5", title: "準備中", icon: "🛠️", description: "今後追加予定", enabled: false },
@@ -175,6 +175,471 @@
           answers: ["He is busy."],
           inputHint: "英語で全文入力",
           point: "He → is"
+        }
+      ]
+    },
+    2: {
+      unitId: 2,
+      id: 2,
+      title: "一般動詞（1・2人称）",
+      intro: "一般動詞の意味と基本形を確認して、肯定・否定・疑問の使い分けを覚えます。",
+      pointSummary: [
+        "POINT",
+        "・一般動詞は「動作」や「状態」を表す。",
+        "・I / You ＋ 一般動詞",
+        "・I play tennis. You like music.",
+        "・否定文は do not / don't ＋ 動詞の原形",
+        "・疑問文は Do ＋ I / you ＋ 動詞の原形 ～?",
+        "・Do ～? で聞かれたら do / don't で答える",
+        "・What ＋ 名詞 ＋ do you ＋ 動詞 ～?"
+      ].join("\n"),
+      pointSummaryContent: {
+        mainPoint: "一般動詞は「動作」や「状態」を表す。",
+        table: [
+          { key: "I / You", value: "一般動詞" },
+          { key: "否定", value: "do not / don't" },
+          { key: "疑問", value: "Do" },
+          { key: "答え方", value: "do / don't" }
+        ],
+        examples: [
+          {
+            label: "肯定文",
+            english: "I play tennis.",
+            japanese: "私はテニスをします。"
+          },
+          {
+            label: "否定文",
+            english: "I do not like music.",
+            japanese: "音楽が好きではありません。",
+            highlight: "not"
+          },
+          {
+            label: "疑問文",
+            english: "Do you like music?",
+            japanese: "音楽が好きですか。",
+            highlight: "Do"
+          }
+        ],
+        noteHighlight: "一般動詞"
+      },
+      pointQuestions: [
+        {
+          id: "p1",
+          type: "fill",
+          prompt: "I play tennis.\n私はテニスを［　　　］。\nひらがなで入力",
+          japanese: "私はテニスをします。",
+          answers: ["します", "する"],
+          inputHint: "ひらがな",
+          point: "一般動詞は動作や状態を表す。"
+        },
+        {
+          id: "p2",
+          type: "fill",
+          prompt: "私は音楽が好きです。\nI [　　　] music.\n英語で入力",
+          japanese: "私は音楽が好きです。",
+          answers: ["like"],
+          inputHint: "英語",
+          point: "I / you ＋ 一般動詞"
+        },
+        {
+          id: "p3",
+          type: "fill",
+          prompt: "I have a dog.\n私は犬を［　　　　　］。\nひらがなで入力",
+          japanese: "私は犬をかっています。",
+          answers: ["かっています", "かっている"],
+          inputHint: "ひらがな",
+          point: "have：「持っている」「飼っている」など"
+        },
+        {
+          id: "p4",
+          type: "fill",
+          prompt: "私はサッカーをします。\nI [　　　] soccer.\n英語で入力",
+          japanese: "私はサッカーをします。",
+          answers: ["play"],
+          inputHint: "英語",
+          point: "play ＋ スポーツ名：～をする"
+        },
+        {
+          id: "p5",
+          type: "fill",
+          prompt: "私はピアノを弾きます。\nI [　　　] the piano.\n英語で入力",
+          japanese: "私はピアノを弾きます。",
+          answers: ["play"],
+          inputHint: "英語",
+          point: "play ＋ the ＋ 楽器名：～を演奏する"
+        }
+      ],
+      practiceQuestions: [
+        {
+          id: "r1",
+          type: "fill",
+          english: "I play tennis.",
+          japanese: "私はテニスをします。",
+          prompt: "私はギターを弾きます。\nI [　　　] the guitar.\n英語で入力",
+          answers: ["play"],
+          inputHint: "英語",
+          point: "一般動詞の基本"
+        },
+        {
+          id: "r2",
+          type: "fill",
+          english: "You have a nice pen.",
+          japanese: "あなたはすてきなペンを持っています。",
+          prompt: "あなたはすてきなペンを持っています。\nYou [　　　] a nice pen.\n英語で入力",
+          answers: ["have"],
+          inputHint: "英語",
+          point: "have は持っている"
+        },
+        {
+          id: "r3",
+          type: "fill",
+          english: "I like baseball.",
+          japanese: "私は野球が好きです。",
+          prompt: "私は野球が好きです。\nI [　　　] baseball.\n英語で入力",
+          answers: ["like"],
+          inputHint: "英語",
+          point: "like は好む"
+        },
+        {
+          id: "r4",
+          type: "fill",
+          english: "You play the flute.",
+          japanese: "あなたはフルートを演奏します。",
+          prompt: "あなたはフルートを演奏します。\nYou [　　　] the flute.\n英語で入力",
+          answers: ["play"],
+          inputHint: "英語",
+          point: "play ＋ the ＋ 楽器名"
+        },
+        {
+          id: "r5",
+          type: "fill",
+          english: "I like math.",
+          japanese: "私は数学が好きです。",
+          prompt: "私は数学が好きです。\nI [　　　] math.\n英語で入力",
+          answers: ["like"],
+          inputHint: "英語",
+          point: "like は好む"
+        },
+        {
+          id: "r6",
+          type: "fill",
+          english: "I have a pet.",
+          japanese: "私はペットを飼っています。",
+          prompt: "私はペットを飼っています。\nI [　　　] a pet.\n英語で入力",
+          answers: ["have"],
+          inputHint: "英語",
+          point: "have は飼っている"
+        },
+        {
+          id: "r7",
+          type: "fill",
+          english: "I study English every day.",
+          japanese: "私は毎日英語を勉強します。",
+          prompt: "私は毎日英語を勉強します。\nI [　　　] English every day.\n英語で入力",
+          answers: ["study"],
+          inputHint: "英語",
+          point: "study は勉強する"
+        },
+        {
+          id: "r8",
+          type: "fill",
+          english: "I use a computer.",
+          japanese: "私はコンピューターを使います。",
+          prompt: "私はコンピューターを使います。\nI [　　　] a computer.\n英語で入力",
+          answers: ["use"],
+          inputHint: "英語",
+          point: "use は使う"
+        },
+        {
+          id: "r9",
+          type: "fill",
+          english: "We do not play video games.",
+          japanese: "私たちはテレビゲームをしません。",
+          prompt: "私たちはテレビゲームをしません。\nWe [　　　] [　　　] play video games.\n英語で入力",
+          answers: ["do", "not"],
+          inputHint: "英語",
+          point: "否定文は do not / don't"
+        },
+        {
+          id: "r10",
+          type: "fill",
+          english: "I don't have a dictionary.",
+          japanese: "私は辞書を持っていません。",
+          prompt: "私は辞書を持っていません。\nI [　　　　　] have a dictionary.\n英語で入力",
+          answers: ["don't"],
+          inputHint: "英語",
+          point: "don't は do not の短縮形"
+        },
+        {
+          id: "r11",
+          type: "fill",
+          english: "Do you like tennis?",
+          japanese: "あなたはテニスが好きですか。",
+          prompt: "あなたはテニスが好きですか。\n[　　　] you like tennis?\n英語で入力",
+          answers: ["Do"],
+          inputHint: "英語",
+          point: "疑問文の先頭は Do"
+        },
+        {
+          id: "r12",
+          type: "fill",
+          english: "Do you have a pet?",
+          japanese: "あなたはペットを飼っていますか。",
+          prompt: "あなたはペットを飼っていますか。\n[　　　] you have a pet?\n英語で入力",
+          answers: ["Do"],
+          inputHint: "英語",
+          point: "Do you ＋ 動詞の原形"
+        },
+        {
+          id: "r13",
+          type: "fill",
+          english: "You don't like music.",
+          japanese: "あなたは音楽が好きではありません。",
+          prompt: "You like music.\n否定文にしよう。\n英語で入力",
+          answers: ["You don't like music."],
+          inputHint: "英語",
+          point: "You ＋ don't ＋ 動詞の原形"
+        },
+        {
+          id: "r14",
+          type: "fill",
+          english: "Do you like music?",
+          japanese: "あなたは音楽が好きですか。",
+          prompt: "You like music.\n疑問文にしよう。\n英語で入力",
+          answers: ["Do you like music?"],
+          inputHint: "英語",
+          point: "Do ＋ you ＋ 動詞の原形"
+        },
+        {
+          id: "r15",
+          type: "fill",
+          english: "You don't play tennis.",
+          japanese: "あなたはテニスをしません。",
+          prompt: "You play tennis.\n否定文にしよう。\n英語で入力",
+          answers: ["You don't play tennis."],
+          inputHint: "英語",
+          point: "否定文は don't ＋ 動詞の原形"
+        },
+        {
+          id: "r16",
+          type: "fill",
+          english: "Do you play tennis?",
+          japanese: "あなたはテニスをしますか。",
+          prompt: "You play tennis.\n疑問文にしよう。\n英語で入力",
+          answers: ["Do you play tennis?"],
+          inputHint: "英語",
+          point: "Do を前に置く"
+        },
+        {
+          id: "r17",
+          type: "fill",
+          english: "You don't have a dog.",
+          japanese: "あなたは犬を飼っていません。",
+          prompt: "You have a dog.\n否定文にしよう。\n英語で入力",
+          answers: ["You don't have a dog."],
+          inputHint: "英語",
+          point: "have も don't で否定"
+        },
+        {
+          id: "r18",
+          type: "fill",
+          english: "Do you have a dog?",
+          japanese: "あなたは犬を飼っていますか。",
+          prompt: "You have a dog.\n疑問文にしよう。\n英語で入力",
+          answers: ["Do you have a dog?"],
+          inputHint: "英語",
+          point: "Do you have a dog?"
+        }
+      ],
+      wordOrderQuestions: [
+        {
+          id: "w1",
+          type: "reorder",
+          english: "I study English every day.",
+          japanese: "私は毎日英語を勉強します。",
+          prompt: "語順を整えて英語を完成させましょう。",
+          words: ["English", "every", "day", "I", "study"],
+          answers: ["I study English every day."],
+          point: "I + study + English + every day"
+        },
+        {
+          id: "w2",
+          type: "reorder",
+          english: "I play tennis.",
+          japanese: "私はテニスをします。",
+          prompt: "語順を整えて英語を完成させましょう。",
+          words: ["tennis", "play", "I"],
+          answers: ["I play tennis."],
+          point: "I + play + tennis"
+        },
+        {
+          id: "w3",
+          type: "reorder",
+          english: "Do you like math?",
+          japanese: "あなたは数学が好きですか。",
+          prompt: "語順を整えて英語を完成させましょう。",
+          words: ["you", "math", "do", "like"],
+          answers: ["Do you like math?"],
+          point: "Do + you + like + math?"
+        },
+        {
+          id: "w4",
+          type: "reorder",
+          english: "I don't have a computer.",
+          japanese: "私はコンピューターを持っていません。",
+          prompt: "語順を整えて英語を完成させましょう。",
+          words: ["a", "computer", "don't", "I", "have"],
+          answers: ["I don't have a computer."],
+          point: "I + don't + have + a computer"
+        },
+        {
+          id: "w5",
+          type: "reorder",
+          english: "What sport do you like?",
+          japanese: "あなたは何のスポーツが好きですか。",
+          prompt: "語順を整えて英語を完成させましょう。",
+          words: ["sport", "you", "what", "do", "like"],
+          answers: ["What sport do you like?"],
+          point: "What + sport + do you like?"
+        },
+        {
+          id: "w6",
+          type: "reorder",
+          english: "What instrument do you play?",
+          japanese: "あなたは何の楽器を演奏しますか。",
+          prompt: "語順を整えて英語を完成させましょう。",
+          words: ["instrument", "play", "what", "you", "do"],
+          answers: ["What instrument do you play?"],
+          point: "What + instrument + do you play?"
+        },
+        {
+          id: "w7",
+          type: "reorder",
+          english: "What do you want for your birthday?",
+          japanese: "あなたは誕生日に何が欲しいですか。",
+          prompt: "語順を整えて英語を完成させましょう。",
+          words: ["for", "your", "birthday", "what", "do", "you", "want"],
+          answers: ["What do you want for your birthday?"],
+          point: "What + do you want + for your birthday?"
+        }
+      ],
+      sentenceQuestions: [
+        {
+          id: "s1",
+          type: "sentence",
+          japanese: "私は音楽が好きです。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["I like music."],
+          inputHint: "英語で全文入力",
+          point: "I like music."
+        },
+        {
+          id: "s2",
+          type: "sentence",
+          japanese: "私は本を持っています。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["I have a book."],
+          inputHint: "英語で全文入力",
+          point: "I have a book."
+        },
+        {
+          id: "s3",
+          type: "sentence",
+          japanese: "私はサッカーをします。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["I play soccer."],
+          inputHint: "英語で全文入力",
+          point: "I play soccer."
+        },
+        {
+          id: "s4",
+          type: "sentence",
+          japanese: "私はスポーツが好きではありません。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["I don't like sports."],
+          inputHint: "英語で全文入力",
+          point: "I don't like sports."
+        },
+        {
+          id: "s5",
+          type: "sentence",
+          japanese: "私たちはテレビゲームをしません。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["We don't play video games."],
+          inputHint: "英語で全文入力",
+          point: "We don't play video games."
+        },
+        {
+          id: "s6",
+          type: "sentence",
+          japanese: "あなたはテニスが好きですか。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["Do you like tennis?"],
+          inputHint: "英語で全文入力",
+          point: "Do you like tennis?"
+        },
+        {
+          id: "s7",
+          type: "sentence",
+          japanese: "あなたは英語を話しますか。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["Do you speak English?"],
+          inputHint: "英語で全文入力",
+          point: "Do you speak English?"
+        },
+        {
+          id: "s8",
+          type: "sentence",
+          japanese: "あなたは何のスポーツが好きですか。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["What sport do you like?"],
+          inputHint: "英語で全文入力",
+          point: "What sport do you like?"
+        },
+        {
+          id: "s9",
+          type: "sentence",
+          japanese: "あなたは何の教科が好きですか。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["What subject do you like?"],
+          inputHint: "英語で全文入力",
+          point: "What subject do you like?"
+        },
+        {
+          id: "s10",
+          type: "sentence",
+          japanese: "あなたは何の楽器を演奏しますか。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["What instrument do you play?"],
+          inputHint: "英語で全文入力",
+          point: "What instrument do you play?"
+        },
+        {
+          id: "s11",
+          type: "sentence",
+          japanese: "あなたは音楽が好きではありません。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["You don't like music."],
+          inputHint: "英語で全文入力",
+          point: "You don't like music."
+        },
+        {
+          id: "s12",
+          type: "sentence",
+          japanese: "あなたは犬を飼っていますか。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["Do you have a dog?"],
+          inputHint: "英語で全文入力",
+          point: "Do you have a dog?"
+        },
+        {
+          id: "s13",
+          type: "sentence",
+          japanese: "あなたは誕生日に何が欲しいですか。",
+          prompt: "日本語を英語に書きましょう。",
+          answers: ["What do you want for your birthday?"],
+          inputHint: "英語で全文入力",
+          point: "What do you want for your birthday?"
         }
       ]
     }
