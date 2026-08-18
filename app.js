@@ -7607,15 +7607,14 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState(), dayKe
     ? Math.max(0, Number(nextChallengePoints))
     : currentChallengePoints;
   const fixedRuleState = getChallengeTicketFixedRuleState(safeStore, resolvedDayKey);
-  const earnedTickets = [];
   let mutated = false;
 
-  const fixedRuleRewardMinutesByThreshold = {
-    90: 15,
-    147: 0,
-    193: 0,
-    199: 5,
-    240: 0
+  const fixedRuleRewardPointsByThreshold = {
+    90: 100,
+    147: 50,
+    193: 50,
+    199: 100,
+    240: 300
   };
 
   const thresholds = getChallengeTicketFixedRuleThresholds();
@@ -7626,25 +7625,26 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState(), dayKe
     fixedRuleState[thresholdKey] = true;
     mutated = true;
 
-    const rewardMinutes = Math.max(0, Number(fixedRuleRewardMinutesByThreshold[thresholdKey] || 0));
-    if (rewardMinutes <= 0) {
+    const rewardPoints = Math.max(0, Number(fixedRuleRewardPointsByThreshold[thresholdKey] || 0));
+    if (rewardPoints <= 0) {
       return;
     }
 
-    const createdTicket = awardChallengeGameTicket(safeStore, rewardMinutes, {
-      type: "random",
-      historyLabel: `過去の間違い ${rewardMinutes}分券`
-    });
-    if (createdTicket) {
-      earnedTickets.push(createdTicket);
-    }
+    const dayTotal = Math.max(0, Number(pointState.dailyEarnedByDate?.[resolvedDayKey]) || 0);
+    pointState.balance = Math.max(0, Number(pointState.balance) || 0) + rewardPoints;
+    pointState.totalEarned = Math.max(0, Number(pointState.totalEarned) || 0) + rewardPoints;
+    pointState.dailyEarnedByDate = pointState.dailyEarnedByDate && typeof pointState.dailyEarnedByDate === "object"
+      ? pointState.dailyEarnedByDate
+      : {};
+    pointState.dailyEarnedByDate[resolvedDayKey] = dayTotal + rewardPoints;
+    savePointState(pointState);
   });
 
   if (mutated) {
     persistGameTicketState();
   }
 
-  return earnedTickets;
+  return [];
 }
 
 function processChallengeEventThresholdCrossings(dayKey, previousChallengePoints, nextChallengePoints, store = ensureGameTicketState()) {

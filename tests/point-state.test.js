@@ -378,6 +378,37 @@ assert.strictEqual(context.awardPointsForTrainingMode("challenge"), 3, "challeng
 context.savePointState(freshPointState);
 assert.strictEqual(context.awardPointsForTrainingMode("irregular-verb"), 2, "irregular-verb should award 2P");
 assert.strictEqual(context.formatPointValue(freshPointState.dailyEarnedByModeByDate[todayKey].challenge), "0P", "challenge point formatting should stay mode-specific");
+
+const challengeFixedRewardSpec = {
+  90: 100,
+  147: 50,
+  193: 50,
+  199: 100,
+  240: 300
+};
+const fixedRewardStore = context.ensureGameTicketState();
+fixedRewardStore.challengeTicketStateByDate = {};
+const fixedRewardDay = context.getPointTodayKey();
+for (const [threshold, rewardPoints] of Object.entries(challengeFixedRewardSpec)) {
+  const pointSeed = JSON.parse(JSON.stringify(context.getPointState()));
+  pointSeed.balance = 0;
+  pointSeed.totalEarned = 0;
+  pointSeed.dailyEarnedByDate[fixedRewardDay] = Number(threshold) - 1;
+  pointSeed.dailyEarnedByModeByDate[fixedRewardDay] = {
+    ...pointSeed.dailyEarnedByModeByDate[fixedRewardDay],
+    challenge: Number(threshold) - 1
+  };
+  context.savePointState(pointSeed);
+  const earned = context.processChallengeGameTicketAwards(fixedRewardStore, fixedRewardDay, Number(threshold) - 1, Number(threshold));
+  assert.deepStrictEqual(earned, [], `threshold ${threshold} should not return ticket rewards`);
+  const persistedPointState = context.getPointState();
+  assert.strictEqual(Number(persistedPointState.balance), rewardPoints, `threshold ${threshold} should award ${rewardPoints}P directly`);
+  assert.strictEqual(Number(persistedPointState.dailyEarnedByDate[fixedRewardDay]), Number(threshold) - 1 + rewardPoints, `threshold ${threshold} should include the direct reward in the daily total`);
+  assert.strictEqual(Number(persistedPointState.dailyEarnedByModeByDate[fixedRewardDay].challenge), Number(threshold) - 1, `threshold ${threshold} points should remain actual challenge points only`);
+  assert.strictEqual(Boolean(context.getChallengeTicketFixedRuleState(fixedRewardStore, fixedRewardDay)[String(threshold)]), true, `threshold ${threshold} should be marked processed`);
+  fixedRewardStore.challengeTicketStateByDate = {};
+}
+
 const cappedPointState = JSON.parse(JSON.stringify(freshPointState));
 cappedPointState.dailyEarnedByDate[todayKey] = 299;
 cappedPointState.dailyEarnedByModeByDate[todayKey].challenge = 299;
