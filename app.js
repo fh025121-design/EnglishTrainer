@@ -8868,6 +8868,7 @@ function bindGameTicketAuthStateListener() {
 let pointStateCache = null;
 let pointRewardQueue = [];
 let pointRewardTimerId = null;
+let pointRewardEnterHandler = null;
 let pendingPointExchangeItemId = "";
 let pointStateBootstrapPromise = null;
 let pointStateSyncMetaCache = null;
@@ -9656,6 +9657,21 @@ function awardDayUnstudiedClearBonus(dayNumber) {
   return bonus;
 }
 
+function closePointRewardModal() {
+  const modal = document.getElementById("pointRewardModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  if (pointRewardEnterHandler) {
+    document.removeEventListener("keydown", pointRewardEnterHandler);
+    pointRewardEnterHandler = null;
+  }
+  if (pointRewardQueue.length) {
+    const next = pointRewardQueue.shift();
+    openPointRewardModal(next);
+  }
+}
+
 function openPointRewardModal(points) {
   const modal = document.getElementById("pointRewardModal");
   const amountText = document.getElementById("pointRewardAmountText");
@@ -9666,16 +9682,19 @@ function openPointRewardModal(points) {
   modal.setAttribute("aria-hidden", "false");
   if (pointRewardTimerId) {
     clearTimeout(pointRewardTimerId);
-  }
-  pointRewardTimerId = setTimeout(() => {
-    modal.classList.add("hidden");
-    modal.setAttribute("aria-hidden", "true");
     pointRewardTimerId = null;
-    if (pointRewardQueue.length) {
-      const next = pointRewardQueue.shift();
-      openPointRewardModal(next);
-    }
-  }, POINT_SYSTEM_CONFIG.rewardCardAutoCloseMs);
+  }
+  if (pointRewardEnterHandler) {
+    document.removeEventListener("keydown", pointRewardEnterHandler);
+  }
+  pointRewardEnterHandler = (event) => {
+    if (event.key !== "Enter") return;
+    if (modal.classList.contains("hidden")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    closePointRewardModal();
+  };
+  document.addEventListener("keydown", pointRewardEnterHandler);
 }
 
 function enqueuePointReward(points) {
