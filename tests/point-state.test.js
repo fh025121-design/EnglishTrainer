@@ -35,7 +35,9 @@ const documentStub = {
       challengeTicketChanceStartBtn: createModalElement(),
       trainingCompleteScreen: createModalElement(),
       homeScreen: createModalElement(),
-      exchangeTicketScreen: createModalElement()
+      exchangeTicketScreen: createModalElement(),
+      pointRewardModal: createModalElement(),
+      pointRewardAmountText: createModalElement()
     };
     return map[id] || null;
   },
@@ -406,6 +408,8 @@ for (const [threshold, rewardPoints] of Object.entries(challengeFixedRewardSpec)
   assert.strictEqual(Number(persistedPointState.dailyEarnedByDate[fixedRewardDay]), Number(threshold) - 1 + rewardPoints, `threshold ${threshold} should include the direct reward in the daily total`);
   assert.strictEqual(Number(persistedPointState.dailyEarnedByModeByDate[fixedRewardDay].challenge), Number(threshold) - 1, `threshold ${threshold} points should remain actual challenge points only`);
   assert.strictEqual(Boolean(context.getChallengeTicketFixedRuleState(fixedRewardStore, fixedRewardDay)[String(threshold)]), true, `threshold ${threshold} should be marked processed`);
+  const pointRewardTextNode = context.document.getElementById("pointRewardAmountText");
+  assert.strictEqual(pointRewardTextNode.textContent, `${rewardPoints}ポイント獲得！`, `threshold ${threshold} should show the exact reward modal message`);
   fixedRewardStore.challengeTicketStateByDate = {};
 }
 

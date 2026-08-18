@@ -7638,6 +7638,7 @@ function processChallengeGameTicketAwards(store = ensureGameTicketState(), dayKe
       : {};
     pointState.dailyEarnedByDate[resolvedDayKey] = dayTotal + rewardPoints;
     savePointState(pointState);
+    enqueuePointReward(rewardPoints);
   });
 
   if (mutated) {
@@ -9659,7 +9660,8 @@ function openPointRewardModal(points) {
   const modal = document.getElementById("pointRewardModal");
   const amountText = document.getElementById("pointRewardAmountText");
   if (!modal || !amountText) return;
-  amountText.textContent = `＋${Math.max(0, Math.floor(Number(points) || 0))}P GET！`;
+  const rewardPoints = Math.max(0, Math.floor(Number(points) || 0));
+  amountText.textContent = `${rewardPoints}ポイント獲得！`;
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
   if (pointRewardTimerId) {
