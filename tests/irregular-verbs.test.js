@@ -2,6 +2,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const irregularVerbs = require('../irregular-verbs.js');
 
+test('default irregular verb bank has 65 unique entries with complete fields', () => {
+  const bank = globalThis.irregularVerbTrainingBank || [];
+
+  assert.equal(bank.length, 65);
+  assert.equal(new Set(bank.map((entry) => entry.id)).size, 65);
+  assert.ok(bank.every((entry) => entry.base && entry.past && entry.pastParticiple && entry.japanese));
+  assert.ok(bank.some((entry) => entry.id === 'get' && Array.isArray(entry.pastParticiple) && entry.pastParticiple.includes('got') && entry.pastParticiple.includes('gotten')));
+});
+
 test('buildIrregularVerbQuestionSet returns unique questions and prioritizes unanswered verbs', () => {
   const verbs = [
     { id: 'go', base: 'go', past: 'went', pastParticiple: 'gone', japanese: '行く' },
