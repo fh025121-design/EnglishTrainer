@@ -51,6 +51,27 @@
     return safeStore;
   }
 
+  function mergeCoverageStores(...stores) {
+    const merged = buildDefaultCoverageStore();
+    const addToMerged = (source) => {
+      const safeSource = sanitizeCoverageStore(source);
+      Object.entries(safeSource.byMode || {}).forEach(([modeKey, value]) => {
+        const normalizedModeKey = normalizeModeKey(modeKey);
+        if (!normalizedModeKey) return;
+        const existing = new Set((merged.byMode[normalizedModeKey] || []).map((id) => String(id || "").trim()).filter(Boolean));
+        (Array.isArray(value) ? value : []).forEach((id) => {
+          const safeId = String(id || "").trim();
+          if (safeId) existing.add(safeId);
+        });
+        merged.byMode[normalizedModeKey] = normalizeIdList([...existing]);
+      });
+    };
+    stores.forEach((store) => {
+      if (store && typeof store === "object") addToMerged(store);
+    });
+    return sanitizeCoverageStore(merged);
+  }
+
   function buildDefaultCoverageStore() {
     return { byMode: {} };
   }
@@ -93,6 +114,7 @@
   const api = {
     buildDefaultCoverageStore,
     sanitizeCoverageStore,
+    mergeCoverageStores,
     markQuestionShown,
     buildCoverageSummary,
     normalizeModeKey,

@@ -1681,6 +1681,33 @@ function loadTrainingCoverageStore(uid = getCurrentPcFirebaseUid()) {
   }
 }
 
+async function loadTrainingCoverageStoreFromFirestore(uid = getCurrentPcFirebaseUid()) {
+  const currentUid = String(uid || getCurrentPcFirebaseUid() || "").trim();
+  if (!currentUid || typeof window.loadTrainingCoverageFromFirestore !== "function") {
+    return window.trainingCoverage?.buildDefaultCoverageStore?.() || { byMode: {} };
+  }
+  const remote = await window.loadTrainingCoverageFromFirestore(currentUid);
+  const remoteStore = remote && remote.data && typeof remote.data === "object" ? remote.data : {};
+  const localStore = loadTrainingCoverageStore(currentUid);
+  const mergedStore = window.trainingCoverage?.mergeCoverageStores?.(remoteStore, localStore) || { byMode: {} };
+  saveTrainingCoverageStore(mergedStore, currentUid);
+  return mergedStore;
+}
+
+async function syncTrainingCoverageToFirestore(store, uid = getCurrentPcFirebaseUid()) {
+  const currentUid = String(uid || getCurrentPcFirebaseUid() || "").trim();
+  if (!currentUid || typeof window.saveTrainingCoverageToFirestore !== "function") {
+    return false;
+  }
+  const sanitized = window.trainingCoverage?.sanitizeCoverageStore?.(store) || { byMode: {} };
+  try {
+    await window.saveTrainingCoverageToFirestore(sanitized, { targetUid: currentUid });
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
 function saveTrainingCoverageStore(store, uid = getCurrentPcFirebaseUid()) {
   const storageKey = getTrainingCoverageStorageKey(uid);
   const sanitized = window.trainingCoverage?.sanitizeCoverageStore?.(store) || { byMode: {} };
@@ -1699,10 +1726,21 @@ function markTrainingQuestionShown(modeKey, questionId) {
   const mode = String(modeKey || "").trim();
   const id = String(questionId || "").trim();
   if (!mode || !id) return null;
-  const store = loadTrainingCoverageStore();
-  const nextStore = window.trainingCoverage.markQuestionShown(store, mode, id);
-  saveTrainingCoverageStore(nextStore);
+  const currentUid = getCurrentPcFirebaseUid();
+  const localStore = loadTrainingCoverageStore(currentUid);
+  const nextStore = window.trainingCoverage.markQuestionShown(localStore, mode, id);
+  saveTrainingCoverageStore(nextStore, currentUid);
+  if (currentUid && typeof window.saveTrainingCoverageToFirestore === "function") {
+    syncTrainingCoverageToFirestore(nextStore, currentUid).catch(() => {});
+  }
   return nextStore;
+}
+
+async function hydrateTrainingCoverageFromFirestore() {
+  const currentUid = getCurrentPcFirebaseUid();
+  if (!currentUid) return null;
+  const mergedStore = await loadTrainingCoverageStoreFromFirestore(currentUid);
+  return mergedStore;
 }
 
 function getTrainingCoverageSummaryRows() {
@@ -1936,6 +1974,7 @@ function bindLearningHistoryFamilyWatchAuthStateListener() {
   if (document.body?.dataset.learningHistoryFamilyWatchBound === "true") return;
   document.addEventListener("pc-firebase-auth-state", () => {
     startLearningHistoryFamilyWatch();
+    hydrateTrainingCoverageFromFirestore().catch(() => {});
   });
   if (document.body) {
     document.body.dataset.learningHistoryFamilyWatchBound = "true";
@@ -5085,9 +5124,15 @@ function renderAdminLearningHistoryHistoryWatch(targetUid, options = {}) {
   const loadToken = ++adminLearningHistoryFirestoreLoadToken;
   renderAdminLearningHistoryState("読み込み中...", { countText: "読み込み中..." });
 
-  console.log("[AdminLearningHistory] watchLearningHistoryEntriesFromFirestore targetUid", targetUid);
+  const currentUser = getCurrentPcFirebaseUser();
+  const currentUid = String(currentUser?.uid || "").trim();
+  const watchedTargetUid = String(targetUid || "").trim();
+  const isChildLogin = Boolean(watchedTargetUid && currentUid && watchedTargetUid === currentUid && !adminLearningHistoryCanSelectFamily);
+  const safeOptions = isChildLogin ? { ...options, allowOtherUser: false } : options;
 
-  adminLearningHistoryFirestoreUnsubscribe = watchFn(targetUid, {
+  console.log("[AdminLearningHistory] watchLearningHistoryEntriesFromFirestore targetUid", watchedTargetUid);
+
+  adminLearningHistoryFirestoreUnsubscribe = watchFn(watchedTargetUid, {
     onUpdate: (entries) => {
       if (loadToken !== adminLearningHistoryFirestoreLoadToken) return;
       adminLearningHistorySourceEntries = Array.isArray(entries) ? entries.slice() : [];
@@ -5106,7 +5151,7 @@ function renderAdminLearningHistoryHistoryWatch(targetUid, options = {}) {
       adminLearningHistorySourceEntries = [];
       renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
     }
-  }, options);
+  }, safeOptions);
 }
 
 function renderAdminLearningHistoryFamilyWatch() {
@@ -5160,6 +5205,17 @@ function renderAdminLearningHistoryFamilyWatch() {
         adminLearningHistorySelectedChildUid = selectedChild.uid;
         console.log("[AdminLearningHistory] adminLearningHistorySelectedChildUid", adminLearningHistorySelectedChildUid);
         renderAdminLearningHistoryHistoryWatch(selectedChild.uid, { allowOtherUser: true });
+        return;
+      }
+
+      if (isChildLogin) {
+        adminLearningHistoryCanSelectFamily = false;
+        setAdminLearningHistoryAccessState(currentUid, false);
+        adminLearningHistoryFamilyChildren = [];
+        adminLearningHistorySelectedChildKey = "self";
+        adminLearningHistorySelectedChildUid = currentUid;
+        console.log("[AdminLearningHistory] child login fixed uid", adminLearningHistorySelectedChildUid);
+        renderAdminLearningHistoryHistoryWatch(currentUid, { allowOtherUser: false });
         return;
       }
 

@@ -411,6 +411,40 @@ async function saveGameTicketsToFirestore(payload, options = {}) {
   }
 }
 
+async function loadTrainingCoverageFromFirestore(targetUid = null) {
+  const user = auth.currentUser;
+  const resolvedUid = String(targetUid || user?.uid || "").trim();
+  if (!resolvedUid) {
+    return { exists: false, data: null };
+  }
+
+  const snapshot = await getDoc(doc(firestore, "users", resolvedUid, "trainingCoverage"));
+  if (!snapshot.exists()) {
+    return { exists: false, data: null };
+  }
+
+  return {
+    exists: true,
+    data: normalizeFirestoreSerializableValue(snapshot.data() || {})
+  };
+}
+
+async function saveTrainingCoverageToFirestore(payload, options = {}) {
+  const user = auth.currentUser;
+  const resolvedUid = String(options?.targetUid || user?.uid || "").trim();
+  if (!resolvedUid || !payload || typeof payload !== "object") {
+    return false;
+  }
+
+  try {
+    await setDoc(doc(firestore, "users", resolvedUid, "trainingCoverage"), normalizeFirestoreSerializableValue(payload), { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Failed to save training coverage to Firestore", error);
+    return false;
+  }
+}
+
 async function loadStudyCoreBackupsFromFirestore(targetUid = null) {
   const user = auth.currentUser;
   const resolvedUid = String(targetUid || user?.uid || "").trim();
@@ -601,6 +635,8 @@ window.loadLearningHistoryEntriesFromFirestore = loadLearningHistoryEntriesFromF
 window.watchLearningHistoryEntriesFromFirestore = watchLearningHistoryEntriesFromFirestore;
 window.loadStudyCoreFromFirestore = loadStudyCoreFromFirestore;
 window.saveStudyCoreToFirestore = saveStudyCoreToFirestore;
+window.loadTrainingCoverageFromFirestore = loadTrainingCoverageFromFirestore;
+window.saveTrainingCoverageToFirestore = saveTrainingCoverageToFirestore;
 window.loadPointStateFromFirestore = loadPointStateFromFirestore;
 window.savePointStateToFirestore = savePointStateToFirestore;
 window.loadGameTicketsFromFirestore = loadGameTicketsFromFirestore;
