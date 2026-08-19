@@ -6697,26 +6697,18 @@ function submitIrregularVerbAnswer() {
     session.awaitingCorrectionRetry = false;
     session.answered = true;
     feedbackBox.className = "feedback-box success";
-    feedbackBox.innerHTML = `<strong>✅ 入力できました</strong><div class="answer-line">${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>${alternateFormHint}`;
+    feedbackBox.innerHTML = `<strong>✅ 正解</strong><div class="answer-line">${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>${alternateFormHint}`;
     answerInput.disabled = true;
     answerBtn.disabled = true;
-    nextBtn.classList.add("hidden");
+    nextBtn.classList.remove("hidden");
+    nextBtn.disabled = false;
+    pronounceBtn.classList.remove("hidden");
+    pronounceBtn.disabled = false;
 
-    const typingConfig = getTypingConfig();
-    const fallbackDelayMs = Math.max(typingDelaySecToMs(typingConfig.judgementToNextDelaySec), 900);
-    let advanced = false;
-    const advanceOnce = () => {
-      if (advanced) return;
-      advanced = true;
-      moveToNextIrregularVerbQuestion();
-    };
-
-    const spoke = speakIrregularVerbAnswerSequence(currentQuestion, correctPastText, correctParticipleText, {
-      onEnd: advanceOnce
+    speakIrregularVerbAnswerSequence(currentQuestion, correctPastText, correctParticipleText, {
+      gapMs: 0
     });
-    if (!spoke) {
-      setTimeout(advanceOnce, fallbackDelayMs);
-    }
+    nextBtn.focus();
     return;
   }
 
