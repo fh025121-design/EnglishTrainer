@@ -11,7 +11,8 @@ const LEARNING_HISTORY_SON_UID_CACHE_KEY = "english-trainer-history-son-uid-v1";
 const ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY = "all";
 const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY = "legacy:unidentified";
 const ADMIN_HISTORY_NAMED_DEVICE_FILTER_PREFIX = "name:";
-const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_LABEL = "端末未識別";
+const ADMIN_HISTORY_SON_OTHER_FILTER_LABEL = "その他／未設定";
+const ADMIN_HISTORY_LEGACY_DEVICE_FILTER_LABEL = ADMIN_HISTORY_SON_OTHER_FILTER_LABEL;
 const ADMIN_HISTORY_SON_PC_FILTER_KEY = "son:pc";
 const ADMIN_HISTORY_SON_MOBILE_FILTER_KEY = "son:mobile";
 const ADMIN_HISTORY_SON_OTHER_FILTER_KEY = "son:other";
@@ -2068,11 +2069,15 @@ function isAdminLearningHistorySonSelected() {
 function resolveAdminLearningHistorySonDeviceFilterKey(entry) {
   const deviceType = String(entry?.deviceType || "").trim().toLowerCase();
   const deviceName = normalizeDeviceNameForHistory(entry?.deviceName);
+  const ownerUid = String(entry?.uid || entry?.ownerUid || entry?.userUid || "").trim();
   if (deviceType === "pc" && deviceName === "長男PC") {
     return ADMIN_HISTORY_SON_PC_FILTER_KEY;
   }
   if (deviceType === "mobile" && deviceName === "長男モバイル") {
     return ADMIN_HISTORY_SON_MOBILE_FILTER_KEY;
+  }
+  if (deviceName === "私のPC" && ownerUid && adminLearningHistorySelectedChildUid && ownerUid !== adminLearningHistorySelectedChildUid) {
+    return ADMIN_HISTORY_SON_OTHER_FILTER_KEY;
   }
   return ADMIN_HISTORY_SON_OTHER_FILTER_KEY;
 }
@@ -2109,20 +2114,24 @@ function buildAdminLearningHistoryDeviceNameMap(entries = adminLearningHistorySo
 
 function getAdminLearningHistoryDeviceFilterLabel(entry, fallbackKey = "", deviceNameMap = null) {
   const explicitName = normalizeDeviceNameForHistory(entry?.deviceName);
-  if (explicitName) return explicitName;
+  const ownerUid = String(entry?.uid || entry?.ownerUid || entry?.userUid || "").trim();
+  const selectedChildUid = String(adminLearningHistorySelectedChildUid || "").trim();
+  if (explicitName) {
+    if (explicitName === "私のPC" && selectedChildUid && ownerUid && ownerUid !== selectedChildUid) {
+      return ADMIN_HISTORY_SON_OTHER_FILTER_LABEL;
+    }
+    return explicitName;
+  }
   const deviceType = String(entry?.deviceType || "").trim().toLowerCase();
   const resolvedKey = normalizeAdminLearningHistoryDeviceFilterKey(entry?.deviceId || fallbackKey);
   if (resolvedKey === ADMIN_HISTORY_LEGACY_DEVICE_FILTER_KEY) {
-    return ADMIN_HISTORY_LEGACY_DEVICE_FILTER_LABEL;
+    return ADMIN_HISTORY_SON_OTHER_FILTER_LABEL;
   }
   const mappedName = normalizeDeviceNameForHistory(deviceNameMap?.get(resolvedKey));
   if (mappedName) {
     return mappedName;
   }
-  if (deviceType === "mobile") {
-    return "端末未設定";
-  }
-  return PC_BROWSER_DEVICE_NAME_FALLBACK;
+  return ADMIN_HISTORY_SON_OTHER_FILTER_LABEL;
 }
 
 function buildAdminLearningHistoryNamedDeviceFilterKey(label) {
@@ -4848,7 +4857,7 @@ function getAdminLearningHistoryDeviceOptions() {
       { key: ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY, label: "すべて" },
       { key: ADMIN_HISTORY_SON_PC_FILTER_KEY, label: "長男PC" },
       { key: ADMIN_HISTORY_SON_MOBILE_FILTER_KEY, label: "長男モバイル" },
-      { key: ADMIN_HISTORY_SON_OTHER_FILTER_KEY, label: "その他" }
+      { key: ADMIN_HISTORY_SON_OTHER_FILTER_KEY, label: "その他／未設定" }
     ];
   }
 
@@ -4892,6 +4901,12 @@ function getAdminLearningHistoryFilteredEntries(entries) {
   const deviceNameMap = buildAdminLearningHistoryDeviceNameMap(source);
   const sonSelected = isAdminLearningHistorySonSelected();
   return source.filter((entry) => {
+    const selectedUid = String(adminLearningHistorySelectedChildUid || "").trim();
+    const ownerUid = String(entry?.uid || entry?.ownerUid || entry?.userUid || "").trim();
+    if (selectedUid && ownerUid && ownerUid !== selectedUid) {
+      return false;
+    }
+
     const selectedFilterKey = normalizeAdminLearningHistoryDeviceType(adminLearningHistorySelectedDeviceType);
     if (sonSelected) {
       const sonFilterKey = resolveAdminLearningHistorySonDeviceFilterKey(entry);
