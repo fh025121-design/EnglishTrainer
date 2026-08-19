@@ -2761,18 +2761,19 @@ select {
 
 .answer-input {
   flex: 1 1 280px;
-  padding: calc(10px * var(--pc-ui-scale)) calc(16px * var(--pc-ui-scale));
+  padding: calc(11px * var(--pc-ui-scale)) calc(16px * var(--pc-ui-scale)) calc(12px * var(--pc-ui-scale));
   border-radius: calc(14px * var(--pc-ui-scale));
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
   font-size: clamp(18px, calc(32px * var(--pc-ui-scale)), 32px);
-  min-height: 56px;
-  height: 56px;
-  line-height: 1.2;
+  min-height: 62px;
+  height: 62px;
+  line-height: 1.35;
   text-decoration: none;
   text-align: center;
   vertical-align: middle;
+  display: block;
   box-sizing: border-box;
 }
 
@@ -3012,16 +3013,16 @@ select {
 
 .answer-input {
   flex: 1 1 280px;
-  padding: calc(8px * var(--pc-ui-scale)) calc(12px * var(--pc-ui-scale));
+  padding: calc(10px * var(--pc-ui-scale)) calc(12px * var(--pc-ui-scale)) calc(11px * var(--pc-ui-scale));
   border-radius: calc(14px * var(--pc-ui-scale));
   border: 1px solid var(--border);
   border-bottom: none;
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
   font-size: clamp(18px, calc(36px * var(--pc-ui-scale)), 36px);
-  min-height: 40px;
-  height: 40px;
-  line-height: 1.2;
+  min-height: 50px;
+  height: 50px;
+  line-height: 1.35;
   text-align: center;
   vertical-align: middle;
   box-sizing: border-box;
