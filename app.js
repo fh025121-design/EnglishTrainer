@@ -4857,11 +4857,6 @@ function getAdminLearningHistoryFilteredEntries(entries) {
         return false;
       }
     } else {
-      const deviceType = String(entry?.deviceType || "").trim().toLowerCase();
-      // Default PC history view should not mix mobile sessions.
-      if (selectedFilterKey === ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY && deviceType === "mobile") {
-        return false;
-      }
       if (selectedFilterKey !== ADMIN_HISTORY_ALL_DEVICE_FILTER_KEY) {
         const entryFilterKey = getAdminLearningHistoryEntryDeviceFilterKey(entry, deviceNameMap);
         if (entryFilterKey !== selectedFilterKey) {
