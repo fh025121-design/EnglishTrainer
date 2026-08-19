@@ -201,6 +201,33 @@
     };
   }
 
+  function recordMobileTrainingCoverageSeen(modeKey, questionId) {
+    const coverageApi = window.trainingCoverage;
+    if (!coverageApi || typeof coverageApi.markQuestionShown !== "function") {
+      return null;
+    }
+    const mode = String(modeKey || "").trim();
+    const id = String(questionId || "").trim();
+    if (!mode || !id) return null;
+    const storageKey = "english-trainer-pc-training-coverage-v1";
+    let store = null;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        store = JSON.parse(raw);
+      }
+    } catch (_error) {
+      store = null;
+    }
+    const safeStore = coverageApi.markQuestionShown(store || coverageApi.buildDefaultCoverageStore(), mode, id);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(safeStore));
+    } catch (_error) {
+      // Ignore quota failures; runtime tracking still succeeds in-memory.
+    }
+    return safeStore;
+  }
+
   function getMobilePointDailyTotalRemaining(pointState = getMobilePointState()) {
     void pointState;
     return Number.POSITIVE_INFINITY;
@@ -7370,6 +7397,9 @@
       training.completed = true;
       renderWordOrderTraining();
       return;
+    }
+    if (question?.id) {
+      recordMobileTrainingCoverageSeen("word-order", question.id);
     }
 
     questionPanel.classList.remove("hidden");

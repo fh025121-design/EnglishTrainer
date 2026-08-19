@@ -1605,6 +1605,7 @@ function saveGameTicketSettingsFromUi() {
 }
 const GAME_TICKET_DAY_MS = 24 * 60 * 60 * 1000;
 const POINT_SYSTEM_STORAGE_KEY = "english-trainer-pc-points-v1";
+const TRAINING_COVERAGE_STORAGE_KEY = "english-trainer-pc-training-coverage-v1";
 const POINT_SYSTEM_CONFIG = Object.freeze({
   dayAdvanceCompletionBonusPoints: 50,
   dayUnstudiedClearBonusPoints: 25,
@@ -1662,6 +1663,103 @@ function getCurrentPcFirebaseUid() {
 function getScopedLocalStorageKey(baseKey, uid = getCurrentPcFirebaseUid()) {
   const safeUid = String(uid || "").trim();
   return safeUid ? `${baseKey}-${safeUid}` : "";
+}
+
+function getTrainingCoverageStorageKey(uid = getCurrentPcFirebaseUid()) {
+  return getScopedLocalStorageKey(TRAINING_COVERAGE_STORAGE_KEY, uid) || TRAINING_COVERAGE_STORAGE_KEY;
+}
+
+function loadTrainingCoverageStore(uid = getCurrentPcFirebaseUid()) {
+  const storageKey = getTrainingCoverageStorageKey(uid);
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return window.trainingCoverage?.buildDefaultCoverageStore?.() || { byMode: {} };
+    const parsed = JSON.parse(raw);
+    return window.trainingCoverage?.sanitizeCoverageStore?.(parsed) || { byMode: {} };
+  } catch (_error) {
+    return window.trainingCoverage?.buildDefaultCoverageStore?.() || { byMode: {} };
+  }
+}
+
+function saveTrainingCoverageStore(store, uid = getCurrentPcFirebaseUid()) {
+  const storageKey = getTrainingCoverageStorageKey(uid);
+  const sanitized = window.trainingCoverage?.sanitizeCoverageStore?.(store) || { byMode: {} };
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(sanitized));
+  } catch (_error) {
+    // Ignore quota failures; the live in-memory structure remains available.
+  }
+  return sanitized;
+}
+
+function markTrainingQuestionShown(modeKey, questionId) {
+  if (!window.trainingCoverage || typeof window.trainingCoverage.markQuestionShown !== "function") {
+    return null;
+  }
+  const mode = String(modeKey || "").trim();
+  const id = String(questionId || "").trim();
+  if (!mode || !id) return null;
+  const store = loadTrainingCoverageStore();
+  const nextStore = window.trainingCoverage.markQuestionShown(store, mode, id);
+  saveTrainingCoverageStore(nextStore);
+  return nextStore;
+}
+
+function getTrainingCoverageSummaryRows() {
+  const coverageApi = window.trainingCoverage;
+  if (!coverageApi || typeof coverageApi.buildCoverageSummary !== "function") {
+    return [];
+  }
+  const store = loadTrainingCoverageStore();
+  const rows = [
+    { key: "word", label: "単語特訓", bank: (state?.items || []).filter((item) => String(item?.type || "") === "word") },
+    { key: "phrase", label: "熟語特訓", bank: (state?.items || []).filter((item) => String(item?.type || "") === "phrase") },
+    { key: "preposition", label: "前置詞特訓", bank: getPrepositionQuestionBank() },
+    { key: "response", label: "応答文特訓", bank: getResponseQuestionBank() },
+    { key: "irregular-verb", label: "不規則動詞特訓", bank: getIrregularVerbQuestionBank() },
+    { key: "word-order", label: "語順トレーニング", bank: getWordOrderQuestionsByDayRange(1, 40) },
+    { key: "translation", label: "和訳トレーニング", bank: (window.translationTrainingData?.getTranslationTrainingQuestions?.() || []) }
+  ];
+  return rows.map((row) => {
+    const summary = coverageApi.buildCoverageSummary(store, row.key, row.bank || []);
+    return {
+      ...row,
+      registeredTotal: Number(summary.registeredTotal) || 0,
+      targetCount: Number(summary.targetCount) || 0,
+      seenCount: Number(summary.seenCount) || 0,
+      unseenCount: Number(summary.unseenCount) || 0,
+      coverageRate: Number(summary.coverageRate) || 0,
+      seenIds: Array.isArray(summary.seenIds) ? summary.seenIds : [],
+      unseenIds: Array.isArray(summary.unseenIds) ? summary.unseenIds : []
+    };
+  });
+}
+
+function renderTrainingCoverageSummaryCard() {
+  const rows = getTrainingCoverageSummaryRows();
+  return `
+    <section class="admin-history-today-section">
+      <div class="admin-history-section-header">
+        <h3>出題カバレッジ</h3>
+      </div>
+      <div class="admin-history-selected-summary">
+        <div class="admin-history-mode-summary-list">
+          ${rows.map((row) => `
+            <div class="admin-history-mode-summary-item">
+              <div class="admin-history-detail-row admin-history-detail-row-main">
+                <span class="admin-history-detail-mode">${escapeHtml(row.label)}</span>
+                <span class="admin-history-detail-meta">登録:${row.registeredTotal}</span>
+                <span class="admin-history-detail-meta">対象:${row.targetCount}</span>
+                <span class="admin-history-detail-meta">出題済:${row.seenCount}</span>
+                <span class="admin-history-detail-meta">未出題:${row.unseenCount}</span>
+                <span class="admin-history-detail-meta">${row.registeredTotal ? row.coverageRate.toFixed(1) : "0.0"}%</span>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function extractUidFromScopedStorageKey(storageKey, baseKey) {
@@ -5104,6 +5202,7 @@ function renderAdminLearningHistoryEntries(entries) {
     content.innerHTML = `
       <div class="admin-learning-history-view">
         ${renderAdminLearningHistoryControls()}
+        ${renderTrainingCoverageSummaryCard()}
         <p class="empty-state">選択中のユーザーと端末の履歴はまだありません</p>
       </div>
     `;
@@ -5127,6 +5226,7 @@ function renderAdminLearningHistoryEntries(entries) {
   content.innerHTML = `
     <div class="admin-learning-history-view">
       ${renderAdminLearningHistoryControls()}
+      ${renderTrainingCoverageSummaryCard()}
       <section class="admin-history-overview">
         <div class="admin-history-streak-row">🔥連続${model.streak || 0}日</div>
         <div class="admin-history-period-grid">
@@ -6483,6 +6583,9 @@ function renderIrregularVerbQuestion() {
   if (!title || !promptText || !counterText || !questionText || !hintText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
 
   const currentQuestion = session.questions[session.currentIndex];
+  if (currentQuestion?.id) {
+    markTrainingQuestionShown("irregular-verb", currentQuestion.id);
+  }
   const modeLabel = session.reviewMode ? "復習" : session.mode === "test" ? "テスト" : "特訓";
   title.textContent = `不規則動詞特訓 ${modeLabel}`;
   promptText.textContent = `不規則動詞特訓 ${modeLabel}`;
@@ -6949,6 +7052,9 @@ function renderResponseTrainingQuestion() {
   if (!title || !scopeText || !counterText || !questionText || !questionLabel || !templateText || !questionTranslationText || !answerLabel || !answerTranslationText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
 
   const currentQuestion = session.questions[session.currentIndex];
+  if (currentQuestion?.id) {
+    markTrainingQuestionShown("response", currentQuestion.id);
+  }
   title.textContent = "応答文特訓";
   scopeText.textContent = "応答文特訓";
   counterText.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
@@ -11344,6 +11450,9 @@ function renderPrepositionQuestion() {
   if (!title || !scopeText || !counterText || !questionText || !translationText || !answerInput || !answerBtn || !feedbackBox || !nextBtn || !answerPanel) return;
 
   const currentQuestion = session.questions[session.currentIndex];
+  if (currentQuestion?.id) {
+    markTrainingQuestionShown("preposition", currentQuestion.id);
+  }
   title.textContent = `前置詞特訓 ${session.scopeLabel}`;
   scopeText.textContent = `前置詞特訓 ${session.scopeLabel}`;
   counterText.textContent = `${session.currentIndex + 1} / ${session.questions.length}`;
@@ -14298,6 +14407,9 @@ function renderQuestionSession() {
     finishSession();
     return;
   }
+  if (question?.id) {
+    markTrainingQuestionShown("word", question.id);
+  }
 
   const questionCard = document.getElementById("questionCard");
   const reviewCard = document.getElementById("reviewCard");
@@ -14409,6 +14521,9 @@ function renderReviewSession() {
   if (!question) {
     finishSession();
     return;
+  }
+  if (question?.id) {
+    markTrainingQuestionShown("phrase", question.id);
   }
 
   const reviewCard = document.getElementById("reviewCard");
