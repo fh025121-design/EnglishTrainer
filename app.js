@@ -1691,6 +1691,9 @@ async function loadTrainingCoverageStoreFromFirestore(uid = getCurrentPcFirebase
   const localStore = loadTrainingCoverageStore(currentUid);
   const mergedStore = window.trainingCoverage?.mergeCoverageStores?.(remoteStore, localStore) || { byMode: {} };
   saveTrainingCoverageStore(mergedStore, currentUid);
+  if (typeof window.saveTrainingCoverageToFirestore === "function") {
+    await window.saveTrainingCoverageToFirestore(mergedStore, { targetUid: currentUid }).catch(() => false);
+  }
   return mergedStore;
 }
 
@@ -5127,12 +5130,16 @@ function renderAdminLearningHistoryHistoryWatch(targetUid, options = {}) {
   const currentUser = getCurrentPcFirebaseUser();
   const currentUid = String(currentUser?.uid || "").trim();
   const watchedTargetUid = String(targetUid || "").trim();
-  const isChildLogin = Boolean(watchedTargetUid && currentUid && watchedTargetUid === currentUid && !adminLearningHistoryCanSelectFamily);
-  const safeOptions = isChildLogin ? { ...options, allowOtherUser: false } : options;
+  const isChildLogin = Boolean(currentUid && watchedTargetUid && watchedTargetUid === currentUid && !adminLearningHistoryCanSelectFamily);
+  const effectiveTargetUid = isChildLogin ? currentUid : watchedTargetUid;
+  const safeOptions = isChildLogin ? { ...options, allowOtherUser: false } : { ...options, allowOtherUser: false };
 
-  console.log("[AdminLearningHistory] watchLearningHistoryEntriesFromFirestore targetUid", watchedTargetUid);
+  if (!adminLearningHistoryCanSelectFamily && currentUid && effectiveTargetUid !== currentUid) {
+    console.warn("[AdminLearningHistory] child-scope override applied", { currentUid, effectiveTargetUid, watchedTargetUid });
+  }
+  console.log("[AdminLearningHistory] watchLearningHistoryEntriesFromFirestore targetUid", effectiveTargetUid, { allowOtherUser: safeOptions.allowOtherUser, canSelectFamily: adminLearningHistoryCanSelectFamily });
 
-  adminLearningHistoryFirestoreUnsubscribe = watchFn(watchedTargetUid, {
+  adminLearningHistoryFirestoreUnsubscribe = watchFn(effectiveTargetUid, {
     onUpdate: (entries) => {
       if (loadToken !== adminLearningHistoryFirestoreLoadToken) return;
       adminLearningHistorySourceEntries = Array.isArray(entries) ? entries.slice() : [];
@@ -5167,6 +5174,7 @@ function renderAdminLearningHistoryFamilyWatch() {
     return;
   }
 
+  resetAdminLearningHistorySelectionState();
   stopAdminLearningHistoryFamilyListener();
   stopAdminLearningHistoryHistoryListener();
   const loadToken = ++adminLearningHistoryFamilyLoadToken;

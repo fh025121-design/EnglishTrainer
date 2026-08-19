@@ -418,7 +418,7 @@ async function loadTrainingCoverageFromFirestore(targetUid = null) {
     return { exists: false, data: null };
   }
 
-  const snapshot = await getDoc(doc(firestore, "users", resolvedUid, "trainingCoverage"));
+  const snapshot = await getDoc(doc(firestore, "users", resolvedUid, "sync", "trainingCoverage"));
   if (!snapshot.exists()) {
     return { exists: false, data: null };
   }
@@ -437,7 +437,7 @@ async function saveTrainingCoverageToFirestore(payload, options = {}) {
   }
 
   try {
-    await setDoc(doc(firestore, "users", resolvedUid, "trainingCoverage"), normalizeFirestoreSerializableValue(payload), { merge: true });
+    await setDoc(doc(firestore, "users", resolvedUid, "sync", "trainingCoverage"), normalizeFirestoreSerializableValue(payload), { merge: true });
     return true;
   } catch (error) {
     console.error("Failed to save training coverage to Firestore", error);
