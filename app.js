@@ -6578,7 +6578,8 @@ function renderIrregularVerbQuestion() {
   const answerBtn = document.getElementById("irregularVerbAnswerBtn");
   const feedbackBox = document.getElementById("irregularVerbFeedbackBox");
   const nextBtn = document.getElementById("irregularVerbNextBtn");
-  if (!title || !promptText || !counterText || !questionText || !hintText || !answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
+  const pronounceBtn = document.getElementById("irregularVerbPronounceBtn");
+  if (!title || !promptText || !counterText || !questionText || !hintText || !answerInput || !answerBtn || !feedbackBox || !nextBtn || !pronounceBtn) return;
 
   const currentQuestion = session.questions[session.currentIndex];
   if (currentQuestion?.id) {
@@ -6598,6 +6599,8 @@ function renderIrregularVerbQuestion() {
   feedbackBox.innerHTML = "";
   nextBtn.disabled = false;
   nextBtn.classList.add("hidden");
+  pronounceBtn.disabled = false;
+  pronounceBtn.classList.add("hidden");
   session.answered = false;
   session.awaitingCorrectionRetry = false;
   session.questionStartedAt = Date.now();
@@ -6618,7 +6621,8 @@ function submitIrregularVerbAnswer() {
   const answerBtn = document.getElementById("irregularVerbAnswerBtn");
   const feedbackBox = document.getElementById("irregularVerbFeedbackBox");
   const nextBtn = document.getElementById("irregularVerbNextBtn");
-  if (!answerInput || !answerBtn || !feedbackBox || !nextBtn) return;
+  const pronounceBtn = document.getElementById("irregularVerbPronounceBtn");
+  if (!answerInput || !answerBtn || !feedbackBox || !nextBtn || !pronounceBtn) return;
 
   const raw = String(answerInput.value || "");
   const trimmed = raw.trim();
@@ -6736,9 +6740,18 @@ function submitIrregularVerbAnswer() {
   }
   nextBtn.classList.remove("hidden");
   nextBtn.disabled = false;
+  pronounceBtn.classList.remove("hidden");
+  pronounceBtn.disabled = false;
   answerInput.disabled = true;
   answerBtn.disabled = true;
   nextBtn.focus();
+}
+
+function playIrregularVerbPronunciation(currentQuestion) {
+  if (!currentQuestion || typeof currentQuestion !== "object") return false;
+  const pastText = Array.isArray(currentQuestion?.past) ? currentQuestion.past.filter(Boolean).map((value) => String(value || "").trim()).filter(Boolean).join(" / ") : String(currentQuestion?.past || "").trim();
+  const participleText = Array.isArray(currentQuestion?.pastParticiple) ? currentQuestion.pastParticiple.filter(Boolean).map((value) => String(value || "").trim()).filter(Boolean).join(" / ") : String(currentQuestion?.pastParticiple || "").trim();
+  return speakIrregularVerbAnswerSequence(currentQuestion, pastText, participleText, { gapMs: 0 });
 }
 
 function moveToNextIrregularVerbQuestion() {
@@ -16203,6 +16216,16 @@ function bindEvents() {
   if (irregularVerbNextBtn) {
     irregularVerbNextBtn.addEventListener("click", () => {
       moveToNextIrregularVerbQuestion();
+    });
+  }
+
+  const irregularVerbPronounceBtn = document.getElementById("irregularVerbPronounceBtn");
+  if (irregularVerbPronounceBtn) {
+    irregularVerbPronounceBtn.addEventListener("click", () => {
+      const session = irregularVerbTrainingSession;
+      const currentQuestion = session?.questions?.[session.currentIndex];
+      if (!currentQuestion) return;
+      playIrregularVerbPronunciation(currentQuestion);
     });
   }
 
