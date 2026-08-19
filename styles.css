@@ -2562,6 +2562,41 @@ p {
   font-weight: 700;
 }
 
+.irregular-verb-pronunciation-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.irregular-verb-pronunciation-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 50px;
+  padding: 10px 12px;
+  border-radius: calc(12px * var(--pc-ui-scale));
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+  text-align: center;
+}
+
+.irregular-verb-pronunciation-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.irregular-verb-pronunciation-btn span {
+  opacity: 0.85;
+}
+
 #irregularVerbPronounceBtn,
 #irregularVerbNextBtn {
   min-height: 52px;

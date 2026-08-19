@@ -6545,6 +6545,41 @@ function speakIrregularVerbQuestionSequence(question) {
   speakIrregularVerbText(base);
 }
 
+function renderIrregularVerbPronunciationControls(question) {
+  const container = document.getElementById("irregularVerbPronunciationGroup");
+  if (!container) return;
+
+  const formEntries = [
+    { label: String(question?.base || "").trim(), title: "現在形", kind: "base" },
+    { label: String(Array.isArray(question?.past) ? (question.past.find(Boolean) || "") : (question?.past || "")).trim(), title: "過去形", kind: "past" },
+    { label: String(Array.isArray(question?.pastParticiple) ? (question.pastParticiple.find(Boolean) || "") : (question?.pastParticiple || "")).trim(), title: "過去分詞", kind: "participle" }
+  ].filter((entry) => entry.label);
+
+  if (!formEntries.length) {
+    container.innerHTML = "";
+    container.classList.add("hidden");
+    return;
+  }
+
+  container.innerHTML = formEntries.map((entry) => `
+    <button type="button" class="irregular-verb-pronunciation-btn" data-pronunciation="${escapeHtml(entry.label)}" data-kind="${entry.kind}">
+      <span>🔊</span>
+      <span>${escapeHtml(entry.label)}</span>
+      <span>（${escapeHtml(entry.title)}）</span>
+    </button>
+  `).join("");
+
+  container.querySelectorAll(".irregular-verb-pronunciation-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const pronunciationText = String(button.dataset.pronunciation || "").trim();
+      if (!pronunciationText) return;
+      speakIrregularVerbText(pronunciationText);
+    });
+  });
+
+  container.classList.remove("hidden");
+}
+
 function speakIrregularVerbAnswerSequence(question, pastText, participleText, options = {}) {
   const base = String(question?.base || "").trim();
   const past = String(pastText || "").trim();
@@ -6597,6 +6632,11 @@ function renderIrregularVerbQuestion() {
   answerBtn.disabled = false;
   feedbackBox.className = "feedback-box hidden";
   feedbackBox.innerHTML = "";
+  const pronunciationGroup = document.getElementById("irregularVerbPronunciationGroup");
+  if (pronunciationGroup) {
+    pronunciationGroup.innerHTML = "";
+    pronunciationGroup.classList.add("hidden");
+  }
   nextBtn.disabled = false;
   nextBtn.classList.add("hidden");
   pronounceBtn.disabled = false;
@@ -6689,6 +6729,10 @@ function submitIrregularVerbAnswer() {
       session.answered = false;
       feedbackBox.className = "feedback-box error";
       feedbackBox.innerHTML = `<strong>❌ もう一度入力してください</strong>${userAnswerDiffMarkup}<div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div><div class="hint">正しい形を入力すると音声が流れて次の問題へ進みます</div>`;
+      renderIrregularVerbPronunciationControls(currentQuestion);
+      pronounceBtn.classList.remove("hidden");
+      pronounceBtn.disabled = false;
+      nextBtn.classList.add("hidden");
       answerInput.focus();
       answerInput.select();
       return;
@@ -6698,6 +6742,7 @@ function submitIrregularVerbAnswer() {
     session.answered = true;
     feedbackBox.className = "feedback-box success";
     feedbackBox.innerHTML = `<strong>✅ 正解</strong><div class="answer-line">${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>${alternateFormHint}`;
+    renderIrregularVerbPronunciationControls(currentQuestion);
     answerInput.disabled = true;
     answerBtn.disabled = true;
     nextBtn.classList.remove("hidden");
@@ -6716,6 +6761,7 @@ function submitIrregularVerbAnswer() {
   feedbackBox.innerHTML = isCorrect
     ? `<strong>✅ 正解</strong><div class="answer-line">${escapeHtml(`${currentQuestion.base} → ${correctPastText} → ${correctParticipleText}`)}</div>${alternateFormHint}`
     : `<strong>❌ 不正解</strong>${userAnswerDiffMarkup}<div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div>`;
+  renderIrregularVerbPronunciationControls(currentQuestion);
   if (isCorrect) {
     speakIrregularVerbAnswerSequence(currentQuestion, correctPastText, correctParticipleText);
   } else {
@@ -6725,8 +6771,10 @@ function submitIrregularVerbAnswer() {
     answerInput.disabled = false;
     answerBtn.disabled = false;
     feedbackBox.innerHTML = `<strong>❌ 不正解</strong>${userAnswerDiffMarkup}<div class="answer-line">正解：${escapeHtml(expectedAnswerText)}</div><div class="hint">正しい形を入力すると音声が流れて次の問題へ進みます</div>`;
-    answerInput.focus();
+    pronounceBtn.classList.remove("hidden");
+    pronounceBtn.disabled = false;
     nextBtn.classList.add("hidden");
+    answerInput.focus();
     saveState();
     return;
   }
