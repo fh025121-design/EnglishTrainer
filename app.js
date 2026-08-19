@@ -1711,13 +1711,16 @@ function getTrainingCoverageSummaryRows() {
     return [];
   }
   const store = loadTrainingCoverageStore();
+  const wordOrderBank = typeof getWordOrderQuestionsByDayRange === "function"
+    ? getWordOrderQuestionsByDayRange(1, 40)
+    : (Array.isArray(window.wordOrderTrainingBank) ? window.wordOrderTrainingBank.slice() : []);
   const rows = [
     { key: "word", label: "単語特訓", bank: (state?.items || []).filter((item) => String(item?.type || "") === "word") },
     { key: "phrase", label: "熟語特訓", bank: (state?.items || []).filter((item) => String(item?.type || "") === "phrase") },
     { key: "preposition", label: "前置詞特訓", bank: getPrepositionQuestionBank() },
     { key: "response", label: "応答文特訓", bank: getResponseQuestionBank() },
     { key: "irregular-verb", label: "不規則動詞特訓", bank: getIrregularVerbQuestionBank() },
-    { key: "word-order", label: "語順トレーニング", bank: getWordOrderQuestionsByDayRange(1, 40) },
+    { key: "word-order", label: "語順トレーニング", bank: wordOrderBank },
     { key: "translation", label: "和訳トレーニング", bank: (window.translationTrainingData?.getTranslationTrainingQuestions?.() || []) }
   ];
   return rows.map((row) => {

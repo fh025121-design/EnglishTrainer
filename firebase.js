@@ -90,6 +90,13 @@ function canAccessOtherUserLearningHistory() {
   return Boolean(window.AdminLearningHistoryAccessState?.canSelectFamily === true);
 }
 
+function hasValidFirebaseCurrentUser() {
+  const user = auth?.currentUser;
+  if (!user || typeof user !== "object") return false;
+  const uid = String(user.uid || "").trim();
+  return Boolean(uid) && typeof user.email !== "undefined" || Boolean(uid) && typeof user.isAnonymous === "boolean";
+}
+
 function getFirebaseAuthErrorMessage(error) {
   const code = String(error?.code || "");
   if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
