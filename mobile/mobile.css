@@ -1140,6 +1140,14 @@ select,
   line-height: 1.1;
 }
 
+.vocabulary-sample-word-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
 .vocabulary-sample-word {
   margin: 0;
   text-align: center;
@@ -1147,23 +1155,29 @@ select,
   font-weight: 900;
   letter-spacing: 0.03em;
   color: #12324A;
+  line-height: 1.2;
 }
 
 .vocabulary-sample-part-of-speech {
-  margin: 6px 0 10px;
+  margin: 0;
   font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: #60788A;
+  line-height: 1.2;
 }
 
 .vocabulary-sample-meaning-result {
   margin: 0 0 14px;
+  min-height: 1.5em;
   font-size: clamp(1.0rem, 2.8vw, 1.4rem);
   font-weight: 700;
   line-height: 1.5;
   color: #12324A;
   text-align: center;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
 }
 
 .vocabulary-sample-label {
@@ -1223,7 +1237,19 @@ select,
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   width: min(100%, 300px);
+  min-height: 52px;
   margin: 0 auto;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.vocabulary-sample-choice-row.is-visible,
+.vocabulary-sample-meaning-row.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .vocabulary-sample-choice-btn {
@@ -1267,6 +1293,8 @@ select,
   font-weight: 800;
   line-height: 1.5;
   color: #12324A;
+  opacity: 1;
+  visibility: visible;
 }
 
 .vocabulary-sample-complete-title {

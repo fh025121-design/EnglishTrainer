@@ -3054,6 +3054,7 @@
     speakingRecognition: null,
     speakingAutoAdvanceTimerId: null,
     vocabularySample: null,
+    vocabularyStudy: null,
     wordOrderTraining: null,
     wordOrderSelectedRangeValue: WORD_ORDER_DAY_RANGES[0].value,
     translationTraining: null,
@@ -3094,6 +3095,218 @@
     }
   ];
 
+  const MOBILE_VOCABULARY_REAL_WORD_BANK = [
+    { id: "environment", word: "environment", level: "5", partOfSpeech: "名詞", meaning: "環境", accent: "en-VI-ron-ment", accentFocus: "VI", exampleSentence: "We need a clean environment.", exampleTranslation: "きれいな環境が必要です。" },
+    { id: "receive", word: "receive", level: "5", partOfSpeech: "動詞", meaning: "受け取る", accent: "re-CEIVE", accentFocus: "CEIVE", exampleSentence: "I received a letter.", exampleTranslation: "手紙を受け取りました。" },
+    { id: "important", word: "important", level: "5", partOfSpeech: "形容詞", meaning: "重要な", accent: "im-POR-tant", accentFocus: "POR", exampleSentence: "It is important to study.", exampleTranslation: "勉強することは重要です。" },
+    { id: "practice", word: "practice", level: "4", partOfSpeech: "名詞", meaning: "練習", accent: "PRAK-tis", accentFocus: "PRAK", exampleSentence: "Daily practice helps.", exampleTranslation: "毎日の練習が役立ちます。" },
+    { id: "careful", word: "careful", level: "4", partOfSpeech: "形容詞", meaning: "注意深い", accent: "CARE-ful", accentFocus: "CARE", exampleSentence: "Be careful with the knife.", exampleTranslation: "ナイフには気をつけて。" },
+    { id: "result", word: "result", level: "3", partOfSpeech: "名詞", meaning: "結果", accent: "re-ZULT", accentFocus: "ZULT", exampleSentence: "The result was good.", exampleTranslation: "結果は良かったです。" }
+  ];
+
+  function createVocabularySkillState(overrides = {}) {
+    return {
+      currentState: "unlearned",
+      level: 0,
+      nextReviewAt: null,
+      lastJudgedAt: null,
+      lastJudgedBy: "self",
+      ...overrides
+    };
+  }
+
+  function getVocabularyReviewDelayDays(level) {
+    const reviewMap = {
+      1: 1,
+      2: 3,
+      3: 7,
+      4: 14,
+      5: 30
+    };
+    return reviewMap[Number(level)] || 0;
+  }
+
+  function getVocabularyNextReviewAt(level, now = Date.now()) {
+    const delayDays = getVocabularyReviewDelayDays(level);
+    if (!delayDays) return null;
+    return now + (delayDays * 24 * 60 * 60 * 1000);
+  }
+
+  function normalizeVocabularyWordRecord(entry, index = 0) {
+    const word = String(entry?.word || "").trim();
+    if (!word) return null;
+    const wordId = String(entry?.id || entry?.word || `${index}-${word}`);
+    const pronunciation = entry?.pronunciation || {};
+    const meaning = entry?.meaningState || {};
+    return {
+      id: wordId,
+      word,
+      level: String(entry?.level || "5"),
+      partOfSpeech: entry?.partOfSpeech || "名詞",
+      meaning: entry?.meaning || "",
+      accent: entry?.accent || "",
+      accentFocus: entry?.accentFocus || "",
+      exampleSentence: entry?.exampleSentence || "",
+      exampleTranslation: entry?.exampleTranslation || "",
+      pronunciation: createVocabularySkillState({
+        currentState: pronunciation.currentState || "unlearned",
+        level: Number(pronunciation.level || 0),
+        nextReviewAt: pronunciation.nextReviewAt || null,
+        lastJudgedAt: pronunciation.lastJudgedAt || null,
+        lastJudgedBy: pronunciation.lastJudgedBy || "self",
+        ...pronunciation
+      }),
+      meaningState: createVocabularySkillState({
+        currentState: meaning.currentState || "unlearned",
+        level: Number(meaning.level || 0),
+        nextReviewAt: meaning.nextReviewAt || null,
+        lastJudgedAt: meaning.lastJudgedAt || null,
+        lastJudgedBy: meaning.lastJudgedBy || "self",
+        ...meaning
+      }),
+      lastJudgedAt: entry?.lastJudgedAt || null,
+      lastJudgedBy: entry?.lastJudgedBy || "self",
+      lastHumanConfirmedAt: entry?.lastHumanConfirmedAt || null,
+      sessionFailedAt: entry?.sessionFailedAt || null,
+      sessionRetryAfterQuestionCount: Number(entry?.sessionRetryAfterQuestionCount || 0),
+      createdAt: entry?.createdAt || Date.now(),
+      reviewHistory: Array.isArray(entry?.reviewHistory) ? entry.reviewHistory.slice() : []
+    };
+  }
+
+  function createVocabularyStudyState(wordEntries = []) {
+    const normalizedEntries = wordEntries
+      .map((entry, index) => normalizeVocabularyWordRecord(entry, index))
+      .filter(Boolean);
+    const studyState = {
+      targetWordCount: 1000,
+      entries: normalizedEntries,
+      progressMap: Object.fromEntries(normalizedEntries.map((entry) => [entry.id, entry])),
+      session: {
+        questionCount: 0,
+        failedWordIds: [],
+        recentFailedWordIds: []
+      },
+      gradeSummary: {
+        5: { total: 0, mastered: 0 },
+        4: { total: 0, mastered: 0 },
+        3: { total: 0, mastered: 0 }
+      }
+    };
+    studyState.entries.forEach((entry) => {
+      const gradeKey = String(entry.level || "5");
+      if (!studyState.gradeSummary[gradeKey]) {
+        studyState.gradeSummary[gradeKey] = { total: 0, mastered: 0 };
+      }
+      studyState.gradeSummary[gradeKey].total += 1;
+      const isMastered = entry.pronunciation.level >= 5 && entry.meaningState.level >= 5;
+      if (isMastered) {
+        studyState.gradeSummary[gradeKey].mastered += 1;
+      }
+    });
+    return studyState;
+  }
+
+  function getVocabularySkillStatus(skillState) {
+    if (!skillState || !skillState.level) return "unlearned";
+    if (skillState.level >= 5) return "mastered";
+    if (skillState.nextReviewAt && skillState.nextReviewAt <= Date.now()) return "due";
+    return "learning";
+  }
+
+  function getVocabularyWordProgressStatus(entry) {
+    const pronunciationStatus = getVocabularySkillStatus(entry.pronunciation);
+    const meaningStatus = getVocabularySkillStatus(entry.meaningState);
+    if (entry.pronunciation.level >= 5 && entry.meaningState.level >= 5) return "mastered";
+    if (pronunciationStatus === "due" || meaningStatus === "due") return "due";
+    if (pronunciationStatus === "learning" || meaningStatus === "learning") return "learning";
+    return "unlearned";
+  }
+
+  function applyVocabularySkillResult(entry, field, result, judgedBy = "self", now = Date.now()) {
+    const skill = field === "meaning" ? entry.meaningState : entry.pronunciation;
+    if (!skill) return entry;
+    if (result === "ok") {
+      const nextLevel = Math.min(5, Number(skill.level || 0) + 1);
+      skill.level = nextLevel;
+      skill.currentState = nextLevel >= 5 ? "mastered" : "learning";
+      skill.lastJudgedAt = now;
+      skill.lastJudgedBy = judgedBy;
+      skill.nextReviewAt = getVocabularyNextReviewAt(nextLevel, now);
+      if (nextLevel >= 5) {
+        skill.currentState = "mastered";
+      }
+    } else {
+      const resetLevel = 1;
+      skill.level = resetLevel;
+      skill.currentState = "review";
+      skill.lastJudgedAt = now;
+      skill.lastJudgedBy = judgedBy;
+      skill.nextReviewAt = getVocabularyNextReviewAt(resetLevel, now);
+      entry.sessionFailedAt = now;
+      entry.sessionRetryAfterQuestionCount = 15;
+    }
+    entry.lastJudgedAt = now;
+    entry.lastJudgedBy = judgedBy;
+    return entry;
+  }
+
+  function appendVocabularySessionQuestion(studyState) {
+    if (!studyState || !studyState.session) return;
+    studyState.session.questionCount += 1;
+  }
+
+  function getVocabularyCandidateQueue(studyState, now = Date.now()) {
+    if (!studyState || !studyState.entries) return [];
+    const failedRevisit = studyState.entries.filter((entry) => {
+      const hasRetryWindow = Number(entry.sessionRetryAfterQuestionCount || 0) > 0 && Number(studyState.session?.questionCount || 0) >= Number(entry.sessionRetryAfterQuestionCount || 0);
+      return hasRetryWindow;
+    });
+    const dueEntries = studyState.entries.filter((entry) => {
+      const pronunciationDue = entry.pronunciation && entry.pronunciation.nextReviewAt && entry.pronunciation.nextReviewAt <= now;
+      const meaningDue = entry.meaningState && entry.meaningState.nextReviewAt && entry.meaningState.nextReviewAt <= now;
+      return pronunciationDue || meaningDue;
+    });
+    const newEntries = studyState.entries.filter((entry) => {
+      const pronunciationNew = Number(entry.pronunciation.level || 0) === 0;
+      const meaningNew = Number(entry.meaningState.level || 0) === 0;
+      return pronunciationNew || meaningNew;
+    });
+    const orderedLevels = ["5", "4", "3"];
+    const orderedNewEntries = [...newEntries].sort((a, b) => {
+      const levelDiff = orderedLevels.indexOf(String(a.level || "5")) - orderedLevels.indexOf(String(b.level || "5"));
+      if (levelDiff !== 0) return levelDiff;
+      return a.word.localeCompare(b.word);
+    });
+    return [...failedRevisit, ...dueEntries, ...orderedNewEntries];
+  }
+
+  function getVocabularyProgressSummary(studyState) {
+    const entries = studyState?.entries || [];
+    const totalWords = entries.length;
+    const masteredWords = entries.filter((entry) => entry.pronunciation.level >= 5 && entry.meaningState.level >= 5).length;
+    const gradeSummary = Object.fromEntries((Object.keys(studyState?.gradeSummary || {}) || []).map((gradeKey) => {
+      const grade = studyState.gradeSummary[gradeKey] || { total: 0, mastered: 0 };
+      return [gradeKey, { total: grade.total || 0, mastered: grade.mastered || 0 }];
+    }));
+    return {
+      targetWordCount: Number(studyState?.targetWordCount || 1000),
+      totalWords,
+      masteredWords,
+      learningWords: entries.filter((entry) => getVocabularyWordProgressStatus(entry) === "learning").length,
+      dueWords: entries.filter((entry) => getVocabularyWordProgressStatus(entry) === "due").length,
+      gradeSummary
+    };
+  }
+
+  function buildVocabularyRealStudyState() {
+    return createVocabularyStudyState(MOBILE_VOCABULARY_REAL_WORD_BANK.map((entry) => ({
+      ...entry,
+      pronunciation: { currentState: "unlearned", level: 0, nextReviewAt: null },
+      meaningState: { currentState: "unlearned", level: 0, nextReviewAt: null }
+    })));
+  }
+
   function getVocabularySampleWordItem() {
     const sample = state.vocabularySample || null;
     if (!sample || !Array.isArray(sample.words) || !sample.words.length) return null;
@@ -3122,6 +3335,65 @@
     return highlighted;
   }
 
+  function refreshVocabularySampleTimerDisplay() {
+    const sample = state.vocabularySample;
+    const timerText = elements?.vocabularySampleTimerText;
+    if (!sample || !timerText) return;
+
+    const deadlineAt = Number(sample.timerDeadlineAt) || 0;
+    const remainingMs = Math.max(0, deadlineAt - Date.now());
+    const totalSeconds = Math.ceil(remainingMs / 1000);
+    const safeRemaining = Math.max(0, totalSeconds);
+    const minutes = Math.floor(safeRemaining / 60);
+    const seconds = safeRemaining % 60;
+    const valueNode = timerText.querySelector(".vocabulary-sample-timer-value");
+    if (valueNode) {
+      valueNode.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    if (safeRemaining <= 0 && !sample.sessionExpired) {
+      sample.sessionExpired = true;
+      sample.finished = false;
+      sample.meaningChecked = true;
+      sample.meaningRevealed = true;
+      sample.pronunciationChecked = true;
+    }
+  }
+
+  function stopVocabularySampleTimer() {
+    const sample = state.vocabularySample;
+    if (!sample) return;
+    if (sample.timerIntervalId) {
+      window.clearInterval(sample.timerIntervalId);
+      sample.timerIntervalId = null;
+    }
+    sample.timerDeadlineAt = Number(sample.timerDeadlineAt) || 0;
+  }
+
+  function startVocabularySampleTimer() {
+    const sample = state.vocabularySample;
+    if (!sample) return;
+
+    stopVocabularySampleTimer();
+    sample.timerDeadlineAt = Date.now() + 10 * 60 * 1000;
+    sample.sessionExpired = false;
+    refreshVocabularySampleTimerDisplay();
+
+    sample.timerIntervalId = window.setInterval(() => {
+      if (!state.vocabularySample) return;
+      const current = state.vocabularySample;
+      const remainingMs = Math.max(0, Number(current.timerDeadlineAt || 0) - Date.now());
+      if (remainingMs <= 0) {
+        current.sessionExpired = true;
+        current.finished = false;
+        refreshVocabularySampleTimerDisplay();
+        stopVocabularySampleTimer();
+        return;
+      }
+      refreshVocabularySampleTimerDisplay();
+    }, 1000);
+  }
+
   function renderVocabularySampleScreen() {
     const sample = state.vocabularySample || null;
     if (!sample) {
@@ -3143,24 +3415,43 @@
       elements.vocabularySampleMeaningResultBlock.classList.add("hidden");
       elements.vocabularySampleNextWrap.classList.add("hidden");
       elements.vocabularySampleCompleteBlock.classList.remove("hidden");
+      stopVocabularySampleTimer();
       showScreen("vocabularySampleScreen");
       return;
     }
 
+    if (sample.sessionExpired) {
+      elements.vocabularySampleMeaningBlock.classList.add("hidden");
+      elements.vocabularySampleMeaningResultBlock.classList.add("hidden");
+      elements.vocabularySampleNextWrap.classList.add("hidden");
+      stopVocabularySampleTimer();
+    }
+
+    if (sample.sessionExpired && sample.pronunciationChoice && sample.meaningChoice) {
+      elements.vocabularySampleNextWrap.classList.remove("hidden");
+    }
+
     elements.vocabularySampleHeaderText.textContent = "本日の学習";
-    elements.vocabularySampleTimerText.innerHTML = '<span class="vocabulary-sample-timer-label">残り時間</span><span class="vocabulary-sample-timer-value">10:00</span>';
+    if (!elements.vocabularySampleTimerText.querySelector(".vocabulary-sample-timer-value")) {
+      elements.vocabularySampleTimerText.innerHTML = '<span class="vocabulary-sample-timer-label">残り時間</span><span class="vocabulary-sample-timer-value">10:00</span>';
+    }
+    refreshVocabularySampleTimerDisplay();
     elements.vocabularySampleWordText.textContent = wordItem.word;
     elements.vocabularySamplePartOfSpeechText.textContent = `[${wordItem.partOfSpeech}]`;
 
     elements.vocabularySamplePronunciationBlock.classList.remove("hidden");
     elements.vocabularySampleMeaningBlock.classList.add("hidden");
-    elements.vocabularySampleMeaningResultBlock.classList.add("hidden");
+    elements.vocabularySampleMeaningResultBlock.classList.remove("hidden");
     elements.vocabularySampleNextWrap.classList.add("hidden");
     elements.vocabularySampleCompleteBlock.classList.add("hidden");
 
     const accentVisible = sample.pronunciationChecked;
-    const meaningVisible = sample.meaningChecked;
-    elements.vocabularySampleAccentBlock.classList.toggle("hidden", !accentVisible);
+    const meaningVisible = sample.meaningRevealed || sample.meaningChecked;
+    elements.vocabularySampleAccentBlock.classList.remove("hidden");
+    const accentChoiceRow = elements.vocabularySampleAccentBlock.querySelector(".vocabulary-sample-choice-row");
+    if (accentChoiceRow) {
+      accentChoiceRow.classList.toggle("is-visible", accentVisible);
+    }
     if (accentVisible) {
       elements.vocabularySampleAccentText.innerHTML = `${buildVocabularySampleAccentMarkup(wordItem.accent, wordItem.accentFocus)} <span class="vocabulary-sample-accent-note">赤字＝アクセント</span>`;
     }
@@ -3174,25 +3465,37 @@
     if (sample.pronunciationChecked) {
       elements.vocabularySamplePronunciationBtn.disabled = false;
       elements.vocabularySamplePronunciationBtn.textContent = "【 もう一度発音を聞く 】";
+      elements.vocabularySampleAccentBlock.classList.remove("hidden");
     } else {
       elements.vocabularySamplePronunciationBtn.disabled = false;
       elements.vocabularySamplePronunciationBtn.textContent = "【 声に出したら、次へ 】";
+      elements.vocabularySampleAccentBlock.classList.add("hidden");
     }
 
     if (sample.meaningRevealed || sample.meaningChecked) {
       elements.vocabularySampleMeaningBtn.textContent = "【 意味 】";
+      elements.vocabularySampleMeaningResultBlock.classList.remove("hidden");
     } else {
       elements.vocabularySampleMeaningBtn.textContent = "【 意味を言ったら、次へ 】";
+      elements.vocabularySampleMeaningResultBlock.classList.add("hidden");
     }
 
     elements.vocabularySampleMeaningBlock.classList.toggle("hidden", sample.pronunciationChecked === false);
-    elements.vocabularySampleMeaningResultBlock.classList.toggle("hidden", !sample.meaningChecked && !sample.meaningRevealed);
-    if (sample.meaningRevealed || sample.meaningChecked) {
+    elements.vocabularySampleMeaningResultBlock.classList.remove("hidden");
+    const meaningChoiceRow = elements.vocabularySampleMeaningResultBlock.querySelector(".vocabulary-sample-meaning-row");
+    if (meaningChoiceRow) {
+      meaningChoiceRow.classList.toggle("is-visible", meaningVisible);
+    }
+    if (meaningVisible) {
       elements.vocabularySampleMeaningResultText.textContent = wordItem.meaning;
-      elements.vocabularySampleMeaningResultText.classList.remove("hidden");
+      elements.vocabularySampleMeaningResultText.style.visibility = "visible";
+      elements.vocabularySampleMeaningResultText.style.opacity = "1";
+      elements.vocabularySampleMeaningResultText.style.color = "#12324A";
     } else {
       elements.vocabularySampleMeaningResultText.textContent = "";
-      elements.vocabularySampleMeaningResultText.classList.add("hidden");
+      elements.vocabularySampleMeaningResultText.style.visibility = "hidden";
+      elements.vocabularySampleMeaningResultText.style.opacity = "0";
+      elements.vocabularySampleMeaningResultText.style.color = "#12324A";
     }
 
     const meaningSelected = sample.meaningChoice;
@@ -3209,6 +3512,7 @@
   }
 
   function startVocabularySample() {
+    state.vocabularyStudy = state.vocabularyStudy || buildVocabularyRealStudyState();
     state.vocabularySample = {
       words: MOBILE_VOCABULARY_SAMPLE_WORDS.map((item) => ({ ...item })),
       index: 0,
@@ -3217,16 +3521,27 @@
       meaningChecked: false,
       meaningChoice: null,
       meaningRevealed: false,
-      finished: false
+      finished: false,
+      sessionExpired: false,
+      timerDeadlineAt: null,
+      timerIntervalId: null
     };
+    startVocabularySampleTimer();
     renderVocabularySampleScreen();
   }
 
   function continueVocabularySample() {
     const sample = state.vocabularySample;
     if (!sample) return;
+    if (sample.sessionExpired) {
+      sample.finished = true;
+      stopVocabularySampleTimer();
+      renderVocabularySampleScreen();
+      return;
+    }
     if (sample.index >= sample.words.length - 1) {
       sample.finished = true;
+      stopVocabularySampleTimer();
       renderVocabularySampleScreen();
       return;
     }
@@ -8895,6 +9210,7 @@
   }
 
   function renderSpeakingHome() {
+    stopVocabularySampleTimer();
     showScreen("speakingHomeScreen");
   }
 
@@ -11034,7 +11350,10 @@
     elements.pointRewardOkBtn.addEventListener("click", closePointRewardScreen);
     document.getElementById("openSpeakingVocabBtn").addEventListener("click", () => {});
     document.getElementById("openVocabularySampleBtn").addEventListener("click", startVocabularySample);
-    elements.vocabularySampleBackBtn.addEventListener("click", renderSpeakingHome);
+    elements.vocabularySampleBackBtn.addEventListener("click", () => {
+      stopVocabularySampleTimer();
+      renderSpeakingHome();
+    });
     elements.vocabularySamplePronunciationBtn.addEventListener("click", handleVocabularySamplePronunciationCheck);
     elements.vocabularySamplePronunciationOkBtn.addEventListener("click", () => handleVocabularySampleChoice("pronunciation", "ok"));
     elements.vocabularySamplePronunciationNgBtn.addEventListener("click", () => handleVocabularySampleChoice("pronunciation", "ng"));
@@ -11042,7 +11361,10 @@
     elements.vocabularySampleMeaningOkBtn.addEventListener("click", () => handleVocabularySampleChoice("meaning", "ok"));
     elements.vocabularySampleMeaningNgBtn.addEventListener("click", () => handleVocabularySampleChoice("meaning", "ng"));
     elements.vocabularySampleNextBtn.addEventListener("click", continueVocabularySample);
-    elements.vocabularySampleCompleteBackBtn.addEventListener("click", renderSpeakingHome);
+    elements.vocabularySampleCompleteBackBtn.addEventListener("click", () => {
+      stopVocabularySampleTimer();
+      renderSpeakingHome();
+    });
     document.getElementById("conversationSelectBackBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("conversationDaySelectBackBtn").addEventListener("click", renderConversationSelectScreen);
     document.getElementById("speakingVocabBackBtn").addEventListener("click", renderSpeakingHome);
