@@ -6672,10 +6672,30 @@ function speakIrregularVerbTextSequence(texts, options = {}) {
   return true;
 }
 
+function getIrregularVerbPronunciationSpeechText(question, kind) {
+  const base = String(question?.base || "").trim();
+  if (!base) return "";
+  const lowerBase = base.toLowerCase();
+  if (lowerBase === "read") {
+    if (kind === "base") return "reed";
+    if (kind === "past" || kind === "participle") return "red";
+  }
+
+  if (kind === "base") return base;
+  if (kind === "past") {
+    return String(Array.isArray(question?.past) ? (question.past.find(Boolean) || "") : (question?.past || "")).trim();
+  }
+  if (kind === "participle") {
+    return String(Array.isArray(question?.pastParticiple) ? (question.pastParticiple.find(Boolean) || "") : (question?.pastParticiple || "")).trim();
+  }
+  return "";
+}
+
 function speakIrregularVerbQuestionSequence(question) {
   const base = String(question?.base || "").trim();
   if (!base) return;
-  speakIrregularVerbText(base);
+  const speechText = getIrregularVerbPronunciationSpeechText(question, "base") || base;
+  speakIrregularVerbText(speechText);
 }
 
 function renderIrregularVerbPronunciationControls(question) {
@@ -6694,13 +6714,16 @@ function renderIrregularVerbPronunciationControls(question) {
     return;
   }
 
-  container.innerHTML = formEntries.map((entry) => `
-    <button type="button" class="irregular-verb-pronunciation-btn" data-pronunciation="${escapeHtml(entry.label)}" data-kind="${entry.kind}">
-      <span>🔊</span>
-      <span>${escapeHtml(entry.label)}</span>
-      <span>（${escapeHtml(entry.title)}）</span>
-    </button>
-  `).join("");
+  container.innerHTML = formEntries.map((entry) => {
+    const pronunciationText = getIrregularVerbPronunciationSpeechText(question, entry.kind) || entry.label;
+    return `
+      <button type="button" class="irregular-verb-pronunciation-btn" data-pronunciation="${escapeHtml(pronunciationText)}" data-kind="${entry.kind}">
+        <span>🔊</span>
+        <span>${escapeHtml(entry.label)}</span>
+        <span>（${escapeHtml(entry.title)}）</span>
+      </button>
+    `;
+  }).join("");
 
   container.querySelectorAll(".irregular-verb-pronunciation-btn").forEach((button) => {
     button.addEventListener("click", () => {
@@ -6718,7 +6741,11 @@ function speakIrregularVerbAnswerSequence(question, pastText, participleText, op
   const past = String(pastText || "").trim();
   const participle = String(participleText || "").trim();
   const normalizeSpeechText = (text) => String(text || "").replace(/\s*\/\s*/g, " or ").replace(/\s+/g, " ").trim();
-  const sequence = [normalizeSpeechText(base), normalizeSpeechText(past), normalizeSpeechText(participle)].filter(Boolean);
+  const sequence = [
+    normalizeSpeechText(getIrregularVerbPronunciationSpeechText(question, "base") || base),
+    normalizeSpeechText(getIrregularVerbPronunciationSpeechText(question, "past") || past),
+    normalizeSpeechText(getIrregularVerbPronunciationSpeechText(question, "participle") || participle)
+  ].filter(Boolean);
   if (!sequence.length) return false;
   return speakIrregularVerbTextSequence(sequence, {
     ...options,

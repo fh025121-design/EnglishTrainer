@@ -1089,6 +1089,93 @@ select,
   width: 100%;
 }
 
+.vocabulary-sample-layout {
+  display: block;
+}
+
+.vocabulary-sample-panel {
+  text-align: center;
+  padding: 20px 16px;
+}
+
+.vocabulary-sample-panel h2 {
+  margin: 0 0 10px;
+  font-size: 1.5rem;
+}
+
+.vocabulary-sample-timer {
+  margin: 0 0 18px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.vocabulary-sample-word {
+  margin: 0 0 20px;
+  text-align: center;
+  font-size: clamp(2.2rem, 6vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.vocabulary-sample-label {
+  margin: 0 0 12px;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.vocabulary-sample-block {
+  margin-top: 12px;
+}
+
+.vocabulary-sample-accent {
+  min-height: 34px;
+  margin: 0 0 12px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.vocabulary-sample-accent-focus {
+  color: #ff4d5a;
+  font-weight: 900;
+}
+
+.vocabulary-sample-choice-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.vocabulary-sample-choice-btn {
+  width: 100%;
+  min-height: 46px;
+  font-weight: 900;
+}
+
+.vocabulary-sample-choice-btn.is-selected {
+  background: linear-gradient(135deg, rgba(94, 214, 214, 0.24), rgba(123, 108, 255, 0.26));
+  border-color: rgba(94, 214, 214, 0.72);
+  color: #ffffff;
+}
+
+.vocabulary-sample-meaning-result {
+  margin: 0 0 12px;
+  font-size: 1.12rem;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.vocabulary-sample-complete-title {
+  margin: 0 0 14px;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--text);
+}
+
 .conversation-mode-action-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

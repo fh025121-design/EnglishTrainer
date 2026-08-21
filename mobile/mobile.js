@@ -3053,6 +3053,7 @@
     speakingRecognitionInProgress: false,
     speakingRecognition: null,
     speakingAutoAdvanceTimerId: null,
+    vocabularySample: null,
     wordOrderTraining: null,
     wordOrderSelectedRangeValue: WORD_ORDER_DAY_RANGES[0].value,
     translationTraining: null,
@@ -3068,6 +3069,195 @@
   };
 
   const elements = {};
+
+  const MOBILE_VOCABULARY_SAMPLE_WORDS = [
+    {
+      word: "environment",
+      partOfSpeech: "名詞",
+      meaning: "環境",
+      accent: "en-VI-ron-ment",
+      accentFocus: "VI"
+    },
+    {
+      word: "receive",
+      partOfSpeech: "動詞",
+      meaning: "受け取る",
+      accent: "re-CEIVE",
+      accentFocus: "CEIVE"
+    },
+    {
+      word: "important",
+      partOfSpeech: "形容詞",
+      meaning: "重要な",
+      accent: "im-POR-tant",
+      accentFocus: "POR"
+    }
+  ];
+
+  function getVocabularySampleWordItem() {
+    const sample = state.vocabularySample || null;
+    if (!sample || !Array.isArray(sample.words) || !sample.words.length) return null;
+    return sample.words[Math.max(0, Math.min(sample.index || 0, sample.words.length - 1))] || null;
+  }
+
+  function buildVocabularySampleAccentMarkup(accentText, focusText) {
+    if (!accentText) return "";
+    if (!focusText) return accentText;
+    const escapedAccent = String(accentText).replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+    const escapedFocus = String(focusText).replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+    const pattern = new RegExp(escapedFocus.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const highlighted = escapedAccent.replace(pattern, `<span class="vocabulary-sample-accent-focus">${escapedFocus}</span>`);
+    return highlighted;
+  }
+
+  function renderVocabularySampleScreen() {
+    const sample = state.vocabularySample || null;
+    if (!sample) {
+      showScreen("speakingHomeScreen");
+      return;
+    }
+
+    const wordItem = getVocabularySampleWordItem();
+    if (!wordItem) {
+      showScreen("speakingHomeScreen");
+      return;
+    }
+
+    if (sample.finished) {
+      elements.vocabularySampleWordText.textContent = "";
+      elements.vocabularySamplePronunciationBlock.classList.add("hidden");
+      elements.vocabularySampleAccentBlock.classList.add("hidden");
+      elements.vocabularySampleMeaningBlock.classList.add("hidden");
+      elements.vocabularySampleMeaningResultBlock.classList.add("hidden");
+      elements.vocabularySampleNextWrap.classList.add("hidden");
+      elements.vocabularySampleCompleteBlock.classList.remove("hidden");
+      showScreen("vocabularySampleScreen");
+      return;
+    }
+
+    elements.vocabularySampleHeaderText.textContent = "本日の学習";
+    elements.vocabularySampleTimerText.textContent = "残り時間 10:00";
+    elements.vocabularySampleWordText.textContent = wordItem.word;
+
+    elements.vocabularySamplePronunciationBlock.classList.remove("hidden");
+    elements.vocabularySampleMeaningBlock.classList.add("hidden");
+    elements.vocabularySampleMeaningResultBlock.classList.add("hidden");
+    elements.vocabularySampleNextWrap.classList.add("hidden");
+    elements.vocabularySampleCompleteBlock.classList.add("hidden");
+
+    const accentVisible = sample.pronunciationChecked;
+    const meaningVisible = sample.meaningChecked;
+    elements.vocabularySampleAccentBlock.classList.toggle("hidden", !accentVisible);
+    if (accentVisible) {
+      elements.vocabularySampleAccentText.innerHTML = buildVocabularySampleAccentMarkup(wordItem.accent, wordItem.accentFocus);
+    }
+
+    const pronunciationSelected = sample.pronunciationChoice;
+    [elements.vocabularySamplePronunciationOkBtn, elements.vocabularySamplePronunciationNgBtn].forEach((button) => {
+      const isOk = button.id === "vocabularySamplePronunciationOkBtn";
+      button.classList.toggle("is-selected", pronunciationSelected === (isOk ? "ok" : "ng"));
+    });
+
+    if (!sample.pronunciationChecked) {
+      elements.vocabularySamplePronunciationBtn.disabled = false;
+      elements.vocabularySamplePronunciationBtn.textContent = "発音を確認";
+    }
+
+    elements.vocabularySampleMeaningBlock.classList.toggle("hidden", sample.pronunciationChecked === false || sample.meaningChecked || sample.meaningRevealed);
+    elements.vocabularySampleMeaningResultBlock.classList.toggle("hidden", !sample.meaningChecked && !sample.meaningRevealed);
+    if (sample.meaningRevealed) {
+      elements.vocabularySampleMeaningResultText.textContent = `${wordItem.partOfSpeech}　${wordItem.meaning}`;
+      elements.vocabularySampleMeaningResultBlock.classList.remove("hidden");
+    }
+
+    const meaningSelected = sample.meaningChoice;
+    [elements.vocabularySampleMeaningOkBtn, elements.vocabularySampleMeaningNgBtn].forEach((button) => {
+      const isOk = button.id === "vocabularySampleMeaningOkBtn";
+      button.classList.toggle("is-selected", meaningSelected === (isOk ? "ok" : "ng"));
+    });
+
+    const showNextButton = Boolean(sample.pronunciationChoice && sample.meaningChoice);
+    elements.vocabularySampleNextWrap.classList.toggle("hidden", !showNextButton);
+    elements.vocabularySampleNextBtn.textContent = sample.index >= sample.words.length - 1 ? "終了" : "次へ";
+
+    showScreen("vocabularySampleScreen");
+  }
+
+  function startVocabularySample() {
+    state.vocabularySample = {
+      words: MOBILE_VOCABULARY_SAMPLE_WORDS.map((item) => ({ ...item })),
+      index: 0,
+      pronunciationChecked: false,
+      pronunciationChoice: null,
+      meaningChecked: false,
+      meaningChoice: null,
+      meaningRevealed: false,
+      finished: false
+    };
+    renderVocabularySampleScreen();
+  }
+
+  function continueVocabularySample() {
+    const sample = state.vocabularySample;
+    if (!sample) return;
+    if (sample.index >= sample.words.length - 1) {
+      sample.finished = true;
+      renderVocabularySampleScreen();
+      return;
+    }
+    sample.index += 1;
+    sample.pronunciationChecked = false;
+    sample.pronunciationChoice = null;
+    sample.meaningChecked = false;
+    sample.meaningChoice = null;
+    sample.meaningRevealed = false;
+    renderVocabularySampleScreen();
+  }
+
+  function handleVocabularySamplePronunciationCheck() {
+    const sample = state.vocabularySample;
+    const item = getVocabularySampleWordItem();
+    if (!sample || !item) return;
+    sample.pronunciationChecked = true;
+    sample.meaningChecked = false;
+    sample.meaningRevealed = false;
+    speakMobileEnglishText(item.word);
+    renderVocabularySampleScreen();
+  }
+
+  function handleVocabularySampleMeaningReveal() {
+    const sample = state.vocabularySample;
+    if (!sample) return;
+    sample.meaningRevealed = true;
+    sample.meaningChecked = true;
+    renderVocabularySampleScreen();
+  }
+
+  function handleVocabularySampleChoice(kind, value) {
+    const sample = state.vocabularySample;
+    if (!sample) return;
+    if (kind === "pronunciation") {
+      sample.pronunciationChoice = value;
+      sample.pronunciationChecked = true;
+    }
+    if (kind === "meaning") {
+      sample.meaningChoice = value;
+      sample.meaningChecked = true;
+    }
+    renderVocabularySampleScreen();
+  }
 
   function formatTimestampToJstDisplay(timestamp) {
     if (!Number.isFinite(Number(timestamp))) return "";
@@ -10655,6 +10845,26 @@
     elements.speakingWordPracticeWeekText = document.getElementById("speakingWordPracticeWeekText");
     elements.speakingWordPracticeProgressText = document.getElementById("speakingWordPracticeProgressText");
     elements.speakingWordPracticeWordText = document.getElementById("speakingWordPracticeWordText");
+    elements.vocabularySampleHeaderText = document.getElementById("vocabularySampleHeaderText");
+    elements.vocabularySampleTimerText = document.getElementById("vocabularySampleTimerText");
+    elements.vocabularySampleWordText = document.getElementById("vocabularySampleWordText");
+    elements.vocabularySamplePronunciationBlock = document.getElementById("vocabularySamplePronunciationBlock");
+    elements.vocabularySamplePronunciationBtn = document.getElementById("vocabularySamplePronunciationBtn");
+    elements.vocabularySampleAccentBlock = document.getElementById("vocabularySampleAccentBlock");
+    elements.vocabularySampleAccentText = document.getElementById("vocabularySampleAccentText");
+    elements.vocabularySamplePronunciationOkBtn = document.getElementById("vocabularySamplePronunciationOkBtn");
+    elements.vocabularySamplePronunciationNgBtn = document.getElementById("vocabularySamplePronunciationNgBtn");
+    elements.vocabularySampleMeaningBlock = document.getElementById("vocabularySampleMeaningBlock");
+    elements.vocabularySampleMeaningBtn = document.getElementById("vocabularySampleMeaningBtn");
+    elements.vocabularySampleMeaningResultBlock = document.getElementById("vocabularySampleMeaningResultBlock");
+    elements.vocabularySampleMeaningResultText = document.getElementById("vocabularySampleMeaningResultText");
+    elements.vocabularySampleMeaningOkBtn = document.getElementById("vocabularySampleMeaningOkBtn");
+    elements.vocabularySampleMeaningNgBtn = document.getElementById("vocabularySampleMeaningNgBtn");
+    elements.vocabularySampleNextWrap = document.getElementById("vocabularySampleNextWrap");
+    elements.vocabularySampleNextBtn = document.getElementById("vocabularySampleNextBtn");
+    elements.vocabularySampleCompleteBlock = document.getElementById("vocabularySampleCompleteBlock");
+    elements.vocabularySampleCompleteBackBtn = document.getElementById("vocabularySampleCompleteBackBtn");
+    elements.vocabularySampleBackBtn = document.getElementById("vocabularySampleBackBtn");
     elements.speakingWordPlayBtn = document.getElementById("speakingWordPlayBtn");
     elements.speakingWordMeaningToggleBtn = document.getElementById("speakingWordMeaningToggleBtn");
     elements.speakingWordMeaningText = document.getElementById("speakingWordMeaningText");
@@ -10809,6 +11019,16 @@
     elements.returnSpeakingReviewCompleteBtn.addEventListener("click", renderSpeakingReviewTopScreen);
     elements.pointRewardOkBtn.addEventListener("click", closePointRewardScreen);
     document.getElementById("openSpeakingVocabBtn").addEventListener("click", () => {});
+    document.getElementById("openVocabularySampleBtn").addEventListener("click", startVocabularySample);
+    elements.vocabularySampleBackBtn.addEventListener("click", renderSpeakingHome);
+    elements.vocabularySamplePronunciationBtn.addEventListener("click", handleVocabularySamplePronunciationCheck);
+    elements.vocabularySamplePronunciationOkBtn.addEventListener("click", () => handleVocabularySampleChoice("pronunciation", "ok"));
+    elements.vocabularySamplePronunciationNgBtn.addEventListener("click", () => handleVocabularySampleChoice("pronunciation", "ng"));
+    elements.vocabularySampleMeaningBtn.addEventListener("click", handleVocabularySampleMeaningReveal);
+    elements.vocabularySampleMeaningOkBtn.addEventListener("click", () => handleVocabularySampleChoice("meaning", "ok"));
+    elements.vocabularySampleMeaningNgBtn.addEventListener("click", () => handleVocabularySampleChoice("meaning", "ng"));
+    elements.vocabularySampleNextBtn.addEventListener("click", continueVocabularySample);
+    elements.vocabularySampleCompleteBackBtn.addEventListener("click", renderSpeakingHome);
     document.getElementById("conversationSelectBackBtn").addEventListener("click", renderSpeakingHome);
     document.getElementById("conversationDaySelectBackBtn").addEventListener("click", renderConversationSelectScreen);
     document.getElementById("speakingVocabBackBtn").addEventListener("click", renderSpeakingHome);
