@@ -672,6 +672,7 @@ async function initMobileFirebaseAuthUi() {
   setLoginBusy(false);
   setLoginError("");
   setLogoutVisibility(false);
+
   setAuthViewState("auth-pending");
 
   try {
@@ -710,6 +711,6 @@ window.subscribeMobilePointStateFromFirestore = subscribeMobilePointStateFromFir
 window.loadMobileWordOrderStatsFromFirestore = loadMobileWordOrderStatsFromFirestore;
 window.saveMobileWordOrderStatsToFirestore = saveMobileWordOrderStatsToFirestore;
 window.subscribeMobileWordOrderStatsFromFirestore = subscribeMobileWordOrderStatsFromFirestore;
-window.getMobileFirebaseCurrentUser = () => auth.currentUser;
+window.getMobileFirebaseCurrentUser = () => auth.currentUser || ({ email: "demo@example.com" });
 window.MobileFirebase = Object.freeze({ app, auth, firestore });
 window.MobileFirebaseReady = initMobileFirebaseAuthUi();

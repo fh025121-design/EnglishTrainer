@@ -3148,8 +3148,9 @@
     }
 
     elements.vocabularySampleHeaderText.textContent = "本日の学習";
-    elements.vocabularySampleTimerText.textContent = "残り時間 10:00";
+    elements.vocabularySampleTimerText.innerHTML = '<span class="vocabulary-sample-timer-label">残り時間</span><span class="vocabulary-sample-timer-value">10:00</span>';
     elements.vocabularySampleWordText.textContent = wordItem.word;
+    elements.vocabularySamplePartOfSpeechText.textContent = `[${wordItem.partOfSpeech}]`;
 
     elements.vocabularySamplePronunciationBlock.classList.remove("hidden");
     elements.vocabularySampleMeaningBlock.classList.add("hidden");
@@ -3161,7 +3162,7 @@
     const meaningVisible = sample.meaningChecked;
     elements.vocabularySampleAccentBlock.classList.toggle("hidden", !accentVisible);
     if (accentVisible) {
-      elements.vocabularySampleAccentText.innerHTML = buildVocabularySampleAccentMarkup(wordItem.accent, wordItem.accentFocus);
+      elements.vocabularySampleAccentText.innerHTML = `${buildVocabularySampleAccentMarkup(wordItem.accent, wordItem.accentFocus)} <span class="vocabulary-sample-accent-note">赤字＝アクセント</span>`;
     }
 
     const pronunciationSelected = sample.pronunciationChoice;
@@ -3170,16 +3171,28 @@
       button.classList.toggle("is-selected", pronunciationSelected === (isOk ? "ok" : "ng"));
     });
 
-    if (!sample.pronunciationChecked) {
+    if (sample.pronunciationChecked) {
       elements.vocabularySamplePronunciationBtn.disabled = false;
-      elements.vocabularySamplePronunciationBtn.textContent = "発音を確認";
+      elements.vocabularySamplePronunciationBtn.textContent = "【 もう一度発音を聞く 】";
+    } else {
+      elements.vocabularySamplePronunciationBtn.disabled = false;
+      elements.vocabularySamplePronunciationBtn.textContent = "【 声に出したら、次へ 】";
     }
 
-    elements.vocabularySampleMeaningBlock.classList.toggle("hidden", sample.pronunciationChecked === false || sample.meaningChecked || sample.meaningRevealed);
+    if (sample.meaningRevealed || sample.meaningChecked) {
+      elements.vocabularySampleMeaningBtn.textContent = "【 意味 】";
+    } else {
+      elements.vocabularySampleMeaningBtn.textContent = "【 意味を言ったら、次へ 】";
+    }
+
+    elements.vocabularySampleMeaningBlock.classList.toggle("hidden", sample.pronunciationChecked === false);
     elements.vocabularySampleMeaningResultBlock.classList.toggle("hidden", !sample.meaningChecked && !sample.meaningRevealed);
-    if (sample.meaningRevealed) {
-      elements.vocabularySampleMeaningResultText.textContent = `${wordItem.partOfSpeech}　${wordItem.meaning}`;
-      elements.vocabularySampleMeaningResultBlock.classList.remove("hidden");
+    if (sample.meaningRevealed || sample.meaningChecked) {
+      elements.vocabularySampleMeaningResultText.textContent = wordItem.meaning;
+      elements.vocabularySampleMeaningResultText.classList.remove("hidden");
+    } else {
+      elements.vocabularySampleMeaningResultText.textContent = "";
+      elements.vocabularySampleMeaningResultText.classList.add("hidden");
     }
 
     const meaningSelected = sample.meaningChoice;
@@ -7814,7 +7827,7 @@
   }
 
   function showScreen(screenId) {
-    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileUpdateHistoryScreen", "mobileAdminLearningHistoryScreen", "wordOrderTrainingScreen", "translationTrainingScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "vocabularySampleScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileUpdateHistoryScreen", "mobileAdminLearningHistoryScreen", "wordOrderTrainingScreen", "translationTrainingScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -10848,6 +10861,7 @@
     elements.vocabularySampleHeaderText = document.getElementById("vocabularySampleHeaderText");
     elements.vocabularySampleTimerText = document.getElementById("vocabularySampleTimerText");
     elements.vocabularySampleWordText = document.getElementById("vocabularySampleWordText");
+    elements.vocabularySamplePartOfSpeechText = document.getElementById("vocabularySamplePartOfSpeechText");
     elements.vocabularySamplePronunciationBlock = document.getElementById("vocabularySamplePronunciationBlock");
     elements.vocabularySamplePronunciationBtn = document.getElementById("vocabularySamplePronunciationBtn");
     elements.vocabularySampleAccentBlock = document.getElementById("vocabularySampleAccentBlock");

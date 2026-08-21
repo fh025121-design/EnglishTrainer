@@ -1089,91 +1089,191 @@ select,
   width: 100%;
 }
 
+#vocabularySampleScreen {
+  background: #DCE7EC;
+  min-height: 100vh;
+  padding: 14px 12px 26px;
+  color: #12324A;
+}
+
 .vocabulary-sample-layout {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .vocabulary-sample-panel {
+  background: #EAF0F2;
+  border: 1px solid #C6D5DC;
+  box-shadow: none;
   text-align: center;
-  padding: 20px 16px;
+  padding: 18px 18px 20px;
+  border-radius: 18px;
+  max-width: 100%;
 }
 
 .vocabulary-sample-panel h2 {
   margin: 0 0 10px;
-  font-size: 1.5rem;
+  font-size: 1.45rem;
+  color: #12324A;
 }
 
 .vocabulary-sample-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   margin: 0 0 18px;
-  font-size: 1rem;
+  color: #60788A;
+}
+
+.vocabulary-sample-timer-label {
+  font-size: 0.78rem;
   font-weight: 700;
-  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+.vocabulary-sample-timer-value {
+  font-size: clamp(1.8rem, 3.6vw, 2.3rem);
+  color: #12324A;
+  font-weight: 900;
+  line-height: 1.1;
 }
 
 .vocabulary-sample-word {
-  margin: 0 0 20px;
+  margin: 0;
   text-align: center;
-  font-size: clamp(2.2rem, 6vw, 3.5rem);
+  font-size: clamp(1.9rem, 5vw, 2.3rem);
   font-weight: 900;
-  letter-spacing: 0.04em;
-  color: var(--text);
+  letter-spacing: 0.03em;
+  color: #12324A;
+}
+
+.vocabulary-sample-part-of-speech {
+  margin: 6px 0 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #60788A;
+}
+
+.vocabulary-sample-meaning-result {
+  margin: 0 0 14px;
+  font-size: clamp(1.0rem, 2.8vw, 1.4rem);
+  font-weight: 700;
+  line-height: 1.5;
+  color: #12324A;
+  text-align: center;
 }
 
 .vocabulary-sample-label {
   margin: 0 0 12px;
   font-size: 0.96rem;
   font-weight: 700;
-  color: var(--muted);
+  color: #60788A;
 }
 
 .vocabulary-sample-block {
-  margin-top: 12px;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.vocabulary-sample-main-btn {
+  width: min(100%, 320px);
+  min-height: 52px;
+  margin: 0 auto;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 800;
+  background: #8FAFCB;
+  color: #ffffff;
+  border: 1px solid #8FAFCB;
+  box-shadow: none;
+  display: block;
 }
 
 .vocabulary-sample-accent {
-  min-height: 34px;
-  margin: 0 0 12px;
-  font-size: 1.2rem;
+  min-height: 26px;
+  margin: 0 0 10px;
+  font-size: 1.3rem;
   font-weight: 800;
-  color: var(--text);
+  color: #12324A;
+  letter-spacing: 0.04em;
+}
+
+.vocabulary-sample-accent-note {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #60788A;
+  vertical-align: middle;
 }
 
 .vocabulary-sample-accent-focus {
-  color: #ff4d5a;
+  color: #E44F55;
   font-weight: 900;
 }
 
-.vocabulary-sample-choice-row {
+.vocabulary-sample-choice-row,
+.vocabulary-sample-meaning-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  width: 100%;
+  width: min(100%, 300px);
+  margin: 0 auto;
 }
 
 .vocabulary-sample-choice-btn {
   width: 100%;
-  min-height: 46px;
-  font-weight: 900;
+  min-height: 48px;
+  font-weight: 800;
+  border-radius: 12px;
+  background: #E4ECEF;
+  border: 1px solid #C4D3DA;
+  color: #12324A;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.vocabulary-sample-choice-good {
+  background: #E4ECEF;
+  border-color: #C4D3DA;
+}
+
+.vocabulary-sample-choice-weak {
+  background: #E4ECEF;
+  border-color: #C4D3DA;
 }
 
 .vocabulary-sample-choice-btn.is-selected {
-  background: linear-gradient(135deg, rgba(94, 214, 214, 0.24), rgba(123, 108, 255, 0.26));
-  border-color: rgba(94, 214, 214, 0.72);
   color: #ffffff;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.vocabulary-sample-choice-good.is-selected {
+  background: #5CA9A8;
+}
+
+.vocabulary-sample-choice-weak.is-selected {
+  background: #D89A62;
 }
 
 .vocabulary-sample-meaning-result {
-  margin: 0 0 12px;
-  font-size: 1.12rem;
+  margin: 8px 0 12px;
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
   font-weight: 800;
-  line-height: 1.7;
+  line-height: 1.5;
+  color: #12324A;
 }
 
 .vocabulary-sample-complete-title {
   margin: 0 0 14px;
   font-size: 1.4rem;
   font-weight: 900;
-  color: var(--text);
+  color: #12324A;
 }
 
 .conversation-mode-action-row {
