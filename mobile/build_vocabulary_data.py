@@ -30,9 +30,9 @@ def build_id(grade, word, part_of_speech, index):
 
 def row_to_entry(row, grade, index):
     cells = [normalize_text(v) for v in row]
-    if len(cells) < 8:
+    if len(cells) < 9:
         return None
-    level, word, part_of_speech, meaning, accent, example, example_ja = cells[1:8]
+    level, word, part_of_speech, meaning, accent, example, example_ja, phonetic = cells[1:9]
     if not level or not word:
         return None
     if level not in ('5級', '4級', '3級'):
@@ -56,6 +56,7 @@ def row_to_entry(row, grade, index):
         'meaning': meaning,
         'accent': accent,
         'accentFocus': accent_focus,
+        'phonetic': phonetic,
         'exampleSentence': example,
         'exampleTranslation': example_ja,
     }
@@ -105,6 +106,7 @@ def main():
         lines.append(f"      meaning: \"{entry['meaning']}\",")
         lines.append(f"      accent: \"{entry['accent']}\",")
         lines.append(f"      accentFocus: \"{entry['accentFocus']}\",")
+        lines.append(f"      phonetic: \"{entry['phonetic']}\",")
         lines.append(f"      exampleSentence: \"{entry['exampleSentence']}\",")
         lines.append(f"      exampleTranslation: \"{entry['exampleTranslation']}\",")
         lines.append('    },')

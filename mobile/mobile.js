@@ -3077,31 +3077,34 @@
       partOfSpeech: "名詞",
       meaning: "環境",
       accent: "en-VI-ron-ment",
-      accentFocus: "VI"
+      accentFocus: "VI",
+      phonetic: "/ ɪnˈvaɪrənmənt /"
     },
     {
       word: "receive",
       partOfSpeech: "動詞",
       meaning: "受け取る",
       accent: "re-CEIVE",
-      accentFocus: "CEIVE"
+      accentFocus: "CEIVE",
+      phonetic: "/ rɪˈsiːv /"
     },
     {
       word: "important",
       partOfSpeech: "形容詞",
       meaning: "重要な",
       accent: "im-POR-tant",
-      accentFocus: "POR"
+      accentFocus: "POR",
+      phonetic: "/ ɪmˈpɔːrtənt /"
     }
   ];
 
   const MOBILE_VOCABULARY_REAL_WORD_BANK = [
-    { id: "environment", word: "environment", level: "5", partOfSpeech: "名詞", meaning: "環境", accent: "en-VI-ron-ment", accentFocus: "VI", exampleSentence: "We need a clean environment.", exampleTranslation: "きれいな環境が必要です。" },
-    { id: "receive", word: "receive", level: "5", partOfSpeech: "動詞", meaning: "受け取る", accent: "re-CEIVE", accentFocus: "CEIVE", exampleSentence: "I received a letter.", exampleTranslation: "手紙を受け取りました。" },
-    { id: "important", word: "important", level: "5", partOfSpeech: "形容詞", meaning: "重要な", accent: "im-POR-tant", accentFocus: "POR", exampleSentence: "It is important to study.", exampleTranslation: "勉強することは重要です。" },
-    { id: "practice", word: "practice", level: "4", partOfSpeech: "名詞", meaning: "練習", accent: "PRAK-tis", accentFocus: "PRAK", exampleSentence: "Daily practice helps.", exampleTranslation: "毎日の練習が役立ちます。" },
-    { id: "careful", word: "careful", level: "4", partOfSpeech: "形容詞", meaning: "注意深い", accent: "CARE-ful", accentFocus: "CARE", exampleSentence: "Be careful with the knife.", exampleTranslation: "ナイフには気をつけて。" },
-    { id: "result", word: "result", level: "3", partOfSpeech: "名詞", meaning: "結果", accent: "re-ZULT", accentFocus: "ZULT", exampleSentence: "The result was good.", exampleTranslation: "結果は良かったです。" }
+    { id: "environment", word: "environment", level: "5", partOfSpeech: "名詞", meaning: "環境", accent: "en-VI-ron-ment", accentFocus: "VI", phonetic: "/ ɪnˈvaɪrənmənt /", exampleSentence: "We need a clean environment.", exampleTranslation: "きれいな環境が必要です。" },
+    { id: "receive", word: "receive", level: "5", partOfSpeech: "動詞", meaning: "受け取る", accent: "re-CEIVE", accentFocus: "CEIVE", phonetic: "/ rɪˈsiːv /", exampleSentence: "I received a letter.", exampleTranslation: "手紙を受け取りました。" },
+    { id: "important", word: "important", level: "5", partOfSpeech: "形容詞", meaning: "重要な", accent: "im-POR-tant", accentFocus: "POR", phonetic: "/ ɪmˈpɔːrtənt /", exampleSentence: "It is important to study.", exampleTranslation: "勉強することは重要です。" },
+    { id: "practice", word: "practice", level: "4", partOfSpeech: "名詞", meaning: "練習", accent: "PRAK-tis", accentFocus: "PRAK", phonetic: "/ ˈpræk.tɪs /", exampleSentence: "Daily practice helps.", exampleTranslation: "毎日の練習が役立ちます。" },
+    { id: "careful", word: "careful", level: "4", partOfSpeech: "形容詞", meaning: "注意深い", accent: "CARE-ful", accentFocus: "CARE", phonetic: "/ ˈkeə.fəl /", exampleSentence: "Be careful with the knife.", exampleTranslation: "ナイフには気をつけて。" },
+    { id: "result", word: "result", level: "3", partOfSpeech: "名詞", meaning: "結果", accent: "re-ZULT", accentFocus: "ZULT", phonetic: "/ rɪˈzʌlt /", exampleSentence: "The result was good.", exampleTranslation: "結果は良かったです。" }
   ];
 
   function createVocabularySkillState(overrides = {}) {
@@ -3146,6 +3149,7 @@
       meaning: entry?.meaning || "",
       accent: entry?.accent || "",
       accentFocus: entry?.accentFocus || "",
+      phonetic: entry?.phonetic || "",
       exampleSentence: entry?.exampleSentence || "",
       exampleTranslation: entry?.exampleTranslation || "",
       pronunciation: createVocabularySkillState({
@@ -3398,10 +3402,9 @@
   }
 
   function normalizeVocabularyPronunciationDisplay(entry) {
-    const raw = String(entry?.accent || "").trim();
+    const raw = String(entry?.phonetic ?? "").trim();
     if (!raw) return "";
-    const normalized = raw.replace(/[A-Z]/g, (char) => char.toLowerCase());
-    return `/${normalized}/`;
+    return raw;
   }
 
   function renderVocabularySampleScreen() {
@@ -3467,7 +3470,7 @@
       if (accentSlot) accentSlot.classList.add("is-visible");
     } else {
       elements.vocabularySampleAccentText.textContent = "";
-      elements.vocabularySampleAccentBlock.classList.add("hidden");
+      elements.vocabularySampleAccentBlock.classList.remove("hidden");
       if (accentSlot) accentSlot.classList.remove("is-visible");
     }
 
@@ -3483,7 +3486,7 @@
     } else {
       elements.vocabularySamplePronunciationBtn.disabled = false;
       elements.vocabularySamplePronunciationBtn.textContent = "声に出したら、聞く 🔊";
-      elements.vocabularySampleAccentBlock.classList.add("hidden");
+      elements.vocabularySampleAccentBlock.classList.remove("hidden");
     }
 
     elements.vocabularySampleMeaningBtn.disabled = !canRevealMeaning;
@@ -3492,7 +3495,7 @@
       elements.vocabularySampleMeaningResultBlock.classList.remove("hidden");
     } else {
       elements.vocabularySampleMeaningBtn.textContent = "意味を言ったら、確認";
-      elements.vocabularySampleMeaningResultBlock.classList.add("hidden");
+      elements.vocabularySampleMeaningResultBlock.classList.remove("hidden");
     }
 
     const meaningChoiceRow = elements.vocabularySampleMeaningResultBlock.querySelector(".vocabulary-sample-meaning-row");
@@ -3539,6 +3542,7 @@
         meaning: item.meaning || "",
         accent: item.accent || "",
         accentFocus: item.accentFocus || item.accent || "",
+        phonetic: item.phonetic || "",
         exampleSentence: item.exampleSentence || "",
         exampleTranslation: item.exampleTranslation || ""
       })),
