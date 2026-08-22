@@ -18,6 +18,10 @@ const checks = [
     ok: /MOBILE_VOCABULARY_NORMAL_PROGRESS_STORAGE_KEY/.test(source)
   },
   {
+    name: "normal round queue state is persisted in localStorage for shuffled rounds",
+    ok: /MOBILE_VOCABULARY_NORMAL_QUEUE_STORAGE_KEY/.test(source) && /function getVocabularyNormalRoundState\s*\(/.test(source) && /function generateVocabularyNormalRoundQueue\s*\(/.test(source)
+  },
+  {
     name: "normal progress load/save functions exist",
     ok: /function (load|save)VocabularyNormalProgress/.test(source)
   },

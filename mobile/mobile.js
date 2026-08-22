@@ -8,6 +8,7 @@
   const MOBILE_PENDING_LEARNING_HISTORY_STORAGE_KEY = "english-trainer-mobile-pending-learning-history-v1";
   const MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY = "english-trainer-mobile-vocabulary-today-history-v1";
   const MOBILE_VOCABULARY_NORMAL_PROGRESS_STORAGE_KEY = "english-trainer-mobile-vocabulary-normal-progress-v1";
+  const MOBILE_VOCABULARY_NORMAL_QUEUE_STORAGE_KEY = "english-trainer-mobile-vocabulary-normal-queue-v1";
   const MOBILE_LEARNING_HISTORY_DEVICE_NAME_SON = "長男モバイル";
   const MOBILE_LEARNING_HISTORY_DEVICE_NAME_OTHER = "その他";
   const HOME_ACCOUNT_PARENT_EMAIL_PREFIX = "fh025";
@@ -3521,43 +3522,141 @@
     return safeIndex % safeTotal;
   }
 
-  function getVocabularyNormalProgress() {
+  function generateVocabularyNormalRoundQueue(bank = getVocabularyRealWordBank()) {
+    const source = Array.isArray(bank) ? bank.filter(Boolean) : [];
+    const queue = source
+      .map((entry) => String(entry?.id || entry?.word || "").trim())
+      .filter(Boolean);
+    if (!queue.length) {
+      return [];
+    }
+    return shuffleArray(queue.filter((value, index, values) => values.indexOf(value) === index));
+  }
+
+  function getVocabularyNormalRoundState() {
+    const bank = getVocabularyRealWordBank();
+    const totalWords = bank.length;
+    const fallbackQueue = generateVocabularyNormalRoundQueue(bank);
+
     try {
-      const raw = window.localStorage.getItem(MOBILE_VOCABULARY_NORMAL_PROGRESS_STORAGE_KEY);
-      if (raw === null || raw === undefined || raw === "") return 0;
+      const raw = window.localStorage.getItem(MOBILE_VOCABULARY_NORMAL_QUEUE_STORAGE_KEY);
+      if (raw === null || raw === undefined || raw === "") {
+        return {
+          queue: fallbackQueue,
+          cursor: 0,
+          total: totalWords,
+          round: 1
+        };
+      }
+
       const parsed = JSON.parse(raw);
-      const value = typeof parsed === "object" ? (parsed.index ?? parsed.position ?? 0) : parsed;
-      return getVocabularySafeNormalProgressIndex(value, getVocabularyRealWordBank().length);
+      const queue = Array.isArray(parsed?.queue) ? parsed.queue.map((value) => String(value || "").trim()).filter(Boolean) : fallbackQueue;
+      const safeQueue = queue.length ? queue : fallbackQueue;
+      const total = Math.max(1, totalWords || safeQueue.length);
+      const cursor = Number.isFinite(Number(parsed?.cursor)) ? Math.max(0, Math.min(Number(parsed.cursor), Math.max(0, safeQueue.length - 1))) : 0;
+      return {
+        queue: safeQueue,
+        cursor,
+        total,
+        round: Math.max(1, Number(parsed?.round) || 1)
+      };
     } catch (_error) {
-      return 0;
+      return {
+        queue: fallbackQueue,
+        cursor: 0,
+        total: totalWords,
+        round: 1
+      };
     }
   }
 
-  function saveVocabularyNormalProgress(index) {
+  function saveVocabularyNormalRoundState(nextState) {
+    const safeQueue = Array.isArray(nextState?.queue) ? nextState.queue.map((value) => String(value || "").trim()).filter(Boolean) : [];
     const totalWords = getVocabularyRealWordBank().length;
-    const safeIndex = getVocabularySafeNormalProgressIndex(index, totalWords);
+    const payload = {
+      queue: safeQueue,
+      cursor: Number.isFinite(Number(nextState?.cursor)) ? Math.max(0, Math.floor(Number(nextState.cursor) || 0)) : 0,
+      round: Number.isFinite(Number(nextState?.round)) ? Math.max(1, Math.floor(Number(nextState.round) || 1)) : 1,
+      total: Math.max(totalWords, safeQueue.length)
+    };
+
+    if (!payload.queue.length && totalWords) {
+      payload.queue = generateVocabularyNormalRoundQueue(getVocabularyRealWordBank());
+    }
+    if (payload.queue.length && payload.cursor > payload.queue.length - 1) {
+      payload.cursor = payload.queue.length - 1;
+    }
+
     try {
-      window.localStorage.setItem(MOBILE_VOCABULARY_NORMAL_PROGRESS_STORAGE_KEY, String(safeIndex));
+      window.localStorage.setItem(MOBILE_VOCABULARY_NORMAL_QUEUE_STORAGE_KEY, JSON.stringify(payload));
     } catch (_error) {
       // Ignore storage failures; the in-memory session still proceeds as usual.
     }
+
+    return payload;
+  }
+
+  function getVocabularyNormalProgress() {
+    const normalRound = getVocabularyNormalRoundState();
+    return normalRound.queue.length ? Math.min(Math.max(0, Number(normalRound.cursor) || 0), normalRound.queue.length - 1) : 0;
+  }
+
+  function saveVocabularyNormalProgress(index) {
+    const normalRound = getVocabularyNormalRoundState();
+    const totalWords = normalRound.queue.length || getVocabularyRealWordBank().length;
+    const safeIndex = totalWords ? Math.max(0, Math.min(Math.floor(Number(index) || 0), totalWords - 1)) : 0;
+    const nextRound = {
+      ...normalRound,
+      cursor: safeIndex,
+      total: totalWords
+    };
+    saveVocabularyNormalRoundState(nextRound);
     return safeIndex;
   }
 
   function advanceVocabularyNormalProgress(step = 1) {
     const safeStep = Math.max(1, Math.floor(Number(step) || 1));
-    const totalWords = getVocabularyRealWordBank().length;
+    const normalRound = getVocabularyNormalRoundState();
+    const totalWords = normalRound.queue.length || getVocabularyRealWordBank().length;
     if (!totalWords) return 0;
-    const nextIndex = getVocabularySafeNormalProgressIndex(getVocabularyNormalProgress() + safeStep, totalWords);
-    return saveVocabularyNormalProgress(nextIndex);
+
+    const nextCursor = normalRound.cursor + safeStep;
+    if (nextCursor >= totalWords) {
+      const refreshedQueue = generateVocabularyNormalRoundQueue(getVocabularyRealWordBank());
+      const nextState = {
+        queue: refreshedQueue,
+        cursor: 0,
+        total: refreshedQueue.length || totalWords,
+        round: (Number(normalRound.round) || 1) + 1
+      };
+      saveVocabularyNormalRoundState(nextState);
+      return 0;
+    }
+
+    const nextState = {
+      ...normalRound,
+      cursor: nextCursor,
+      total: totalWords,
+      round: Number(normalRound.round) || 1
+    };
+    saveVocabularyNormalRoundState(nextState);
+    return nextCursor;
   }
 
   function buildVocabularyNormalStudyWords(bank = getVocabularyRealWordBank(), startIndex = getVocabularyNormalProgress()) {
     const source = Array.isArray(bank) ? bank.filter(Boolean) : [];
     const totalWords = source.length;
     if (!totalWords) return [];
-    const safeStartIndex = getVocabularySafeNormalProgressIndex(startIndex, totalWords);
-    return Array.from({ length: totalWords }, (_, offset) => source[(safeStartIndex + offset) % totalWords]);
+
+    const roundState = getVocabularyNormalRoundState();
+    const persistentQueue = Array.isArray(roundState.queue) && roundState.queue.length ? roundState.queue : generateVocabularyNormalRoundQueue(source);
+    const byId = new Map(source.map((item) => [String(item?.id || item?.word || "").trim(), item]).filter((entry) => entry[0]));
+    const orderedSource = persistentQueue
+      .map((wordId) => byId.get(String(wordId || "").trim()))
+      .filter(Boolean);
+    const safeSource = orderedSource.length ? orderedSource : source;
+    const safeStartIndex = getVocabularySafeNormalProgressIndex(startIndex, safeSource.length);
+    return Array.from({ length: safeSource.length }, (_, offset) => safeSource[(safeStartIndex + offset) % safeSource.length]);
   }
 
   function getVocabularyNormalStudyWords() {
