@@ -3954,19 +3954,61 @@
     });
   }
 
+  function normalizeVocabularyTodayHistoryMap(rawMap) {
+    if (!rawMap || typeof rawMap !== "object" || Array.isArray(rawMap)) {
+      return {};
+    }
+
+    const safeMap = {};
+    Object.entries(rawMap).forEach(([dateKey, bucket]) => {
+      if (!dateKey || typeof dateKey !== "string" || !bucket || typeof bucket !== "object" || Array.isArray(bucket)) {
+        return;
+      }
+
+      const safeBucket = {};
+      Object.entries(bucket).forEach(([wordKey, entry]) => {
+        if (!wordKey || typeof wordKey !== "string" || !entry || typeof entry !== "object") {
+          return;
+        }
+        const word = String(entry.word || "").trim();
+        if (!word) {
+          return;
+        }
+
+        safeBucket[wordKey] = {
+          word,
+          partOfSpeech: String(entry.partOfSpeech || "").trim(),
+          pronunciation: String(entry.pronunciation || "—").trim() || "—",
+          meaning: String(entry.meaning || "—").trim() || "—"
+        };
+      });
+
+      if (Object.keys(safeBucket).length || Object.keys(bucket).length === 0) {
+        safeMap[dateKey] = safeBucket;
+      }
+    });
+
+    return safeMap;
+  }
+
   function loadVocabularyTodayHistoryMap() {
+    const previousMap = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
+      ? state.vocabularyTodayHistoryMap
+      : {};
+
     try {
       const raw = window.localStorage.getItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
       if (!raw) {
-        state.vocabularyTodayHistoryMap = {};
+        state.vocabularyTodayHistoryMap = previousMap;
         return state.vocabularyTodayHistoryMap;
       }
+
       const parsed = JSON.parse(raw);
-      const safeMap = parsed && typeof parsed === "object" ? parsed : {};
-      state.vocabularyTodayHistoryMap = safeMap;
+      const safeMap = normalizeVocabularyTodayHistoryMap(parsed);
+      state.vocabularyTodayHistoryMap = Object.keys(safeMap).length ? safeMap : previousMap;
       return state.vocabularyTodayHistoryMap;
     } catch (_error) {
-      state.vocabularyTodayHistoryMap = {};
+      state.vocabularyTodayHistoryMap = previousMap;
       return state.vocabularyTodayHistoryMap;
     }
   }

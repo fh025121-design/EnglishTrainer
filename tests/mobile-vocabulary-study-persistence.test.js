@@ -20,6 +20,10 @@ const checks = [
   {
     name: "persistent vocabulary study entries are merged with the current real bank by stable word id",
     ok: /mergeVocabulary.*Study.*With.*Bank|merge.*Current.*Bank.*Study|merge.*study.*entries/.test(source)
+  },
+  {
+    name: "today history is preserved through the dedicated storage key and load path",
+    ok: /MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY/.test(source) && /loadVocabularyTodayHistoryMap\s*\(/.test(source) && /normalizeVocabularyTodayHistoryMap/.test(source)
   }
 ];
 
