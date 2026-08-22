@@ -1911,6 +1911,93 @@ select,
   box-shadow: none;
 }
 
+.vocabulary-teacher-check-panel {
+  background: rgba(18, 50, 74, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 28px rgba(32, 62, 84, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.vocabulary-teacher-check-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+.vocabulary-teacher-check-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vocabulary-teacher-check-grade,
+.vocabulary-teacher-check-part-of-speech,
+.vocabulary-teacher-check-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #9fb0c6;
+}
+
+.vocabulary-teacher-check-word {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.2;
+  font-weight: 900;
+  color: #f8fafc;
+}
+
+.vocabulary-teacher-check-pronunciation {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #dbeaf5;
+}
+
+.vocabulary-teacher-check-meaning {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.vocabulary-teacher-check-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.vocabulary-teacher-check-option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vocabulary-teacher-check-choice-row {
+  display: flex;
+  gap: 8px;
+}
+
+.vocabulary-teacher-check-choice-row .secondary-btn {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.vocabulary-teacher-check-choice-row .secondary-btn.is-selected {
+  background: linear-gradient(135deg, #a7d0ff 0%, #7bb8ff 100%);
+  border-color: rgba(255, 255, 255, 0.7);
+  color: #12324a;
+}
+
 .vocabulary-history-panel {
   background: rgba(18, 50, 74, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.2);

@@ -124,6 +124,7 @@
 
           <section class="panel speaking-feature-panel">
             <button id="openVocabularySampleBtn" class="secondary-btn large-btn" type="button">10分学習を始める</button>
+            <button id="openVocabularyPastHistoryBtn" class="secondary-btn large-btn" type="button">過去の履歴</button>
             <div id="vocabularyPracticeProgressCard" class="vocabulary-practice-progress-card hidden" aria-live="polite">
               <div class="vocabulary-practice-progress-top">
                 <div class="vocabulary-practice-title-block">
@@ -316,7 +317,10 @@
       <section id="vocabularySampleScreen" class="screen">
         <header class="screen-topbar vocabulary-sample-topbar">
           <button id="vocabularySampleBackBtn" class="back-btn" type="button">← Speaking</button>
-          <button id="vocabularySampleHistoryBtn" class="secondary-btn vocabulary-sample-history-btn" type="button">今日の履歴</button>
+          <div class="vocabulary-sample-header-actions">
+            <button id="vocabularySampleHistoryBtn" class="secondary-btn vocabulary-sample-history-btn" type="button">今日の履歴</button>
+            <button id="vocabularySamplePastHistoryBtn" class="secondary-btn vocabulary-sample-history-btn" type="button">過去の履歴</button>
+          </div>
         </header>
 
         <main class="stack-layout vocabulary-sample-layout">
@@ -397,12 +401,45 @@
       <section id="vocabularyTodayHistoryScreen" class="screen">
         <header class="screen-topbar">
           <button id="vocabularyTodayHistoryBackBtn" class="back-btn" type="button">← Vocabulary</button>
+          <button id="vocabularyTeacherCheckBtn" class="secondary-btn vocabulary-sample-history-btn" type="button">【 先生チェック 】</button>
         </header>
 
         <main class="stack-layout">
           <section class="panel vocabulary-history-panel">
             <h2>今日の履歴</h2>
             <div id="vocabularyTodayHistoryList" class="vocabulary-history-list"></div>
+          </section>
+        </main>
+      </section>
+
+      <section id="vocabularyPastHistoryScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="vocabularyPastHistoryBackBtn" class="back-btn" type="button">← Vocabulary</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel vocabulary-history-panel">
+            <h2>過去の履歴</h2>
+            <div id="vocabularyPastHistoryList" class="vocabulary-history-list"></div>
+          </section>
+        </main>
+      </section>
+
+      <section id="vocabularyTeacherCheckScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="vocabularyTeacherCheckBackBtn" class="back-btn" type="button">← 過去の履歴</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel vocabulary-teacher-check-panel">
+            <h2>単語チェック</h2>
+            <p id="vocabularyTeacherCheckMeta" class="status-text">0 / 50</p>
+            <div id="vocabularyTeacherCheckContent" class="vocabulary-teacher-check-content"></div>
+            <div class="vocabulary-teacher-check-actions">
+              <button id="vocabularyTeacherCheckPrevBtn" class="secondary-btn" type="button">前へ</button>
+              <button id="vocabularyTeacherCheckNextBtn" class="secondary-btn" type="button">次へ</button>
+              <button id="vocabularyTeacherCheckCompleteBtn" class="primary-btn" type="button">チェック完了</button>
+            </div>
           </section>
         </main>
       </section>
