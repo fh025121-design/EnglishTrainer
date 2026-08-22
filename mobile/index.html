@@ -56,9 +56,13 @@
             <button id="openTranslationTrainingBtn" class="secondary-btn large-btn" type="button">和訳トレーニング</button>
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
             <button id="refreshCacheBtn" class="secondary-btn large-btn" type="button">♻ キャッシュ更新</button>
-            <button id="openAcquiredPointsScreenBtn" class="secondary-btn large-btn" type="button">獲得ポイント</button>
-            <button id="openMobileLearningHistoryBtn" class="secondary-btn large-btn" type="button">学習履歴</button>
-            <div class="home-utility-row">
+
+            <div class="home-button-pair home-result-row">
+              <button id="openAcquiredPointsScreenBtn" class="secondary-btn large-btn" type="button">獲得ポイント</button>
+              <button id="openMobileLearningHistoryBtn" class="secondary-btn large-btn" type="button">学習履歴</button>
+            </div>
+
+            <div class="home-button-pair home-utility-row">
               <button id="openSettingsBtn" class="ghost-btn large-btn" type="button">⚙ 設定</button>
               <button id="mobileLogoutBtn" class="ghost-btn large-btn hidden" type="button">ログアウト</button>
             </div>
@@ -101,12 +105,14 @@
           </section>
 
           <section class="panel speaking-feature-panel">
-            <button id="openConversationSelectBtn" class="primary-btn large-btn" type="button">💬 会話練習</button>
-            <p class="status-text">Weekごとの会話練習</p>
-            <button id="openSpeakingVocabBtn" class="secondary-btn large-btn" type="button" disabled>📚 単語・熟語（工事中）</button>
-            <p class="status-text">単語・熟語を声に出して練習</p>
-            <button id="openVocabularySampleBtn" class="secondary-btn large-btn" type="button">📖 本日の学習サンプル</button>
-            <p class="status-text">3語だけのUI見本</p>
+            <button id="openVocabularySampleBtn" class="secondary-btn large-btn" type="button">📖 単語練習</button>
+            <p class="status-text">5級〜3級の実データで学習</p>
+            <p class="status-text">問題数固定なし・10分で学習</p>
+
+            <button id="openConversationSelectBtn" class="primary-btn large-btn hidden" type="button">💬 会話練習</button>
+            <p class="status-text hidden">Weekごとの会話練習</p>
+
+            <button id="openSpeakingVocabBtn" class="secondary-btn large-btn" type="button">📚 Vocabulary（工事中）</button>
           </section>
         </main>
       </section>
@@ -329,6 +335,19 @@
               <p class="vocabulary-sample-complete-title">サンプル終了</p>
               <button id="vocabularySampleCompleteBackBtn" class="primary-btn large-btn" type="button">ホームへ戻る</button>
             </div>
+          </section>
+        </main>
+      </section>
+
+      <section id="vocabularyTodayHistoryScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="vocabularyTodayHistoryBackBtn" class="back-btn" type="button">← Vocabulary</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel vocabulary-history-panel">
+            <h2>今日の履歴</h2>
+            <div id="vocabularyTodayHistoryList" class="vocabulary-history-list"></div>
           </section>
         </main>
       </section>
