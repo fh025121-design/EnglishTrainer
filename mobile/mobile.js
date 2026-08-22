@@ -3785,10 +3785,14 @@
       elements.vocabularySampleMeaningResultText.textContent = wordItem.meaning;
       elements.vocabularySampleMeaningResultText.style.visibility = "visible";
       elements.vocabularySampleMeaningResultText.style.opacity = "1";
+      elements.vocabularySampleMeaningInlineText.textContent = wordItem.meaning;
+      elements.vocabularySampleMeaningInlineText.classList.add("is-visible");
     } else {
       elements.vocabularySampleMeaningResultText.textContent = "";
       elements.vocabularySampleMeaningResultText.style.visibility = "hidden";
       elements.vocabularySampleMeaningResultText.style.opacity = "0";
+      elements.vocabularySampleMeaningInlineText.textContent = "";
+      elements.vocabularySampleMeaningInlineText.classList.remove("is-visible");
     }
 
     [elements.vocabularySampleMeaningOkBtn, elements.vocabularySampleMeaningNgBtn].forEach((button) => {
@@ -11952,6 +11956,7 @@
     elements.vocabularySamplePronunciationNgBtn = document.getElementById("vocabularySamplePronunciationNgBtn");
     elements.vocabularySampleMeaningArea = document.getElementById("vocabularySampleMeaningArea");
     elements.vocabularySampleMeaningBtn = document.getElementById("vocabularySampleMeaningBtn");
+    elements.vocabularySampleMeaningInlineText = document.getElementById("vocabularySampleMeaningInlineText");
     elements.vocabularySampleMeaningResultBlock = document.getElementById("vocabularySampleMeaningResultBlock");
     elements.vocabularySampleMeaningResultText = document.getElementById("vocabularySampleMeaningResultText");
     elements.vocabularySampleMeaningOkBtn = document.getElementById("vocabularySampleMeaningOkBtn");
