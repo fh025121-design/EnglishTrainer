@@ -3185,6 +3185,19 @@
     return now + (delayDays * 24 * 60 * 60 * 1000);
   }
 
+  function getVocabularyGradeValue(entry) {
+    if (!entry || typeof entry !== "object") return "5";
+    const rawGrade = entry.grade ?? entry.sourceLevel ?? entry.level ?? entry.gradeLevel ?? "5";
+    const gradeText = String(rawGrade ?? "").trim();
+    if (["5", "4", "3"].includes(gradeText)) return gradeText;
+    if (["5級", "4級", "3級"].includes(gradeText)) return gradeText.replace("級", "");
+    const digits = gradeText.match(/([345])/);
+    if (digits) return digits[1];
+    const numericValue = Number(rawGrade);
+    if ([5, 4, 3].includes(numericValue)) return String(numericValue);
+    return "5";
+  }
+
   function normalizeVocabularyWordRecord(entry, index = 0) {
     const word = String(entry?.word || "").trim();
     if (!word) return null;
@@ -3194,7 +3207,7 @@
     return {
       id: wordId,
       word,
-      level: String(entry?.level || "5"),
+      level: getVocabularyGradeValue(entry),
       partOfSpeech: entry?.partOfSpeech || "名詞",
       meaning: entry?.meaning || "",
       accent: entry?.accent || "",
@@ -3248,7 +3261,7 @@
       }
     };
     studyState.entries.forEach((entry) => {
-      const gradeKey = String(entry.level || "5");
+      const gradeKey = getVocabularyGradeValue(entry);
       if (!studyState.gradeSummary[gradeKey]) {
         studyState.gradeSummary[gradeKey] = { total: 0, mastered: 0 };
       }
@@ -3258,6 +3271,33 @@
         studyState.gradeSummary[gradeKey].mastered += 1;
       }
     });
+    return studyState;
+  }
+
+  function sanitizeVocabularyStudyState(rawStudy) {
+    if (!rawStudy || typeof rawStudy !== "object") return null;
+    const sourceEntries = Array.isArray(rawStudy.entries) ? rawStudy.entries : [];
+    const normalizedEntries = sourceEntries
+      .map((entry, index) => normalizeVocabularyWordRecord(entry, index))
+      .filter(Boolean);
+    if (!normalizedEntries.length) {
+      return null;
+    }
+    const studyState = createVocabularyStudyState(normalizedEntries);
+    if (Number.isFinite(Number(rawStudy.targetWordCount))) {
+      studyState.targetWordCount = Math.max(0, Number(rawStudy.targetWordCount) || studyState.targetWordCount);
+    }
+    if (rawStudy.session && typeof rawStudy.session === "object") {
+      studyState.session = {
+        questionCount: Math.max(0, Number(rawStudy.session.questionCount) || 0),
+        failedWordIds: Array.isArray(rawStudy.session.failedWordIds)
+          ? rawStudy.session.failedWordIds.map((value) => String(value || "").trim()).filter(Boolean)
+          : [],
+        recentFailedWordIds: Array.isArray(rawStudy.session.recentFailedWordIds)
+          ? rawStudy.session.recentFailedWordIds.map((value) => String(value || "").trim()).filter(Boolean)
+          : []
+      };
+    }
     return studyState;
   }
 
@@ -3310,6 +3350,36 @@
     studyState.session.questionCount += 1;
   }
 
+  function getVocabularyStudyEntryById(wordId) {
+    if (!state.vocabularyStudy || !Array.isArray(state.vocabularyStudy.entries)) return null;
+    const normalizedId = String(wordId || "").trim();
+    if (!normalizedId) return null;
+    return state.vocabularyStudy.entries.find((entry) => String(entry?.id || entry?.word || "").trim() === normalizedId) || null;
+  }
+
+  function updateVocabularyStudyEntryAfterJudgment(wordItem, kind, value) {
+    if (!wordItem || !kind || !value) return null;
+    if (!state.vocabularyStudy) {
+      state.vocabularyStudy = buildVocabularyRealStudyState();
+    }
+    const normalizedId = String(wordItem.id || wordItem.word || "").trim();
+    if (!normalizedId) return null;
+    let entry = getVocabularyStudyEntryById(normalizedId);
+    if (!entry) {
+      const fallbackEntry = getVocabularyRealWordBank().find((candidate) => String(candidate.id || candidate.word || "").trim() === normalizedId) || wordItem;
+      entry = normalizeVocabularyWordRecord(fallbackEntry, state.vocabularyStudy.entries.length);
+      if (!entry) return null;
+      state.vocabularyStudy.entries.push(entry);
+      state.vocabularyStudy.progressMap[entry.id] = entry;
+    }
+    const fieldName = kind === "meaning" ? "meaning" : "pronunciation";
+    const result = value === "ok" ? "ok" : "ng";
+    applyVocabularySkillResult(entry, fieldName, result, "self", Date.now());
+    state.vocabularyStudy.progressMap[entry.id] = entry;
+    saveState();
+    return entry;
+  }
+
   function getVocabularyCandidateQueue(studyState, now = Date.now()) {
     if (!studyState || !studyState.entries) return [];
     const failedRevisit = studyState.entries.filter((entry) => {
@@ -3353,15 +3423,89 @@
     };
   }
 
-  function buildVocabularyRealStudyState() {
+  function mergeVocabularyStudyStateWithCurrentBank(studyState, realWordBank = getVocabularyRealWordBank()) {
+    const currentBank = Array.isArray(realWordBank) && realWordBank.length ? realWordBank : getVocabularyRealWordBank();
+    const candidateEntries = Array.isArray(studyState?.entries) ? studyState.entries : [];
+    const persistedById = new Map();
+    candidateEntries.forEach((entry) => {
+      const normalizedId = String(entry?.id || entry?.word || "").trim();
+      if (!normalizedId) return;
+      const normalizedEntry = normalizeVocabularyWordRecord(entry, persistedById.size);
+      if (normalizedEntry) {
+        persistedById.set(normalizedId, normalizedEntry);
+      }
+    });
+
+    const mergedEntries = currentBank
+      .map((entry, index) => {
+        const normalizedWord = normalizeVocabularyWordRecord(entry, index);
+        if (!normalizedWord) return null;
+        const savedEntry = persistedById.get(String(normalizedWord.id || normalizedWord.word || "").trim());
+        if (!savedEntry) {
+          return normalizedWord;
+        }
+
+        const mergedPronunciation = createVocabularySkillState({
+          ...normalizedWord.pronunciation,
+          ...savedEntry.pronunciation,
+          level: Number(savedEntry.pronunciation?.level ?? normalizedWord.pronunciation?.level ?? 0),
+          nextReviewAt: savedEntry.pronunciation?.nextReviewAt ?? normalizedWord.pronunciation?.nextReviewAt ?? null,
+          currentState: savedEntry.pronunciation?.currentState || normalizedWord.pronunciation?.currentState || "unlearned",
+          lastJudgedAt: savedEntry.pronunciation?.lastJudgedAt ?? normalizedWord.pronunciation?.lastJudgedAt ?? null,
+          lastJudgedBy: savedEntry.pronunciation?.lastJudgedBy || normalizedWord.pronunciation?.lastJudgedBy || "self"
+        });
+
+        const mergedMeaningState = createVocabularySkillState({
+          ...normalizedWord.meaningState,
+          ...savedEntry.meaningState,
+          level: Number(savedEntry.meaningState?.level ?? normalizedWord.meaningState?.level ?? 0),
+          nextReviewAt: savedEntry.meaningState?.nextReviewAt ?? normalizedWord.meaningState?.nextReviewAt ?? null,
+          currentState: savedEntry.meaningState?.currentState || normalizedWord.meaningState?.currentState || "unlearned",
+          lastJudgedAt: savedEntry.meaningState?.lastJudgedAt ?? normalizedWord.meaningState?.lastJudgedAt ?? null,
+          lastJudgedBy: savedEntry.meaningState?.lastJudgedBy || normalizedWord.meaningState?.lastJudgedBy || "self"
+        });
+
+        return {
+          ...normalizedWord,
+          ...savedEntry,
+          id: normalizedWord.id,
+          word: normalizedWord.word,
+          level: normalizedWord.level,
+          pronunciation: mergedPronunciation,
+          meaningState: mergedMeaningState,
+          lastJudgedAt: savedEntry.lastJudgedAt || normalizedWord.lastJudgedAt || null,
+          lastJudgedBy: savedEntry.lastJudgedBy || normalizedWord.lastJudgedBy || "self"
+        };
+      })
+      .filter(Boolean);
+
+    const nextStudyState = createVocabularyStudyState(mergedEntries);
+    if (studyState && typeof studyState.targetWordCount === "number") {
+      nextStudyState.targetWordCount = Math.max(0, Number(studyState.targetWordCount) || nextStudyState.targetWordCount);
+    }
+    if (studyState && studyState.session && typeof studyState.session === "object") {
+      nextStudyState.session = {
+        questionCount: Math.max(0, Number(studyState.session.questionCount) || 0),
+        failedWordIds: Array.isArray(studyState.session.failedWordIds) ? studyState.session.failedWordIds.slice() : [],
+        recentFailedWordIds: Array.isArray(studyState.session.recentFailedWordIds) ? studyState.session.recentFailedWordIds.slice() : []
+      };
+    }
+    return nextStudyState;
+  }
+
+  function buildVocabularyRealStudyState(existingStudyState = null) {
     const realWordBank = Array.isArray(window.MOBILE_VOCABULARY_REAL_WORD_BANK) && window.MOBILE_VOCABULARY_REAL_WORD_BANK.length
       ? window.MOBILE_VOCABULARY_REAL_WORD_BANK
       : MOBILE_VOCABULARY_REAL_WORD_BANK;
-    return createVocabularyStudyState(realWordBank.map((entry) => ({
+    const baseState = createVocabularyStudyState(realWordBank.map((entry) => ({
       ...entry,
       pronunciation: { currentState: "unlearned", level: 0, nextReviewAt: null },
       meaningState: { currentState: "unlearned", level: 0, nextReviewAt: null }
     })));
+    if (!existingStudyState) {
+      return baseState;
+    }
+    return mergeVocabularyStudyStateWithCurrentBank(existingStudyState, realWordBank);
   }
 
   function getVocabularyRealWordBank() {
@@ -3659,7 +3803,7 @@
   }
 
   function startVocabularySample() {
-    state.vocabularyStudy = state.vocabularyStudy || buildVocabularyRealStudyState();
+    state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(state.vocabularyStudy || buildVocabularyRealStudyState(), getVocabularyRealWordBank());
     const realWordBank = getVocabularyRealWordBank();
     const studyWords = buildVocabularyNormalStudyWords(realWordBank, getVocabularyNormalProgress());
     state.vocabularySample = {
@@ -3935,11 +4079,13 @@
       sample.pronunciationChoice = value;
       sample.pronunciationChecked = true;
       recordVocabularySampleHistoryJudgment(item, "pronunciation", value);
+      updateVocabularyStudyEntryAfterJudgment(item, "pronunciation", value);
     }
     if (kind === "meaning") {
       sample.meaningChoice = value;
       sample.meaningChecked = true;
       recordVocabularySampleHistoryJudgment(item, "meaning", value);
+      updateVocabularyStudyEntryAfterJudgment(item, "meaning", value);
     }
 
     if (sample.pronunciationChoice && sample.meaningChoice) {
@@ -5524,7 +5670,8 @@
         firstTryCorrect: 0,
         secondTryCorrect: 0,
         fullyIncorrect: 0
-      }
+      },
+      vocabularyStudy: null
     };
   }
 
@@ -5567,6 +5714,10 @@
       startDay = minDay;
       endDay = maxDay;
     }
+    const sanitizedStudy = sanitizeVocabularyStudyState(source.vocabularyStudy);
+    const loadedVocabularyStudy = sanitizedStudy
+      ? mergeVocabularyStudyStateWithCurrentBank(sanitizedStudy, getVocabularyRealWordBank())
+      : buildVocabularyRealStudyState();
     return {
       settings: {
         rangeMode,
@@ -5580,7 +5731,8 @@
         firstTryCorrect: Math.max(0, Number(source.stats?.firstTryCorrect) || 0),
         secondTryCorrect: Math.max(0, Number(source.stats?.secondTryCorrect) || 0),
         fullyIncorrect: Math.max(0, Number(source.stats?.fullyIncorrect) || 0)
-      }
+      },
+      vocabularyStudy: loadedVocabularyStudy
     };
   }
 
@@ -5588,12 +5740,20 @@
     const raw = window.localStorage.getItem(MOBILE_STORAGE_KEY);
     if (!raw) {
       Object.assign(state, createDefaultMobileState());
+      state.vocabularyStudy = buildVocabularyRealStudyState();
       return;
     }
     try {
-      Object.assign(state, sanitizeMobileState(JSON.parse(raw)));
+      const sanitizedState = sanitizeMobileState(JSON.parse(raw));
+      Object.assign(state, sanitizedState);
+      if (!state.vocabularyStudy) {
+        state.vocabularyStudy = buildVocabularyRealStudyState();
+      } else {
+        state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(state.vocabularyStudy, getVocabularyRealWordBank());
+      }
     } catch (_error) {
       Object.assign(state, createDefaultMobileState());
+      state.vocabularyStudy = buildVocabularyRealStudyState();
     }
   }
 
@@ -6289,7 +6449,8 @@
   function saveState() {
     const snapshot = {
       settings: state.settings,
-      stats: state.stats
+      stats: state.stats,
+      vocabularyStudy: state.vocabularyStudy ? sanitizeVocabularyStudyState(state.vocabularyStudy) : null
     };
     window.localStorage.setItem(MOBILE_STORAGE_KEY, JSON.stringify(snapshot));
   }
@@ -9684,7 +9845,7 @@
     }
 
     studyEntries.forEach((entry) => {
-      const gradeKey = String(entry?.level || entry?.grade || "5");
+      const gradeKey = getVocabularyGradeValue(entry);
       const safeGradeKey = ["5", "4", "3"].includes(gradeKey) ? gradeKey : "5";
       const gradeBucket = summary.gradeSummary[safeGradeKey] || { total: 0, mastered: 0 };
       gradeBucket.total += 1;
@@ -9727,11 +9888,13 @@
     const learningText = document.getElementById("vocabularyPracticeLearningText");
     const unlearnedText = document.getElementById("vocabularyPracticeUnlearnedText");
     const progressBarFill = document.getElementById("vocabularyPracticeProgressBarFill");
+    const progressBarCountText = document.getElementById("vocabularyPracticeProgressCountText");
     const gradeSummaryWrap = document.getElementById("vocabularyPracticeGradeSummary");
     const todayText = document.getElementById("vocabularyPracticeTodayText");
+    const todayLabel = document.getElementById("vocabularyPracticeTodayLabel");
 
     if (registeredText) {
-      registeredText.textContent = `登録 ${totalWords}語`;
+      registeredText.textContent = `登録語数 ${totalWords}語`;
     }
     if (masteredText) {
       masteredText.textContent = `${summary.mastered}語`;
@@ -9745,16 +9908,24 @@
     if (progressBarFill) {
       progressBarFill.style.width = `${Math.min(100, Math.max(0, summary.percent))}%`;
     }
+    if (progressBarCountText) {
+      progressBarCountText.textContent = `定着 ${summary.mastered} / ${totalWords}`;
+    }
+    if (todayLabel) {
+      todayLabel.textContent = "今日の学習";
+    }
     if (todayText) {
       todayText.textContent = `${todaySummary.count || 0}語・${todaySummary.points || 0}P`;
     }
     if (gradeSummaryWrap) {
-      const gradeMarkup = [
-        ["5級", summary.gradeSummary[5]?.total || 0],
-        ["4級", summary.gradeSummary[4]?.total || 0],
-        ["3級", summary.gradeSummary[3]?.total || 0]
-      ].map(([label, count]) => `<span>${label} ${count}</span>`).join("");
-      gradeSummaryWrap.innerHTML = gradeMarkup;
+      const gradeRows = [
+        ["5級", summary.gradeSummary[5]?.mastered || 0, summary.gradeSummary[5]?.total || 0],
+        ["4級", summary.gradeSummary[4]?.mastered || 0, summary.gradeSummary[4]?.total || 0],
+        ["3級", summary.gradeSummary[3]?.mastered || 0, summary.gradeSummary[3]?.total || 0]
+      ];
+      gradeSummaryWrap.innerHTML = gradeRows
+        .map(([label, mastered, total]) => `<div class="vocabulary-practice-grade-row"><span>${label}</span><strong>${mastered} / ${total}</strong></div>`)
+        .join("");
     }
 
     card.classList.toggle("hidden", !totalWords);

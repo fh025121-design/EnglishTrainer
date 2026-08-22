@@ -125,8 +125,11 @@
           <section class="panel speaking-feature-panel">
             <div id="vocabularyPracticeProgressCard" class="vocabulary-practice-progress-card hidden" aria-live="polite">
               <div class="vocabulary-practice-progress-top">
-                <p class="vocabulary-practice-progress-title">単語練習</p>
-                <span id="vocabularyPracticeRegisteredText" class="vocabulary-practice-pill">登録 0語</span>
+                <div class="vocabulary-practice-title-block">
+                  <p class="vocabulary-practice-progress-title">単語練習</p>
+                  <p class="vocabulary-practice-subtitle">5級〜3級の実データで学習</p>
+                </div>
+                <span id="vocabularyPracticeRegisteredText" class="vocabulary-practice-pill">登録語数 0語</span>
               </div>
               <div class="vocabulary-practice-progress-grid">
                 <div class="vocabulary-practice-progress-stat">
@@ -142,19 +145,22 @@
                   <strong id="vocabularyPracticeUnlearnedText">0語</strong>
                 </div>
               </div>
+              <div class="vocabulary-practice-summary-line">
+                <span>定着</span>
+                <strong id="vocabularyPracticeProgressCountText">0 / 0</strong>
+              </div>
               <div class="vocabulary-practice-progress-bar" aria-hidden="true">
                 <span id="vocabularyPracticeProgressBarFill"></span>
               </div>
               <div id="vocabularyPracticeGradeSummary" class="vocabulary-practice-grade-summary" aria-live="polite"></div>
               <div class="vocabulary-practice-today-row">
-                <span>今日</span>
+                <span id="vocabularyPracticeTodayLabel">今日の学習</span>
                 <strong id="vocabularyPracticeTodayText">0語・0P</strong>
               </div>
             </div>
 
             <button id="openVocabularySampleBtn" class="secondary-btn large-btn" type="button">10分学習を始める</button>
             <button id="vocabularyPracticeHistoryBtn" class="ghost-btn large-btn vocabulary-practice-history-btn" type="button">今日の履歴</button>
-            <p class="status-text">5級〜3級の実データで学習</p>
             <p class="status-text">問題数固定なし・10分で学習</p>
 
             <button id="openConversationSelectBtn" class="primary-btn large-btn hidden" type="button">💬 会話練習</button>
