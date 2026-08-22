@@ -1125,6 +1125,8 @@ select,
   font-size: 24px;
   line-height: 1.2;
   color: #12324A;
+  font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+  font-weight: 700;
 }
 
 .vocabulary-sample-timer {
@@ -1133,12 +1135,14 @@ select,
   justify-content: flex-end;
   gap: 4px;
   color: #60788A;
+  font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
 }
 
 .vocabulary-sample-timer-label {
   font-size: 16px;
   font-weight: 700;
   color: #60788A;
+  font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
 }
 
 .vocabulary-sample-timer-value {
@@ -1147,6 +1151,7 @@ select,
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: 0.02em;
+  font-family: "Segoe UI", "Yu Gothic", "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
 
 .vocabulary-sample-word-stack {
@@ -1165,29 +1170,32 @@ select,
 .vocabulary-sample-part-of-speech {
   margin: 0;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.02em;
   color: #12324A;
   line-height: 1.4;
+  font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
 }
 
 .vocabulary-sample-word {
   margin: 0;
   font-size: 30px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 0.02em;
-  color: #12324A;
+  color: #1A2B3A;
   line-height: 1.2;
+  font-family: "Segoe UI", "Yu Gothic", "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
 
 .vocabulary-sample-pronunciation {
   min-height: 1.5em;
   margin: 4px 0 0;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 400;
   letter-spacing: 0.02em;
-  color: #12324A;
+  color: #4C5E71;
   line-height: 1.35;
+  font-family: "Segoe UI", "Yu Gothic", "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
 
 .vocabulary-sample-meaning-line {
@@ -1202,9 +1210,10 @@ select,
 .vocabulary-sample-meaning-label {
   margin: 0;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   color: #12324A;
   line-height: 1.4;
+  font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
 }
 
 .vocabulary-sample-meaning-result {
@@ -1213,11 +1222,12 @@ select,
   font-size: 24px;
   font-weight: 700;
   line-height: 1.45;
-  color: #12324A;
+  color: #2B8C88;
   text-align: left;
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.15s ease, visibility 0.15s ease;
+  font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
 }
 
 .vocabulary-sample-label {
@@ -1314,14 +1324,15 @@ select,
   min-height: 26px;
   margin: 0;
   font-size: 22px;
-  font-weight: 800;
-  color: #12324A;
+  font-weight: 700;
+  color: #1A2B3A;
   letter-spacing: 0.04em;
+  font-family: "Segoe UI", "Yu Gothic", "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
 
 .vocabulary-sample-accent-focus {
   color: #E44F55;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .vocabulary-sample-choice-row,
@@ -1349,12 +1360,13 @@ select,
   width: 100%;
   min-height: 40px;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   border-radius: 12px;
   background: #E4ECEF;
   border: 1px solid #C4D3DA;
   color: #12324A;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
 }
 
 .vocabulary-sample-choice-good {
@@ -1368,13 +1380,17 @@ select,
 }
 
 .vocabulary-sample-choice-btn.is-selected {
-  color: #ffffff;
+  color: #111111;
   border-color: transparent;
   box-shadow: none;
 }
 
 .vocabulary-sample-choice-good.is-selected {
-  background: #5CA9A8;
+  background: linear-gradient(135deg, #7cc2ff 0%, #5aaeff 30%, #3b93f6 60%, #2d75e7 100%);
+  border-color: rgba(191, 219, 254, 0.95);
+  box-shadow: none;
+  color: #111111;
+  font-weight: 900;
 }
 
 .vocabulary-sample-meaning-row.is-visible,
