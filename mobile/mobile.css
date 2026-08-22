@@ -996,6 +996,127 @@ select,
   gap: 10px;
 }
 
+.vocabulary-practice-progress-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(123, 175, 214, 0.4);
+  background: linear-gradient(180deg, rgba(119, 159, 209, 0.14), rgba(118, 176, 185, 0.08));
+}
+
+.vocabulary-practice-progress-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vocabulary-practice-progress-title {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.vocabulary-practice-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(63, 121, 164, 0.12);
+  border: 1px solid rgba(63, 121, 164, 0.18);
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.vocabulary-practice-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.vocabulary-practice-progress-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 6px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.vocabulary-practice-progress-stat span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.82;
+}
+
+.vocabulary-practice-progress-stat strong {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.vocabulary-practice-progress-bar {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.vocabulary-practice-progress-bar span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #69c9b4 0%, #4b9ad9 100%);
+}
+
+.vocabulary-practice-grade-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  font-size: 0.72rem;
+  color: var(--text);
+}
+
+.vocabulary-practice-grade-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: rgba(20, 38, 58, 0.16);
+  border: 1px solid rgba(20, 38, 58, 0.1);
+  font-weight: 700;
+}
+
+.vocabulary-practice-today-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.vocabulary-practice-today-row strong {
+  font-size: 0.92rem;
+}
+
+.vocabulary-practice-history-btn {
+  width: 100%;
+}
+
 .speaking-week-list .primary-btn,
 .speaking-week-list .secondary-btn {
   width: 100%;
