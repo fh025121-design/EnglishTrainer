@@ -3436,6 +3436,10 @@
       return;
     }
 
+    if (sample.finished && !sample.historyFinalized) {
+      finalizeVocabularySampleHistorySession("completed");
+    }
+
     const wordItem = getVocabularySampleWordItem();
     if (!wordItem) {
       showScreen("speakingHomeScreen");
@@ -3577,7 +3581,11 @@
       finished: false,
       sessionExpired: false,
       timerDeadlineAt: null,
-      timerIntervalId: null
+      timerIntervalId: null,
+      completedWordCount: 0,
+      historyFinalized: false,
+      currentWordKey: null,
+      currentWordCompleted: false
     };
     if (!state.vocabularySample.words.length) {
       state.vocabularySample.words = realWordBank.map((item) => ({
@@ -3592,6 +3600,15 @@
         exampleTranslation: item.exampleTranslation || ""
       }));
     }
+    if (!state.learningHistorySession) {
+      startMobileLearningHistorySession({
+        source: "vocabulary",
+        mode: "Vocabulary",
+        dayNumber: getVocabularyHistoryTodayKey(),
+        startedAt: Date.now(),
+        session: null
+      });
+    }
     startVocabularySampleTimer();
     renderVocabularySampleScreen();
   }
@@ -3601,13 +3618,19 @@
     if (!sample) return;
     if (sample.sessionExpired) {
       sample.finished = true;
+      sample.currentWordCompleted = false;
+      sample.currentWordKey = null;
       stopVocabularySampleTimer();
+      finalizeVocabularySampleHistorySession("completed");
       renderVocabularySampleScreen();
       return;
     }
     if (sample.index >= sample.words.length - 1) {
       sample.finished = true;
+      sample.currentWordCompleted = false;
+      sample.currentWordKey = null;
       stopVocabularySampleTimer();
+      finalizeVocabularySampleHistorySession("completed");
       renderVocabularySampleScreen();
       return;
     }
@@ -3617,6 +3640,8 @@
     sample.meaningChecked = false;
     sample.meaningChoice = null;
     sample.meaningRevealed = false;
+    sample.currentWordCompleted = false;
+    sample.currentWordKey = null;
     renderVocabularySampleScreen();
   }
 
@@ -3653,6 +3678,34 @@
     if (value === "ok") return "○";
     if (value === "ng") return "△";
     return "—";
+  }
+
+  function getVocabularySampleCompletedWordCount(sample = state.vocabularySample) {
+    if (!sample || typeof sample !== "object") return 0;
+    const count = Number(sample.completedWordCount);
+    return Number.isFinite(count) ? Math.max(0, count) : 0;
+  }
+
+  function finalizeVocabularySampleHistorySession(completedReason = "completed") {
+    const sample = state.vocabularySample;
+    if (!sample || sample.historyFinalized) return;
+    sample.historyFinalized = true;
+    if (!state.learningHistorySession) {
+      return;
+    }
+    const completedWordCount = getVocabularySampleCompletedWordCount(sample);
+    const earnedPoints = completedWordCount * 2;
+    finalizeMobileLearningHistorySession({
+      completedReason,
+      mode: "Vocabulary",
+      dayNumber: getVocabularyHistoryTodayKey(),
+      summary: {
+        questionCount: completedWordCount,
+        correctCount: completedWordCount,
+        accuracy: completedWordCount > 0 ? 100 : 0,
+        earnedPoints
+      }
+    });
   }
 
   function recordVocabularySampleHistoryJudgment(wordItem, kind, value) {
@@ -3741,22 +3794,26 @@
     const sample = state.vocabularySample;
     if (!sample) return;
     const item = getVocabularySampleWordItem();
+    if (!item) return;
+    const itemKey = `${String(item.id || item.word || "").trim()}|${String(item.partOfSpeech || "").trim()}`;
+
     if (kind === "pronunciation") {
       sample.pronunciationChoice = value;
       sample.pronunciationChecked = true;
-      if (item) {
-        recordVocabularySampleHistoryJudgment(item, "pronunciation", value);
-      }
+      recordVocabularySampleHistoryJudgment(item, "pronunciation", value);
     }
     if (kind === "meaning") {
       sample.meaningChoice = value;
       sample.meaningChecked = true;
-      if (item) {
-        recordVocabularySampleHistoryJudgment(item, "meaning", value);
-      }
+      recordVocabularySampleHistoryJudgment(item, "meaning", value);
     }
 
     if (sample.pronunciationChoice && sample.meaningChoice) {
+      if (!sample.currentWordCompleted || sample.currentWordKey !== itemKey) {
+        sample.currentWordCompleted = true;
+        sample.currentWordKey = itemKey;
+        sample.completedWordCount = getVocabularySampleCompletedWordCount(sample) + 1;
+      }
       continueVocabularySample();
       return;
     }
@@ -8368,20 +8425,13 @@
 
       const modeText = String(entry.mode || "").trim();
       const category = resolveMobileLearningHistoryCategory(entry);
+      const dayNumber = String(entry.dayNumber || "").trim();
       const entryPoints = parseMobileLearningHistoryEarnedPoints(entry.earnedPoints);
       const questionCount = Math.max(0, Number(entry.questionCount) || 0);
+      const isNewVocabularyEntry = category === "Vocabulary" && isIsoDayKey(dayNumber);
+      const isLegacyVocabularyEntry = category === "Vocabulary" && /week/i.test(dayNumber);
 
-      if (category === "Vocabulary" || /vocabulary/i.test(modeText) || /単語/i.test(modeText)) {
-        if (modeText === "Vocabulary" && String(entry.dayNumber || "").includes("Week")) {
-          result.word.count += questionCount;
-          result.word.points += entryPoints;
-          return;
-        }
-        if (modeText === "Vocabulary" && !String(entry.dayNumber || "").includes("Week")) {
-          result.word.count += questionCount;
-          result.word.points += entryPoints;
-          return;
-        }
+      if (isNewVocabularyEntry || (/vocabulary/i.test(modeText) || /単語/i.test(modeText)) && !isLegacyVocabularyEntry) {
         result.word.count += questionCount;
         result.word.points += entryPoints;
         return;
@@ -11639,6 +11689,10 @@
     document.getElementById("openVocabularySampleBtn").addEventListener("click", startVocabularySample);
     elements.vocabularySampleBackBtn.addEventListener("click", () => {
       stopVocabularySampleTimer();
+      if (state.vocabularySample && !state.vocabularySample.historyFinalized) {
+        finalizeVocabularySampleHistorySession("interrupted");
+      }
+      state.vocabularySample = null;
       renderSpeakingHome();
     });
     elements.vocabularySamplePronunciationBtn.addEventListener("click", handleVocabularySamplePronunciationCheck);
@@ -11669,6 +11723,10 @@
     elements.vocabularySampleNextBtn.addEventListener("click", continueVocabularySample);
     elements.vocabularySampleCompleteBackBtn.addEventListener("click", () => {
       stopVocabularySampleTimer();
+      if (state.vocabularySample && !state.vocabularySample.historyFinalized) {
+        finalizeVocabularySampleHistorySession("completed");
+      }
+      state.vocabularySample = null;
       renderSpeakingHome();
     });
     document.getElementById("conversationSelectBackBtn").addEventListener("click", renderSpeakingHome);

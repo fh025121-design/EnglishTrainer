@@ -24,3 +24,10 @@ test('mobile app includes a dedicated vocabulary data file and grade-based real 
   assert.match(dataSource, /window\.MOBILE_VOCABULARY_REAL_WORD_BANK\s*=\s*\[/, 'should export the real bank on window');
   assert.match(dataSource, /grade:\s*5|grade:\s*4|grade:\s*3/, 'should preserve grade information');
 });
+
+test('mobile vocabulary practice generates canonical history entries using completed-word counts', () => {
+  assert.match(source, /function\s+getVocabularySampleCompletedWordCount\s*\(/, 'should count completed vocabulary words by finished pronunciation + meaning judgments');
+  assert.match(source, /function\s+finalizeVocabularySampleHistorySession\s*\(/, 'should finalize the canonical mobile learning history session');
+  assert.match(source, /questionCount:\s*getVocabularySampleCompletedWordCount\s*\(/, 'should save the number of completed words as questionCount');
+  assert.match(source, /mode:\s*["']Vocabulary["']/, 'should use the canonical Vocabulary mode label for history entries');
+});
