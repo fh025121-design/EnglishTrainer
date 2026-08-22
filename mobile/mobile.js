@@ -185,20 +185,51 @@
     return pointState;
   }
 
+  function isNewVocabularyPracticeHistoryEntry(entry) {
+    if (!entry || typeof entry !== "object") return false;
+    const category = resolveMobileLearningHistoryCategory(entry);
+    const dayNumber = String(entry.dayNumber || "").trim();
+    return category === "Vocabulary" && isIsoDayKey(dayNumber);
+  }
+
+  function isNewMobileVocabularyHistoryEntry(entry) {
+    return isNewVocabularyPracticeHistoryEntry(entry);
+  }
+
+  function getMobileVocabularyPracticePointsByDayFromHistory() {
+    const byDay = {};
+    const entries = Array.isArray(loadMobileLearningHistoryEntries()) ? loadMobileLearningHistoryEntries() : [];
+    entries.forEach((entry) => {
+      if (!isNewVocabularyPracticeHistoryEntry(entry)) return;
+      const dayKey = getMobileLearningHistoryDayKey(entry.endedAt || entry.startedAt || Date.now());
+      const points = Math.max(0, parseMobileLearningHistoryEarnedPoints(entry.earnedPoints));
+      if (points <= 0) return;
+      byDay[dayKey] = Math.max(0, Number(byDay[dayKey] || 0)) + points;
+    });
+    return byDay;
+  }
+
+  function getMobileVocabularyEarnedPointsByDay() {
+    return getMobileVocabularyPracticePointsByDayFromHistory();
+  }
+
   function getMobilePointSummary(pointState = getMobilePointState()) {
     const todayKey = getMobilePointJstDateKey(0);
     const todayHomework = Math.max(0, Number(pointState.homeworkSpeakingPointsByDate?.[todayKey]) || 0);
     const todayReview = Math.max(0, Number(pointState.reviewSpeakingPointsByDate?.[todayKey]) || 0);
     const todayWordOrder = Math.max(0, Number(pointState.wordOrderPointsByDate?.[todayKey]) || 0);
     const todayTranslation = Math.max(0, Number(pointState.translationTrainingPointsByDate?.[todayKey]) || 0);
+    const vocabByDay = getMobileVocabularyPracticePointsByDayFromHistory();
+    const todayVocabulary = Math.max(0, Number(vocabByDay[todayKey] || 0));
     return {
       todayHomework,
       todayReview,
       todayWordOrder,
       todayTranslation,
-      todayEarned: Math.max(0, Number(pointState.todayEarned) || 0),
+      todayVocabulary,
+      todayEarned: Math.max(0, Number(pointState.todayEarned) || 0) + todayVocabulary,
       previousDayEarned: Math.max(0, Number(pointState.previousDayEarned) || 0),
-      totalEarned: Math.max(0, Number(pointState.totalEarned) || 0)
+      totalEarned: Math.max(0, Number(pointState.totalEarned) || 0) + Object.values(vocabByDay).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0)
     };
   }
 
@@ -904,6 +935,7 @@
     if (key.includes("dayadvance") || key.includes("day-advance") || key.includes("bonus") || key.includes("進行")) return "Day進行ボーナス";
     if (key === "homework" || key.includes("宿題")) return "宿題";
     if (key === "speaking" || key.includes("発話")) return "発話";
+    if (key.includes("vocabulary") || key.includes("単語")) return "単語";
     if (key.includes("wordorder") || key.includes("語順")) return "語順";
     if (key.includes("translation") || key.includes("和訳")) return "和訳";
     return String(modeKey || "").trim();
@@ -921,6 +953,10 @@
           points
         });
       });
+      const vocabularyExtra = Math.max(0, Number(getMobileVocabularyPracticePointsByDayFromHistory()[dayKey] || 0));
+      if (vocabularyExtra > 0 && !modeRows.some((row) => row.modeLabel === "単語")) {
+        modeRows.push({ modeLabel: "単語", points: vocabularyExtra });
+      }
       return modeRows
         .filter((row) => row.modeLabel)
         .sort((left, right) => right.points - left.points || left.modeLabel.localeCompare(right.modeLabel, "ja"));
@@ -932,6 +968,11 @@
       { modeLabel: "語順", points: Math.max(0, Math.floor(Number(pointState?.wordOrderPointsByDate?.[dayKey]) || 0)) },
       { modeLabel: "和訳", points: Math.max(0, Math.floor(Number(pointState?.translationTrainingPointsByDate?.[dayKey]) || 0)) }
     ].filter((row) => row.points > 0);
+
+    const vocabularyRows = Math.max(0, Number(getMobileVocabularyPracticePointsByDayFromHistory()[dayKey] || 0));
+    if (vocabularyRows > 0) {
+      fallbackRows.push({ modeLabel: "単語", points: vocabularyRows });
+    }
 
     return fallbackRows.sort((left, right) => right.points - left.points || left.modeLabel.localeCompare(right.modeLabel, "ja"));
   }
@@ -966,6 +1007,12 @@
         if (hasEarned) keySet.add(String(dayKey));
       });
     }
+
+    Object.keys(getMobileVocabularyPracticePointsByDayFromHistory()).forEach((dayKey) => {
+      if (Math.max(0, Number(getMobileVocabularyPracticePointsByDayFromHistory()[dayKey] || 0)) > 0) {
+        keySet.add(String(dayKey));
+      }
+    });
 
     return [...keySet].sort((left, right) => right.localeCompare(left));
   }
