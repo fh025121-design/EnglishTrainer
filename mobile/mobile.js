@@ -3397,6 +3397,13 @@
     }, 1000);
   }
 
+  function normalizeVocabularyPronunciationDisplay(entry) {
+    const raw = String(entry?.accent || "").trim();
+    if (!raw) return "";
+    const normalized = raw.replace(/[A-Z]/g, (char) => char.toLowerCase());
+    return `/${normalized}/`;
+  }
+
   function renderVocabularySampleScreen() {
     const sample = state.vocabularySample || null;
     if (!sample) {
@@ -3411,10 +3418,13 @@
     }
 
     if (sample.finished) {
+      elements.vocabularySamplePartOfSpeechText.textContent = "";
       elements.vocabularySampleWordText.textContent = "";
-      elements.vocabularySamplePronunciationBlock.classList.add("hidden");
+      elements.vocabularySamplePronunciationText.textContent = "";
+      elements.vocabularySampleMeaningResultText.textContent = "";
+      elements.vocabularySamplePronunciationArea.classList.add("hidden");
       elements.vocabularySampleAccentBlock.classList.add("hidden");
-      elements.vocabularySampleMeaningBlock.classList.add("hidden");
+      elements.vocabularySampleMeaningArea.classList.add("hidden");
       elements.vocabularySampleMeaningResultBlock.classList.add("hidden");
       elements.vocabularySampleNextWrap.classList.add("hidden");
       elements.vocabularySampleCompleteBlock.classList.remove("hidden");
@@ -3423,43 +3433,44 @@
       return;
     }
 
-    if (sample.sessionExpired) {
-      elements.vocabularySampleMeaningBlock.classList.add("hidden");
-      elements.vocabularySampleMeaningResultBlock.classList.add("hidden");
-      elements.vocabularySampleNextWrap.classList.add("hidden");
-      stopVocabularySampleTimer();
-    }
-
-    if (sample.sessionExpired && sample.pronunciationChoice && sample.meaningChoice) {
-      elements.vocabularySampleNextWrap.classList.remove("hidden");
-    }
-
     elements.vocabularySampleHeaderText.textContent = "本日の学習";
-    if (!elements.vocabularySampleTimerText.querySelector(".vocabulary-sample-timer-value")) {
-      elements.vocabularySampleTimerText.innerHTML = '<span class="vocabulary-sample-timer-label">残り時間</span><span class="vocabulary-sample-timer-value">10:00</span>';
-    }
     refreshVocabularySampleTimerDisplay();
-    elements.vocabularySampleWordText.textContent = wordItem.word;
-    elements.vocabularySamplePartOfSpeechText.textContent = `[${wordItem.partOfSpeech}]`;
 
-    elements.vocabularySamplePronunciationBlock.classList.remove("hidden");
-    elements.vocabularySampleMeaningBlock.classList.add("hidden");
+    elements.vocabularySamplePartOfSpeechText.textContent = `〈${wordItem.partOfSpeech}〉`;
+    elements.vocabularySampleWordText.textContent = wordItem.word;
+    elements.vocabularySamplePronunciationText.textContent = normalizeVocabularyPronunciationDisplay(wordItem);
+
+    const accentVisible = sample.pronunciationChecked;
+    const meaningVisible = sample.meaningRevealed || sample.meaningChecked;
+    const pronunciationSelected = sample.pronunciationChoice;
+    const meaningSelected = sample.meaningChoice;
+    const canRevealMeaning = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+
+    elements.vocabularySamplePronunciationArea.classList.remove("hidden");
+    elements.vocabularySampleMeaningArea.classList.remove("hidden");
     elements.vocabularySampleMeaningResultBlock.classList.remove("hidden");
     elements.vocabularySampleNextWrap.classList.add("hidden");
     elements.vocabularySampleCompleteBlock.classList.add("hidden");
 
-    const accentVisible = sample.pronunciationChecked;
-    const meaningVisible = sample.meaningRevealed || sample.meaningChecked;
-    elements.vocabularySampleAccentBlock.classList.remove("hidden");
     const accentChoiceRow = elements.vocabularySampleAccentBlock.querySelector(".vocabulary-sample-choice-row");
+    const accentSlot = elements.vocabularySampleAccentBlock.querySelector(".vocabulary-sample-accent-slot");
+    const accentJudgmentSlot = elements.vocabularySampleAccentBlock.querySelector(".vocabulary-sample-judgment-slot");
     if (accentChoiceRow) {
       accentChoiceRow.classList.toggle("is-visible", accentVisible);
     }
+    if (accentJudgmentSlot) {
+      accentJudgmentSlot.classList.toggle("is-visible", accentVisible);
+    }
     if (accentVisible) {
-      elements.vocabularySampleAccentText.innerHTML = `${buildVocabularySampleAccentMarkup(wordItem.accent, wordItem.accentFocus)} <span class="vocabulary-sample-accent-note">赤字＝アクセント</span>`;
+      elements.vocabularySampleAccentText.innerHTML = buildVocabularySampleAccentMarkup(wordItem.accent, wordItem.accentFocus);
+      elements.vocabularySampleAccentBlock.classList.remove("hidden");
+      if (accentSlot) accentSlot.classList.add("is-visible");
+    } else {
+      elements.vocabularySampleAccentText.textContent = "";
+      elements.vocabularySampleAccentBlock.classList.add("hidden");
+      if (accentSlot) accentSlot.classList.remove("is-visible");
     }
 
-    const pronunciationSelected = sample.pronunciationChoice;
     [elements.vocabularySamplePronunciationOkBtn, elements.vocabularySamplePronunciationNgBtn].forEach((button) => {
       const isOk = button.id === "vocabularySamplePronunciationOkBtn";
       button.classList.toggle("is-selected", pronunciationSelected === (isOk ? "ok" : "ng"));
@@ -3467,48 +3478,47 @@
 
     if (sample.pronunciationChecked) {
       elements.vocabularySamplePronunciationBtn.disabled = false;
-      elements.vocabularySamplePronunciationBtn.textContent = "【 もう一度発音を聞く 】";
+      elements.vocabularySamplePronunciationBtn.textContent = "もう一度聞く 🔊";
       elements.vocabularySampleAccentBlock.classList.remove("hidden");
     } else {
       elements.vocabularySamplePronunciationBtn.disabled = false;
-      elements.vocabularySamplePronunciationBtn.textContent = "【 声に出したら、次へ 】";
+      elements.vocabularySamplePronunciationBtn.textContent = "声に出したら、聞く 🔊";
       elements.vocabularySampleAccentBlock.classList.add("hidden");
     }
 
+    elements.vocabularySampleMeaningBtn.disabled = !canRevealMeaning;
     if (sample.meaningRevealed || sample.meaningChecked) {
-      elements.vocabularySampleMeaningBtn.textContent = "【 意味 】";
+      elements.vocabularySampleMeaningBtn.textContent = "意味";
       elements.vocabularySampleMeaningResultBlock.classList.remove("hidden");
     } else {
-      elements.vocabularySampleMeaningBtn.textContent = "【 意味を言ったら、次へ 】";
+      elements.vocabularySampleMeaningBtn.textContent = "意味を言ったら、確認";
       elements.vocabularySampleMeaningResultBlock.classList.add("hidden");
     }
 
-    elements.vocabularySampleMeaningBlock.classList.toggle("hidden", sample.pronunciationChecked === false);
-    elements.vocabularySampleMeaningResultBlock.classList.remove("hidden");
     const meaningChoiceRow = elements.vocabularySampleMeaningResultBlock.querySelector(".vocabulary-sample-meaning-row");
+    const meaningJudgmentSlot = elements.vocabularySampleMeaningResultBlock.querySelector(".vocabulary-sample-meaning-judgment-slot");
     if (meaningChoiceRow) {
       meaningChoiceRow.classList.toggle("is-visible", meaningVisible);
+    }
+    if (meaningJudgmentSlot) {
+      meaningJudgmentSlot.classList.toggle("is-visible", meaningVisible);
     }
     if (meaningVisible) {
       elements.vocabularySampleMeaningResultText.textContent = wordItem.meaning;
       elements.vocabularySampleMeaningResultText.style.visibility = "visible";
       elements.vocabularySampleMeaningResultText.style.opacity = "1";
-      elements.vocabularySampleMeaningResultText.style.color = "#12324A";
     } else {
       elements.vocabularySampleMeaningResultText.textContent = "";
       elements.vocabularySampleMeaningResultText.style.visibility = "hidden";
       elements.vocabularySampleMeaningResultText.style.opacity = "0";
-      elements.vocabularySampleMeaningResultText.style.color = "#12324A";
     }
 
-    const meaningSelected = sample.meaningChoice;
     [elements.vocabularySampleMeaningOkBtn, elements.vocabularySampleMeaningNgBtn].forEach((button) => {
       const isOk = button.id === "vocabularySampleMeaningOkBtn";
       button.classList.toggle("is-selected", meaningSelected === (isOk ? "ok" : "ng"));
     });
 
-    const showNextButton = Boolean(sample.pronunciationChoice && sample.meaningChoice);
-    elements.vocabularySampleNextWrap.classList.toggle("hidden", !showNextButton);
+    elements.vocabularySampleNextWrap.classList.add("hidden");
     elements.vocabularySampleNextBtn.textContent = sample.index >= sample.words.length - 1 ? "終了" : "次へ";
 
     showScreen("vocabularySampleScreen");
@@ -3585,6 +3595,8 @@
   function handleVocabularySampleMeaningReveal() {
     const sample = state.vocabularySample;
     if (!sample) return;
+    const isPronunciationDecided = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+    if (!isPronunciationDecided) return;
     sample.meaningRevealed = true;
     sample.meaningChecked = true;
     renderVocabularySampleScreen();
@@ -3601,6 +3613,12 @@
       sample.meaningChoice = value;
       sample.meaningChecked = true;
     }
+
+    if (sample.pronunciationChoice && sample.meaningChoice) {
+      continueVocabularySample();
+      return;
+    }
+
     renderVocabularySampleScreen();
   }
 
@@ -11193,15 +11211,16 @@
     elements.speakingWordPracticeWordText = document.getElementById("speakingWordPracticeWordText");
     elements.vocabularySampleHeaderText = document.getElementById("vocabularySampleHeaderText");
     elements.vocabularySampleTimerText = document.getElementById("vocabularySampleTimerText");
-    elements.vocabularySampleWordText = document.getElementById("vocabularySampleWordText");
     elements.vocabularySamplePartOfSpeechText = document.getElementById("vocabularySamplePartOfSpeechText");
-    elements.vocabularySamplePronunciationBlock = document.getElementById("vocabularySamplePronunciationBlock");
+    elements.vocabularySampleWordText = document.getElementById("vocabularySampleWordText");
+    elements.vocabularySamplePronunciationText = document.getElementById("vocabularySamplePronunciationText");
+    elements.vocabularySamplePronunciationArea = document.getElementById("vocabularySamplePronunciationArea");
     elements.vocabularySamplePronunciationBtn = document.getElementById("vocabularySamplePronunciationBtn");
     elements.vocabularySampleAccentBlock = document.getElementById("vocabularySampleAccentBlock");
     elements.vocabularySampleAccentText = document.getElementById("vocabularySampleAccentText");
     elements.vocabularySamplePronunciationOkBtn = document.getElementById("vocabularySamplePronunciationOkBtn");
     elements.vocabularySamplePronunciationNgBtn = document.getElementById("vocabularySamplePronunciationNgBtn");
-    elements.vocabularySampleMeaningBlock = document.getElementById("vocabularySampleMeaningBlock");
+    elements.vocabularySampleMeaningArea = document.getElementById("vocabularySampleMeaningArea");
     elements.vocabularySampleMeaningBtn = document.getElementById("vocabularySampleMeaningBtn");
     elements.vocabularySampleMeaningResultBlock = document.getElementById("vocabularySampleMeaningResultBlock");
     elements.vocabularySampleMeaningResultText = document.getElementById("vocabularySampleMeaningResultText");
@@ -11209,6 +11228,7 @@
     elements.vocabularySampleMeaningNgBtn = document.getElementById("vocabularySampleMeaningNgBtn");
     elements.vocabularySampleNextWrap = document.getElementById("vocabularySampleNextWrap");
     elements.vocabularySampleNextBtn = document.getElementById("vocabularySampleNextBtn");
+    elements.vocabularySampleHistoryBtn = document.getElementById("vocabularySampleHistoryBtn");
     elements.vocabularySampleCompleteBlock = document.getElementById("vocabularySampleCompleteBlock");
     elements.vocabularySampleCompleteBackBtn = document.getElementById("vocabularySampleCompleteBackBtn");
     elements.vocabularySampleBackBtn = document.getElementById("vocabularySampleBackBtn");

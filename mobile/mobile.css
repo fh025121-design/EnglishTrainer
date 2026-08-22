@@ -1112,69 +1112,108 @@ select,
   max-width: 100%;
 }
 
-.vocabulary-sample-panel h2 {
+.vocabulary-sample-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0 0 10px;
-  font-size: 1.45rem;
+}
+
+.vocabulary-sample-panel h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
   color: #12324A;
 }
 
 .vocabulary-sample-timer {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  margin: 0 0 18px;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
   color: #60788A;
 }
 
 .vocabulary-sample-timer-label {
-  font-size: 0.78rem;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  color: #60788A;
 }
 
 .vocabulary-sample-timer-value {
-  font-size: clamp(1.8rem, 3.6vw, 2.3rem);
+  font-size: 24px;
   color: #12324A;
-  font-weight: 900;
+  font-weight: 800;
   line-height: 1.1;
+  letter-spacing: 0.02em;
 }
 
-.vocabulary-sample-word-row {
+.vocabulary-sample-word-stack {
+  display: block;
+  text-align: left;
+  margin: 0 0 18px;
+}
+
+.vocabulary-sample-word-line {
   display: flex;
   align-items: baseline;
-  justify-content: center;
   gap: 10px;
-  margin: 0 0 10px;
-}
-
-.vocabulary-sample-word {
   margin: 0;
-  text-align: center;
-  font-size: clamp(1.9rem, 5vw, 2.3rem);
-  font-weight: 900;
-  letter-spacing: 0.03em;
-  color: #12324A;
-  line-height: 1.2;
 }
 
 .vocabulary-sample-part-of-speech {
   margin: 0;
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #60788A;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #12324A;
+  line-height: 1.4;
+}
+
+.vocabulary-sample-word {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #12324A;
   line-height: 1.2;
 }
 
-.vocabulary-sample-meaning-result {
-  margin: 0 0 14px;
-  min-height: 1.5em;
-  font-size: clamp(1.0rem, 2.8vw, 1.4rem);
-  font-weight: 700;
-  line-height: 1.5;
+.vocabulary-sample-pronunciation {
+  margin: 6px 0 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
   color: #12324A;
-  text-align: center;
+  line-height: 1.35;
+}
+
+.vocabulary-sample-meaning-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 2.4em;
+  margin: 10px 0 0;
+  width: 100%;
+}
+
+.vocabulary-sample-meaning-label {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #12324A;
+  line-height: 1.4;
+}
+
+.vocabulary-sample-meaning-result {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #12324A;
+  text-align: left;
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.15s ease, visibility 0.15s ease;
@@ -1187,10 +1226,25 @@ select,
   color: #60788A;
 }
 
+.vocabulary-sample-area {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(96, 120, 138, 0.35);
+}
+
+.vocabulary-sample-area-title {
+  margin: 0 0 10px;
+  text-align: left;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #60788A;
+}
+
 .vocabulary-sample-block {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(96, 120, 138, 0.35);
 }
 
 .vocabulary-sample-main-btn {
@@ -1198,7 +1252,7 @@ select,
   min-height: 52px;
   margin: 0 auto;
   border-radius: 14px;
-  font-size: 1rem;
+  font-size: 18px;
   font-weight: 800;
   background: #8FAFCB;
   color: #ffffff;
@@ -1207,23 +1261,39 @@ select,
   display: block;
 }
 
+.vocabulary-sample-main-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.vocabulary-sample-accent-slot,
+.vocabulary-sample-judgment-slot,
+.vocabulary-sample-meaning-judgment-slot {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.vocabulary-sample-accent-slot.is-visible,
+.vocabulary-sample-judgment-slot.is-visible,
+.vocabulary-sample-meaning-judgment-slot.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
 .vocabulary-sample-accent {
   min-height: 26px;
-  margin: 0 0 10px;
-  font-size: 1.3rem;
+  margin: 0;
+  font-size: 22px;
   font-weight: 800;
   color: #12324A;
   letter-spacing: 0.04em;
-}
-
-.vocabulary-sample-accent-note {
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #60788A;
-  vertical-align: middle;
 }
 
 .vocabulary-sample-accent-focus {
@@ -1255,6 +1325,7 @@ select,
 .vocabulary-sample-choice-btn {
   width: 100%;
   min-height: 48px;
+  font-size: 18px;
   font-weight: 800;
   border-radius: 12px;
   background: #E4ECEF;
@@ -1283,18 +1354,22 @@ select,
   background: #5CA9A8;
 }
 
+.vocabulary-sample-meaning-row.is-visible,
+.vocabulary-sample-choice-row.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
 .vocabulary-sample-choice-weak.is-selected {
   background: #D89A62;
 }
 
-.vocabulary-sample-meaning-result {
-  margin: 8px 0 12px;
-  font-size: clamp(1.1rem, 3vw, 1.5rem);
-  font-weight: 800;
-  line-height: 1.5;
-  color: #12324A;
-  opacity: 1;
-  visibility: visible;
+.vocabulary-sample-history-btn {
+  width: min(100%, 280px);
+  margin: 18px auto 0;
+  display: block;
+  font-size: 18px;
 }
 
 .vocabulary-sample-complete-title {

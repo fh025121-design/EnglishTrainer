@@ -264,43 +264,62 @@
 
         <main class="stack-layout vocabulary-sample-layout">
           <section class="panel vocabulary-sample-panel">
-            <h2 id="vocabularySampleHeaderText">本日の学習</h2>
-            <div id="vocabularySampleTimerText" class="vocabulary-sample-timer">
-              <span class="vocabulary-sample-timer-label">残り時間</span>
-              <span class="vocabulary-sample-timer-value">10:00</span>
-            </div>
-            <div class="vocabulary-sample-word-row">
-              <p id="vocabularySamplePartOfSpeechText" class="vocabulary-sample-part-of-speech">［名詞］</p>
-              <p id="vocabularySampleWordText" class="vocabulary-sample-word">environment</p>
-            </div>
-            <p id="vocabularySampleMeaningResultText" class="vocabulary-sample-meaning-result"></p>
-
-            <div id="vocabularySamplePronunciationBlock" class="vocabulary-sample-block">
-              <button id="vocabularySamplePronunciationBtn" class="primary-btn large-btn vocabulary-sample-main-btn" type="button">【 声に出したら、次へ 】</button>
-            </div>
-
-            <div id="vocabularySampleAccentBlock" class="vocabulary-sample-block hidden">
-              <p id="vocabularySampleAccentText" class="vocabulary-sample-accent"></p>
-              <div class="vocabulary-sample-choice-row">
-                <button id="vocabularySamplePronunciationOkBtn" class="secondary-btn vocabulary-sample-choice-btn vocabulary-sample-choice-good" type="button">○ できた</button>
-                <button id="vocabularySamplePronunciationNgBtn" class="secondary-btn vocabulary-sample-choice-btn vocabulary-sample-choice-weak" type="button">△ あやしい</button>
+            <div class="vocabulary-sample-header-row">
+              <h2 id="vocabularySampleHeaderText">本日の学習</h2>
+              <div id="vocabularySampleTimerText" class="vocabulary-sample-timer" aria-live="polite">
+                <span class="vocabulary-sample-timer-label">残り</span>
+                <span class="vocabulary-sample-timer-value">09:45</span>
               </div>
             </div>
 
-            <div id="vocabularySampleMeaningBlock" class="vocabulary-sample-block hidden">
-              <button id="vocabularySampleMeaningBtn" class="primary-btn large-btn vocabulary-sample-main-btn" type="button">【 意味を言ったら、次へ 】</button>
+            <div class="vocabulary-sample-word-stack">
+              <div class="vocabulary-sample-word-line">
+                <span id="vocabularySamplePartOfSpeechText" class="vocabulary-sample-part-of-speech">〈名詞〉</span>
+                <span id="vocabularySampleWordText" class="vocabulary-sample-word">environment</span>
+              </div>
+              <p id="vocabularySamplePronunciationText" class="vocabulary-sample-pronunciation">/əˈnvaɪrənmənt/</p>
+              <div class="vocabulary-sample-meaning-line">
+                <span id="vocabularySampleMeaningLabelText" class="vocabulary-sample-meaning-label">〈意味〉</span>
+                <span id="vocabularySampleMeaningResultText" class="vocabulary-sample-meaning-result"></span>
+              </div>
+            </div>
+
+            <div id="vocabularySamplePronunciationArea" class="vocabulary-sample-area">
+              <p class="vocabulary-sample-area-title">発音</p>
+              <button id="vocabularySamplePronunciationBtn" class="primary-btn large-btn vocabulary-sample-main-btn" type="button">声に出したら、聞く 🔊</button>
+            </div>
+
+            <div id="vocabularySampleAccentBlock" class="vocabulary-sample-block hidden">
+              <div class="vocabulary-sample-accent-slot">
+                <p id="vocabularySampleAccentText" class="vocabulary-sample-accent"></p>
+              </div>
+              <div class="vocabulary-sample-judgment-slot">
+                <div class="vocabulary-sample-choice-row">
+                  <button id="vocabularySamplePronunciationOkBtn" class="secondary-btn vocabulary-sample-choice-btn vocabulary-sample-choice-good" type="button">○ できた</button>
+                  <button id="vocabularySamplePronunciationNgBtn" class="secondary-btn vocabulary-sample-choice-btn vocabulary-sample-choice-weak" type="button">△ あやしい</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="vocabularySampleMeaningArea" class="vocabulary-sample-area">
+              <p class="vocabulary-sample-area-title">意味</p>
+              <button id="vocabularySampleMeaningBtn" class="primary-btn large-btn vocabulary-sample-main-btn" type="button">意味を言ったら、確認</button>
             </div>
 
             <div id="vocabularySampleMeaningResultBlock" class="vocabulary-sample-block hidden">
-              <div class="vocabulary-sample-meaning-row">
-                <button id="vocabularySampleMeaningOkBtn" class="secondary-btn vocabulary-sample-choice-btn vocabulary-sample-choice-good" type="button">○ できた</button>
-                <button id="vocabularySampleMeaningNgBtn" class="secondary-btn vocabulary-sample-choice-btn vocabulary-sample-choice-weak" type="button">△ あやしい</button>
+              <div class="vocabulary-sample-meaning-judgment-slot">
+                <div class="vocabulary-sample-meaning-row">
+                  <button id="vocabularySampleMeaningOkBtn" class="secondary-btn vocabulary-sample-choice-btn vocabulary-sample-choice-good" type="button">○ できた</button>
+                  <button id="vocabularySampleMeaningNgBtn" class="secondary-btn vocabulary-sample-choice-btn vocabulary-sample-choice-weak" type="button">△ あやしい</button>
+                </div>
               </div>
             </div>
 
             <div id="vocabularySampleNextWrap" class="vocabulary-sample-block hidden">
               <button id="vocabularySampleNextBtn" class="primary-btn large-btn" type="button">次へ</button>
             </div>
+
+            <button id="vocabularySampleHistoryBtn" class="secondary-btn large-btn vocabulary-sample-history-btn" type="button">今日の履歴</button>
 
             <div id="vocabularySampleCompleteBlock" class="vocabulary-sample-block hidden">
               <p class="vocabulary-sample-complete-title">サンプル終了</p>
