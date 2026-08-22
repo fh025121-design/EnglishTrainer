@@ -12,3 +12,15 @@ test('mobile vocabulary data layer exposes real word bank and review state scaff
   assert.match(source, /function\s+getVocabularyProgressSummary\s*\(studyState\)/, 'should define a progress summary helper');
   assert.match(source, /1:\s*1,\s*2:\s*3,\s*3:\s*7,\s*4:\s*14,\s*5:\s*30/, 'should encode the 1, 3, 7, 14, 30 review ladder');
 });
+
+test('mobile app includes a dedicated vocabulary data file and grade-based real bank', () => {
+  const html = fs.readFileSync(require('node:path').join(__dirname, '..', 'mobile', 'index.html'), 'utf8');
+  assert.match(html, /vocabulary-data\.js/, 'should load the dedicated vocabulary data module');
+
+  const dataFile = require('node:path').join(__dirname, '..', 'mobile', 'vocabulary-data.js');
+  assert.ok(fs.existsSync(dataFile), 'should create the app vocabulary data file');
+
+  const dataSource = fs.readFileSync(dataFile, 'utf8');
+  assert.match(dataSource, /window\.MOBILE_VOCABULARY_REAL_WORD_BANK\s*=\s*\[/, 'should export the real bank on window');
+  assert.match(dataSource, /grade:\s*5|grade:\s*4|grade:\s*3/, 'should preserve grade information');
+});

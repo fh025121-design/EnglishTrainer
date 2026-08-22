@@ -3300,7 +3300,10 @@
   }
 
   function buildVocabularyRealStudyState() {
-    return createVocabularyStudyState(MOBILE_VOCABULARY_REAL_WORD_BANK.map((entry) => ({
+    const realWordBank = Array.isArray(window.MOBILE_VOCABULARY_REAL_WORD_BANK) && window.MOBILE_VOCABULARY_REAL_WORD_BANK.length
+      ? window.MOBILE_VOCABULARY_REAL_WORD_BANK
+      : MOBILE_VOCABULARY_REAL_WORD_BANK;
+    return createVocabularyStudyState(realWordBank.map((entry) => ({
       ...entry,
       pronunciation: { currentState: "unlearned", level: 0, nextReviewAt: null },
       meaningState: { currentState: "unlearned", level: 0, nextReviewAt: null }
@@ -3513,8 +3516,22 @@
 
   function startVocabularySample() {
     state.vocabularyStudy = state.vocabularyStudy || buildVocabularyRealStudyState();
+    const realWordBank = Array.isArray(window.MOBILE_VOCABULARY_REAL_WORD_BANK) && window.MOBILE_VOCABULARY_REAL_WORD_BANK.length
+      ? window.MOBILE_VOCABULARY_REAL_WORD_BANK
+      : MOBILE_VOCABULARY_REAL_WORD_BANK;
+    const candidateEntries = getVocabularyCandidateQueue(state.vocabularyStudy, Date.now());
+    const studyWords = candidateEntries.length ? candidateEntries.slice(0, 3) : realWordBank.slice(0, 3);
     state.vocabularySample = {
-      words: MOBILE_VOCABULARY_SAMPLE_WORDS.map((item) => ({ ...item })),
+      words: studyWords.map((item) => ({
+        id: item.id || item.word,
+        word: item.word,
+        partOfSpeech: item.partOfSpeech || "名詞",
+        meaning: item.meaning || "",
+        accent: item.accent || "",
+        accentFocus: item.accentFocus || item.accent || "",
+        exampleSentence: item.exampleSentence || "",
+        exampleTranslation: item.exampleTranslation || ""
+      })),
       index: 0,
       pronunciationChecked: false,
       pronunciationChoice: null,
