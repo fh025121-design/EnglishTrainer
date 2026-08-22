@@ -4232,12 +4232,24 @@
   window.openVocabularyTodayHistoryScreen = openVocabularyTodayHistoryScreen;
   window.renderVocabularyTodayHistoryScreen = renderVocabularyTodayHistoryScreen;
 
+  function playVocabularySampleCorrectChime() {
+    if (typeof Audio !== "function") return false;
+    const audio = new Audio("../assets/sounds/correct-05-3.mp3");
+    audio.preload = "auto";
+    audio.play().catch(() => undefined);
+    return true;
+  }
+
   function handleVocabularySampleChoice(kind, value) {
     const sample = state.vocabularySample;
     if (!sample) return;
     const item = getVocabularySampleWordItem();
     if (!item) return;
     const itemKey = `${String(item.id || item.word || "").trim()}|${String(item.partOfSpeech || "").trim()}`;
+
+    if (value === "ok") {
+      playVocabularySampleCorrectChime();
+    }
 
     if (kind === "pronunciation") {
       sample.pronunciationChoice = value;
