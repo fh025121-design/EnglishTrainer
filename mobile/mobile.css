@@ -138,6 +138,73 @@ select {
   margin-top: 12px;
 }
 
+.home-today-learning-card {
+  padding: 12px 10px 8px;
+}
+
+.home-today-learning-header {
+  margin-bottom: 8px;
+}
+
+.home-today-learning-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.home-today-learning-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(99, 130, 210, 0.10);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.home-today-learning-item {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 82px;
+  width: 100%;
+  padding: 12px 8px;
+  border: 0;
+  background: rgba(99, 130, 210, 0.30);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.home-today-learning-item--filled {
+  background: rgba(99, 150, 225, 0.42);
+}
+
+.home-today-learning-item:active {
+  background: rgba(99, 150, 225, 0.48);
+  transform: scale(0.99);
+}
+
+.home-today-learning-item + .home-today-learning-item {
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.home-today-learning-label {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.home-today-learning-value {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
 .panel,
 .study-card {
   padding: 18px 16px;

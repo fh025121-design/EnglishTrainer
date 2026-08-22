@@ -50,10 +50,28 @@
         </header>
 
         <main class="stack-layout">
+          <section id="todayLearningSummaryCard" class="panel home-today-learning-card">
+            <div class="home-today-learning-header">
+              <p class="home-today-learning-title">今日の学習</p>
+            </div>
+            <div class="home-today-learning-grid">
+              <button id="openSpeakingFeatureBtn" class="home-today-learning-item" type="button">
+                <span class="home-today-learning-label">Speaking</span>
+                <strong id="todayLearningWordValue" class="home-today-learning-value">未了</strong>
+              </button>
+              <button id="openWordOrderTrainingBtn" class="home-today-learning-item" type="button">
+                <span class="home-today-learning-label">語順トレ</span>
+                <strong id="todayLearningWordOrderValue" class="home-today-learning-value">未了</strong>
+              </button>
+              <button id="openTranslationTrainingBtn" class="home-today-learning-item" type="button">
+                <span class="home-today-learning-label">和訳トレ</span>
+                <strong id="todayLearningTranslationValue" class="home-today-learning-value">未了</strong>
+              </button>
+            </div>
+          </section>
+
           <section class="panel action-panel">
-            <button id="openSpeakingFeatureBtn" class="primary-btn large-btn" type="button">🎤 Speaking</button>
-            <button id="openWordOrderTrainingBtn" class="secondary-btn large-btn" type="button">語順トレーニング</button>
-            <button id="openTranslationTrainingBtn" class="secondary-btn large-btn" type="button">和訳トレーニング</button>
+            <button id="openConversationSelectFromHomeBtn" class="secondary-btn large-btn" type="button">💬 会話練習</button>
             <button id="startTypingBtn" class="secondary-btn large-btn" type="button">⌨ タイピングで学習</button>
             <button id="refreshCacheBtn" class="secondary-btn large-btn" type="button">♻ キャッシュ更新</button>
 

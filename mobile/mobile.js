@@ -8352,9 +8352,99 @@
     aliasNode.classList.toggle("hidden", !shouldShow);
   }
 
+  function getMobileHomeTodayLearningSummary() {
+    const todayDayKey = getMobileLearningHistoryDayKey(Date.now());
+    const result = {
+      word: { count: 0, points: 0 },
+      wordOrder: { count: 0, points: 0 },
+      translation: { count: 0, points: 0 }
+    };
+
+    const entries = Array.isArray(loadMobileLearningHistoryEntries()) ? loadMobileLearningHistoryEntries() : [];
+    entries.forEach((entry) => {
+      if (!entry || getMobileLearningHistoryDayKey(entry.endedAt) !== todayDayKey) {
+        return;
+      }
+
+      const modeText = String(entry.mode || "").trim();
+      const category = resolveMobileLearningHistoryCategory(entry);
+      const entryPoints = parseMobileLearningHistoryEarnedPoints(entry.earnedPoints);
+      const questionCount = Math.max(0, Number(entry.questionCount) || 0);
+
+      if (category === "Vocabulary" || /vocabulary/i.test(modeText) || /単語/i.test(modeText)) {
+        if (modeText === "Vocabulary" && String(entry.dayNumber || "").includes("Week")) {
+          result.word.count += questionCount;
+          result.word.points += entryPoints;
+          return;
+        }
+        if (modeText === "Vocabulary" && !String(entry.dayNumber || "").includes("Week")) {
+          result.word.count += questionCount;
+          result.word.points += entryPoints;
+          return;
+        }
+        result.word.count += questionCount;
+        result.word.points += entryPoints;
+        return;
+      }
+
+      if (category === "語順" || /語順/i.test(modeText) || /wordorder/i.test(modeText) || /word order/i.test(modeText)) {
+        result.wordOrder.count += questionCount;
+        result.wordOrder.points += entryPoints;
+        return;
+      }
+
+      if (category === "和訳" || /和訳/i.test(modeText) || /translation/i.test(modeText)) {
+        result.translation.count += questionCount;
+        result.translation.points += entryPoints;
+      }
+    });
+
+    return result;
+  }
+
+  function renderMobileHomeTodayLearningSummary() {
+    const todayValues = {
+      word: document.getElementById("todayLearningWordValue"),
+      wordOrder: document.getElementById("todayLearningWordOrderValue"),
+      translation: document.getElementById("todayLearningTranslationValue")
+    };
+
+    const summary = getMobileHomeTodayLearningSummary();
+
+    const formatValue = (metric, unit) => {
+      if (!metric || metric.count <= 0) return "未了";
+      return `${metric.count}${unit}・${metric.points}P`;
+    };
+
+    const wordTile = document.getElementById("openSpeakingFeatureBtn");
+    const wordOrderTile = document.getElementById("openWordOrderTrainingBtn");
+    const translationTile = document.getElementById("openTranslationTrainingBtn");
+
+    if (wordTile) {
+      wordTile.classList.toggle("home-today-learning-item--filled", summary.word.count > 0);
+    }
+    if (wordOrderTile) {
+      wordOrderTile.classList.toggle("home-today-learning-item--filled", summary.wordOrder.count > 0);
+    }
+    if (translationTile) {
+      translationTile.classList.toggle("home-today-learning-item--filled", summary.translation.count > 0);
+    }
+
+    if (todayValues.word) {
+      todayValues.word.textContent = formatValue(summary.word, "語");
+    }
+    if (todayValues.wordOrder) {
+      todayValues.wordOrder.textContent = formatValue(summary.wordOrder, "問");
+    }
+    if (todayValues.translation) {
+      todayValues.translation.textContent = formatValue(summary.translation, "問");
+    }
+  }
+
   function renderHome() {
     setWordOrderDayRangeValue(state.wordOrderSelectedRangeValue);
     hideMobileAdminLearningHistory();
+    renderMobileHomeTodayLearningSummary();
     showScreen("homeScreen");
   }
 
@@ -11492,8 +11582,16 @@
   }
 
   function bindEvents() {
-    document.getElementById("openSpeakingFeatureBtn").addEventListener("click", renderSpeakingHome);
-    document.getElementById("openWordOrderTrainingBtn").addEventListener("click", renderWordOrderRangeSelectScreen);
+    const speakingHomeBtn = document.getElementById("openSpeakingFeatureBtn");
+    if (speakingHomeBtn) {
+      speakingHomeBtn.addEventListener("click", renderSpeakingHome);
+    }
+
+    const wordOrderHomeBtn = document.getElementById("openWordOrderTrainingBtn");
+    if (wordOrderHomeBtn) {
+      wordOrderHomeBtn.addEventListener("click", renderWordOrderRangeSelectScreen);
+    }
+
     const translationTrainingHomeBtn = document.getElementById("openTranslationTrainingBtn");
     if (translationTrainingHomeBtn) {
       const runTranslationTraining = (event) => {
@@ -11506,7 +11604,11 @@
       translationTrainingHomeBtn.removeEventListener("click", runTranslationTraining);
       translationTrainingHomeBtn.addEventListener("click", runTranslationTraining);
     }
-    document.getElementById("startTypingBtn").addEventListener("click", () => startStudy("typing"));
+
+    const startTypingBtn = document.getElementById("startTypingBtn");
+    if (startTypingBtn) {
+      startTypingBtn.addEventListener("click", () => startStudy("typing"));
+    }
     document.getElementById("refreshCacheBtn").addEventListener("click", refreshMobileCache);
     document.getElementById("openAcquiredPointsScreenBtn").addEventListener("click", async () => {
       mobilePointHistoryVisibleCount = MOBILE_POINT_HISTORY_PAGE_SIZE;
@@ -11523,6 +11625,10 @@
     });
     document.getElementById("openSettingsBtn").addEventListener("click", () => showScreen("settingsScreen"));
     document.getElementById("speakingHomeBackBtn").addEventListener("click", renderHome);
+    const homeConversationSelectBtn = document.getElementById("openConversationSelectFromHomeBtn");
+    if (homeConversationSelectBtn) {
+      homeConversationSelectBtn.addEventListener("click", renderConversationSelectScreen);
+    }
     document.getElementById("openConversationSelectBtn").addEventListener("click", renderConversationSelectScreen);
     document.getElementById("openSpeakingReviewTopBtn").addEventListener("click", renderSpeakingReviewTopScreen);
     document.getElementById("speakingReviewTopBackBtn").addEventListener("click", renderSpeakingHome);
