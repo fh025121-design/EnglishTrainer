@@ -6,6 +6,7 @@
   const MOBILE_DEVICE_ID_STORAGE_KEY = "english-trainer-mobile-device-id-v1";
   const MOBILE_FAMILY_SON_UID_CACHE_KEY = "english-trainer-mobile-son-uid-v1";
   const MOBILE_PENDING_LEARNING_HISTORY_STORAGE_KEY = "english-trainer-mobile-pending-learning-history-v1";
+  const MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY = "english-trainer-mobile-vocabulary-today-history-v1";
   const MOBILE_LEARNING_HISTORY_DEVICE_NAME_SON = "長男モバイル";
   const MOBILE_LEARNING_HISTORY_DEVICE_NAME_OTHER = "その他";
   const HOME_ACCOUNT_PARENT_EMAIL_PREFIX = "fh025";
@@ -3708,6 +3709,34 @@
     });
   }
 
+  function loadVocabularyTodayHistoryMap() {
+    try {
+      const raw = window.localStorage.getItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
+      if (!raw) {
+        state.vocabularyTodayHistoryMap = {};
+        return state.vocabularyTodayHistoryMap;
+      }
+      const parsed = JSON.parse(raw);
+      const safeMap = parsed && typeof parsed === "object" ? parsed : {};
+      state.vocabularyTodayHistoryMap = safeMap;
+      return state.vocabularyTodayHistoryMap;
+    } catch (_error) {
+      state.vocabularyTodayHistoryMap = {};
+      return state.vocabularyTodayHistoryMap;
+    }
+  }
+
+  function saveVocabularyTodayHistoryMap() {
+    try {
+      const bucket = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
+        ? state.vocabularyTodayHistoryMap
+        : {};
+      window.localStorage.setItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY, JSON.stringify(bucket));
+    } catch (_error) {
+      // Ignore storage failures; keep the in-memory map for the current session.
+    }
+  }
+
   function recordVocabularySampleHistoryJudgment(wordItem, kind, value) {
     if (!wordItem || !kind || !value) return;
     const todayKey = getVocabularyHistoryTodayKey();
@@ -3731,11 +3760,15 @@
     todayMap[wordKey] = existing;
     bucket[todayKey] = todayMap;
     state.vocabularyTodayHistoryMap = bucket;
+    saveVocabularyTodayHistoryMap();
   }
 
   function getVocabularyTodayHistoryEntries() {
     const todayKey = getVocabularyHistoryTodayKey();
-    const todayMap = state.vocabularyTodayHistoryMap?.[todayKey] || {};
+    const bucket = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
+      ? state.vocabularyTodayHistoryMap
+      : {};
+    const todayMap = bucket[todayKey] && typeof bucket[todayKey] === "object" ? bucket[todayKey] : {};
     return Object.values(todayMap)
       .filter((entry) => entry && String(entry.word || "").trim())
       .filter((entry) => entry.pronunciation !== "—" || entry.meaning !== "—")
@@ -11879,6 +11912,7 @@
     loadSpeakingWordDayCompletionMap();
     loadSpeakingReviewSession();
     loadRecentSpeakingProgress();
+    loadVocabularyTodayHistoryMap();
     bindElements();
     renderMobileVersionInfo();
     syncFormFromState();
