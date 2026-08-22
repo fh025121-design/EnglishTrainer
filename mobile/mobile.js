@@ -4035,6 +4035,14 @@
     return "—";
   }
 
+  function getVocabularyHistoryWeaknessScore(entry) {
+    if (!entry || typeof entry !== "object") return 0;
+    let score = 0;
+    if (String(entry.pronunciation || "—").trim() === "△") score += 1;
+    if (String(entry.meaning || "—").trim() === "△") score += 1;
+    return score;
+  }
+
   function getVocabularySampleCompletedWordCount(sample = state.vocabularySample) {
     if (!sample || typeof sample !== "object") return 0;
     const count = Number(sample.completedWordCount);
@@ -4087,8 +4095,11 @@
         safeBucket[wordKey] = {
           word,
           partOfSpeech: String(entry.partOfSpeech || "").trim(),
+          grade: String(entry.grade || entry.sourceLevel || entry.level || "5").trim() || "5",
           pronunciation: String(entry.pronunciation || "—").trim() || "—",
-          meaning: String(entry.meaning || "—").trim() || "—"
+          pronunciationText: String(entry.pronunciationText || "").trim() || "",
+          meaning: String(entry.meaning || "—").trim() || "—",
+          meaningText: String(entry.meaningText || "").trim() || ""
         };
       });
 
@@ -4144,19 +4155,46 @@
     const existing = todayMap[wordKey] || {
       word: String(wordItem.word || "").trim(),
       partOfSpeech: String(wordItem.partOfSpeech || "").trim(),
+      grade: String(wordItem.grade ?? wordItem.level ?? wordItem.sourceLevel ?? wordItem.gradeLevel ?? "5").trim() || "5",
       pronunciation: "—",
-      meaning: "—"
+      pronunciationText: "",
+      meaning: "—",
+      meaningText: ""
     };
     if (kind === "pronunciation") {
       existing.pronunciation = normalizeVocabularyHistoryStatus(value);
+      existing.pronunciationText = String(wordItem.phonetic || wordItem.pronunciation || existing.pronunciationText || "").trim();
     }
     if (kind === "meaning") {
       existing.meaning = normalizeVocabularyHistoryStatus(value);
+      existing.meaningText = String(wordItem.meaning || wordItem.japanese || existing.meaningText || "").trim();
+    }
+    if (!existing.grade || !["5", "4", "3"].includes(String(existing.grade).trim())) {
+      existing.grade = String(wordItem.grade ?? wordItem.level ?? wordItem.sourceLevel ?? wordItem.gradeLevel ?? "5").trim() || "5";
     }
     todayMap[wordKey] = existing;
     bucket[todayKey] = todayMap;
     state.vocabularyTodayHistoryMap = bucket;
     saveVocabularyTodayHistoryMap();
+  }
+
+  function getVocabularyHistoryDetailData(entry) {
+    const wordText = String(entry?.word || "").trim();
+    const realBankEntry = getVocabularyRealWordBank().find((candidate) => {
+      const candidateWord = String(candidate?.word || "").trim();
+      const candidateId = String(candidate?.id || "").trim();
+      const entryId = String(entry?.id || "").trim();
+      return candidateWord && candidateWord === wordText || candidateId && candidateId === entryId;
+    });
+
+    const gradeValue = String(realBankEntry?.grade ?? realBankEntry?.level ?? realBankEntry?.sourceLevel ?? entry?.grade ?? "5").trim() || "5";
+    const normalizedGrade = ["5", "4", "3"].includes(gradeValue) ? gradeValue : (String(gradeValue).replace(/級/g, "").trim() || "5");
+    const meaningValue = String(realBankEntry?.meaning || entry?.meaningText || entry?.meaning || "意味未設定").trim() || "意味未設定";
+
+    return {
+      grade: normalizedGrade,
+      meaning: meaningValue
+    };
   }
 
   function getVocabularyTodayHistoryEntries() {
@@ -4168,7 +4206,11 @@
     return Object.values(todayMap)
       .filter((entry) => entry && String(entry.word || "").trim())
       .filter((entry) => entry.pronunciation !== "—" || entry.meaning !== "—")
-      .sort((left, right) => String(left.word || "").localeCompare(String(right.word || ""), "ja"));
+      .sort((left, right) => {
+        const weaknessDiff = getVocabularyHistoryWeaknessScore(right) - getVocabularyHistoryWeaknessScore(left);
+        if (weaknessDiff !== 0) return weaknessDiff;
+        return String(left.word || "").localeCompare(String(right.word || ""), "ja");
+      });
   }
 
   function renderVocabularyTodayHistoryScreen() {
@@ -4205,19 +4247,44 @@
       serial.className = "vocabulary-history-index";
       serial.textContent = `${index + 1}`;
 
-      const word = document.createElement("span");
-      word.className = "vocabulary-history-word";
-      word.textContent = entry.word;
+      const wordButton = document.createElement("button");
+      wordButton.type = "button";
+      wordButton.className = "vocabulary-history-word-button";
+      wordButton.textContent = entry.word;
+      wordButton.setAttribute("aria-expanded", "false");
 
       const pronunciation = document.createElement("span");
       pronunciation.className = "vocabulary-history-status";
       pronunciation.textContent = entry.pronunciation || "—";
+      if ((entry.pronunciation || "—") === "△") pronunciation.classList.add("is-weak");
 
       const meaning = document.createElement("span");
       meaning.className = "vocabulary-history-status";
       meaning.textContent = entry.meaning || "—";
+      if ((entry.meaning || "—") === "△") meaning.classList.add("is-weak");
 
-      row.append(serial, word, pronunciation, meaning);
+      const detail = document.createElement("div");
+      detail.className = "vocabulary-history-detail";
+      detail.hidden = true;
+
+      const detailInfo = getVocabularyHistoryDetailData(entry);
+      const detailGrade = document.createElement("span");
+      detailGrade.className = "vocabulary-history-detail-grade";
+      detailGrade.textContent = `${detailInfo.grade}級`;
+
+      const detailMeaningText = document.createElement("span");
+      detailMeaningText.className = "vocabulary-history-detail-meaning";
+      detailMeaningText.textContent = detailInfo.meaning || "意味未設定";
+
+      detail.append(detailGrade, detailMeaningText);
+
+      row.addEventListener("click", () => {
+        const isOpen = row.classList.toggle("is-open");
+        wordButton.setAttribute("aria-expanded", String(isOpen));
+        detail.hidden = !isOpen;
+      });
+
+      row.append(serial, wordButton, pronunciation, meaning, detail);
       list.appendChild(row);
     });
 
