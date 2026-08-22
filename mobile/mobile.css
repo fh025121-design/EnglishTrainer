@@ -1397,6 +1397,14 @@ select,
   margin: 0 0 10px;
 }
 
+.vocabulary-sample-header-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .vocabulary-sample-panel h2 {
   margin: 0;
   font-size: 24px;
@@ -1404,6 +1412,16 @@ select,
   color: #12324A;
   font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
   font-weight: 700;
+}
+
+.vocabulary-sample-progress-text {
+  min-width: 64px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #12324A;
+  font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
 }
 
 .vocabulary-sample-timer {
@@ -1764,8 +1782,8 @@ select,
 
 .vocabulary-history-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(70px, 0.9fr) minmax(70px, 0.9fr);
-  gap: 10px;
+  grid-template-columns: 32px minmax(0, 1.8fr) minmax(70px, 0.9fr) minmax(70px, 0.9fr);
+  gap: 8px;
   align-items: center;
   padding: 10px 12px;
   border-radius: 12px;
@@ -1780,11 +1798,17 @@ select,
   color: #12324A;
 }
 
+.vocabulary-history-index,
 .vocabulary-history-word,
 .vocabulary-history-status {
   font-size: 1rem;
   line-height: 1.4;
   text-align: center;
+}
+
+.vocabulary-history-index {
+  font-weight: 800;
+  color: #dbeaf5;
 }
 
 .vocabulary-history-word {

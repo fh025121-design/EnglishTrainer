@@ -3595,7 +3595,13 @@
   function refreshVocabularySampleTimerDisplay() {
     const sample = state.vocabularySample;
     const timerText = elements?.vocabularySampleTimerText;
+    const progressText = elements?.vocabularySampleProgressText;
     if (!sample || !timerText) return;
+
+    const questionNumber = Math.max(1, Number(sample.completedWordCount) + 1);
+    if (progressText) {
+      progressText.textContent = `${questionNumber}問目`;
+    }
 
     const deadlineAt = Number(sample.timerDeadlineAt) || 0;
     const remainingMs = Math.max(0, deadlineAt - Date.now());
@@ -4073,6 +4079,11 @@
     const entries = getVocabularyTodayHistoryEntries();
     list.innerHTML = "";
 
+    const titleNode = document.querySelector("#vocabularyTodayHistoryScreen .vocabulary-history-panel h2");
+    if (titleNode) {
+      titleNode.textContent = `今日の履歴 ${entries.length}問`;
+    }
+
     if (!entries.length) {
       const empty = document.createElement("p");
       empty.className = "status-text";
@@ -4084,22 +4095,30 @@
 
     const header = document.createElement("div");
     header.className = "vocabulary-history-row vocabulary-history-row--header";
-    header.innerHTML = '<span class="vocabulary-history-word">単語</span><span class="vocabulary-history-status">発音</span><span class="vocabulary-history-status">意味</span>';
+    header.innerHTML = '<span class="vocabulary-history-index">No.</span><span class="vocabulary-history-word">単語</span><span class="vocabulary-history-status">発音</span><span class="vocabulary-history-status">意味</span>';
     list.appendChild(header);
 
-    entries.forEach((entry) => {
+    entries.forEach((entry, index) => {
       const row = document.createElement("div");
       row.className = "vocabulary-history-row";
+
+      const serial = document.createElement("span");
+      serial.className = "vocabulary-history-index";
+      serial.textContent = `${index + 1}`;
+
       const word = document.createElement("span");
       word.className = "vocabulary-history-word";
       word.textContent = entry.word;
+
       const pronunciation = document.createElement("span");
       pronunciation.className = "vocabulary-history-status";
       pronunciation.textContent = entry.pronunciation || "—";
+
       const meaning = document.createElement("span");
       meaning.className = "vocabulary-history-status";
       meaning.textContent = entry.meaning || "—";
-      row.append(word, pronunciation, meaning);
+
+      row.append(serial, word, pronunciation, meaning);
       list.appendChild(row);
     });
 
@@ -11944,6 +11963,7 @@
     elements.speakingWordPracticeProgressText = document.getElementById("speakingWordPracticeProgressText");
     elements.speakingWordPracticeWordText = document.getElementById("speakingWordPracticeWordText");
     elements.vocabularySampleHeaderText = document.getElementById("vocabularySampleHeaderText");
+    elements.vocabularySampleProgressText = document.getElementById("vocabularySampleProgressText");
     elements.vocabularySampleTimerText = document.getElementById("vocabularySampleTimerText");
     elements.vocabularySamplePartOfSpeechText = document.getElementById("vocabularySamplePartOfSpeechText");
     elements.vocabularySampleWordText = document.getElementById("vocabularySampleWordText");
