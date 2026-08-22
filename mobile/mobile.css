@@ -1101,6 +1101,15 @@ select,
   background: rgba(255, 255, 255, 0.055);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #f8fafc;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.vocabulary-practice-progress-stat:hover,
+.vocabulary-practice-progress-stat:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(96, 165, 250, 0.6);
+  background: rgba(96, 165, 250, 0.08);
 }
 
 .vocabulary-practice-progress-stat span {
@@ -1158,10 +1167,14 @@ select,
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
   padding: 7px 9px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .vocabulary-practice-grade-row span {
@@ -1191,6 +1204,103 @@ select,
 .vocabulary-practice-today-row strong {
   font-size: 0.95rem;
   color: #38d9c5;
+}
+
+.vocabulary-progress-list-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vocabulary-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vocabulary-progress-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vocabulary-progress-list-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vocabulary-progress-list-grade {
+  color: #9fb0c6;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.vocabulary-progress-list-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.vocabulary-progress-list-badge--mastered {
+  background: rgba(52, 211, 153, 0.14);
+  color: #7ef0c2;
+  border-color: rgba(52, 211, 153, 0.28);
+}
+
+.vocabulary-progress-list-badge--learning {
+  background: rgba(96, 165, 250, 0.14);
+  color: #9ec7ff;
+  border-color: rgba(96, 165, 250, 0.25);
+}
+
+.vocabulary-progress-list-badge--unlearned {
+  background: rgba(148, 163, 184, 0.12);
+  color: #d6e0ec;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.vocabulary-progress-list-word-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vocabulary-progress-list-word-row strong {
+  color: #f8fafc;
+  font-size: 1.03rem;
+}
+
+.vocabulary-progress-list-word-row span {
+  color: #9fb0c6;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.vocabulary-progress-list-meaning {
+  margin: 0;
+  color: #dfeaf7;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.vocabulary-progress-list-empty {
+  padding: 12px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #b8c7d9;
+  text-align: center;
 }
 
 .vocabulary-practice-history-btn {

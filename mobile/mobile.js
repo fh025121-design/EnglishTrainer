@@ -8836,7 +8836,7 @@
   }
 
   function showScreen(screenId) {
-    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "vocabularySampleScreen", "vocabularyTodayHistoryScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileUpdateHistoryScreen", "mobileAdminLearningHistoryScreen", "wordOrderTrainingScreen", "translationTrainingScreen", "comingSoonScreen"].forEach((id) => {
+    ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "vocabularySampleScreen", "vocabularyTodayHistoryScreen", "vocabularyProgressListScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileUpdateHistoryScreen", "mobileAdminLearningHistoryScreen", "wordOrderTrainingScreen", "translationTrainingScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.classList.toggle("active", id === screenId);
@@ -9986,6 +9986,40 @@
     showScreen("conversationDaySelectScreen");
   }
 
+  function getVocabularyEntryDisplayStatus(entry) {
+    const pronunciationLevel = Number(entry?.pronunciation?.level ?? 0);
+    const meaningLevel = Number(entry?.meaningState?.level ?? 0);
+    if (pronunciationLevel >= 5 && meaningLevel >= 5) return "mastered";
+    if (pronunciationLevel > 0 || meaningLevel > 0) return "learning";
+    return "unlearned";
+  }
+
+  function getVocabularyGradeProgressDisplay(gradeKey) {
+    const entries = Array.isArray(state.vocabularyStudy?.entries) && state.vocabularyStudy.entries.length
+      ? state.vocabularyStudy.entries
+      : getVocabularyRealWordBank().map((entry, index) => normalizeVocabularyWordRecord(entry, index)).filter(Boolean);
+    const safeGradeKey = ["5", "4", "3"].includes(String(gradeKey || "")) ? String(gradeKey) : "5";
+    const gradeEntries = entries.filter((entry) => getVocabularyGradeValue(entry) === safeGradeKey);
+    const total = gradeEntries.length;
+    const mastered = gradeEntries.filter((entry) => getVocabularyEntryDisplayStatus(entry) === "mastered").length;
+    const learning = gradeEntries.filter((entry) => getVocabularyEntryDisplayStatus(entry) === "learning").length;
+    const unlearned = gradeEntries.filter((entry) => getVocabularyEntryDisplayStatus(entry) === "unlearned").length;
+    const activeCount = mastered + learning;
+    const status = unlearned === 0 ? "mastered" : "learning";
+    return {
+      gradeKey: safeGradeKey,
+      total,
+      mastered,
+      learning,
+      unlearned,
+      activeCount,
+      status,
+      label: status === "mastered" ? "定着" : "学習中",
+      count: status === "mastered" ? mastered : activeCount,
+      summaryText: status === "mastered" ? `定着 ${mastered} / ${total}` : `学習中 ${activeCount} / ${total}`
+    };
+  }
+
   function getVocabularyPracticeEntrySummary() {
     const studyEntries = Array.isArray(state.vocabularyStudy?.entries) && state.vocabularyStudy.entries.length
       ? state.vocabularyStudy.entries
@@ -10015,18 +10049,14 @@
       gradeBucket.total += 1;
       summary.gradeSummary[safeGradeKey] = gradeBucket;
 
-      const pronunciationLevel = Number(entry?.pronunciation?.level ?? 0);
-      const meaningLevel = Number(entry?.meaningState?.level ?? 0);
-      const isMastered = pronunciationLevel >= 5 && meaningLevel >= 5;
-      const hasProgress = pronunciationLevel > 0 || meaningLevel > 0;
-
-      if (isMastered) {
+      const status = getVocabularyEntryDisplayStatus(entry);
+      if (status === "mastered") {
         summary.mastered += 1;
         gradeBucket.mastered += 1;
         return;
       }
 
-      if (hasProgress) {
+      if (status === "learning") {
         summary.learning += 1;
         return;
       }
@@ -10036,6 +10066,77 @@
 
     summary.percent = Math.round((summary.mastered / Math.max(1, totalWords)) * 100);
     return summary;
+  }
+
+  function getVocabularyProgressListEntries(filterType, filterValue) {
+    const studyEntries = Array.isArray(state.vocabularyStudy?.entries) && state.vocabularyStudy.entries.length
+      ? state.vocabularyStudy.entries
+      : getVocabularyRealWordBank().map((entry, index) => normalizeVocabularyWordRecord(entry, index)).filter(Boolean);
+
+    if (filterType === "grade") {
+      const grade = ["5", "4", "3"].includes(String(filterValue || "")) ? String(filterValue) : "5";
+      return studyEntries
+        .filter((entry) => getVocabularyGradeValue(entry) === grade)
+        .sort((a, b) => a.word.localeCompare(b.word, "ja"));
+    }
+
+    const status = ["mastered", "learning", "unlearned"].includes(String(filterValue || "")) ? String(filterValue) : "learning";
+    return studyEntries
+      .filter((entry) => getVocabularyEntryDisplayStatus(entry) === status)
+      .sort((a, b) => {
+        const gradeDiff = Number(getVocabularyGradeValue(a)) - Number(getVocabularyGradeValue(b));
+        if (gradeDiff !== 0) return gradeDiff;
+        return a.word.localeCompare(b.word, "ja");
+      });
+  }
+
+  function renderVocabularyProgressList(filterType = "grade", filterValue = "5") {
+    const titleEl = document.getElementById("vocabularyProgressListTitle");
+    const metaEl = document.getElementById("vocabularyProgressListMeta");
+    const listEl = document.getElementById("vocabularyProgressList");
+    if (!titleEl || !metaEl || !listEl) return;
+
+    const entries = getVocabularyProgressListEntries(filterType, filterValue);
+    const isGradeFilter = filterType === "grade";
+    const filterLabel = isGradeFilter ? `${String(filterValue || "5")}級` : {
+      mastered: "定着",
+      learning: "学習中",
+      unlearned: "未学習"
+    }[String(filterValue || "learning")] || "学習中";
+
+    titleEl.textContent = isGradeFilter ? `${filterLabel}一覧` : `${filterLabel}一覧`;
+    const summary = isGradeFilter
+      ? getVocabularyGradeProgressDisplay(filterValue)
+      : { count: entries.length };
+    metaEl.textContent = isGradeFilter ? `${summary.label} ${summary.count} / ${summary.total}` : `${entries.length}語`;
+
+    listEl.innerHTML = entries.length
+      ? entries.map((entry) => {
+          const status = getVocabularyEntryDisplayStatus(entry);
+          const statusLabelMap = { mastered: "定着", learning: "学習中", unlearned: "未学習" };
+          const statusText = statusLabelMap[status] || "未学習";
+          const partOfSpeech = String(entry?.partOfSpeech || "名詞");
+          const meaning = String(entry?.meaning || "");
+          return `
+            <div class="vocabulary-progress-list-item">
+              <div class="vocabulary-progress-list-meta-row">
+                <span class="vocabulary-progress-list-grade">${String(getVocabularyGradeValue(entry) || "5")}級</span>
+                <span class="vocabulary-progress-list-badge vocabulary-progress-list-badge--${status}">${statusText}</span>
+              </div>
+              <div class="vocabulary-progress-list-word-row">
+                <strong>${String(entry?.word || "-")}</strong>
+                <span>${partOfSpeech}</span>
+              </div>
+              <p class="vocabulary-progress-list-meaning">${meaning || "意味未設定"}</p>
+            </div>
+          `;
+        }).join("")
+      : '<div class="vocabulary-progress-list-empty">表示できる単語がありません。</div>';
+  }
+
+  function openVocabularyProgressList(filterType = "grade", filterValue = "5") {
+    renderVocabularyProgressList(filterType, filterValue);
+    showScreen("vocabularyProgressListScreen");
   }
 
   function renderVocabularyPracticeProgressCard() {
@@ -10083,13 +10184,29 @@
     }
     if (gradeSummaryWrap) {
       const gradeRows = [
-        ["5級", summary.gradeSummary[5]?.mastered || 0, summary.gradeSummary[5]?.total || 0],
-        ["4級", summary.gradeSummary[4]?.mastered || 0, summary.gradeSummary[4]?.total || 0],
-        ["3級", summary.gradeSummary[3]?.mastered || 0, summary.gradeSummary[3]?.total || 0]
+        ["5級", "5"],
+        ["4級", "4"],
+        ["3級", "3"]
       ];
       gradeSummaryWrap.innerHTML = gradeRows
-        .map(([label, mastered, total]) => `<div class="vocabulary-practice-grade-row"><span>${label}</span><strong>${mastered} / ${total}</strong></div>`)
+        .map(([label, gradeKey]) => {
+          const display = getVocabularyGradeProgressDisplay(gradeKey);
+          return `
+            <button
+              class="vocabulary-practice-grade-row"
+              type="button"
+              data-vocabulary-grade="${display.gradeKey}"
+              data-vocabulary-grade-label="${label}"
+            >
+              <span>${label}</span>
+              <strong>${display.label} ${display.count} / ${display.total}</strong>
+            </button>
+          `;
+        })
         .join("");
+      gradeSummaryWrap.querySelectorAll(".vocabulary-practice-grade-row").forEach((button) => {
+        button.addEventListener("click", () => openVocabularyProgressList("grade", button.dataset.vocabularyGrade || "5"));
+      });
     }
 
     card.classList.toggle("hidden", !totalWords);
@@ -12262,6 +12379,16 @@
     const vocabularyPracticeHistoryBtn = document.getElementById("vocabularyPracticeHistoryBtn");
     if (vocabularyPracticeHistoryBtn) {
       vocabularyPracticeHistoryBtn.addEventListener("click", openVocabularyTodayHistoryScreen);
+    }
+    document.querySelectorAll(".vocabulary-progress-stat-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        const status = String(button.dataset.vocabularyStatus || "learning");
+        openVocabularyProgressList("status", status);
+      });
+    });
+    const vocabularyProgressListBackBtn = document.getElementById("vocabularyProgressListBackBtn");
+    if (vocabularyProgressListBackBtn) {
+      vocabularyProgressListBackBtn.addEventListener("click", renderSpeakingHome);
     }
     elements.vocabularySampleBackBtn.addEventListener("click", () => {
       stopVocabularySampleTimer();

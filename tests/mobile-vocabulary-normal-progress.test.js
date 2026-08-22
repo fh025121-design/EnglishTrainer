@@ -22,6 +22,14 @@ const checks = [
     ok: /MOBILE_VOCABULARY_NORMAL_QUEUE_STORAGE_KEY/.test(source) && /function getVocabularyNormalRoundState\s*\(/.test(source) && /function generateVocabularyNormalRoundQueue\s*\(/.test(source)
   },
   {
+    name: "grade summary display uses study-progress labels instead of fixed mastered counts",
+    ok: /function getVocabularyGradeProgressDisplay\s*\(/.test(source) && /function getVocabularyEntryDisplayStatus\s*\(/.test(source) && /学習中/.test(source)
+  },
+  {
+    name: "grade and state browse screens are available for read-only list views",
+    ok: /function openVocabularyProgressList\s*\(/.test(source) && /function renderVocabularyProgressList\s*\(/.test(source) && /vocabularyProgressListScreen/.test(source)
+  },
+  {
     name: "normal progress load/save functions exist",
     ok: /function (load|save)VocabularyNormalProgress/.test(source)
   },

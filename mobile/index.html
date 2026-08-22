@@ -132,18 +132,18 @@
                 <span id="vocabularyPracticeRegisteredText" class="vocabulary-practice-pill">登録語数 0語</span>
               </div>
               <div class="vocabulary-practice-progress-grid">
-                <div class="vocabulary-practice-progress-stat">
+                <button id="vocabularyPracticeMasteredStat" class="vocabulary-practice-progress-stat vocabulary-progress-stat-btn" type="button" data-vocabulary-status="mastered">
                   <span>定着</span>
                   <strong id="vocabularyPracticeMasteredText">0語</strong>
-                </div>
-                <div class="vocabulary-practice-progress-stat">
+                </button>
+                <button id="vocabularyPracticeLearningStat" class="vocabulary-practice-progress-stat vocabulary-progress-stat-btn" type="button" data-vocabulary-status="learning">
                   <span>学習中</span>
                   <strong id="vocabularyPracticeLearningText">0語</strong>
-                </div>
-                <div class="vocabulary-practice-progress-stat">
+                </button>
+                <button id="vocabularyPracticeUnlearnedStat" class="vocabulary-practice-progress-stat vocabulary-progress-stat-btn" type="button" data-vocabulary-status="unlearned">
                   <span>未学習</span>
                   <strong id="vocabularyPracticeUnlearnedText">0語</strong>
-                </div>
+                </button>
               </div>
               <div class="vocabulary-practice-summary-line">
                 <span>定着</span>
@@ -406,6 +406,20 @@
           <section class="panel vocabulary-history-panel">
             <h2>今日の履歴</h2>
             <div id="vocabularyTodayHistoryList" class="vocabulary-history-list"></div>
+          </section>
+        </main>
+      </section>
+
+      <section id="vocabularyProgressListScreen" class="screen">
+        <header class="screen-topbar">
+          <button id="vocabularyProgressListBackBtn" class="back-btn" type="button">← 単語練習</button>
+        </header>
+
+        <main class="stack-layout">
+          <section class="panel vocabulary-progress-list-panel">
+            <h2 id="vocabularyProgressListTitle">単語一覧</h2>
+            <p id="vocabularyProgressListMeta" class="status-text">0語</p>
+            <div id="vocabularyProgressList" class="vocabulary-progress-list"></div>
           </section>
         </main>
       </section>
