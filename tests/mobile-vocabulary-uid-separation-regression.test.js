@@ -36,4 +36,26 @@ test(scenarioNames[3], () => {
   assert.match(source, /mergeVocabularyStudyStateByLatest\(currentLocal, incomingStudy\)/);
 });
 
-console.log(`UID ownership regression tests added (${scenarioNames.length})`);
+test('№74-1 child-only reset version gate exists', () => {
+  assert.match(source, /MOBILE_VOCABULARY_CHILD_RESET_VERSION/);
+  assert.match(source, /resetVersion/);
+  assert.match(source, /resetAtMs/);
+  assert.match(source, /remoteResetVersion > localResetVersion/);
+  assert.match(source, /isCurrentSonLoginForMobileLearningHistory\(\)|isCurrentMobileChildUid\(/);
+});
+
+test('№74-2 child reset applies only to child UID and not parent UID', () => {
+  assert.match(source, /currentUid === mobileCachedSonUid/);
+  assert.match(source, /if \(!targetUid \|\| !isChildUidResetTarget\(targetUid\)\)/);
+  assert.match(source, /return false;/);
+  assert.match(source, /saveMobileVocabularyResetAppliedState\(targetUid, resetVersion, resetAtMs\)/);
+});
+
+test('№74-3 reset clears child vocabulary runtime and storage only', () => {
+  assert.match(source, /state\.vocabularyStudy = freshStudy/);
+  assert.match(source, /state\.teacherCheckSession = null/);
+  assert.match(source, /window\.localStorage\.removeItem\(getMobileVocabularyStorageKey\(targetUid\)\)/);
+  assert.match(source, /window\.localStorage\.removeItem\(getMobileVocabularyTodayHistoryStorageKey\(targetUid\)\)/);
+});
+
+console.log(`UID ownership regression tests added (${scenarioNames.length + 3})`);

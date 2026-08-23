@@ -7,8 +7,10 @@
   const MOBILE_FAMILY_SON_UID_CACHE_KEY = "english-trainer-mobile-son-uid-v1";
   const MOBILE_PENDING_LEARNING_HISTORY_STORAGE_KEY = "english-trainer-mobile-pending-learning-history-v1";
   const MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY = "english-trainer-mobile-vocabulary-today-history-v1";
+  const MOBILE_VOCABULARY_RESET_STORAGE_KEY = "english-trainer-mobile-vocabulary-reset-v1";
   const MOBILE_VOCABULARY_NORMAL_PROGRESS_STORAGE_KEY = "english-trainer-mobile-vocabulary-normal-progress-v1";
   const MOBILE_VOCABULARY_NORMAL_QUEUE_STORAGE_KEY = "english-trainer-mobile-vocabulary-normal-queue-v1";
+  const MOBILE_VOCABULARY_CHILD_RESET_VERSION = 2;
   const MOBILE_LEARNING_HISTORY_DEVICE_NAME_SON = "長男モバイル";
   const MOBILE_LEARNING_HISTORY_DEVICE_NAME_OTHER = "その他";
   const HOME_ACCOUNT_PARENT_EMAIL_PREFIX = "fh025";
@@ -7671,6 +7673,117 @@
     }
   }
 
+  function getMobileVocabularyResetStorageKey(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    const safeUid = String(uid || "").trim();
+    return safeUid ? `${MOBILE_VOCABULARY_RESET_STORAGE_KEY}:${safeUid}` : MOBILE_VOCABULARY_RESET_STORAGE_KEY;
+  }
+
+  function getMobileVocabularyResetAppliedState(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    const targetUid = String(uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!targetUid) {
+      return { resetVersion: 0, resetAtMs: 0 };
+    }
+    try {
+      const raw = window.localStorage.getItem(getMobileVocabularyResetStorageKey(targetUid));
+      if (!raw || !raw.trim()) {
+        return { resetVersion: 0, resetAtMs: 0 };
+      }
+      const parsed = JSON.parse(raw);
+      return {
+        resetVersion: Math.max(0, Number(parsed?.resetVersion || 0) || 0),
+        resetAtMs: Math.max(0, Number(parsed?.resetAtMs || 0) || 0)
+      };
+    } catch (_error) {
+      return { resetVersion: 0, resetAtMs: 0 };
+    }
+  }
+
+  function saveMobileVocabularyResetAppliedState(uid = getCurrentMobileFirebaseUser()?.uid || "", resetVersion = 0, resetAtMs = Date.now()) {
+    const targetUid = String(uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!targetUid) return;
+    const nextResetVersion = Math.max(0, Number(resetVersion) || 0);
+    const nextResetAtMs = Math.max(0, Number(resetAtMs) || Date.now());
+    window.localStorage.setItem(getMobileVocabularyResetStorageKey(targetUid), JSON.stringify({
+      resetVersion: nextResetVersion,
+      resetAtMs: nextResetAtMs
+    }));
+  }
+
+  function isCurrentMobileChildUid(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    const currentUid = String(uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!currentUid) return false;
+    if (!mobileCachedSonUid) {
+      mobileCachedSonUid = readMobileCachedSonUid();
+    }
+    return Boolean(mobileCachedSonUid && currentUid === mobileCachedSonUid);
+  }
+
+  function isChildUidResetTarget(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    return isCurrentMobileChildUid(uid);
+  }
+
+  function shouldApplyChildVocabularyResetForUid(uid, remoteResetMeta = {}) {
+    const targetUid = String(uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!targetUid || !isChildUidResetTarget(targetUid)) {
+      return false;
+    }
+    const remoteResetVersion = Math.max(0, Number(remoteResetMeta?.resetVersion || 0) || 0);
+    const remoteResetAtMs = Math.max(0, Number(remoteResetMeta?.resetAtMs || 0) || 0);
+    const localResetState = getMobileVocabularyResetAppliedState(targetUid);
+    const localResetVersion = Math.max(0, Number(localResetState?.resetVersion || 0) || 0);
+    const localResetAtMs = Math.max(0, Number(localResetState?.resetAtMs || 0) || 0);
+    return remoteResetVersion > localResetVersion || (remoteResetVersion === localResetVersion && remoteResetAtMs > localResetAtMs);
+  }
+
+  function applyChildVocabularyResetForCurrentUid(uid, remoteResetMeta = {}) {
+    const targetUid = String(uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!targetUid || !isChildUidResetTarget(targetUid)) {
+      return false;
+    }
+
+    const resetVersion = Math.max(0, Number(remoteResetMeta?.resetVersion || MOBILE_VOCABULARY_CHILD_RESET_VERSION) || 0);
+    const resetAtMs = Math.max(0, Number(remoteResetMeta?.resetAtMs || Date.now()) || Date.now());
+    const freshStudy = buildVocabularyRealStudyState();
+
+    state.vocabularyStudy = freshStudy;
+    state.vocabularyTodayHistoryMap = {};
+    state.teacherCheckSession = null;
+    state.vocabularyPastHistoryFilter = "all";
+    vocabularyStateOwnerUid = targetUid;
+    vocabularyTodayHistoryOwnerUid = targetUid;
+
+    window.localStorage.removeItem(getMobileVocabularyStorageKey(targetUid));
+    window.localStorage.removeItem(getMobileVocabularyTodayHistoryStorageKey(targetUid));
+    window.localStorage.removeItem(MOBILE_STORAGE_KEY);
+    window.localStorage.removeItem(MOBILE_VOCABULARY_NORMAL_QUEUE_STORAGE_KEY);
+    saveMobileVocabularyResetAppliedState(targetUid, resetVersion, resetAtMs);
+    saveState();
+    saveMobileVocabularyStateForSync(freshStudy, targetUid);
+    saveVocabularyTodayHistoryMap();
+
+    const sourceDeviceId = String(getMobileBrowserDeviceId() || "").trim();
+    const sourceDeviceName = sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName());
+    if (typeof window.saveMobileVocabularyStateToFirestore === "function") {
+      window.saveMobileVocabularyStateToFirestore(freshStudy, {
+        targetUid,
+        allowCreate: true,
+        resetVersion,
+        resetAtMs,
+        sourceDeviceId,
+        sourceDeviceName
+      }).catch(() => undefined);
+    }
+    if (typeof window.saveMobileVocabularyTodayHistoryStateToFirestore === "function") {
+      window.saveMobileVocabularyTodayHistoryStateToFirestore({}, {
+        targetUid,
+        allowCreate: true,
+        sourceDeviceId,
+        sourceDeviceName
+      }).catch(() => undefined);
+    }
+    return true;
+  }
+
   function getMobileVocabularyStorageKey(uid = getCurrentMobileFirebaseUser()?.uid || "") {
     const safeUid = String(uid || "").trim();
     return safeUid ? `english-trainer-mobile-vocabulary-state-v1:${safeUid}` : "english-trainer-mobile-vocabulary-state-v1";
@@ -7805,10 +7918,20 @@
   }
 
   function handleVocabularySyncRemoteSnapshot(snapshot) {
+    const uid = String(snapshot?.uid || getMobileVocabularySyncUid() || "").trim();
+    const remoteResetMeta = {
+      resetVersion: Number(snapshot?.resetVersion || 0) || 0,
+      resetAtMs: Number(snapshot?.resetAtMs || 0) || 0
+    };
+
+    if (isChildUidResetTarget(uid) && shouldApplyChildVocabularyResetForUid(uid, remoteResetMeta)) {
+      applyChildVocabularyResetForCurrentUid(uid, remoteResetMeta);
+      return;
+    }
+
     if (!snapshot?.ok || !snapshot.exists || !snapshot.studyState) {
       return;
     }
-    const uid = String(snapshot.uid || getMobileVocabularySyncUid() || "").trim();
     const incomingStudy = sanitizeVocabularyStudyState(snapshot.studyState);
     if (!incomingStudy || !Array.isArray(incomingStudy.entries) || !incomingStudy.entries.length) {
       const localBaseline = loadMobileVocabularyStateForSync(uid) || state.vocabularyStudy || buildVocabularyRealStudyState();
@@ -7881,6 +8004,37 @@
       remoteResult = await remoteLoad({ targetUid: uid });
     } catch (_error) {
       remoteResult = null;
+    }
+
+    const remoteResetMeta = remoteResult && typeof remoteResult === "object"
+      ? { resetVersion: remoteResult.resetVersion, resetAtMs: remoteResult.resetAtMs }
+      : { resetVersion: 0, resetAtMs: 0 };
+
+    if (isChildUidResetTarget(uid) && remoteResetMeta.resetVersion < MOBILE_VOCABULARY_CHILD_RESET_VERSION) {
+      const issuedResetAtMs = Date.now();
+      const issuedStudy = buildVocabularyRealStudyState();
+      const sourceDeviceId = String(getMobileBrowserDeviceId() || "").trim();
+      const sourceDeviceName = sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName());
+      if (typeof window.saveMobileVocabularyStateToFirestore === "function") {
+        await window.saveMobileVocabularyStateToFirestore(issuedStudy, {
+          targetUid: uid,
+          allowCreate: true,
+          resetVersion: MOBILE_VOCABULARY_CHILD_RESET_VERSION,
+          resetAtMs: issuedResetAtMs,
+          sourceDeviceId,
+          sourceDeviceName
+        }).catch(() => null);
+      }
+      remoteResetMeta.resetVersion = MOBILE_VOCABULARY_CHILD_RESET_VERSION;
+      remoteResetMeta.resetAtMs = issuedResetAtMs;
+    }
+
+    if (isChildUidResetTarget(uid) && shouldApplyChildVocabularyResetForUid(uid, remoteResetMeta)) {
+      applyChildVocabularyResetForCurrentUid(uid, remoteResetMeta);
+      vocabularySyncCurrentUid = uid;
+      vocabularySyncReady = true;
+      vocabularySyncAllowCreate = false;
+      return true;
     }
 
     if (remoteResult?.ok && remoteResult.exists && remoteResult.studyState) {

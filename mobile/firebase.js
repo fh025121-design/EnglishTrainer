@@ -890,6 +890,8 @@ function normalizeMobileVocabularyStateDoc(docData) {
   return {
     studyState,
     updatedAtMs: Math.max(0, Number(source.updatedAtMs) || 0),
+    resetVersion: Math.max(0, Number(source.resetVersion || source.vocabularyResetVersion || 0) || 0),
+    resetAtMs: Math.max(0, Number(source.resetAtMs || source.vocabularyResetAtMs || 0) || 0),
     sourceDeviceId: String(source.sourceDeviceId || "").trim(),
     sourceDeviceName: String(source.sourceDeviceName || "").trim(),
     schemaVersion: Math.max(0, Number(source.schemaVersion) || MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION)
@@ -916,6 +918,8 @@ async function loadMobileVocabularyStateFromFirestore(options = {}) {
       uid: targetUid,
       studyState: normalized.studyState,
       updatedAtMs: normalized.updatedAtMs,
+      resetVersion: normalized.resetVersion,
+      resetAtMs: normalized.resetAtMs,
       sourceDeviceId: normalized.sourceDeviceId,
       sourceDeviceName: normalized.sourceDeviceName,
       schemaVersion: normalized.schemaVersion
@@ -937,6 +941,8 @@ async function saveMobileVocabularyStateToFirestore(studyState, options = {}) {
   const allowCreate = options?.allowCreate === true;
   const sourceDeviceId = String(options?.sourceDeviceId || "").trim();
   const sourceDeviceName = String(options?.sourceDeviceName || "").trim();
+  const incomingResetVersion = Math.max(0, Number(options?.resetVersion || 0) || 0);
+  const incomingResetAtMs = Math.max(0, Number(options?.resetAtMs || 0) || 0);
 
   try {
     const result = await runTransaction(firestore, async (transaction) => {
@@ -951,12 +957,21 @@ async function saveMobileVocabularyStateToFirestore(studyState, options = {}) {
         };
       }
 
-      const currentStudyState = existsBefore ? normalizeMobileVocabularyStateDoc(snapshot.data()).studyState : null;
+      const currentDoc = existsBefore ? normalizeMobileVocabularyStateDoc(snapshot.data()) : {
+        studyState: null,
+        resetVersion: 0,
+        resetAtMs: 0
+      };
+      const currentStudyState = currentDoc.studyState;
       const mergedStudyState = currentStudyState ? window.mergeVocabularyStudyStateByLatest?.(currentStudyState, studyState) || studyState : studyState;
+      const nextResetVersion = incomingResetVersion > 0 ? incomingResetVersion : currentDoc.resetVersion;
+      const nextResetAtMs = incomingResetAtMs > 0 ? incomingResetAtMs : currentDoc.resetAtMs;
 
       transaction.set(ref, {
         uid: targetUid,
         studyState: mergedStudyState,
+        resetVersion: nextResetVersion,
+        resetAtMs: nextResetAtMs,
         sourceDeviceId,
         sourceDeviceName,
         schemaVersion: MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION,
@@ -967,7 +982,9 @@ async function saveMobileVocabularyStateToFirestore(studyState, options = {}) {
       return {
         saved: true,
         existsBefore,
-        studyState: mergedStudyState
+        studyState: mergedStudyState,
+        resetVersion: nextResetVersion,
+        resetAtMs: nextResetAtMs
       };
     });
 
@@ -977,7 +994,9 @@ async function saveMobileVocabularyStateToFirestore(studyState, options = {}) {
       exists: Boolean(result?.existsBefore),
       uid: targetUid,
       skipped: result?.skipped || "",
-      studyState: result?.studyState || null
+      studyState: result?.studyState || null,
+      resetVersion: result?.resetVersion || 0,
+      resetAtMs: result?.resetAtMs || 0
     };
   } catch (error) {
     console.error("Failed to save mobile vocabulary state to Firestore", error);
@@ -1007,6 +1026,8 @@ function subscribeMobileVocabularyStateFromFirestore(onChange, options = {}) {
       uid: targetUid,
       studyState: normalized.studyState,
       updatedAtMs: normalized.updatedAtMs,
+      resetVersion: normalized.resetVersion,
+      resetAtMs: normalized.resetAtMs,
       sourceDeviceId: normalized.sourceDeviceId,
       sourceDeviceName: normalized.sourceDeviceName,
       schemaVersion: normalized.schemaVersion
