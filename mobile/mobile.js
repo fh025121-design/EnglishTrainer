@@ -3124,6 +3124,7 @@
     vocabularyStudy: null,
     vocabularyTodayHistoryMap: {},
     teacherCheckSession: null,
+    vocabularyPastHistoryFilter: "all",
     wordOrderTraining: null,
     wordOrderSelectedRangeValue: WORD_ORDER_DAY_RANGES[0].value,
     translationTraining: null,
@@ -4666,31 +4667,106 @@
       .sort((left, right) => Number(right.lastLearnedAt || 0) - Number(left.lastLearnedAt || 0));
   }
 
-  function getVocabularyPastHistoryDisplayEntries() {
+  function getVocabularyPastHistoryEntryCategory(entry) {
+    if (!entry || typeof entry !== "object") return "none";
+    const studyEntry = getVocabularyStudyEntryById(String(entry.id || entry.word || "").trim()) || null;
+    if (!studyEntry || typeof studyEntry !== "object") return "none";
+
+    const pronunciationSkill = studyEntry.pronunciation || null;
+    const meaningSkill = studyEntry.meaningState || null;
+    if (!pronunciationSkill && !meaningSkill) return "none";
+
+    const pronunciationSelf = getVocabularyCurrentSelfStatus(pronunciationSkill);
+    const meaningSelf = getVocabularyCurrentSelfStatus(meaningSkill);
+    const pronunciationTeacher = getVocabularyTeacherCheckStatusText(pronunciationSkill, "pronunciation");
+    const meaningTeacher = getVocabularyTeacherCheckStatusText(meaningSkill, "meaning");
+
+    const hasDelta = pronunciationSelf === "△" || meaningSelf === "△" || pronunciationTeacher === "△" || meaningTeacher === "△";
+    if (hasDelta) return "learning";
+
+    const bothChecked = pronunciationTeacher === "◎" && meaningTeacher === "◎";
+    if (bothChecked) return "checked";
+
+    const bothSelfOk = pronunciationSelf === "○" && meaningSelf === "○";
+    if (bothSelfOk) return "pending";
+
+    return "none";
+  }
+
+  function getVocabularyPastHistorySummary() {
     const entries = Array.isArray(getVocabularyPastHistoryEntries()) ? getVocabularyPastHistoryEntries().slice() : [];
-    return entries.sort((left, right) => {
-      const leftHasDelta = [left?.pronunciationStatus, left?.meaningStatus].includes("△");
-      const rightHasDelta = [right?.pronunciationStatus, right?.meaningStatus].includes("△");
+    const summary = { learning: 0, pending: 0, checked: 0 };
 
-      if (leftHasDelta !== rightHasDelta) {
-        return leftHasDelta ? -1 : 1;
-      }
-
-      return Number(right?.lastLearnedAt || 0) - Number(left?.lastLearnedAt || 0);
+    entries.forEach((entry) => {
+      const category = getVocabularyPastHistoryEntryCategory(entry);
+      if (category === "learning") summary.learning += 1;
+      else if (category === "pending") summary.pending += 1;
+      else if (category === "checked") summary.checked += 1;
     });
+
+    return summary;
+  }
+
+  function getVocabularyPastHistoryDisplayEntries(filterValue = state.vocabularyPastHistoryFilter || "all") {
+    const entries = Array.isArray(getVocabularyPastHistoryEntries()) ? getVocabularyPastHistoryEntries().slice() : [];
+    const normalizedFilter = ["all", "learning", "pending", "checked"].includes(String(filterValue || "all")) ? String(filterValue || "all") : "all";
+    const filteredEntries = normalizedFilter === "all"
+      ? entries
+      : entries.filter((entry) => getVocabularyPastHistoryEntryCategory(entry) === normalizedFilter);
+
+    if (normalizedFilter === "all") {
+      return filteredEntries.sort((left, right) => {
+        const leftHasDelta = [left?.pronunciationStatus, left?.meaningStatus].includes("△");
+        const rightHasDelta = [right?.pronunciationStatus, right?.meaningStatus].includes("△");
+
+        if (leftHasDelta !== rightHasDelta) {
+          return leftHasDelta ? -1 : 1;
+        }
+
+        return Number(right?.lastLearnedAt || 0) - Number(left?.lastLearnedAt || 0);
+      });
+    }
+
+    return filteredEntries.sort((left, right) => Number(right?.lastLearnedAt || 0) - Number(left?.lastLearnedAt || 0));
   }
 
   function renderVocabularyPastHistoryScreen() {
     const list = elements.vocabularyPastHistoryList;
+    const summary = elements.vocabularyPastHistorySummary;
+    const filters = elements.vocabularyPastHistoryFilters;
     if (!list) return;
 
     const entries = getVocabularyPastHistoryDisplayEntries();
+    const summaryData = getVocabularyPastHistorySummary();
+
+    if (summary) {
+      const summaryEntries = [
+        { key: "learning", label: "学習中", value: summaryData.learning },
+        { key: "pending", label: "先生チェック待ち", value: summaryData.pending },
+        { key: "checked", label: "チェック済み", value: summaryData.checked }
+      ];
+      summary.innerHTML = summaryEntries.map((item) => {
+        const modifier = item.key === "pending" ? " is-pending" : "";
+        return `<span class="vocabulary-history-summary-item${modifier}">${item.label} ${item.value}語</span>`;
+      }).join("");
+    }
+
+    if (filters) {
+      const buttons = filters.querySelectorAll(".vocabulary-history-filter-btn");
+      const activeFilter = state.vocabularyPastHistoryFilter || "all";
+      buttons.forEach((button) => {
+        const isActive = String(button.dataset.filter || "all") === String(activeFilter || "all");
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+    }
+
     list.innerHTML = "";
 
     if (!entries.length) {
       const empty = document.createElement("p");
       empty.className = "status-text";
-      empty.textContent = "まだ学習した単語はありません。";
+      empty.textContent = "該当する履歴はありません。";
       list.appendChild(empty);
       showScreen("vocabularyPastHistoryScreen");
       return;
@@ -13495,6 +13571,8 @@
     elements.vocabularySampleHistoryBtn = document.getElementById("vocabularySampleHistoryBtn");
     elements.vocabularySamplePastHistoryBtn = document.getElementById("vocabularySamplePastHistoryBtn");
     elements.vocabularyTodayHistoryList = document.getElementById("vocabularyTodayHistoryList");
+    elements.vocabularyPastHistorySummary = document.getElementById("vocabularyPastHistorySummary");
+    elements.vocabularyPastHistoryFilters = document.getElementById("vocabularyPastHistoryFilters");
     elements.vocabularyPastHistoryList = document.getElementById("vocabularyPastHistoryList");
     elements.vocabularyPastHistoryBackBtn = document.getElementById("vocabularyPastHistoryBackBtn");
     elements.vocabularyTodayHistoryBackBtn = document.getElementById("vocabularyTodayHistoryBackBtn");
@@ -13745,6 +13823,15 @@
       }
       renderSpeakingHome();
     });
+    if (elements.vocabularyPastHistoryFilters) {
+      elements.vocabularyPastHistoryFilters.querySelectorAll(".vocabulary-history-filter-btn").forEach((button) => {
+        button.addEventListener("click", () => {
+          const filterValue = String(button.dataset.filter || "all");
+          state.vocabularyPastHistoryFilter = ["all", "learning", "pending", "checked"].includes(filterValue) ? filterValue : "all";
+          renderVocabularyPastHistoryScreen();
+        });
+      });
+    }
     if (elements.vocabularyTeacherCheckBtn) {
       elements.vocabularyTeacherCheckBtn.addEventListener("click", openVocabularyTeacherCheckScreen);
     }

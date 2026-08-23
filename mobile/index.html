@@ -421,6 +421,13 @@
         <main class="stack-layout">
           <section class="panel vocabulary-history-panel">
             <h2>過去の履歴</h2>
+            <div id="vocabularyPastHistorySummary" class="vocabulary-history-summary" aria-live="polite"></div>
+            <div id="vocabularyPastHistoryFilters" class="vocabulary-history-filter-row" role="tablist" aria-label="過去の履歴絞り込み">
+              <button type="button" class="vocabulary-history-filter-btn is-active" data-filter="all" aria-pressed="true">すべて</button>
+              <button type="button" class="vocabulary-history-filter-btn" data-filter="learning" aria-pressed="false">学習中</button>
+              <button type="button" class="vocabulary-history-filter-btn is-pending" data-filter="pending" aria-pressed="false">先生チェック待ち</button>
+              <button type="button" class="vocabulary-history-filter-btn" data-filter="checked" aria-pressed="false">チェック済み</button>
+            </div>
             <div id="vocabularyPastHistoryList" class="vocabulary-history-list"></div>
           </section>
         </main>

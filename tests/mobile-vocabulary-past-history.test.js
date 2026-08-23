@@ -21,6 +21,13 @@ const checks = [
   {
     name: "past history display preserves current teacher-check state separately from self judgments",
     ok: /getVocabularyPastHistoryStatus/.test(source) && /teacherCheckState/.test(source)
+  },
+  {
+    name: "past history summary uses learning/pending/checked categories without altering the row layout",
+    ok: /getVocabularyPastHistoryEntryCategory\s*\(/.test(source)
+      && /getVocabularyPastHistorySummary\s*\(/.test(source)
+      && /vocabularyPastHistorySummary/.test(html)
+      && /vocabulary-history-filter-btn/.test(html)
   }
 ];
 

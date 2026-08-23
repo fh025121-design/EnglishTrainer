@@ -2041,6 +2041,63 @@ select,
   -webkit-backdrop-filter: blur(10px);
 }
 
+.vocabulary-history-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 12px;
+}
+
+.vocabulary-history-summary-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.vocabulary-history-summary-item.is-pending {
+  background: rgba(255, 193, 7, 0.12);
+  border-color: rgba(255, 193, 7, 0.28);
+  color: #ffe7a5;
+}
+
+.vocabulary-history-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.vocabulary-history-filter-btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vocabulary-history-filter-btn.is-active {
+  background: rgba(139, 192, 255, 0.18);
+  border-color: rgba(139, 192, 255, 0.48);
+  color: #eaf5ff;
+}
+
+.vocabulary-history-filter-btn.is-pending.is-active {
+  background: rgba(255, 193, 7, 0.16);
+  border-color: rgba(255, 193, 7, 0.4);
+}
+
 .vocabulary-history-list {
   display: flex;
   flex-direction: column;
