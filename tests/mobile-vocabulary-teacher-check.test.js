@@ -51,6 +51,13 @@ const checks = [
       && /scheduleMobileVocabularySync\(\)/.test(source)
   },
   {
+    name: "teacher check summary keeps 10-question pagination and prev/next draft navigation",
+    ok: /pageSize\s*=\s*10/.test(source)
+      && /次の10問/.test(source)
+      && /前の10問/.test(source)
+      && /pageIndex/.test(source)
+  },
+  {
     name: "teacher check merge compares dedicated teacher-check timestamps to keep the newest status",
     ok: /teacherCheckUpdatedAt/.test(source)
       && /pronunciationTeacherCheckUpdatedAt/.test(source)

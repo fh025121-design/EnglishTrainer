@@ -4983,12 +4983,42 @@
     return getVocabularyTeacherCheckCandidates();
   }
 
+  function getVocabularyTeacherCheckPageInfo(session) {
+    const candidates = Array.isArray(session?.candidates) ? session.candidates : [];
+    const pageSize = 10;
+    const total = candidates.length;
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    const pageIndex = Math.max(0, Math.min(Number(session?.pageIndex || 0) || 0, pageCount - 1));
+    const startIndex = pageIndex * pageSize;
+    const endIndex = Math.min(total, startIndex + pageSize);
+    const pageCandidates = candidates.slice(startIndex, endIndex);
+    const startNumber = total ? startIndex + 1 : 0;
+    const endNumber = total ? endIndex : 0;
+    const isCurrentPageComplete = pageCandidates.every((candidate) => {
+      const decision = session?.decisions?.[candidate.id] || { pronunciation: "none", meaning: "none" };
+      return String(decision.pronunciation || "none").trim() !== "none" && String(decision.meaning || "none").trim() !== "none";
+    });
+    return {
+      pageSize,
+      total,
+      pageCount,
+      pageIndex,
+      startIndex,
+      endIndex,
+      startNumber,
+      endNumber,
+      pageCandidates,
+      isCurrentPageComplete
+    };
+  }
+
   function renderVocabularyTeacherCheckScreen() {
     if (!state.teacherCheckSession) {
       state.teacherCheckSession = {
         candidates: buildVocabularyTeacherCheckCandidates(),
         decisions: {},
-        showMeaningIds: []
+        showMeaningIds: [],
+        pageIndex: 0
       };
     }
 
@@ -4996,9 +5026,15 @@
     const candidates = Array.isArray(session.candidates) ? session.candidates : [];
     const contentEl = elements.vocabularyTeacherCheckContent;
     const metaEl = elements.vocabularyTeacherCheckMeta;
+    const prevBtn = elements.vocabularyTeacherCheckPrevBtn;
+    const nextBtn = elements.vocabularyTeacherCheckNextBtn;
+    const completeBtn = elements.vocabularyTeacherCheckCompleteBtn;
     if (!contentEl || !metaEl) return;
     if (!candidates.length) {
       metaEl.textContent = "0 / 0";
+      if (prevBtn) prevBtn.classList.add("hidden");
+      if (nextBtn) nextBtn.classList.add("hidden");
+      if (completeBtn) completeBtn.classList.add("hidden");
       contentEl.innerHTML = '<p class="status-text">先生チェック対象の単語はありません。</p>';
       return;
     }
@@ -5007,19 +5043,35 @@
       session.showMeaningIds = [];
     }
 
+    const pageInfo = getVocabularyTeacherCheckPageInfo(session);
+    session.pageIndex = pageInfo.pageIndex;
     const decisions = session.decisions && typeof session.decisions === "object" ? session.decisions : {};
     const showMeaningIds = new Set(session.showMeaningIds.map((value) => String(value || "").trim()).filter(Boolean));
-    metaEl.textContent = `${candidates.length} / ${candidates.length}`;
+    metaEl.textContent = `${pageInfo.startNumber}～${pageInfo.endNumber} / ${pageInfo.total}`;
+
+    if (prevBtn) {
+      prevBtn.classList.toggle("hidden", pageInfo.pageIndex === 0);
+      prevBtn.textContent = "前の10問";
+    }
+    if (nextBtn) {
+      nextBtn.classList.toggle("hidden", pageInfo.pageIndex >= pageInfo.pageCount - 1);
+      nextBtn.textContent = "次の10問";
+    }
+    if (completeBtn) {
+      completeBtn.classList.toggle("hidden", pageInfo.pageIndex < pageInfo.pageCount - 1);
+      completeBtn.textContent = "チェック完了";
+    }
 
     contentEl.innerHTML = `
       <div class="vocabulary-teacher-check-list">
-        ${candidates.map((candidate, index) => {
+        ${pageInfo.pageCandidates.map((candidate, index) => {
           const decision = decisions[candidate.id] || { pronunciation: "none", meaning: "none" };
           const showMeaning = showMeaningIds.has(candidate.id);
+          const pageOffset = pageInfo.startIndex + index + 1;
           return `
             <div class="vocabulary-teacher-check-card" data-teacher-check-card-id="${String(candidate.id || "").trim()}">
               <div class="vocabulary-teacher-check-header">
-                <span class="vocabulary-teacher-check-index">${index + 1}.</span>
+                <span class="vocabulary-teacher-check-index">${pageOffset}.</span>
                 <span class="vocabulary-teacher-check-grade">${candidate.grade}級</span>
                 <span class="vocabulary-teacher-check-part-of-speech">${candidate.partOfSpeech}</span>
                 <button type="button" class="secondary-btn vocabulary-teacher-check-audio-btn" data-teacher-check-action="audio" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-audio="${String(candidate.word || "").trim()}">
@@ -13837,6 +13889,37 @@
     }
     if (elements.vocabularyTeacherCheckBackBtn) {
       elements.vocabularyTeacherCheckBackBtn.addEventListener("click", openVocabularyPastHistoryScreen);
+    }
+    if (elements.vocabularyTeacherCheckPrevBtn) {
+      elements.vocabularyTeacherCheckPrevBtn.addEventListener("click", () => {
+        if (!state.teacherCheckSession) return;
+        const session = state.teacherCheckSession;
+        const pageInfo = getVocabularyTeacherCheckPageInfo(session);
+        if (pageInfo.pageIndex <= 0) return;
+        session.pageIndex = pageInfo.pageIndex - 1;
+        renderVocabularyTeacherCheckScreen();
+      });
+    }
+    if (elements.vocabularyTeacherCheckNextBtn) {
+      elements.vocabularyTeacherCheckNextBtn.addEventListener("click", () => {
+        if (!state.teacherCheckSession) return;
+        const session = state.teacherCheckSession;
+        const pageInfo = getVocabularyTeacherCheckPageInfo(session);
+        const pageCandidates = pageInfo.pageCandidates;
+        const hasUnfinished = pageCandidates.some((candidate) => {
+          const decision = session.decisions?.[candidate.id] || { pronunciation: "none", meaning: "none" };
+          return String(decision.pronunciation || "none").trim() === "none" || String(decision.meaning || "none").trim() === "none";
+        });
+        if (hasUnfinished) {
+          const metaEl = elements.vocabularyTeacherCheckMeta;
+          if (metaEl) metaEl.textContent = "未判定が残っています";
+          window.alert("現在の10問に未判定があります。発音と意味の両方を判定してください。");
+          return;
+        }
+        if (pageInfo.pageIndex >= pageInfo.pageCount - 1) return;
+        session.pageIndex = pageInfo.pageIndex + 1;
+        renderVocabularyTeacherCheckScreen();
+      });
     }
     if (elements.vocabularyTeacherCheckCompleteBtn) {
       elements.vocabularyTeacherCheckCompleteBtn.addEventListener("click", () => {
