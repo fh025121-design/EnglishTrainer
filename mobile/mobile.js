@@ -3420,11 +3420,10 @@
   }
 
   function getVocabularyWordProgressStatus(entry) {
-    const pronunciationStatus = getVocabularySkillStatus(entry.pronunciation);
-    const meaningStatus = getVocabularySkillStatus(entry.meaningState);
-    if (entry.pronunciation.level >= 5 && entry.meaningState.level >= 5) return "mastered";
-    if (pronunciationStatus === "due" || meaningStatus === "due") return "due";
-    if (pronunciationStatus === "learning" || meaningStatus === "learning") return "learning";
+    const pronunciationLevel = Number(entry?.pronunciation?.level ?? 0);
+    const meaningLevel = Number(entry?.meaningState?.level ?? 0);
+    if (pronunciationLevel >= 5 && meaningLevel >= 5) return "mastered";
+    if (pronunciationLevel > 0 && meaningLevel > 0) return "learning";
     return "unlearned";
   }
 
@@ -7803,7 +7802,7 @@
     const learnedCount = studyEntries.filter((entry) => {
       const pronLevel = Number(entry?.pronunciation?.level || 0) || 0;
       const meaningLevel = Number(entry?.meaningState?.level || 0) || 0;
-      return pronLevel > 0 || meaningLevel > 0;
+      return pronLevel > 0 && meaningLevel > 0;
     }).length;
     const todayHistoryMap = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
       ? state.vocabularyTodayHistoryMap
@@ -11884,7 +11883,7 @@
     const pronunciationLevel = Number(entry?.pronunciation?.level ?? 0);
     const meaningLevel = Number(entry?.meaningState?.level ?? 0);
     if (pronunciationLevel >= 5 && meaningLevel >= 5) return "mastered";
-    if (pronunciationLevel > 0 || meaningLevel > 0) return "learning";
+    if (pronunciationLevel > 0 && meaningLevel > 0) return "learning";
     return "unlearned";
   }
 
