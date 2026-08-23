@@ -15064,6 +15064,7 @@
 
   function initialize() {
     window.startTranslationTraining = startTranslationTraining;
+    window.startVocabularySample = startVocabularySample;
     loadState();
     mobilePendingLearningHistoryEntries = loadMobilePendingLearningHistoryEntries();
     loadSpeakingProgress();
