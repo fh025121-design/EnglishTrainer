@@ -39,7 +39,17 @@ const checks = [
     name: "today history empty remote snapshot does not overwrite local entries",
     ok: /!incomingMap/.test(source)
       && /Object\.keys\(incomingMap\)\.length/.test(source)
-      && /renderVocabularyTodayHistoryScreen\(\)/.test(source)
+      && /hasLocalEntries/.test(source)
+      && /Object\.keys\(localBaseline \|\| \{\}\)\.length > 0/.test(source)
+      && /return;\s*\n\s*}\s*\n\s*state\.vocabularyTodayHistoryMap = \{\};/.test(source)
+  },
+  {
+    name: "son reload stays on home and suppresses history re-show after F5",
+    ok: /shouldSuppressVocabularyTodayHistoryRenderAfterReload\(\)/.test(source)
+      && /isCurrentSonLoginForMobileLearningHistory\(\)/.test(source)
+      && /isMobileReloadNavigation\(\)/.test(source)
+      && /showScreen\(["']homeScreen["']\)/.test(source)
+      && /renderHome\(\);\s*return;/.test(source)
   },
   {
     name: "today history merges legacy and uid-scoped local storage safely",

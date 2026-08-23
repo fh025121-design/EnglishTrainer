@@ -4388,6 +4388,13 @@
       ? state.vocabularyTodayHistoryMap
       : {};
 
+    console.log("[TRACE-V82] loadVocabularyTodayHistoryMap start", {
+      currentUid,
+      previousEntries: Object.keys(previousMap).length,
+      previousTodayKey: getVocabularyHistoryTodayKey(),
+      currentScreen: state.currentScreen
+    });
+
     const candidateKeys = [];
     const pushUniqueKey = (storageKey) => {
       if (!storageKey || !String(storageKey || "").trim()) return;
@@ -4430,6 +4437,13 @@
     if (currentUid) {
       vocabularyTodayHistoryOwnerUid = currentUid;
     }
+    console.log("[TRACE-V82] loadVocabularyTodayHistoryMap end", {
+      currentUid,
+      candidateKeys,
+      nextEntries: Object.keys(nextMap).length,
+      todayEntries: Object.keys(nextMap[getVocabularyHistoryTodayKey()] || {}).length,
+      currentScreen: state.currentScreen
+    });
     return state.vocabularyTodayHistoryMap;
   }
 
@@ -4440,6 +4454,13 @@
         ? state.vocabularyTodayHistoryMap
         : {};
       const storageKeys = [];
+      console.log("[TRACE-V82] saveVocabularyTodayHistoryMap before", {
+        currentUid,
+        currentScreen: state.currentScreen,
+        bucketKeys: Object.keys(bucket).length,
+        todayEntries: Object.keys(bucket[getVocabularyHistoryTodayKey()] || {}).length,
+        bucketPreview: bucket[getVocabularyHistoryTodayKey()] ? Object.keys(bucket[getVocabularyHistoryTodayKey()]) : []
+      });
       if (currentUid) {
         storageKeys.push(getMobileVocabularyTodayHistoryStorageKey(currentUid));
       }
@@ -4454,6 +4475,13 @@
       if (currentUid) {
         scheduleMobileVocabularyTodayHistorySync();
       }
+      console.log("[TRACE-V82] saveVocabularyTodayHistoryMap after", {
+        currentUid,
+        currentScreen: state.currentScreen,
+        storedKeys: storageKeys,
+        bucketKeys: Object.keys(bucket).length,
+        todayEntries: Object.keys(bucket[getVocabularyHistoryTodayKey()] || {}).length
+      });
     } catch (_error) {
       // Ignore storage failures; keep the in-memory map for the current session.
     }
@@ -4533,6 +4561,19 @@
       });
   }
 
+  function shouldSuppressVocabularyTodayHistoryRenderAfterReload() {
+    if (!isCurrentSonLoginForMobileLearningHistory()) {
+      return false;
+    }
+    if (getVocabularyTeacherCheckRouteScreen()) {
+      return false;
+    }
+    return Boolean(isMobileReloadNavigation()) || Boolean(
+      sessionStorage.getItem(MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY) === "1"
+      || localStorage.getItem(MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY) === "1"
+    );
+  }
+
   function handleVocabularyTodayHistorySyncRemoteSnapshot(snapshot) {
     if (!snapshot?.ok || !snapshot.exists || !snapshot.historyMap) {
       return;
@@ -4541,9 +4582,16 @@
     const incomingMap = normalizeVocabularyTodayHistoryMap(snapshot.historyMap);
     if (!incomingMap || !Object.keys(incomingMap).length) {
       const localBaseline = loadVocabularyTodayHistoryMap();
-      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
-      saveVocabularyTodayHistoryMap();
-      if (state.currentScreen === "vocabularyTodayHistoryScreen") {
+      const hasLocalEntries = Object.keys(localBaseline || {}).length > 0;
+      if (hasLocalEntries) {
+        state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
+        if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
+          renderVocabularyTodayHistoryScreen();
+        }
+        return;
+      }
+      state.vocabularyTodayHistoryMap = {};
+      if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
         renderVocabularyTodayHistoryScreen();
       }
       return;
@@ -4556,7 +4604,7 @@
       const mobileSyncKey = getMobileVocabularyTodayHistoryStorageKey(uid);
       window.localStorage.setItem(mobileSyncKey, JSON.stringify(state.vocabularyTodayHistoryMap));
     }
-    if (state.currentScreen === "vocabularyTodayHistoryScreen") {
+    if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
       renderVocabularyTodayHistoryScreen();
     }
   }
@@ -4616,7 +4664,7 @@
       vocabularyTodayHistorySyncReady = true;
       vocabularyTodayHistorySyncAllowCreate = true;
     }
-    if (state.currentScreen === "vocabularyTodayHistoryScreen") {
+    if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
       renderVocabularyTodayHistoryScreen();
     }
 
@@ -4922,6 +4970,14 @@
   }
 
   function renderVocabularyTodayHistoryScreen() {
+    if (shouldSuppressVocabularyTodayHistoryRenderAfterReload()) {
+      if (state.currentScreen !== "homeScreen") {
+        showScreen("homeScreen");
+      }
+      renderHome();
+      return;
+    }
+
     const list = elements.vocabularyTodayHistoryList;
     if (!list) return;
 
@@ -10523,6 +10579,12 @@
   }
 
   function showScreen(screenId) {
+    console.log("[TRACE-V82] showScreen start", {
+      screenId,
+      previousScreen: state.currentScreen,
+      navigationType: window.performance && window.performance.getEntriesByType ? (window.performance.getEntriesByType("navigation")[0]?.type || "unknown") : "unknown",
+      reloadGuard: sessionStorage.getItem("englishTrainerMobileReloadGuard") || localStorage.getItem("englishTrainerMobileReloadGuard") || null
+    });
     ["homeScreen", "acquiredPointsScreen", "speakingHomeScreen", "speakingReviewTopScreen", "speakingReviewCompleteScreen", "pointRewardScreen", "conversationSelectScreen", "conversationDaySelectScreen", "speakingVocabScreen", "vocabularySampleScreen", "vocabularyTodayHistoryScreen", "vocabularyPastHistoryScreen", "vocabularyTeacherCheckScreen", "vocabularyProgressListScreen", "speakingWordWeekSelectScreen", "speakingWordDaySelectScreen", "speakingWordPracticeScreen", "speakingWordCompleteScreen", "conversationPracticeScreen", "conversationCompleteScreen", "studyScreen", "resultScreen", "settingsScreen", "mobileUpdateHistoryScreen", "mobileAdminLearningHistoryScreen", "wordOrderTrainingScreen", "translationTrainingScreen", "comingSoonScreen"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
@@ -10530,6 +10592,11 @@
       }
     });
     state.currentScreen = screenId;
+    console.log("[TRACE-V82] showScreen end", {
+      screenId,
+      currentScreen: state.currentScreen,
+      todayHistoryEntries: Object.keys((state.vocabularyTodayHistoryMap || {})[getVocabularyHistoryTodayKey()] || {}).length
+    });
     renderMobileHomeAccountAlias();
   }
 
