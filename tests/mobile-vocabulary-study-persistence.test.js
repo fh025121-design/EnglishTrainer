@@ -24,6 +24,13 @@ const checks = [
   {
     name: "today history is preserved through the dedicated storage key and load path",
     ok: /MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY/.test(source) && /loadVocabularyTodayHistoryMap\s*\(/.test(source) && /normalizeVocabularyTodayHistoryMap/.test(source)
+  },
+  {
+    name: "reload guard persists across the hard-refresh boundary and recovery reads all vocabulary history keys",
+    ok: /MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY/.test(source)
+      && /setMobileReloadNavigationGuard\s*\(/.test(source)
+      && /consumeMobileReloadNavigationGuard\s*\(/.test(source)
+      && /localStorage\.key\(index\)|startsWith\(storagePrefix\)/.test(source)
   }
 ];
 

@@ -7,6 +7,7 @@
   const MOBILE_FAMILY_SON_UID_CACHE_KEY = "english-trainer-mobile-son-uid-v1";
   const MOBILE_PENDING_LEARNING_HISTORY_STORAGE_KEY = "english-trainer-mobile-pending-learning-history-v1";
   const MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY = "english-trainer-mobile-vocabulary-today-history-v1";
+  const MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY = "englishTrainerMobileReloadGuard";
   const MOBILE_VOCABULARY_RESET_STORAGE_KEY = "english-trainer-mobile-vocabulary-reset-v1";
   const MOBILE_VOCABULARY_NORMAL_PROGRESS_STORAGE_KEY = "english-trainer-mobile-vocabulary-normal-progress-v1";
   const MOBILE_VOCABULARY_NORMAL_QUEUE_STORAGE_KEY = "english-trainer-mobile-vocabulary-normal-queue-v1";
@@ -4388,10 +4389,31 @@
       : {};
 
     const candidateKeys = [];
+    const pushUniqueKey = (storageKey) => {
+      if (!storageKey || !String(storageKey || "").trim()) return;
+      if (!candidateKeys.includes(storageKey)) {
+        candidateKeys.push(storageKey);
+      }
+    };
+
     if (currentUid) {
-      candidateKeys.push(getMobileVocabularyTodayHistoryStorageKey(currentUid));
+      pushUniqueKey(getMobileVocabularyTodayHistoryStorageKey(currentUid));
     }
-    candidateKeys.push(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
+
+    try {
+      const storagePrefix = `${MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY}:`;
+      for (let index = 0; index < window.localStorage.length; index += 1) {
+        const storageKey = window.localStorage.key(index);
+        if (!storageKey || typeof storageKey !== "string") continue;
+        if (storageKey === MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY || storageKey.startsWith(storagePrefix)) {
+          pushUniqueKey(storageKey);
+        }
+      }
+    } catch (_error) {
+      // Ignore storage enumeration failures and fall back to the known keys below.
+    }
+
+    pushUniqueKey(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
 
     let nextMap = {};
     candidateKeys.forEach((storageKey) => {
@@ -13552,12 +13574,43 @@
     }
   }
 
+  function setMobileReloadNavigationGuard() {
+    try {
+      sessionStorage.setItem(MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY, "1");
+    } catch (_error) {
+      // noop
+    }
+    try {
+      localStorage.setItem(MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY, "1");
+    } catch (_error) {
+      // noop
+    }
+  }
+
+  function consumeMobileReloadNavigationGuard() {
+    const flag = sessionStorage.getItem(MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY) === "1"
+      || localStorage.getItem(MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY) === "1";
+    try {
+      sessionStorage.removeItem(MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY);
+    } catch (_error) {
+      // noop
+    }
+    try {
+      localStorage.removeItem(MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY);
+    } catch (_error) {
+      // noop
+    }
+    return flag;
+  }
+
   function isMobileReloadNavigation() {
     if (!window || !window.performance) return false;
     try {
       const entries = window.performance.getEntriesByType("navigation");
       if (entries && entries.length && entries[0] && entries[0].type) {
-        return entries[0].type === "reload";
+        if (entries[0].type === "reload") {
+          return true;
+        }
       }
     } catch (_error) {
       // noop
@@ -13570,7 +13623,7 @@
       // noop
     }
     try {
-      return sessionStorage.getItem("englishTrainerMobileReloadGuard") === "1";
+      return consumeMobileReloadNavigationGuard();
     } catch (_error) {
       return false;
     }
@@ -13579,18 +13632,13 @@
   function handlePageHide() {
     pauseMobileLearningHistorySession(Date.now());
     stopSpeakingAudio();
-    try {
-      sessionStorage.setItem("englishTrainerMobileReloadGuard", "1");
-    } catch (_error) {
-      // noop
-    }
+    setMobileReloadNavigationGuard();
   }
 
   function handlePageShow() {
     try {
-      const reloadGuard = sessionStorage.getItem("englishTrainerMobileReloadGuard") === "1";
+      const reloadGuard = consumeMobileReloadNavigationGuard();
       if (reloadGuard || (isMobileReloadNavigation() && !getVocabularyTeacherCheckRouteScreen())) {
-        sessionStorage.removeItem("englishTrainerMobileReloadGuard");
         showScreen("homeScreen");
         renderHome();
       }
@@ -14495,11 +14543,7 @@
     window.addEventListener("pageshow", handlePageShow);
     window.addEventListener("pagehide", handlePageHide);
     window.addEventListener("beforeunload", () => {
-      try {
-        sessionStorage.setItem("englishTrainerMobileReloadGuard", "1");
-      } catch (_error) {
-        // noop
-      }
+      setMobileReloadNavigationGuard();
     });
     window.addEventListener("online", () => {
       flushMobilePendingLearningHistoryEntries().catch(() => 0);
