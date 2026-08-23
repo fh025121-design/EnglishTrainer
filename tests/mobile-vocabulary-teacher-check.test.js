@@ -42,6 +42,19 @@ const checks = [
       && /意味を見る/.test(source)
       && /showMeaningIds/.test(source)
       && /session\.decisions/.test(source)
+  },
+  {
+    name: "teacher check completion persists the finalized state to localStorage and Firestore sync",
+    ok: /vocabularyTeacherCheckCompleteBtn/.test(source)
+      && /saveState\(\)/.test(source)
+      && /saveMobileVocabularyStateForSync\(state\.vocabularyStudy/.test(source)
+      && /scheduleMobileVocabularySync\(\)/.test(source)
+  },
+  {
+    name: "teacher check merge compares dedicated teacher-check timestamps to keep the newest status",
+    ok: /teacherCheckUpdatedAt/.test(source)
+      && /pronunciationTeacherCheckUpdatedAt/.test(source)
+      && /meaningTeacherCheckUpdatedAt/.test(source)
   }
 ];
 

@@ -3201,9 +3201,11 @@
       lastJudgedBy: "self",
       teacherCheckStatus,
       teacherCheckState: normalizedTeacherCheckState,
+      teacherCheckUpdatedAt: null,
       ...overrides,
       teacherCheckStatus: String(overrides.teacherCheckStatus || normalizedTeacherCheckState.pronunciation || normalizedTeacherCheckState.meaning || "none").trim() || "none",
-      teacherCheckState: createVocabularyTeacherCheckState(overrides.teacherCheckState || {})
+      teacherCheckState: createVocabularyTeacherCheckState(overrides.teacherCheckState || {}),
+      teacherCheckUpdatedAt: Number(overrides.teacherCheckUpdatedAt ?? overrides.teacherCheckUpdated ?? 0) || null
     };
   }
 
@@ -3243,6 +3245,10 @@
     const wordId = String(entry?.id || entry?.word || `${index}-${word}`);
     const pronunciation = entry?.pronunciation || {};
     const meaning = entry?.meaningState || {};
+    const pronunciationTeacherCheckValue = String(entry?.pronunciationTeacherCheck || entry?.pronunciation?.teacherCheckStatus || entry?.teacherCheckState?.pronunciation || "none").trim() || "none";
+    const meaningTeacherCheckValue = String(entry?.meaningTeacherCheck || entry?.meaningState?.teacherCheckStatus || entry?.teacherCheckState?.meaning || "none").trim() || "none";
+    const pronunciationTeacherCheckUpdatedAt = Number(entry?.pronunciationTeacherCheckUpdatedAt || pronunciation.teacherCheckUpdatedAt || pronunciation.teacherCheckState?.pronunciationUpdatedAt || entry?.lastJudgedAt || pronunciation.lastJudgedAt || 0) || 0;
+    const meaningTeacherCheckUpdatedAt = Number(entry?.meaningTeacherCheckUpdatedAt || meaning.teacherCheckUpdatedAt || meaning.teacherCheckState?.meaningUpdatedAt || entry?.lastJudgedAt || meaning.lastJudgedAt || 0) || 0;
     return {
       id: wordId,
       word,
@@ -3254,21 +3260,27 @@
       phonetic: entry?.phonetic || "",
       exampleSentence: entry?.exampleSentence || "",
       exampleTranslation: entry?.exampleTranslation || "",
-      pronunciationTeacherCheck: String(entry?.pronunciationTeacherCheck || entry?.pronunciation?.teacherCheckStatus || entry?.teacherCheckState?.pronunciation || "none").trim() || "none",
-      meaningTeacherCheck: String(entry?.meaningTeacherCheck || entry?.meaningState?.teacherCheckStatus || entry?.teacherCheckState?.meaning || "none").trim() || "none",
+      pronunciationTeacherCheck: pronunciationTeacherCheckValue,
+      meaningTeacherCheck: meaningTeacherCheckValue,
+      pronunciationTeacherCheckUpdatedAt,
+      meaningTeacherCheckUpdatedAt,
       pronunciation: createVocabularySkillState({
         currentState: pronunciation.currentState || "unlearned",
         level: Number(pronunciation.level || 0),
         nextReviewAt: pronunciation.nextReviewAt || null,
         lastJudgedAt: pronunciation.lastJudgedAt || null,
         lastJudgedBy: pronunciation.lastJudgedBy || "self",
-        teacherCheckStatus: String(entry?.pronunciationTeacherCheck || entry?.pronunciation?.teacherCheckStatus || entry?.teacherCheckState?.pronunciation || "none").trim() || "none",
+        teacherCheckStatus: pronunciationTeacherCheckValue,
         teacherCheckState: createVocabularyTeacherCheckState({
-          pronunciation: String(entry?.pronunciationTeacherCheck || entry?.pronunciation?.teacherCheckStatus || entry?.teacherCheckState?.pronunciation || "none").trim() || "none",
-          meaning: String(entry?.meaningTeacherCheck || entry?.meaningState?.teacherCheckStatus || entry?.teacherCheckState?.meaning || "none").trim() || "none"
+          pronunciation: pronunciationTeacherCheckValue,
+          meaning: meaningTeacherCheckValue
         }),
+        teacherCheckUpdatedAt: Number(pronunciation.teacherCheckUpdatedAt || pronunciationTeacherCheckUpdatedAt || 0) || null,
         ...pronunciation,
-        teacherCheckState: createVocabularyTeacherCheckState(pronunciation.teacherCheckState || {})
+        teacherCheckState: createVocabularyTeacherCheckState(pronunciation.teacherCheckState || {
+          pronunciation: pronunciationTeacherCheckValue,
+          meaning: meaningTeacherCheckValue
+        })
       }),
       meaningState: createVocabularySkillState({
         currentState: meaning.currentState || "unlearned",
@@ -3276,13 +3288,17 @@
         nextReviewAt: meaning.nextReviewAt || null,
         lastJudgedAt: meaning.lastJudgedAt || null,
         lastJudgedBy: meaning.lastJudgedBy || "self",
-        teacherCheckStatus: String(entry?.meaningTeacherCheck || entry?.meaningState?.teacherCheckStatus || entry?.teacherCheckState?.meaning || "none").trim() || "none",
+        teacherCheckStatus: meaningTeacherCheckValue,
         teacherCheckState: createVocabularyTeacherCheckState({
-          pronunciation: String(entry?.pronunciationTeacherCheck || entry?.pronunciation?.teacherCheckStatus || entry?.teacherCheckState?.pronunciation || "none").trim() || "none",
-          meaning: String(entry?.meaningTeacherCheck || entry?.meaningState?.teacherCheckStatus || entry?.teacherCheckState?.meaning || "none").trim() || "none"
+          pronunciation: pronunciationTeacherCheckValue,
+          meaning: meaningTeacherCheckValue
         }),
+        teacherCheckUpdatedAt: Number(meaning.teacherCheckUpdatedAt || meaningTeacherCheckUpdatedAt || 0) || null,
         ...meaning,
-        teacherCheckState: createVocabularyTeacherCheckState(meaning.teacherCheckState || {})
+        teacherCheckState: createVocabularyTeacherCheckState(meaning.teacherCheckState || {
+          pronunciation: pronunciationTeacherCheckValue,
+          meaning: meaningTeacherCheckValue
+        })
       }),
       lastJudgedAt: entry?.lastJudgedAt || null,
       lastJudgedBy: entry?.lastJudgedBy || "self",
@@ -3372,7 +3388,16 @@
     return "unlearned";
   }
 
-  function applyTeacherCheckState(skillState, fieldName, status) {
+  function getVocabularyTeacherCheckUpdatedAtForField(entry, fieldName) {
+    if (!entry || typeof entry !== "object") return 0;
+    const skill = fieldName === "meaning" ? entry.meaningState : entry.pronunciation;
+    const fieldKey = fieldName === "meaning" ? "meaningTeacherCheckUpdatedAt" : "pronunciationTeacherCheckUpdatedAt";
+    const directValue = Number(entry?.[fieldKey] ?? skill?.teacherCheckUpdatedAt ?? skill?.teacherCheckState?.[`${fieldName}UpdatedAt`] ?? 0) || 0;
+    if (directValue) return directValue;
+    return Number(skill?.lastJudgedAt || entry?.lastJudgedAt || entry?.createdAt || 0) || 0;
+  }
+
+  function applyTeacherCheckState(skillState, fieldName, status, options = {}) {
     if (!skillState || !skillState.teacherCheckState || typeof skillState.teacherCheckState !== "object") {
       skillState.teacherCheckState = createVocabularyTeacherCheckState();
     }
@@ -3380,8 +3405,16 @@
       return skillState;
     }
     const nextStatus = status === "ok" ? "◎" : status === "ng" ? "△" : "none";
+    const now = Number(options.now || Date.now()) || Date.now();
+    skillState.teacherCheckUpdatedAt = now;
     skillState.teacherCheckState[fieldName] = nextStatus;
     skillState.teacherCheckStatus = nextStatus === "none" ? "none" : nextStatus;
+    if (options.entry && typeof options.entry === "object") {
+      const topLevelField = fieldName === "meaning" ? "meaningTeacherCheck" : "pronunciationTeacherCheck";
+      const topLevelTimestampField = fieldName === "meaning" ? "meaningTeacherCheckUpdatedAt" : "pronunciationTeacherCheckUpdatedAt";
+      options.entry[topLevelField] = nextStatus;
+      options.entry[topLevelTimestampField] = now;
+    }
     return skillState;
   }
 
@@ -7544,10 +7577,54 @@
         mergedById.set(wordId, normalizeVocabularyWordRecord(baseEntry, mergedById.size));
         return;
       }
+
+      const leftPronUpdated = getVocabularyTeacherCheckUpdatedAtForField(baseEntry, "pronunciation");
+      const rightPronUpdated = getVocabularyTeacherCheckUpdatedAtForField(incomingEntry, "pronunciation");
+      const leftMeaningUpdated = getVocabularyTeacherCheckUpdatedAtForField(baseEntry, "meaning");
+      const rightMeaningUpdated = getVocabularyTeacherCheckUpdatedAtForField(incomingEntry, "meaning");
       const leftUpdated = Number(baseEntry?.lastJudgedAt || baseEntry?.createdAt || 0) || 0;
       const rightUpdated = Number(incomingEntry?.lastJudgedAt || incomingEntry?.createdAt || 0) || 0;
-      const winner = rightUpdated >= leftUpdated ? incomingEntry : baseEntry;
-      mergedById.set(wordId, normalizeVocabularyWordRecord(winner, mergedById.size));
+
+      const mergedEntry = normalizeVocabularyWordRecord({ ...baseEntry }, mergedById.size);
+      const pronStatusSource = rightPronUpdated >= leftPronUpdated ? incomingEntry : baseEntry;
+      const meaningStatusSource = rightMeaningUpdated >= leftMeaningUpdated ? incomingEntry : baseEntry;
+      const pronStatus = String(pronStatusSource?.pronunciationTeacherCheck || pronStatusSource?.pronunciation?.teacherCheckStatus || pronStatusSource?.teacherCheckState?.pronunciation || "none").trim() || "none";
+      const meaningStatus = String(meaningStatusSource?.meaningTeacherCheck || meaningStatusSource?.meaningState?.teacherCheckStatus || meaningStatusSource?.teacherCheckState?.meaning || "none").trim() || "none";
+      const pronTimestamp = Math.max(leftPronUpdated, rightPronUpdated);
+      const meaningTimestamp = Math.max(leftMeaningUpdated, rightMeaningUpdated);
+
+      mergedEntry.pronunciationTeacherCheck = pronStatus;
+      mergedEntry.meaningTeacherCheck = meaningStatus;
+      mergedEntry.pronunciationTeacherCheckUpdatedAt = pronTimestamp;
+      mergedEntry.meaningTeacherCheckUpdatedAt = meaningTimestamp;
+      mergedEntry.pronunciation = createVocabularySkillState({
+        ...mergedEntry.pronunciation,
+        teacherCheckStatus: pronStatus,
+        teacherCheckState: createVocabularyTeacherCheckState({
+          pronunciation: pronStatus,
+          meaning: meaningStatus
+        }),
+        teacherCheckUpdatedAt: pronTimestamp,
+        lastJudgedAt: mergedEntry.pronunciation?.lastJudgedAt || null,
+        lastJudgedBy: mergedEntry.pronunciation?.lastJudgedBy || "self"
+      });
+      mergedEntry.meaningState = createVocabularySkillState({
+        ...mergedEntry.meaningState,
+        teacherCheckStatus: meaningStatus,
+        teacherCheckState: createVocabularyTeacherCheckState({
+          pronunciation: pronStatus,
+          meaning: meaningStatus
+        }),
+        teacherCheckUpdatedAt: meaningTimestamp,
+        lastJudgedAt: mergedEntry.meaningState?.lastJudgedAt || null,
+        lastJudgedBy: mergedEntry.meaningState?.lastJudgedBy || "self"
+      });
+      if (rightUpdated >= leftUpdated) {
+        mergedEntry.lastJudgedAt = incomingEntry.lastJudgedAt || mergedEntry.lastJudgedAt || null;
+        mergedEntry.lastJudgedBy = incomingEntry.lastJudgedBy || mergedEntry.lastJudgedBy || "self";
+      }
+
+      mergedById.set(wordId, mergedEntry);
     });
 
     const mergedEntries = [...mergedById.values()].filter(Boolean);
@@ -13694,6 +13771,7 @@
           return;
         }
 
+        const now = Date.now();
         Object.entries(session.decisions || {}).forEach(([wordId, decision]) => {
           if (!decision || typeof decision !== "object") return;
           const targetEntry = getVocabularyStudyEntryById(String(wordId || "").trim()) || null;
@@ -13703,13 +13781,23 @@
           const meaningSkill = targetEntry.meaningState || null;
 
           if (decision.pronunciation && decision.pronunciation !== "none" && pronunciationSkill) {
-            applyTeacherCheckState(pronunciationSkill, "pronunciation", decision.pronunciation);
+            applyTeacherCheckState(pronunciationSkill, "pronunciation", decision.pronunciation, { entry: targetEntry, now });
           }
           if (decision.meaning && decision.meaning !== "none" && meaningSkill) {
-            applyTeacherCheckState(meaningSkill, "meaning", decision.meaning);
+            applyTeacherCheckState(meaningSkill, "meaning", decision.meaning, { entry: targetEntry, now });
+          }
+          if (decision.pronunciation === "none" && pronunciationSkill) {
+            applyTeacherCheckState(pronunciationSkill, "pronunciation", "none", { entry: targetEntry, now });
+          }
+          if (decision.meaning === "none" && meaningSkill) {
+            applyTeacherCheckState(meaningSkill, "meaning", "none", { entry: targetEntry, now });
           }
         });
 
+        state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(state.vocabularyStudy || buildVocabularyRealStudyState(), getVocabularyRealWordBank());
+        saveState();
+        saveMobileVocabularyStateForSync(state.vocabularyStudy, getMobileVocabularySyncUid());
+        scheduleMobileVocabularySync();
         state.teacherCheckSession = null;
         renderVocabularyPastHistoryScreen();
       });
