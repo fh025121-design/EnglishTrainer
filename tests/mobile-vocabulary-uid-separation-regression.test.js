@@ -58,4 +58,13 @@ test('№74-3 reset clears child vocabulary runtime and storage only', () => {
   assert.match(source, /window\.localStorage\.removeItem\(getMobileVocabularyTodayHistoryStorageKey\(targetUid\)\)/);
 });
 
-console.log(`UID ownership regression tests added (${scenarioNames.length + 3})`);
+test('№76-1 fixed child UID reset must ignore stale cached family UID and stale local data', () => {
+  assert.match(source, /fgoUGLIB3HNwtTiGnGmejp3zUSo2/);
+  assert.match(source, /MOBILE_FIXED_CHILD_UID/);
+  assert.match(source, /targetUid === MOBILE_FIXED_CHILD_UID/);
+  assert.match(source, /localHasStaleVocabularyState/);
+  assert.match(source, /remoteResetVersion > localResetVersion/);
+  assert.match(source, /versionIsBehind/);
+});
+
+console.log(`UID ownership regression tests added (${scenarioNames.length + 4})`);

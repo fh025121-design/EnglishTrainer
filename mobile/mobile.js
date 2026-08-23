@@ -10,7 +10,8 @@
   const MOBILE_VOCABULARY_RESET_STORAGE_KEY = "english-trainer-mobile-vocabulary-reset-v1";
   const MOBILE_VOCABULARY_NORMAL_PROGRESS_STORAGE_KEY = "english-trainer-mobile-vocabulary-normal-progress-v1";
   const MOBILE_VOCABULARY_NORMAL_QUEUE_STORAGE_KEY = "english-trainer-mobile-vocabulary-normal-queue-v1";
-  const MOBILE_VOCABULARY_CHILD_RESET_VERSION = 2;
+  const MOBILE_FIXED_CHILD_UID = "fgoUGLIB3HNwtTiGnGmejp3zUSo2";
+  const MOBILE_VOCABULARY_CHILD_RESET_VERSION = 1;
   const MOBILE_LEARNING_HISTORY_DEVICE_NAME_SON = "長男モバイル";
   const MOBILE_LEARNING_HISTORY_DEVICE_NAME_OTHER = "その他";
   const HOME_ACCOUNT_PARENT_EMAIL_PREFIX = "fh025";
@@ -3350,6 +3351,24 @@
     return studyState;
   }
 
+  function createEmptyVocabularyStudyState() {
+    return {
+      targetWordCount: 0,
+      entries: [],
+      progressMap: {},
+      session: {
+        questionCount: 0,
+        failedWordIds: [],
+        recentFailedWordIds: []
+      },
+      gradeSummary: {
+        5: { total: 0, mastered: 0 },
+        4: { total: 0, mastered: 0 },
+        3: { total: 0, mastered: 0 }
+      }
+    };
+  }
+
   function sanitizeVocabularyStudyState(rawStudy) {
     if (!rawStudy || typeof rawStudy !== "object") return null;
     const sourceEntries = Array.isArray(rawStudy.entries) ? rawStudy.entries : [];
@@ -3357,7 +3376,22 @@
       .map((entry, index) => normalizeVocabularyWordRecord(entry, index))
       .filter(Boolean);
     if (!normalizedEntries.length) {
-      return null;
+      const emptyStudy = createEmptyVocabularyStudyState();
+      if (Number.isFinite(Number(rawStudy.targetWordCount))) {
+        emptyStudy.targetWordCount = Math.max(0, Number(rawStudy.targetWordCount) || 0);
+      }
+      if (rawStudy.session && typeof rawStudy.session === "object") {
+        emptyStudy.session = {
+          questionCount: Math.max(0, Number(rawStudy.session.questionCount) || 0),
+          failedWordIds: Array.isArray(rawStudy.session.failedWordIds)
+            ? rawStudy.session.failedWordIds.map((value) => String(value || "").trim()).filter(Boolean)
+            : [],
+          recentFailedWordIds: Array.isArray(rawStudy.session.recentFailedWordIds)
+            ? rawStudy.session.recentFailedWordIds.map((value) => String(value || "").trim()).filter(Boolean)
+            : []
+        };
+      }
+      return emptyStudy;
     }
     const studyState = createVocabularyStudyState(normalizedEntries);
     if (Number.isFinite(Number(rawStudy.targetWordCount))) {
@@ -6947,7 +6981,7 @@
     const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
     if (!raw) {
       Object.assign(state, createDefaultMobileState());
-      state.vocabularyStudy = currentUid ? null : buildVocabularyRealStudyState();
+      state.vocabularyStudy = currentUid ? createEmptyVocabularyStudyState() : buildVocabularyRealStudyState();
       return;
     }
     try {
@@ -6958,13 +6992,13 @@
         state.teacherCheckSession = null;
       }
       if (!state.vocabularyStudy) {
-        state.vocabularyStudy = currentUid ? null : buildVocabularyRealStudyState();
+        state.vocabularyStudy = currentUid ? createEmptyVocabularyStudyState() : buildVocabularyRealStudyState();
       } else {
         state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(state.vocabularyStudy, getVocabularyRealWordBank());
       }
     } catch (_error) {
       Object.assign(state, createDefaultMobileState());
-      state.vocabularyStudy = currentUid ? null : buildVocabularyRealStudyState();
+      state.vocabularyStudy = currentUid ? createEmptyVocabularyStudyState() : buildVocabularyRealStudyState();
     }
   }
 
@@ -7659,12 +7693,13 @@
 
   function saveState() {
     const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+    const safeStudyState = currentUid && vocabularyStateOwnerUid === currentUid && state.vocabularyStudy
+      ? sanitizeVocabularyStudyState(state.vocabularyStudy) || createEmptyVocabularyStudyState()
+      : null;
     const snapshot = {
       settings: state.settings,
       stats: state.stats,
-      vocabularyStudy: currentUid && vocabularyStateOwnerUid === currentUid && state.vocabularyStudy
-        ? sanitizeVocabularyStudyState(state.vocabularyStudy)
-        : null
+      vocabularyStudy: safeStudyState
     };
     window.localStorage.setItem(MOBILE_STORAGE_KEY, JSON.stringify(snapshot));
     const uid = getMobileVocabularySyncUid();
@@ -7712,6 +7747,9 @@
   function isCurrentMobileChildUid(uid = getCurrentMobileFirebaseUser()?.uid || "") {
     const currentUid = String(uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
     if (!currentUid) return false;
+    if (currentUid === MOBILE_FIXED_CHILD_UID) {
+      return true;
+    }
     if (!mobileCachedSonUid) {
       mobileCachedSonUid = readMobileCachedSonUid();
     }
@@ -7722,17 +7760,70 @@
     return isCurrentMobileChildUid(uid);
   }
 
+  function getChildVocabularyResetStateSnapshot(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    const targetUid = String(uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
+    const studyKey = getMobileVocabularyStorageKey(targetUid);
+    const historyKey = getMobileVocabularyTodayHistoryStorageKey(targetUid);
+    let rawStudy = null;
+    let rawHistory = null;
+    try {
+      rawStudy = window.localStorage.getItem(studyKey);
+    } catch (_error) {
+      rawStudy = null;
+    }
+    try {
+      rawHistory = window.localStorage.getItem(historyKey);
+    } catch (_error) {
+      rawHistory = null;
+    }
+    const parsedStudy = rawStudy ? JSON.parse(rawStudy) : null;
+    const parsedHistory = rawHistory ? JSON.parse(rawHistory) : {};
+    const studyState = sanitizeVocabularyStudyState(parsedStudy || state.vocabularyStudy || null) || createEmptyVocabularyStudyState();
+    const todayHistory = normalizeVocabularyTodayHistoryMap(parsedHistory || state.vocabularyTodayHistoryMap || {});
+    const hasLegacySharedState = !!(
+      window.localStorage.getItem(MOBILE_STORAGE_KEY) &&
+      String(window.localStorage.getItem(MOBILE_STORAGE_KEY) || "").includes("vocabularyStudy") &&
+      String(window.localStorage.getItem(MOBILE_STORAGE_KEY) || "").includes("entries")
+    );
+    return {
+      studyState,
+      todayHistory,
+      hasLegacySharedState,
+      hasStudyEntries: !!(studyState && Array.isArray(studyState.entries) && studyState.entries.length > 0),
+      hasTodayHistoryEntries: !!(todayHistory && Object.keys(todayHistory).length > 0),
+      hasTeacherCheckEntries: !!(
+        state.teacherCheckSession && (
+          Array.isArray(state.teacherCheckSession.candidates) && state.teacherCheckSession.candidates.length > 0 ||
+          Array.isArray(state.teacherCheckSession.showMeaningIds) && state.teacherCheckSession.showMeaningIds.length > 0 ||
+          Object.keys(state.teacherCheckSession.decisions || {}).length > 0
+        )
+      )
+    };
+  }
+
+  function localHasStaleVocabularyState(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    const targetUid = String(uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!targetUid) return false;
+    const snapshot = getChildVocabularyResetStateSnapshot(targetUid);
+    return Boolean(snapshot.hasLegacySharedState || snapshot.hasStudyEntries || snapshot.hasTodayHistoryEntries || snapshot.hasTeacherCheckEntries);
+  }
+
   function shouldApplyChildVocabularyResetForUid(uid, remoteResetMeta = {}) {
     const targetUid = String(uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
     if (!targetUid || !isChildUidResetTarget(targetUid)) {
       return false;
     }
+
     const remoteResetVersion = Math.max(0, Number(remoteResetMeta?.resetVersion || 0) || 0);
     const remoteResetAtMs = Math.max(0, Number(remoteResetMeta?.resetAtMs || 0) || 0);
     const localResetState = getMobileVocabularyResetAppliedState(targetUid);
     const localResetVersion = Math.max(0, Number(localResetState?.resetVersion || 0) || 0);
     const localResetAtMs = Math.max(0, Number(localResetState?.resetAtMs || 0) || 0);
-    return remoteResetVersion > localResetVersion || (remoteResetVersion === localResetVersion && remoteResetAtMs > localResetAtMs);
+    const snapshot = getChildVocabularyResetStateSnapshot(targetUid);
+    const hasStaleChildState = snapshot.hasLegacySharedState || snapshot.hasStudyEntries || snapshot.hasTodayHistoryEntries || snapshot.hasTeacherCheckEntries;
+    const versionIsBehind = remoteResetVersion > localResetVersion || (remoteResetVersion === localResetVersion && remoteResetAtMs > localResetAtMs);
+    const fixedTargetMatch = targetUid === MOBILE_FIXED_CHILD_UID;
+    return fixedTargetMatch && remoteResetVersion >= MOBILE_VOCABULARY_CHILD_RESET_VERSION && (versionIsBehind || hasStaleChildState || localHasStaleVocabularyState(targetUid));
   }
 
   function applyChildVocabularyResetForCurrentUid(uid, remoteResetMeta = {}) {
@@ -7743,7 +7834,7 @@
 
     const resetVersion = Math.max(0, Number(remoteResetMeta?.resetVersion || MOBILE_VOCABULARY_CHILD_RESET_VERSION) || 0);
     const resetAtMs = Math.max(0, Number(remoteResetMeta?.resetAtMs || Date.now()) || Date.now());
-    const freshStudy = buildVocabularyRealStudyState();
+    const freshStudy = createEmptyVocabularyStudyState();
 
     state.vocabularyStudy = freshStudy;
     state.vocabularyTodayHistoryMap = {};
@@ -7756,10 +7847,21 @@
     window.localStorage.removeItem(getMobileVocabularyTodayHistoryStorageKey(targetUid));
     window.localStorage.removeItem(MOBILE_STORAGE_KEY);
     window.localStorage.removeItem(MOBILE_VOCABULARY_NORMAL_QUEUE_STORAGE_KEY);
+    window.localStorage.removeItem(MOBILE_VOCABULARY_NORMAL_PROGRESS_STORAGE_KEY);
     saveMobileVocabularyResetAppliedState(targetUid, resetVersion, resetAtMs);
     saveState();
     saveMobileVocabularyStateForSync(freshStudy, targetUid);
     saveVocabularyTodayHistoryMap();
+
+    if (typeof window.renderVocabularyPastHistoryScreen === "function") {
+      window.renderVocabularyPastHistoryScreen();
+    }
+    if (typeof window.renderVocabularyTodayHistoryScreen === "function") {
+      window.renderVocabularyTodayHistoryScreen();
+    }
+    if (typeof window.renderHome === "function") {
+      window.renderHome();
+    }
 
     const sourceDeviceId = String(getMobileBrowserDeviceId() || "").trim();
     const sourceDeviceName = sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName());
