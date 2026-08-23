@@ -4412,9 +4412,12 @@
     header.innerHTML = '<span class="vocabulary-history-index">No.</span><span class="vocabulary-history-word">単語</span><span class="vocabulary-history-status">発音</span><span class="vocabulary-history-status">意味</span><span class="vocabulary-history-status">最終学習</span>';
     list.appendChild(header);
 
+    const rows = [];
     entries.forEach((entry, index) => {
       const row = document.createElement("div");
       row.className = "vocabulary-history-row";
+      row.dataset.wordId = String(entry.id || entry.word || "").trim();
+      row.classList.remove("is-open");
 
       const serial = document.createElement("span");
       serial.className = "vocabulary-history-index";
@@ -4442,22 +4445,31 @@
       detail.className = "vocabulary-history-detail";
       detail.hidden = true;
       detail.innerHTML = `
-        <div class="vocabulary-history-detail-grade">${entry.grade}級</div>
-        <div class="vocabulary-history-detail-meaning">${entry.partOfSpeech}</div>
-        <div class="vocabulary-history-detail-meaning">${entry.meaning}</div>
-        <div class="vocabulary-history-detail-meaning">発音記号: ${entry.phonetic || "未設定"}</div>
-        <div class="vocabulary-history-detail-meaning">発音: ${entry.pronunciationStatus}</div>
-        <div class="vocabulary-history-detail-meaning">意味: ${entry.meaningStatus}</div>
-        <div class="vocabulary-history-detail-meaning">最終学習日: ${new Date(entry.lastLearnedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+        <span class="vocabulary-history-detail-text">${entry.grade}級　${entry.partOfSpeech}　${entry.meaning}</span>
       `;
 
-      row.addEventListener("click", () => {
-        const isOpen = row.classList.toggle("is-open");
+      const setRowExpanded = (isOpen) => {
+        row.classList.toggle("is-open", isOpen);
         wordButton.setAttribute("aria-expanded", String(isOpen));
         detail.hidden = !isOpen;
+      };
+
+      row.addEventListener("click", () => {
+        const willOpen = !row.classList.contains("is-open");
+        rows.forEach((candidate) => {
+          if (candidate !== row) {
+            candidate.classList.remove("is-open");
+            const candidateButton = candidate.querySelector(".vocabulary-history-word-button");
+            const candidateDetail = candidate.querySelector(".vocabulary-history-detail");
+            if (candidateButton) candidateButton.setAttribute("aria-expanded", "false");
+            if (candidateDetail) candidateDetail.hidden = true;
+          }
+        });
+        setRowExpanded(willOpen);
       });
 
       row.append(serial, wordButton, pronunciation, meaning, lastLearned, detail);
+      rows.push(row);
       list.appendChild(row);
     });
 
@@ -4494,9 +4506,11 @@
     header.innerHTML = '<span class="vocabulary-history-index">No.</span><span class="vocabulary-history-word">単語</span><span class="vocabulary-history-status">発音</span><span class="vocabulary-history-status">意味</span>';
     list.appendChild(header);
 
+    const rows = [];
     entries.forEach((entry, index) => {
       const row = document.createElement("div");
       row.className = "vocabulary-history-row";
+      row.classList.remove("is-open");
 
       const serial = document.createElement("span");
       serial.className = "vocabulary-history-index";
@@ -4534,12 +4548,23 @@
       detail.append(detailGrade, detailMeaningText);
 
       row.addEventListener("click", () => {
-        const isOpen = row.classList.toggle("is-open");
-        wordButton.setAttribute("aria-expanded", String(isOpen));
-        detail.hidden = !isOpen;
+        const willOpen = !row.classList.contains("is-open");
+        rows.forEach((candidate) => {
+          if (candidate !== row) {
+            candidate.classList.remove("is-open");
+            const candidateButton = candidate.querySelector(".vocabulary-history-word-button");
+            const candidateDetail = candidate.querySelector(".vocabulary-history-detail");
+            if (candidateButton) candidateButton.setAttribute("aria-expanded", "false");
+            if (candidateDetail) candidateDetail.hidden = true;
+          }
+        });
+        row.classList.toggle("is-open", willOpen);
+        wordButton.setAttribute("aria-expanded", String(willOpen));
+        detail.hidden = !willOpen;
       });
 
       row.append(serial, wordButton, pronunciation, meaning, detail);
+      rows.push(row);
       list.appendChild(row);
     });
 
@@ -4661,6 +4686,12 @@
         renderVocabularyTeacherCheckScreen();
       });
     });
+  }
+
+  function getVocabularyTeacherCheckRouteScreen() {
+    if (!window || !window.location) return false;
+    const params = new URLSearchParams(String(window.location.search || ""));
+    return params.get("teacherCheck") === "1" || params.get("openTeacherCheck") === "1";
   }
 
   function openVocabularyTeacherCheckScreen() {

@@ -2015,7 +2015,7 @@ select,
 
 .vocabulary-history-row {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1.8fr) minmax(70px, 0.9fr) minmax(70px, 0.9fr);
+  grid-template-columns: 32px minmax(0, 1.8fr) minmax(70px, 0.9fr) minmax(70px, 0.9fr) minmax(80px, 0.9fr);
   gap: 8px;
   align-items: center;
   padding: 10px 12px;
@@ -2044,10 +2044,9 @@ select,
 
 .vocabulary-history-detail {
   grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
+  display: block;
+  min-height: 0;
+  margin-top: 2px;
   padding: 6px 8px;
   border-radius: 8px;
   background: rgba(123, 169, 214, 0.12);
@@ -2056,16 +2055,18 @@ select,
   line-height: 1.4;
 }
 
-.vocabulary-history-detail-grade {
-  font-size: 14px;
-  font-weight: 700;
-  color: #9fb0c6;
+.vocabulary-history-detail[hidden] {
+  display: none !important;
+  visibility: hidden !important;
 }
 
-.vocabulary-history-detail-meaning {
-  font-size: 18px;
+.vocabulary-history-detail-text {
+  display: inline;
+  font-size: 0.92rem;
   font-weight: 700;
   color: #f8fafc;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .vocabulary-history-row--header {

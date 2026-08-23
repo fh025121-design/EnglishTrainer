@@ -28,4 +28,14 @@ for (const check of checks) {
   assert.ok(check.ok, check.name);
 }
 
-console.log(`mobile vocabulary past history checks passed (${checks.length})`);
+const closedStateChecks = [
+  { name: "past history rows start closed", ok: /row\.classList\.remove\("is-open"\)/.test(source) },
+  { name: "past history details are hidden by default", ok: /detail\.hidden = true/.test(source) },
+  { name: "today history rows also reset their open state", ok: /renderVocabularyTodayHistoryScreen[\s\S]*row\.classList\.remove\("is-open"\)/.test(source) }
+];
+
+for (const check of closedStateChecks) {
+  assert.ok(check.ok, check.name);
+}
+
+console.log(`mobile vocabulary past history checks passed (${checks.length + closedStateChecks.length})`);
