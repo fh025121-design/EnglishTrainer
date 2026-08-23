@@ -2006,14 +2006,27 @@ select,
   color: #12324a;
 }
 
+.vocabulary-teacher-check-meaning-toggle {
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(148, 190, 220, 0.18);
+  color: #dfe9f7;
+}
+
 .vocabulary-teacher-check-meaning-preview {
   margin-top: 2px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 1.02rem;
-  line-height: 1.5;
-  font-weight: 700;
-  color: #ffffff;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  font-weight: 600;
+  color: #e7edf7;
 }
 
 .vocabulary-teacher-check-meaning-preview.is-hidden {

@@ -4878,7 +4878,8 @@
     if (!state.teacherCheckSession) {
       state.teacherCheckSession = {
         candidates: buildVocabularyTeacherCheckCandidates(),
-        decisions: {}
+        decisions: {},
+        showMeaningIds: []
       };
     }
 
@@ -4893,21 +4894,26 @@
       return;
     }
 
+    if (!Array.isArray(session.showMeaningIds)) {
+      session.showMeaningIds = [];
+    }
+
     const decisions = session.decisions && typeof session.decisions === "object" ? session.decisions : {};
+    const showMeaningIds = new Set(session.showMeaningIds.map((value) => String(value || "").trim()).filter(Boolean));
     metaEl.textContent = `${candidates.length} / ${candidates.length}`;
 
     contentEl.innerHTML = `
       <div class="vocabulary-teacher-check-list">
         ${candidates.map((candidate, index) => {
           const decision = decisions[candidate.id] || { pronunciation: "none", meaning: "none" };
-          const showMeaning = decision.pronunciation !== "none" && decision.meaning !== "none";
+          const showMeaning = showMeaningIds.has(candidate.id);
           return `
-            <div class="vocabulary-teacher-check-card">
+            <div class="vocabulary-teacher-check-card" data-teacher-check-card-id="${String(candidate.id || "").trim()}">
               <div class="vocabulary-teacher-check-header">
                 <span class="vocabulary-teacher-check-index">${index + 1}.</span>
                 <span class="vocabulary-teacher-check-grade">${candidate.grade}級</span>
                 <span class="vocabulary-teacher-check-part-of-speech">${candidate.partOfSpeech}</span>
-                <button type="button" class="secondary-btn vocabulary-teacher-check-audio-btn" data-teacher-check-audio="${String(candidate.word || "").trim()}">
+                <button type="button" class="secondary-btn vocabulary-teacher-check-audio-btn" data-teacher-check-action="audio" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-audio="${String(candidate.word || "").trim()}">
                   🔊
                 </button>
               </div>
@@ -4917,17 +4923,20 @@
               <div class="vocabulary-teacher-check-row">
                 <span class="vocabulary-teacher-check-label">発音</span>
                 <div class="vocabulary-teacher-check-choice-row">
-                  <button type="button" class="secondary-btn ${decision.pronunciation === "ok" ? "is-selected" : ""}" data-teacher-check-field="pronunciation" data-teacher-check-value="ok">◎</button>
-                  <button type="button" class="secondary-btn ${decision.pronunciation === "ng" ? "is-selected" : ""}" data-teacher-check-field="pronunciation" data-teacher-check-value="ng">△</button>
+                  <button type="button" class="secondary-btn ${decision.pronunciation === "ok" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-field="pronunciation" data-teacher-check-value="ok">◎</button>
+                  <button type="button" class="secondary-btn ${decision.pronunciation === "ng" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-field="pronunciation" data-teacher-check-value="ng">△</button>
                 </div>
               </div>
               <div class="vocabulary-teacher-check-row">
                 <span class="vocabulary-teacher-check-label">意味</span>
                 <div class="vocabulary-teacher-check-choice-row">
-                  <button type="button" class="secondary-btn ${decision.meaning === "ok" ? "is-selected" : ""}" data-teacher-check-field="meaning" data-teacher-check-value="ok">◎</button>
-                  <button type="button" class="secondary-btn ${decision.meaning === "ng" ? "is-selected" : ""}" data-teacher-check-field="meaning" data-teacher-check-value="ng">△</button>
+                  <button type="button" class="secondary-btn ${decision.meaning === "ok" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-field="meaning" data-teacher-check-value="ok">◎</button>
+                  <button type="button" class="secondary-btn ${decision.meaning === "ng" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-field="meaning" data-teacher-check-value="ng">△</button>
                 </div>
               </div>
+              <button type="button" class="ghost-btn vocabulary-teacher-check-meaning-toggle" data-teacher-check-action="toggle-meaning" data-teacher-check-id="${String(candidate.id || "").trim()}">
+                ${showMeaning ? "意味を隠す" : "意味を見る"}
+              </button>
               <div class="vocabulary-teacher-check-meaning-preview ${showMeaning ? "" : "is-hidden"}">${showMeaning ? candidate.meaning : ""}</div>
             </div>
           `;
@@ -4935,33 +4944,71 @@
       </div>
     `;
 
-    contentEl.querySelectorAll("[data-teacher-check-field]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const field = button.dataset.teacherCheckField;
-        const value = button.dataset.teacherCheckValue;
-        if (!field || !value) return;
-        if (!session.decisions[candidateIdFromButton(button)]) session.decisions[candidateIdFromButton(button)] = { pronunciation: "none", meaning: "none" };
-        const currentValue = session.decisions[candidateIdFromButton(button)][field] || "none";
-        session.decisions[candidateIdFromButton(button)][field] = currentValue === value ? "none" : value;
-        renderVocabularyTeacherCheckScreen();
-      });
-    });
+    contentEl.onpointerup = (event) => {
+      const button = event.target && event.target.closest ? event.target.closest("[data-teacher-check-action]") : null;
+      if (!button) return;
+      handleVocabularyTeacherCheckAction(button, event);
+    };
+    contentEl.onclick = (event) => {
+      const button = event.target && event.target.closest ? event.target.closest("[data-teacher-check-action]") : null;
+      if (!button) return;
+      if (button.dataset.teacherCheckTapHandled === "1") {
+        delete button.dataset.teacherCheckTapHandled;
+        return;
+      }
+      handleVocabularyTeacherCheckAction(button, event);
+    };
+  }
 
-    contentEl.querySelectorAll("[data-teacher-check-audio]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const text = String(button.dataset.teacherCheckAudio || "").trim();
-        if (text) {
-          speakMobileEnglishText(text);
-        }
-      });
-    });
+  function handleVocabularyTeacherCheckAction(button, event) {
+    if (!button || !event || !state.teacherCheckSession) return;
+    const action = String(button.dataset.teacherCheckAction || "").trim();
+    const candidateId = String(button.dataset.teacherCheckId || candidateIdFromButton(button) || "").trim();
+    if (!candidateId) return;
+
+    if (event.type === "pointerup" || event.type === "touchend") {
+      button.dataset.teacherCheckTapHandled = "1";
+    }
+
+    if (action === "audio") {
+      const text = String(button.dataset.teacherCheckAudio || "").trim();
+      if (text) {
+        speakMobileEnglishText(text);
+      }
+      return;
+    }
+
+    if (action === "toggle-meaning") {
+      const session = state.teacherCheckSession;
+      const showMeaningIds = Array.isArray(session.showMeaningIds) ? session.showMeaningIds : [];
+      const nextIds = showMeaningIds.filter((value) => String(value || "").trim() !== candidateId);
+      if (!showMeaningIds.includes(candidateId)) {
+        nextIds.push(candidateId);
+      }
+      session.showMeaningIds = nextIds;
+      renderVocabularyTeacherCheckScreen();
+      return;
+    }
+
+    if (action === "decision") {
+      const session = state.teacherCheckSession;
+      const field = String(button.dataset.teacherCheckField || "").trim();
+      const value = String(button.dataset.teacherCheckValue || "").trim();
+      if (!field || !["pronunciation", "meaning"].includes(field) || !value) return;
+      if (!session.decisions[candidateId]) session.decisions[candidateId] = { pronunciation: "none", meaning: "none" };
+      const currentValue = session.decisions[candidateId][field] || "none";
+      session.decisions[candidateId][field] = currentValue === value ? "none" : value;
+      renderVocabularyTeacherCheckScreen();
+      return;
+    }
   }
 
   function candidateIdFromButton(button) {
+    const directId = String(button?.dataset?.teacherCheckId || "").trim();
+    if (directId) return directId;
     const card = button?.closest(".vocabulary-teacher-check-card");
     if (!card) return "";
-    const word = card.querySelector(".vocabulary-teacher-check-word")?.textContent || "";
-    return String(word || "").trim();
+    return String(card.dataset.teacherCheckCardId || "").trim();
   }
 
   function getVocabularyTeacherCheckRouteScreen() {
@@ -4973,7 +5020,8 @@
   function openVocabularyTeacherCheckScreen() {
     state.teacherCheckSession = {
       candidates: buildVocabularyTeacherCheckCandidates(),
-      decisions: {}
+      decisions: {},
+      showMeaningIds: []
     };
     renderVocabularyTeacherCheckScreen();
     showScreen("vocabularyTeacherCheckScreen");

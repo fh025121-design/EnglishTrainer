@@ -35,6 +35,13 @@ const checks = [
       && /発音[\s\S]*◎[\s\S]*△/.test(source)
       && /意味[\s\S]*◎[\s\S]*△/.test(source)
       && /vocabulary-teacher-check-list/.test(source)
+  },
+  {
+    name: "teacher check uses stable per-candidate IDs and independent meaning preview state",
+    ok: /data-teacher-check-id/.test(source)
+      && /意味を見る/.test(source)
+      && /showMeaningIds/.test(source)
+      && /session\.decisions/.test(source)
   }
 ];
 
