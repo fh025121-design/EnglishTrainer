@@ -15,6 +15,14 @@ const checks = [
     ok: /getVocabularyTeacherCheckCandidates|getVocabularyTeacherCheckHistoryEntries|teacherCheck.*50|max.*50/i.test(source)
   },
   {
+    name: "teacher check candidate logic keeps only self-OK and unconfirmed teacher fields and limits to 50 words",
+    ok: /teacherCheck.*slice\(0,\s*50\)|slice\(\s*0,\s*50\)|self.*ok.*teacher.*◎|teacher.*◎.*未確認|teacherCheckCandidate/i.test(source)
+  },
+  {
+    name: "teacher check empty-state shows a no-candidate message instead of opening an empty screen",
+    ok: /先生チェック対象の単語はありません|no\s*teacher.*candidate|empty.*teacher.*candidate/i.test(source)
+  },
+  {
     name: "teacher check persists in separate vocabulary skill state and does not mutate level until final apply",
     ok: /teacherCheckState|teacherCheckStatus|currentState.*review.*nextReviewAt.*1\s*\*\s*24|level\s*=\s*1.*currentState.*review/i.test(source)
   },

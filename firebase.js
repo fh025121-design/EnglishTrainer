@@ -337,20 +337,29 @@ async function saveStudyCoreToFirestore(payload, options = {}) {
 
 async function loadPointStateFromFirestore(targetUid = null) {
   const user = auth.currentUser;
-  const resolvedUid = String(targetUid || user?.uid || "").trim();
+  const currentUid = String(user?.uid || "").trim();
+  const resolvedUid = String(targetUid || currentUid || "").trim();
+  const path = resolvedUid ? `users/${resolvedUid}/sync/pointState` : "users/<unknown>/sync/pointState";
   if (!resolvedUid) {
+    console.log("[Point DEBUG]\ncurrentUid:", currentUid, "\nuid:", resolvedUid, "\npath:", path);
     return { exists: false, data: null };
   }
 
-  const snapshot = await getDoc(doc(firestore, "users", resolvedUid, "sync", "pointState"));
-  if (!snapshot.exists()) {
-    return { exists: false, data: null };
-  }
+  console.log("[Point DEBUG]\ncurrentUid:", currentUid, "\nuid:", resolvedUid, "\npath:", path);
+  try {
+    const snapshot = await getDoc(doc(firestore, "users", resolvedUid, "sync", "pointState"));
+    if (!snapshot.exists()) {
+      return { exists: false, data: null };
+    }
 
-  return {
-    exists: true,
-    data: normalizeFirestoreSerializableValue(snapshot.data() || {})
-  };
+    return {
+      exists: true,
+      data: normalizeFirestoreSerializableValue(snapshot.data() || {})
+    };
+  } catch (error) {
+    console.error("[Point ERROR]\ncode:", error?.code || "", "\nmessage:", error?.message || "", "\ncurrentUid:", currentUid, "\nuid:", resolvedUid, "\npath:", path);
+    throw error;
+  }
 }
 
 async function savePointStateToFirestore(payload, options = {}) {
@@ -529,6 +538,9 @@ async function loadLearningHistoryEntriesFromFirestore(targetUid = null, options
   const requestedUid = String(targetUid || "").trim();
   const currentUid = String(user?.uid || "").trim();
   const allowOtherUser = Boolean(options && typeof options === "object" && options.allowOtherUser === true && canAccessOtherUserLearningHistory());
+  const familyUid = String(options?.familyUid || "").trim();
+  const path = requestedUid ? `users/${requestedUid}/learningHistory` : (currentUid ? `users/${currentUid}/learningHistory` : "users/<unknown>/learningHistory");
+  console.log("[LearningHistory DEBUG]\ncurrentUid:", currentUid, "\ntargetUid:", requestedUid, "\nfamilyUid:", familyUid, "\npath:", path, "\nauthState:", user ? "logged-in" : "logged-out");
   if (requestedUid && currentUid && requestedUid !== currentUid && !allowOtherUser) {
     console.warn("Blocked cross-user learning history load", { requestedUid, currentUid });
     return [];
@@ -537,8 +549,13 @@ async function loadLearningHistoryEntriesFromFirestore(targetUid = null, options
   if (!resolvedUid) {
     return [];
   }
-  const snapshot = await getDocs(query(collection(firestore, "users", resolvedUid, "learningHistory"), orderBy("createdAt", "desc")));
-  return snapshot.docs.map(normalizeLearningHistoryFirestoreEntry);
+  try {
+    const snapshot = await getDocs(query(collection(firestore, "users", resolvedUid, "learningHistory"), orderBy("createdAt", "desc")));
+    return snapshot.docs.map(normalizeLearningHistoryFirestoreEntry);
+  } catch (error) {
+    console.error("[LearningHistory ERROR]\ncode:", error?.code || "", "\nmessage:", error?.message || "", "\ncurrentUid:", currentUid, "\ntargetUid:", resolvedUid, "\npath:", `users/${resolvedUid}/learningHistory`);
+    throw error;
+  }
 }
 
 function watchLearningHistoryEntriesFromFirestore(targetUidOrCallbacks = null, maybeCallbacks = {}, maybeOptions = {}) {
@@ -550,6 +567,7 @@ function watchLearningHistoryEntriesFromFirestore(targetUidOrCallbacks = null, m
   const options = typeof targetUidOrCallbacks === "object" && targetUidOrCallbacks !== null && !Array.isArray(targetUidOrCallbacks)
     ? maybeCallbacks
     : maybeOptions;
+  const familyUid = String(options?.familyUid || "").trim();
   const onLoading = typeof callbacks.onLoading === "function" ? callbacks.onLoading : null;
   const onUpdate = typeof callbacks.onUpdate === "function" ? callbacks.onUpdate : null;
   const onError = typeof callbacks.onError === "function" ? callbacks.onError : null;
@@ -565,13 +583,15 @@ function watchLearningHistoryEntriesFromFirestore(targetUidOrCallbacks = null, m
     return () => {};
   }
 
+  const path = `users/${targetUid}/learningHistory`;
+  console.log("[LearningHistory DEBUG]\ncurrentUid:", currentUid, "\ntargetUid:", targetUid, "\nfamilyUid:", familyUid, "\npath:", path, "\nauthState:", user ? "logged-in" : "logged-out");
   onLoading?.();
   const q = query(collection(firestore, "users", targetUid, "learningHistory"), orderBy("createdAt", "desc"));
   return onSnapshot(q, (snapshot) => {
     const entries = snapshot.docs.map(normalizeLearningHistoryFirestoreEntry);
     onUpdate?.(entries);
   }, (error) => {
-    console.error("Failed to load learning history from Firestore", error);
+    console.error("[LearningHistory ERROR]\ncode:", error?.code || "", "\nmessage:", error?.message || "", "\ncurrentUid:", currentUid, "\ntargetUid:", targetUid, "\npath:", path);
     onError?.(error);
   });
 }
@@ -581,16 +601,22 @@ function watchFamilyDocument(familyId, callbacks = {}) {
   const onUpdate = typeof callbacks.onUpdate === "function" ? callbacks.onUpdate : null;
   const onError = typeof callbacks.onError === "function" ? callbacks.onError : null;
   const normalizedFamilyId = String(familyId || "").trim();
+  const path = `families/${normalizedFamilyId || "<unknown>"}`;
   if (!normalizedFamilyId) {
+    console.error("[Family ERROR]\ncode:", "familyId-required", "\nmessage:", "familyId is required", "\npath:", path);
     onError?.(new Error("familyId is required"));
     return () => {};
   }
 
+  console.log("[Family DEBUG]\npath:", path, "\nfamilyId:", normalizedFamilyId);
   onLoading?.();
   return onSnapshot(doc(firestore, "families", normalizedFamilyId), (snapshot) => {
-    onUpdate?.(normalizeFamilyDocument(snapshot));
+    const familyData = normalizeFamilyDocument(snapshot);
+    const targetUid = String(familyData?.children?.[0]?.uid || familyData?.parentUid || "").trim();
+    console.log("[Family DEBUG]\npath:", path, "\nfamilyUid:", targetUid, "\nchildren:", familyData?.children || []);
+    onUpdate?.(familyData);
   }, (error) => {
-    console.error("Failed to load family document from Firestore", error);
+    console.error("[Family ERROR]\ncode:", error?.code || "", "\nmessage:", error?.message || "", "\npath:", path);
     onError?.(error);
   });
 }

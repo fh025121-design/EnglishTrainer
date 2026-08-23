@@ -4125,6 +4125,25 @@
     return "none";
   }
 
+  function getVocabularyCurrentSelfStatus(skillState) {
+    if (!skillState || typeof skillState !== "object") return "none";
+    const raw = String(skillState.lastSelfResult || "").trim();
+    if (raw === "ok") return "○";
+    if (raw === "ng") return "△";
+    return "none";
+  }
+
+  function getVocabularyTeacherCheckStatusText(skillState, fieldName) {
+    if (!skillState || typeof skillState !== "object") return "none";
+    const teacherCheckState = skillState.teacherCheckState && typeof skillState.teacherCheckState === "object"
+      ? skillState.teacherCheckState
+      : {};
+    const directValue = String(skillState.teacherCheckStatus || teacherCheckState[fieldName] || "none").trim();
+    if (directValue === "◎" || directValue === "ok") return "◎";
+    if (directValue === "△" || directValue === "ng") return "△";
+    return "none";
+  }
+
   function getVocabularyHistoryDisplayValue(entry, fieldName) {
     const normalizedField = fieldName === "meaning" ? "meaning" : "pronunciation";
     if (!entry || typeof entry !== "object") return "—";
@@ -4532,10 +4551,44 @@
     renderVocabularyTodayHistoryScreen();
   }
 
+  function getVocabularyTeacherCheckCandidates() {
+    const historyEntries = getVocabularyPastHistoryEntries();
+    const candidates = [];
+
+    historyEntries.forEach((entry) => {
+      if (!entry || !entry.id || !entry.word) return;
+
+      const studyEntry = getVocabularyStudyEntryById(String(entry.id || entry.word || "").trim()) || null;
+      const pronunciationSkill = studyEntry && studyEntry.pronunciation ? studyEntry.pronunciation : null;
+      const meaningSkill = studyEntry && studyEntry.meaningState ? studyEntry.meaningState : null;
+      const pronunciationSelf = getVocabularyCurrentSelfStatus(pronunciationSkill);
+      const meaningSelf = getVocabularyCurrentSelfStatus(meaningSkill);
+      const pronunciationTeacher = getVocabularyTeacherCheckStatusText(pronunciationSkill, "pronunciation");
+      const meaningTeacher = getVocabularyTeacherCheckStatusText(meaningSkill, "meaning");
+      const pronunciationEligible = pronunciationSelf === "○" && pronunciationTeacher !== "◎";
+      const meaningEligible = meaningSelf === "○" && meaningTeacher !== "◎";
+
+      if (!pronunciationEligible && !meaningEligible) return;
+
+      candidates.push({
+        id: String(entry.id || entry.word || "").trim(),
+        word: String(entry.word || "").trim(),
+        grade: String(entry.grade || "5").trim() || "5",
+        partOfSpeech: String(entry.partOfSpeech || "名詞").trim() || "名詞",
+        meaning: String(entry.meaning || "意味未設定").trim() || "意味未設定",
+        pronunciationText: String(entry.phonetic || "").trim(),
+        pronunciationEligible,
+        pronunciationTeacher,
+        meaningEligible,
+        meaningTeacher
+      });
+    });
+
+    return candidates.slice(0, 50);
+  }
+
   function buildVocabularyTeacherCheckCandidates() {
-    // 先生チェック候補の自動抽出は、別途実装予定の「過去の履歴」接続まで保留。
-    // ここでは未実装の過去履歴を前提にした候補選定を行わず、空候補にして画面と判定フローだけ残す。
-    return [];
+    return getVocabularyTeacherCheckCandidates();
   }
 
   function renderVocabularyTeacherCheckScreen() {
@@ -4554,7 +4607,7 @@
     if (!contentEl || !metaEl) return;
     if (!candidates.length) {
       metaEl.textContent = "0 / 0";
-      contentEl.innerHTML = '<p class="status-text">先生チェック候補は未実装です。過去の履歴実装後に接続します。</p>';
+      contentEl.innerHTML = '<p class="status-text">先生チェック対象の単語はありません。</p>';
       return;
     }
 
@@ -4563,6 +4616,8 @@
     const candidate = candidates[currentIndex];
     const decisions = session.decisions && typeof session.decisions === "object" ? session.decisions : {};
     const decision = decisions[candidate.id] || { pronunciation: "none", meaning: "none" };
+    const pronunciationEligible = Boolean(candidate.pronunciationEligible);
+    const meaningEligible = Boolean(candidate.meaningEligible);
     metaEl.textContent = `${currentIndex + 1} / ${candidates.length}`;
     contentEl.innerHTML = `
       <div class="vocabulary-teacher-check-card">
@@ -4574,20 +4629,24 @@
         <p class="vocabulary-teacher-check-pronunciation">${candidate.pronunciationText || "発音未設定"}</p>
         <p class="vocabulary-teacher-check-meaning">${candidate.meaning}</p>
         <div class="vocabulary-teacher-check-options">
-          <div class="vocabulary-teacher-check-option-group">
-            <span class="vocabulary-teacher-check-label">発音</span>
-            <div class="vocabulary-teacher-check-choice-row">
-              <button type="button" class="secondary-btn ${decision.pronunciation === "ok" ? "is-selected" : ""}" data-teacher-check-field="pronunciation" data-teacher-check-value="ok">◎</button>
-              <button type="button" class="secondary-btn ${decision.pronunciation === "ng" ? "is-selected" : ""}" data-teacher-check-field="pronunciation" data-teacher-check-value="ng">△</button>
+          ${pronunciationEligible ? `
+            <div class="vocabulary-teacher-check-option-group">
+              <span class="vocabulary-teacher-check-label">発音（本人 ○）</span>
+              <div class="vocabulary-teacher-check-choice-row">
+                <button type="button" class="secondary-btn ${decision.pronunciation === "ok" ? "is-selected" : ""}" data-teacher-check-field="pronunciation" data-teacher-check-value="ok">◎</button>
+                <button type="button" class="secondary-btn ${decision.pronunciation === "ng" ? "is-selected" : ""}" data-teacher-check-field="pronunciation" data-teacher-check-value="ng">△</button>
+              </div>
             </div>
-          </div>
-          <div class="vocabulary-teacher-check-option-group">
-            <span class="vocabulary-teacher-check-label">意味</span>
-            <div class="vocabulary-teacher-check-choice-row">
-              <button type="button" class="secondary-btn ${decision.meaning === "ok" ? "is-selected" : ""}" data-teacher-check-field="meaning" data-teacher-check-value="ok">◎</button>
-              <button type="button" class="secondary-btn ${decision.meaning === "ng" ? "is-selected" : ""}" data-teacher-check-field="meaning" data-teacher-check-value="ng">△</button>
+          ` : ""}
+          ${meaningEligible ? `
+            <div class="vocabulary-teacher-check-option-group">
+              <span class="vocabulary-teacher-check-label">意味（本人 ○）</span>
+              <div class="vocabulary-teacher-check-choice-row">
+                <button type="button" class="secondary-btn ${decision.meaning === "ok" ? "is-selected" : ""}" data-teacher-check-field="meaning" data-teacher-check-value="ok">◎</button>
+                <button type="button" class="secondary-btn ${decision.meaning === "ng" ? "is-selected" : ""}" data-teacher-check-field="meaning" data-teacher-check-value="ng">△</button>
+              </div>
             </div>
-          </div>
+          ` : ""}
         </div>
       </div>
     `;
@@ -4605,13 +4664,11 @@
   }
 
   function openVocabularyTeacherCheckScreen() {
-    if (!state.teacherCheckSession || !state.teacherCheckSession.candidates || !state.teacherCheckSession.candidates.length) {
-      state.teacherCheckSession = {
-        candidates: buildVocabularyTeacherCheckCandidates(),
-        currentIndex: 0,
-        decisions: {}
-      };
-    }
+    state.teacherCheckSession = {
+      candidates: buildVocabularyTeacherCheckCandidates(),
+      currentIndex: 0,
+      decisions: {}
+    };
     renderVocabularyTeacherCheckScreen();
     showScreen("vocabularyTeacherCheckScreen");
   }
@@ -6151,22 +6208,32 @@
       ? window.getMobileFirebaseCurrentUser()
       : (window.MobileFirebase?.auth?.currentUser || null);
     const firestore = window.MobileFirebase?.firestore || null;
+    const currentUid = String(user?.uid || "").trim();
+    const path = "families/inoue";
     if (!firestore) {
+      console.log("[Family DEBUG]\npath:", path, "\nfamilyUid:", "", "\nauthState:", user ? "logged-in" : "logged-out");
       return buildMobileAdminFamilyOptions(null, user);
     }
 
-    const sdk = await getMobileFirestoreSdk();
-    const familyDoc = await sdk.getDoc(sdk.doc(firestore, "families", MOBILE_ADMIN_FAMILY_ID));
-    const familyData = familyDoc.exists() ? {
-      parentUid: String(familyDoc.data()?.parentUid || ""),
-      children: Object.entries(familyDoc.data()?.children || {}).map(([key, value]) => ({
-        key: String(key || ""),
-        uid: String(value?.uid || "")
-      }))
-    } : null;
-    const sonUid = familyDoc.exists() ? String(familyDoc.data()?.children?.son?.uid || "").trim() : "";
-    writeMobileCachedSonUid(sonUid);
-    return buildMobileAdminFamilyOptions(familyData, user);
+    console.log("[Family DEBUG]\npath:", path, "\nfamilyUid:", "", "\ncurrentUid:", currentUid, "\nauthState:", user ? "logged-in" : "logged-out");
+    try {
+      const sdk = await getMobileFirestoreSdk();
+      const familyDoc = await sdk.getDoc(sdk.doc(firestore, "families", MOBILE_ADMIN_FAMILY_ID));
+      const familyData = familyDoc.exists() ? {
+        parentUid: String(familyDoc.data()?.parentUid || ""),
+        children: Object.entries(familyDoc.data()?.children || {}).map(([key, value]) => ({
+          key: String(key || ""),
+          uid: String(value?.uid || "")
+        }))
+      } : null;
+      const sonUid = familyDoc.exists() ? String(familyDoc.data()?.children?.son?.uid || "").trim() : "";
+      console.log("[Family DEBUG]\npath:", path, "\nfamilyUid:", sonUid, "\ncurrentUid:", currentUid, "\nauthState:", user ? "logged-in" : "logged-out");
+      writeMobileCachedSonUid(sonUid);
+      return buildMobileAdminFamilyOptions(familyData, user);
+    } catch (error) {
+      console.error("[Family ERROR]\ncode:", error?.code || "", "\nmessage:", error?.message || "", "\npath:", path);
+      throw error;
+    }
   }
 
   function normalizeMobileAdminLearningHistoryFirestoreEntry(docSnapshot) {
@@ -6211,12 +6278,21 @@
     const resolvedUid = String(targetUid || "").trim();
     const safeTargetUid = resolvedUid || currentUid;
     const firestore = window.MobileFirebase?.firestore || null;
+    const path = safeTargetUid ? `users/${safeTargetUid}/learningHistory` : "users/<unknown>/learningHistory";
     if (!safeTargetUid || !firestore) {
+      console.log("[LearningHistory DEBUG]\ncurrentUid:", currentUid, "\ntargetUid:", safeTargetUid, "\nfamilyUid:", "", "\npath:", path, "\nauthState:", currentUser ? "logged-in" : "logged-out");
       return [];
     }
-    const sdk = await getMobileFirestoreSdk();
-    const snapshot = await sdk.getDocs(sdk.query(sdk.collection(firestore, "users", safeTargetUid, "learningHistory"), sdk.orderBy("createdAt", "desc")));
-    return snapshot.docs.map(normalizeMobileAdminLearningHistoryFirestoreEntry);
+
+    console.log("[LearningHistory DEBUG]\ncurrentUid:", currentUid, "\ntargetUid:", safeTargetUid, "\nfamilyUid:", "", "\npath:", path, "\nauthState:", currentUser ? "logged-in" : "logged-out");
+    try {
+      const sdk = await getMobileFirestoreSdk();
+      const snapshot = await sdk.getDocs(sdk.query(sdk.collection(firestore, "users", safeTargetUid, "learningHistory"), sdk.orderBy("createdAt", "desc")));
+      return snapshot.docs.map(normalizeMobileAdminLearningHistoryFirestoreEntry);
+    } catch (error) {
+      console.error("[LearningHistory ERROR]\ncode:", error?.code || "", "\nmessage:", error?.message || "", "\ncurrentUid:", currentUid, "\ntargetUid:", safeTargetUid, "\npath:", path);
+      throw error;
+    }
   }
 
   function createDefaultMobileState() {
@@ -12839,6 +12915,9 @@
         }
         renderSpeakingHome();
       });
+    }
+    if (document.getElementById("vocabularyTeacherCheckPastHistoryBtn")) {
+      document.getElementById("vocabularyTeacherCheckPastHistoryBtn").addEventListener("click", openVocabularyTeacherCheckScreen);
     }
     elements.vocabularyTodayHistoryBackBtn.addEventListener("click", () => {
       if (state.vocabularySample) {

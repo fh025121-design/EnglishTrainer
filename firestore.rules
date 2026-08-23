@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelfUid(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function familyDoc(familyId) {
+      return get(/databases/$(database)/documents/families/$(familyId));
+    }
+
+    function isFamilyMemberOf(familyId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/families/$(familyId)) &&
+        (
+          request.auth.uid == familyDoc(familyId).data.parentUid ||
+          ('son' in familyDoc(familyId).data.children && request.auth.uid == familyDoc(familyId).data.children.son.uid)
+        );
+    }
+
+    function isInoueFamilyUid(uid) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/families/inoue) &&
+        (
+          uid == familyDoc("inoue").data.parentUid ||
+          ('son' in familyDoc("inoue").data.children && uid == familyDoc("inoue").data.children.son.uid)
+        );
+    }
+
+    function isAllowedFamilyHistoryReader(uid) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/families/inoue) &&
+        (
+          request.auth.uid == uid ||
+          (
+            isInoueFamilyUid(request.auth.uid) &&
+            isInoueFamilyUid(uid)
+          )
+        );
+    }
+
+    match /families/{familyId} {
+      allow read: if signedIn() && isFamilyMemberOf(familyId);
+      allow write: if false;
+    }
+
+    match /users/{uid}/learningHistory/{historyId} {
+      allow read: if isSelfUid(uid) || isAllowedFamilyHistoryReader(uid);
+      allow write: if isSelfUid(uid);
+    }
+
+    match /users/{uid}/sync/{documentId} {
+      allow read, write: if isSelfUid(uid);
+    }
+
+    match /users/{uid}/sync/studyCore/backups/{dayKey} {
+      allow read, write: if isSelfUid(uid);
+    }
+
+    match /users/{uid}/mobileSync/{documentId} {
+      allow read, write: if isSelfUid(uid);
+    }
+  }
+}

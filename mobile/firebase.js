@@ -372,12 +372,16 @@ function normalizeMobilePointDoc(docData) {
 }
 
 async function loadMobilePointStateFromFirestore(options = {}) {
-  const targetUid = String(options?.targetUid || auth.currentUser?.uid || "").trim();
+  const currentUid = String(auth.currentUser?.uid || "").trim();
+  const targetUid = String(options?.targetUid || currentUid || "").trim();
   const ref = getMobilePointDocRef(targetUid);
+  const path = ref ? `users/${targetUid}/mobileSync/pointStateV1` : "users/<unknown>/mobileSync/pointStateV1";
   if (!ref || !targetUid) {
+    console.log("[Point DEBUG]\ncurrentUid:", currentUid, "\nuid:", targetUid, "\npath:", path);
     return { ok: false, exists: false, uid: targetUid, pointState: null };
   }
 
+  console.log("[Point DEBUG]\ncurrentUid:", currentUid, "\nuid:", targetUid, "\npath:", path);
   try {
     const snapshot = await getDoc(ref);
     if (!snapshot.exists()) {
@@ -395,7 +399,7 @@ async function loadMobilePointStateFromFirestore(options = {}) {
       schemaVersion: normalized.schemaVersion
     };
   } catch (error) {
-    console.error("Failed to load mobile point state from Firestore", error);
+    console.error("[Point ERROR]\ncode:", error?.code || "", "\nmessage:", error?.message || "", "\ncurrentUid:", currentUid, "\nuid:", targetUid, "\npath:", path);
     return { ok: false, exists: false, uid: targetUid, pointState: null, error };
   }
 }

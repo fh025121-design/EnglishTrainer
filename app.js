@@ -5186,7 +5186,21 @@ function renderAdminLearningHistoryState(message, options = {}) {
 
 function renderAdminLearningHistoryHistoryWatch(targetUid, options = {}) {
   const watchFn = window.watchLearningHistoryEntriesFromFirestore;
+  const currentUser = getCurrentPcFirebaseUser();
+  const currentUid = String(currentUser?.uid || "").trim();
+  const watchedTargetUid = String(targetUid || "").trim();
+  console.log("[ADMIN HISTORY DEBUG] renderAdminLearningHistoryHistoryWatch start", {
+    currentUid,
+    watchedTargetUid,
+    canSelectFamily: adminLearningHistoryCanSelectFamily,
+    allowOtherUser: Boolean(options?.allowOtherUser)
+  });
   if (typeof watchFn !== "function") {
+    console.error("[ADMIN HISTORY ERROR] watchLearningHistoryEntriesFromFirestore is unavailable", {
+      currentUid,
+      watchedTargetUid,
+      canSelectFamily: adminLearningHistoryCanSelectFamily
+    });
     renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
     return;
   }
@@ -5202,6 +5216,13 @@ function renderAdminLearningHistoryHistoryWatch(targetUid, options = {}) {
   const isChildLogin = Boolean(currentUid && watchedTargetUid && watchedTargetUid === currentUid && !adminLearningHistoryCanSelectFamily);
   const effectiveTargetUid = isChildLogin ? currentUid : watchedTargetUid;
   const safeOptions = isChildLogin ? { ...options, allowOtherUser: false } : { ...options, allowOtherUser: false };
+  console.log("[ADMIN HISTORY DEBUG] watchLearningHistoryEntriesFromFirestore call", {
+    currentUid,
+    watchedTargetUid,
+    effectiveTargetUid,
+    allowOtherUser: Boolean(safeOptions.allowOtherUser),
+    canSelectFamily: adminLearningHistoryCanSelectFamily
+  });
 
   if (!adminLearningHistoryCanSelectFamily && currentUid && effectiveTargetUid !== currentUid) {
     console.warn("[AdminLearningHistory] child-scope override applied", { currentUid, effectiveTargetUid, watchedTargetUid });
@@ -5222,9 +5243,17 @@ function renderAdminLearningHistoryHistoryWatch(targetUid, options = {}) {
       );
       renderAdminLearningHistoryEntries(entries);
     },
-    onError: () => {
+    onError: (error) => {
       if (loadToken !== adminLearningHistoryFirestoreLoadToken) return;
       adminLearningHistorySourceEntries = [];
+      console.error("[ADMIN HISTORY ERROR] watchLearningHistoryEntriesFromFirestore failed", {
+        currentUid,
+        watchedTargetUid,
+        effectiveTargetUid,
+        code: error?.code || "",
+        message: error?.message || "",
+        path: `users/${effectiveTargetUid}/learningHistory`
+      });
       renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
     }
   }, safeOptions);
@@ -5234,11 +5263,17 @@ function renderAdminLearningHistoryFamilyWatch() {
   const watchFn = window.watchFamilyDocument;
   const currentUser = getCurrentPcFirebaseUser();
   const currentUid = String(currentUser?.uid || "").trim();
+  console.log("[ADMIN HISTORY DEBUG] renderAdminLearningHistoryFamilyWatch start", {
+    currentUid,
+    familyId: "inoue"
+  });
   if (!currentUid) {
+    console.error("[ADMIN HISTORY ERROR] missing currentUid before family watch");
     renderAdminLearningHistoryState("ログイン情報を確認してください", { countText: "ログイン情報を確認してください" });
     return;
   }
   if (typeof watchFn !== "function") {
+    console.error("[ADMIN HISTORY ERROR] watchFamilyDocument is unavailable", { currentUid, familyId: "inoue" });
     renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
     return;
   }
@@ -5252,6 +5287,7 @@ function renderAdminLearningHistoryFamilyWatch() {
 
   console.log("[AdminLearningHistory] auth.currentUser.uid", currentUid);
 
+  console.log("[ADMIN HISTORY DEBUG] watchFamilyDocument call", { currentUid, familyId: "inoue" });
   adminLearningHistoryFamilyUnsubscribe = watchFn("inoue", {
     onUpdate: (family) => {
       if (loadToken !== adminLearningHistoryFamilyLoadToken) return;
@@ -5305,8 +5341,15 @@ function renderAdminLearningHistoryFamilyWatch() {
       console.log("[AdminLearningHistory] adminLearningHistorySelectedChildUid", adminLearningHistorySelectedChildUid);
       renderAdminLearningHistoryHistoryWatch(currentUid, { allowOtherUser: false });
     },
-    onError: () => {
+    onError: (error) => {
       if (loadToken !== adminLearningHistoryFamilyLoadToken) return;
+      console.error("[ADMIN HISTORY ERROR] watchFamilyDocument failed", {
+        currentUid,
+        familyId: "inoue",
+        code: error?.code || "",
+        message: error?.message || "",
+        path: "families/inoue"
+      });
       renderAdminLearningHistoryState("履歴の取得に失敗しました", { countText: "履歴の取得に失敗しました" });
     }
   });
