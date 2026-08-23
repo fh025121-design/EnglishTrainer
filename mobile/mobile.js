@@ -4833,7 +4833,7 @@
   }
 
   function getVocabularyTeacherCheckCandidates() {
-    const historyEntries = getVocabularyPastHistoryEntries();
+    const historyEntries = Array.isArray(getVocabularyPastHistoryEntries()) ? getVocabularyPastHistoryEntries().slice() : [];
     const candidates = [];
 
     historyEntries.forEach((entry) => {
@@ -4844,12 +4844,15 @@
       const meaningSkill = studyEntry && studyEntry.meaningState ? studyEntry.meaningState : null;
       const pronunciationSelf = getVocabularyCurrentSelfStatus(pronunciationSkill);
       const meaningSelf = getVocabularyCurrentSelfStatus(meaningSkill);
+      const pronunciationSelfOk = pronunciationSelf === "○" || String(pronunciationSkill?.lastSelfResult || "").trim() === "ok";
+      const meaningSelfOk = meaningSelf === "○" || String(meaningSkill?.lastSelfResult || "").trim() === "ok";
+      if (!pronunciationSelfOk || !meaningSelfOk) return;
+
       const pronunciationTeacher = getVocabularyTeacherCheckStatusText(pronunciationSkill, "pronunciation");
       const meaningTeacher = getVocabularyTeacherCheckStatusText(meaningSkill, "meaning");
-      const pronunciationEligible = pronunciationSelf === "○" && pronunciationTeacher !== "◎";
-      const meaningEligible = meaningSelf === "○" && meaningTeacher !== "◎";
-
-      if (!pronunciationEligible && !meaningEligible) return;
+      const pronunciationTeacherComplete = pronunciationTeacher === "◎" || String(pronunciationSkill?.teacherCheckStatus || "").trim() === "◎";
+      const meaningTeacherComplete = meaningTeacher === "◎" || String(meaningSkill?.teacherCheckStatus || "").trim() === "◎";
+      if (pronunciationTeacherComplete && meaningTeacherComplete) return;
 
       candidates.push({
         id: String(entry.id || entry.word || "").trim(),
@@ -4858,14 +4861,13 @@
         partOfSpeech: String(entry.partOfSpeech || "名詞").trim() || "名詞",
         meaning: String(entry.meaning || "意味未設定").trim() || "意味未設定",
         pronunciationText: String(entry.phonetic || "").trim(),
-        pronunciationEligible,
-        pronunciationTeacher,
-        meaningEligible,
-        meaningTeacher
+        lastLearnedAt: Number(entry.lastLearnedAt || 0) || 0
       });
     });
 
-    return candidates.slice(0, 50);
+    return candidates
+      .sort((left, right) => Number(right.lastLearnedAt || 0) - Number(left.lastLearnedAt || 0))
+      .slice(0, 50);
   }
 
   function buildVocabularyTeacherCheckCandidates() {
@@ -4876,7 +4878,6 @@
     if (!state.teacherCheckSession) {
       state.teacherCheckSession = {
         candidates: buildVocabularyTeacherCheckCandidates(),
-        currentIndex: 0,
         decisions: {}
       };
     }
@@ -4892,43 +4893,45 @@
       return;
     }
 
-    const currentIndex = Math.min(Math.max(0, Number(session.currentIndex) || 0), candidates.length - 1);
-    session.currentIndex = currentIndex;
-    const candidate = candidates[currentIndex];
     const decisions = session.decisions && typeof session.decisions === "object" ? session.decisions : {};
-    const decision = decisions[candidate.id] || { pronunciation: "none", meaning: "none" };
-    const pronunciationEligible = Boolean(candidate.pronunciationEligible);
-    const meaningEligible = Boolean(candidate.meaningEligible);
-    metaEl.textContent = `${currentIndex + 1} / ${candidates.length}`;
+    metaEl.textContent = `${candidates.length} / ${candidates.length}`;
+
     contentEl.innerHTML = `
-      <div class="vocabulary-teacher-check-card">
-        <div class="vocabulary-teacher-check-header">
-          <span class="vocabulary-teacher-check-grade">${candidate.grade}級</span>
-          <span class="vocabulary-teacher-check-part-of-speech">${candidate.partOfSpeech}</span>
-        </div>
-        <p class="vocabulary-teacher-check-word">${candidate.word}</p>
-        <p class="vocabulary-teacher-check-pronunciation">${candidate.pronunciationText || "発音未設定"}</p>
-        <p class="vocabulary-teacher-check-meaning">${candidate.meaning}</p>
-        <div class="vocabulary-teacher-check-options">
-          ${pronunciationEligible ? `
-            <div class="vocabulary-teacher-check-option-group">
-              <span class="vocabulary-teacher-check-label">発音（本人 ○）</span>
-              <div class="vocabulary-teacher-check-choice-row">
-                <button type="button" class="secondary-btn ${decision.pronunciation === "ok" ? "is-selected" : ""}" data-teacher-check-field="pronunciation" data-teacher-check-value="ok">◎</button>
-                <button type="button" class="secondary-btn ${decision.pronunciation === "ng" ? "is-selected" : ""}" data-teacher-check-field="pronunciation" data-teacher-check-value="ng">△</button>
+      <div class="vocabulary-teacher-check-list">
+        ${candidates.map((candidate, index) => {
+          const decision = decisions[candidate.id] || { pronunciation: "none", meaning: "none" };
+          const showMeaning = decision.pronunciation !== "none" && decision.meaning !== "none";
+          return `
+            <div class="vocabulary-teacher-check-card">
+              <div class="vocabulary-teacher-check-header">
+                <span class="vocabulary-teacher-check-index">${index + 1}.</span>
+                <span class="vocabulary-teacher-check-grade">${candidate.grade}級</span>
+                <span class="vocabulary-teacher-check-part-of-speech">${candidate.partOfSpeech}</span>
+                <button type="button" class="secondary-btn vocabulary-teacher-check-audio-btn" data-teacher-check-audio="${String(candidate.word || "").trim()}">
+                  🔊
+                </button>
               </div>
-            </div>
-          ` : ""}
-          ${meaningEligible ? `
-            <div class="vocabulary-teacher-check-option-group">
-              <span class="vocabulary-teacher-check-label">意味（本人 ○）</span>
-              <div class="vocabulary-teacher-check-choice-row">
-                <button type="button" class="secondary-btn ${decision.meaning === "ok" ? "is-selected" : ""}" data-teacher-check-field="meaning" data-teacher-check-value="ok">◎</button>
-                <button type="button" class="secondary-btn ${decision.meaning === "ng" ? "is-selected" : ""}" data-teacher-check-field="meaning" data-teacher-check-value="ng">△</button>
+              <div class="vocabulary-teacher-check-word-row">
+                <p class="vocabulary-teacher-check-word">${candidate.word}</p>
               </div>
+              <div class="vocabulary-teacher-check-row">
+                <span class="vocabulary-teacher-check-label">発音</span>
+                <div class="vocabulary-teacher-check-choice-row">
+                  <button type="button" class="secondary-btn ${decision.pronunciation === "ok" ? "is-selected" : ""}" data-teacher-check-field="pronunciation" data-teacher-check-value="ok">◎</button>
+                  <button type="button" class="secondary-btn ${decision.pronunciation === "ng" ? "is-selected" : ""}" data-teacher-check-field="pronunciation" data-teacher-check-value="ng">△</button>
+                </div>
+              </div>
+              <div class="vocabulary-teacher-check-row">
+                <span class="vocabulary-teacher-check-label">意味</span>
+                <div class="vocabulary-teacher-check-choice-row">
+                  <button type="button" class="secondary-btn ${decision.meaning === "ok" ? "is-selected" : ""}" data-teacher-check-field="meaning" data-teacher-check-value="ok">◎</button>
+                  <button type="button" class="secondary-btn ${decision.meaning === "ng" ? "is-selected" : ""}" data-teacher-check-field="meaning" data-teacher-check-value="ng">△</button>
+                </div>
+              </div>
+              <div class="vocabulary-teacher-check-meaning-preview ${showMeaning ? "" : "is-hidden"}">${showMeaning ? candidate.meaning : ""}</div>
             </div>
-          ` : ""}
-        </div>
+          `;
+        }).join("")}
       </div>
     `;
 
@@ -4937,11 +4940,28 @@
         const field = button.dataset.teacherCheckField;
         const value = button.dataset.teacherCheckValue;
         if (!field || !value) return;
-        if (!session.decisions[candidate.id]) session.decisions[candidate.id] = { pronunciation: "none", meaning: "none" };
-        session.decisions[candidate.id][field] = value === "ok" ? "ok" : value === "ng" ? "ng" : "none";
+        if (!session.decisions[candidateIdFromButton(button)]) session.decisions[candidateIdFromButton(button)] = { pronunciation: "none", meaning: "none" };
+        const currentValue = session.decisions[candidateIdFromButton(button)][field] || "none";
+        session.decisions[candidateIdFromButton(button)][field] = currentValue === value ? "none" : value;
         renderVocabularyTeacherCheckScreen();
       });
     });
+
+    contentEl.querySelectorAll("[data-teacher-check-audio]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const text = String(button.dataset.teacherCheckAudio || "").trim();
+        if (text) {
+          speakMobileEnglishText(text);
+        }
+      });
+    });
+  }
+
+  function candidateIdFromButton(button) {
+    const card = button?.closest(".vocabulary-teacher-check-card");
+    if (!card) return "";
+    const word = card.querySelector(".vocabulary-teacher-check-word")?.textContent || "";
+    return String(word || "").trim();
   }
 
   function getVocabularyTeacherCheckRouteScreen() {
@@ -4953,7 +4973,6 @@
   function openVocabularyTeacherCheckScreen() {
     state.teacherCheckSession = {
       candidates: buildVocabularyTeacherCheckCandidates(),
-      currentIndex: 0,
       decisions: {}
     };
     renderVocabularyTeacherCheckScreen();
@@ -13570,80 +13589,46 @@
       elements.vocabularyTeacherCheckBtn.addEventListener("click", openVocabularyTeacherCheckScreen);
     }
     if (elements.vocabularyTeacherCheckBackBtn) {
-      elements.vocabularyTeacherCheckBackBtn.addEventListener("click", openVocabularyTodayHistoryScreen);
-    }
-    if (elements.vocabularyTeacherCheckPrevBtn) {
-      elements.vocabularyTeacherCheckPrevBtn.addEventListener("click", () => {
-        if (!state.teacherCheckSession || !state.teacherCheckSession.candidates.length) return;
-        state.teacherCheckSession.currentIndex = Math.max(0, (state.teacherCheckSession.currentIndex || 0) - 1);
-        renderVocabularyTeacherCheckScreen();
-      });
-    }
-    if (elements.vocabularyTeacherCheckNextBtn) {
-      elements.vocabularyTeacherCheckNextBtn.addEventListener("click", () => {
-        if (!state.teacherCheckSession || !state.teacherCheckSession.candidates.length) return;
-        state.teacherCheckSession.currentIndex = Math.min(state.teacherCheckSession.candidates.length - 1, (state.teacherCheckSession.currentIndex || 0) + 1);
-        renderVocabularyTeacherCheckScreen();
-      });
+      elements.vocabularyTeacherCheckBackBtn.addEventListener("click", openVocabularyPastHistoryScreen);
     }
     if (elements.vocabularyTeacherCheckCompleteBtn) {
       elements.vocabularyTeacherCheckCompleteBtn.addEventListener("click", () => {
         if (!state.teacherCheckSession) return;
-        const decisions = state.teacherCheckSession.decisions || {};
-        Object.entries(decisions).forEach(([wordId, decision]) => {
+        const session = state.teacherCheckSession;
+        const candidates = Array.isArray(session.candidates) ? session.candidates : [];
+        const unmatched = candidates.filter((candidate) => {
+          const decision = session.decisions?.[candidate.id] || { pronunciation: "none", meaning: "none" };
+          return decision.pronunciation === "none" || decision.meaning === "none";
+        });
+
+        if (unmatched.length) {
+          const first = unmatched[0];
+          const metaEl = elements.vocabularyTeacherCheckMeta;
+          if (metaEl) {
+            metaEl.textContent = `未判定: ${first.word}`;
+          }
+          window.alert("未判定の単語があります。発音と意味の両方を判定してください。")
+          return;
+        }
+
+        Object.entries(session.decisions || {}).forEach(([wordId, decision]) => {
           if (!decision || typeof decision !== "object") return;
-          const targetEntry = getVocabularyStudyEntryById(String(wordId || "").trim())
-            || getVocabularyRealWordBank().find((candidate) => String(candidate.id || candidate.word || "").trim() === String(wordId || "").trim() || String(candidate.word || "").trim() === String(wordId || "").trim())
-            || null;
+          const targetEntry = getVocabularyStudyEntryById(String(wordId || "").trim()) || null;
           if (!targetEntry) return;
 
-          if (decision.pronunciation && decision.pronunciation !== "none") {
-            const skill = targetEntry.pronunciation || null;
-            if (skill) {
-              if (decision.pronunciation === "ok") {
-                skill.teacherCheckStatus = "◎";
-                skill.teacherCheckState = createVocabularyTeacherCheckState({
-                  pronunciation: "◎",
-                  meaning: String(skill.teacherCheckState?.meaning || "none").trim() || "none"
-                });
-              } else if (decision.pronunciation === "ng") {
-                skill.teacherCheckStatus = "△";
-                skill.teacherCheckState = createVocabularyTeacherCheckState({
-                  pronunciation: "△",
-                  meaning: String(skill.teacherCheckState?.meaning || "none").trim() || "none"
-                });
-                skill.level = 1;
-                skill.currentState = "review";
-                skill.nextReviewAt = Date.now() + (24 * 60 * 60 * 1000);
-              }
-            }
-          }
+          const pronunciationSkill = targetEntry.pronunciation || null;
+          const meaningSkill = targetEntry.meaningState || null;
 
-          if (decision.meaning && decision.meaning !== "none") {
-            const skill = targetEntry.meaningState || null;
-            if (skill) {
-              if (decision.meaning === "ok") {
-                skill.teacherCheckStatus = "◎";
-                skill.teacherCheckState = createVocabularyTeacherCheckState({
-                  pronunciation: String(skill.teacherCheckState?.pronunciation || "none").trim() || "none",
-                  meaning: "◎"
-                });
-              } else if (decision.meaning === "ng") {
-                skill.teacherCheckStatus = "△";
-                skill.teacherCheckState = createVocabularyTeacherCheckState({
-                  pronunciation: String(skill.teacherCheckState?.pronunciation || "none").trim() || "none",
-                  meaning: "△"
-                });
-                skill.level = 1;
-                skill.currentState = "review";
-                skill.nextReviewAt = Date.now() + (24 * 60 * 60 * 1000);
-              }
-            }
+          if (decision.pronunciation && decision.pronunciation !== "none" && pronunciationSkill) {
+            applyTeacherCheckState(pronunciationSkill, "pronunciation", decision.pronunciation);
+          }
+          if (decision.meaning && decision.meaning !== "none" && meaningSkill) {
+            applyTeacherCheckState(meaningSkill, "meaning", decision.meaning);
           }
         });
 
         state.teacherCheckSession = null;
-        renderVocabularyTodayHistoryScreen();
+        renderVocabularyPastHistoryScreen();
       });
     }
     elements.vocabularySampleNextBtn.addEventListener("click", continueVocabularySample);

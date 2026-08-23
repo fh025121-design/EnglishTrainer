@@ -11,24 +11,30 @@ const checks = [
     ok: /vocabularyTeacherCheckScreen/.test(html) && /teacherCheck/.test(source)
   },
   {
-    name: "teacher check sources from past history and max-50 candidate extraction",
-    ok: /getVocabularyTeacherCheckCandidates|getVocabularyTeacherCheckHistoryEntries|teacherCheck.*50|max.*50/i.test(source)
+    name: "teacher check candidate logic requires both self results to be OK and excludes any teacher-C status already marked as complete",
+    ok: /getVocabularyTeacherCheckCandidates\s*\(/.test(source)
+      && /lastSelfResult.*ok/.test(source)
+      && /teacherCheck.*◎/.test(source)
+      && /slice\(0,\s*50\)/.test(source)
   },
   {
-    name: "teacher check candidate logic keeps only self-OK and unconfirmed teacher fields and limits to 50 words",
-    ok: /teacherCheck.*slice\(0,\s*50\)|slice\(\s*0,\s*50\)|self.*ok.*teacher.*◎|teacher.*◎.*未確認|teacherCheckCandidate/i.test(source)
+    name: "teacher check no-candidate state is explicit and screen is list-based rather than single-item navigation",
+    ok: /先生チェック対象の単語はありません/.test(source)
+      && /vocabulary-teacher-check-list/.test(source)
+      && !/teacherCheck.*currentIndex/.test(source)
   },
   {
-    name: "teacher check empty-state shows a no-candidate message instead of opening an empty screen",
-    ok: /先生チェック対象の単語はありません|no\s*teacher.*candidate|empty.*teacher.*candidate/i.test(source)
+    name: "teacher check decisions are draft-only until complete and do not mutate level or currentState",
+    ok: /teacherCheckSession/.test(source)
+      && /teacherCheckState/.test(source)
+      && /level\s*>=\s*5|currentState.*review|nextReviewAt.*Date\.now/.test(source)
   },
   {
-    name: "teacher check persists in separate vocabulary skill state and does not mutate level until final apply",
-    ok: /teacherCheckState|teacherCheckStatus|currentState.*review.*nextReviewAt.*1\s*\*\s*24|level\s*=\s*1.*currentState.*review/i.test(source)
-  },
-  {
-    name: "teacher check keeps learning state separate from draft decisions",
-    ok: /teacherCheckDraft|teacherCheckDrafts|teacherCheckCurrentIndex|teacherCheckSession/i.test(source)
+    name: "teacher check screen supports a single vertical scroll render with audio and dual selection buttons",
+    ok: /🔊/.test(source)
+      && /発音[\s\S]*◎[\s\S]*△/.test(source)
+      && /意味[\s\S]*◎[\s\S]*△/.test(source)
+      && /vocabulary-teacher-check-list/.test(source)
   }
 ];
 
