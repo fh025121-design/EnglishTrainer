@@ -4387,6 +4387,30 @@
     return safeUid ? `${MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY}:${safeUid}` : MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY;
   }
 
+  function getVocabularySyncEntryLatestUpdatedAt(targetValue) {
+    const numericValue = Number(targetValue);
+    return Number.isFinite(numericValue) ? Math.max(0, numericValue) : 0;
+  }
+
+  function getVocabularyEntryLatestUpdatedAt(entry) {
+    if (!entry || typeof entry !== "object") {
+      return 0;
+    }
+    const timestamps = [
+      getVocabularySyncEntryLatestUpdatedAt(entry.lastJudgedAt),
+      getVocabularySyncEntryLatestUpdatedAt(entry.createdAt),
+      getVocabularySyncEntryLatestUpdatedAt(entry.pronunciationTeacherCheckUpdatedAt),
+      getVocabularySyncEntryLatestUpdatedAt(entry.meaningTeacherCheckUpdatedAt),
+      getVocabularySyncEntryLatestUpdatedAt(entry.pronunciation?.lastJudgedAt),
+      getVocabularySyncEntryLatestUpdatedAt(entry.pronunciation?.teacherCheckUpdatedAt),
+      getVocabularySyncEntryLatestUpdatedAt(entry.meaningState?.lastJudgedAt),
+      getVocabularySyncEntryLatestUpdatedAt(entry.meaningState?.teacherCheckUpdatedAt),
+      getVocabularySyncEntryLatestUpdatedAt(entry.teacherCheckState?.pronunciationUpdatedAt),
+      getVocabularySyncEntryLatestUpdatedAt(entry.teacherCheckState?.meaningUpdatedAt)
+    ];
+    return Math.max(0, ...timestamps);
+  }
+
   function mergeVocabularyTodayHistoryMapByLatest(baseMap, incomingMap) {
     const base = normalizeVocabularyTodayHistoryMap(baseMap || {});
     const incoming = normalizeVocabularyTodayHistoryMap(incomingMap || {});
@@ -4411,8 +4435,17 @@
           return;
         }
         if (!baseEntry || !incomingEntry) return;
-        const leftUpdated = Number(baseEntry.lastJudgedAt) || 0;
-        const rightUpdated = Number(incomingEntry.lastJudgedAt) || 0;
+
+        const leftUpdated = Math.max(
+          getVocabularySyncEntryLatestUpdatedAt(baseEntry.lastJudgedAt),
+          getVocabularySyncEntryLatestUpdatedAt(baseEntry.pronunciationTeacherCheckUpdatedAt),
+          getVocabularySyncEntryLatestUpdatedAt(baseEntry.meaningTeacherCheckUpdatedAt)
+        );
+        const rightUpdated = Math.max(
+          getVocabularySyncEntryLatestUpdatedAt(incomingEntry.lastJudgedAt),
+          getVocabularySyncEntryLatestUpdatedAt(incomingEntry.pronunciationTeacherCheckUpdatedAt),
+          getVocabularySyncEntryLatestUpdatedAt(incomingEntry.meaningTeacherCheckUpdatedAt)
+        );
         mergedBucket[wordKey] = rightUpdated >= leftUpdated ? incomingEntry : baseEntry;
       });
 
@@ -8158,10 +8191,11 @@
       const rightPronUpdated = getVocabularyTeacherCheckUpdatedAtForField(incomingEntry, "pronunciation");
       const leftMeaningUpdated = getVocabularyTeacherCheckUpdatedAtForField(baseEntry, "meaning");
       const rightMeaningUpdated = getVocabularyTeacherCheckUpdatedAtForField(incomingEntry, "meaning");
-      const leftUpdated = Number(baseEntry?.lastJudgedAt || baseEntry?.createdAt || 0) || 0;
-      const rightUpdated = Number(incomingEntry?.lastJudgedAt || incomingEntry?.createdAt || 0) || 0;
+      const leftUpdated = getVocabularyEntryLatestUpdatedAt(baseEntry);
+      const rightUpdated = getVocabularyEntryLatestUpdatedAt(incomingEntry);
+      const winnerEntry = rightUpdated >= leftUpdated ? incomingEntry : baseEntry;
 
-      const mergedEntry = normalizeVocabularyWordRecord({ ...baseEntry }, mergedById.size);
+      const mergedEntry = normalizeVocabularyWordRecord({ ...winnerEntry }, mergedById.size);
       const pronStatusSource = rightPronUpdated >= leftPronUpdated ? incomingEntry : baseEntry;
       const meaningStatusSource = rightMeaningUpdated >= leftMeaningUpdated ? incomingEntry : baseEntry;
       const pronStatus = String(pronStatusSource?.pronunciationTeacherCheck || pronStatusSource?.pronunciation?.teacherCheckStatus || pronStatusSource?.teacherCheckState?.pronunciation || "none").trim() || "none";
@@ -8195,10 +8229,8 @@
         lastJudgedAt: mergedEntry.meaningState?.lastJudgedAt || null,
         lastJudgedBy: mergedEntry.meaningState?.lastJudgedBy || "self"
       });
-      if (rightUpdated >= leftUpdated) {
-        mergedEntry.lastJudgedAt = incomingEntry.lastJudgedAt || mergedEntry.lastJudgedAt || null;
-        mergedEntry.lastJudgedBy = incomingEntry.lastJudgedBy || mergedEntry.lastJudgedBy || "self";
-      }
+      mergedEntry.lastJudgedAt = winnerEntry.lastJudgedAt || mergedEntry.lastJudgedAt || null;
+      mergedEntry.lastJudgedBy = winnerEntry.lastJudgedBy || mergedEntry.lastJudgedBy || "self";
 
       mergedById.set(wordId, mergedEntry);
     });

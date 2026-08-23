@@ -77,6 +77,13 @@ const checks = [
     name: "last-updated merge wins for same vocabulary id across devices",
     ok: /rightUpdated >= leftUpdated \? incomingEntry : baseEntry/.test(source)
       && /rightUpdated >= leftUpdated \? incomingEntry : baseEntry/.test(source)
+  },
+  {
+    name: "same-uid merge compares the latest relevant update timestamps, not only lastJudgedAt",
+    ok: /getVocabularySyncEntryLatestUpdatedAt\s*\(/.test(source)
+      && /pronunciationTeacherCheckUpdatedAt/.test(source)
+      && /meaningTeacherCheckUpdatedAt/.test(source)
+      && /lastJudgedAt/.test(source)
   }
 ];
 
