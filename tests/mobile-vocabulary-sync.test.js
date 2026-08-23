@@ -21,6 +21,19 @@ const checks = [
   {
     name: "sync code guards against empty remote state wiping local progress",
     ok: /empty.*remote|missing-remote|allowCreate|skip.*empty/.test(source) || /missing-remote|allowCreate/.test(firebaseSource)
+  },
+  {
+    name: "today-history sync helpers are present for cross-browser shared state",
+    ok: /MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_DOC_ID/.test(firebaseSource)
+      && /loadMobileVocabularyTodayHistoryStateFromFirestore\s*\(/.test(firebaseSource)
+      && /saveMobileVocabularyTodayHistoryStateToFirestore\s*\(/.test(firebaseSource)
+      && /subscribeMobileVocabularyTodayHistoryStateFromFirestore\s*\(/.test(firebaseSource)
+  },
+  {
+    name: "home today learning summary uses Firestore formal learning history as its canonical source",
+    ok: /loadMobileFormalLearningHistoryEntriesForToday\s*\(/.test(source)
+      && /collection\(firestore,\s*"users",\s*uid,\s*"learningHistory"\)/.test(source)
+      && /MOBILE_LEARNING_HISTORY_STORAGE_KEY/.test(source)
   }
 ];
 

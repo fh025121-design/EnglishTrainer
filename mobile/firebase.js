@@ -39,6 +39,9 @@ const MOBILE_WORD_ORDER_SYNC_SCHEMA_VERSION = 1;
 const MOBILE_VOCABULARY_SYNC_DOC_COLLECTION = "mobileSync";
 const MOBILE_VOCABULARY_SYNC_DOC_ID = "vocabularyStateV1";
 const MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION = 1;
+const MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_DOC_COLLECTION = "mobileSync";
+const MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_DOC_ID = "vocabularyTodayHistoryV1";
+const MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_SCHEMA_VERSION = 1;
 
 window.MobileFirebaseAuthState = {
   status: "pending",
@@ -673,6 +676,196 @@ function subscribeMobileWordOrderStatsFromFirestore(onChange, options = {}) {
     onChange({ ok: false, exists: false, uid: targetUid, statsMap: null, error });
   });
 }
+
+function getMobileVocabularyTodayHistoryStateDocRef(targetUid = "") {
+  const uid = String(targetUid || auth.currentUser?.uid || "").trim();
+  if (!uid) return null;
+  return doc(firestore, "users", uid, MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_DOC_COLLECTION, MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_DOC_ID);
+}
+
+function sanitizeVocabularyTodayHistoryMapForSync(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const next = {};
+  Object.entries(source).forEach(([dateKey, bucket]) => {
+    const normalizedDateKey = String(dateKey || "").trim();
+    if (!normalizedDateKey || !bucket || typeof bucket !== "object" || Array.isArray(bucket)) {
+      return;
+    }
+    const safeBucket = {};
+    Object.entries(bucket).forEach(([wordKey, entry]) => {
+      const normalizedWordKey = String(wordKey || "").trim();
+      if (!normalizedWordKey || !entry || typeof entry !== "object") return;
+      const word = String(entry.word || "").trim();
+      if (!word) return;
+      safeBucket[normalizedWordKey] = {
+        word,
+        partOfSpeech: String(entry.partOfSpeech || "").trim(),
+        grade: String(entry.grade || entry.level || entry.sourceLevel || "5").trim() || "5",
+        pronunciation: String(entry.pronunciation || "—").trim() || "—",
+        pronunciationText: String(entry.pronunciationText || "").trim(),
+        meaning: String(entry.meaning || "—").trim() || "—",
+        meaningText: String(entry.meaningText || "").trim(),
+        pronunciationTeacherCheck: ["none", "◎", "△"].includes(String(entry.pronunciationTeacherCheck || "").trim()) ? String(entry.pronunciationTeacherCheck || "").trim() : "none",
+        meaningTeacherCheck: ["none", "◎", "△"].includes(String(entry.meaningTeacherCheck || "").trim()) ? String(entry.meaningTeacherCheck || "").trim() : "none",
+        lastJudgedAt: Number(entry.lastJudgedAt) || 0
+      };
+    });
+    if (Object.keys(safeBucket).length || Object.keys(bucket).length === 0) {
+      next[normalizedDateKey] = safeBucket;
+    }
+  });
+  return next;
+}
+
+function normalizeMobileVocabularyTodayHistoryStateDoc(docData) {
+  const source = docData && typeof docData === "object" ? docData : {};
+  const historyMap = sanitizeVocabularyTodayHistoryMapForSync(source.historyMap || source.vocabularyTodayHistoryMap || source.map || {});
+  return {
+    historyMap,
+    updatedAtMs: Math.max(0, Number(source.updatedAtMs) || 0),
+    sourceDeviceId: String(source.sourceDeviceId || "").trim(),
+    sourceDeviceName: String(source.sourceDeviceName || "").trim(),
+    schemaVersion: Math.max(0, Number(source.schemaVersion) || MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_SCHEMA_VERSION)
+  };
+}
+
+async function loadMobileVocabularyTodayHistoryStateFromFirestore(options = {}) {
+  const currentUid = String(auth.currentUser?.uid || "").trim();
+  const targetUid = String(options?.targetUid || currentUid || "").trim();
+  const ref = getMobileVocabularyTodayHistoryStateDocRef(targetUid);
+  if (!ref || !targetUid) {
+    return { ok: false, exists: false, uid: targetUid, historyMap: null };
+  }
+
+  try {
+    const snapshot = await getDoc(ref);
+    if (!snapshot.exists()) {
+      return { ok: true, exists: false, uid: targetUid, historyMap: null };
+    }
+    const normalized = normalizeMobileVocabularyTodayHistoryStateDoc(snapshot.data());
+    return {
+      ok: true,
+      exists: true,
+      uid: targetUid,
+      historyMap: normalized.historyMap,
+      updatedAtMs: normalized.updatedAtMs,
+      sourceDeviceId: normalized.sourceDeviceId,
+      sourceDeviceName: normalized.sourceDeviceName,
+      schemaVersion: normalized.schemaVersion
+    };
+  } catch (error) {
+    console.error("Failed to load mobile vocabulary today history state from Firestore", error);
+    return { ok: false, exists: false, uid: targetUid, historyMap: null, error };
+  }
+}
+
+async function saveMobileVocabularyTodayHistoryStateToFirestore(historyMap, options = {}) {
+  const user = auth.currentUser;
+  const targetUid = String(options?.targetUid || user?.uid || "").trim();
+  const ref = getMobileVocabularyTodayHistoryStateDocRef(targetUid);
+  if (!ref || !targetUid || !historyMap || typeof historyMap !== "object") {
+    return { ok: false, saved: false, exists: false, uid: targetUid };
+  }
+
+  const allowCreate = options?.allowCreate === true;
+  const normalizedIncoming = sanitizeVocabularyTodayHistoryMapForSync(historyMap);
+  const sourceDeviceId = String(options?.sourceDeviceId || "").trim();
+  const sourceDeviceName = String(options?.sourceDeviceName || "").trim();
+
+  try {
+    const result = await runTransaction(firestore, async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      const existsBefore = snapshot.exists();
+      if (!existsBefore && !allowCreate) {
+        return {
+          saved: false,
+          existsBefore,
+          skipped: "missing-remote",
+          historyMap: null
+        };
+      }
+
+      const currentHistoryMap = existsBefore
+        ? normalizeMobileVocabularyTodayHistoryStateDoc(snapshot.data()).historyMap
+        : {};
+      const mergedHistoryMap = { ...currentHistoryMap };
+      Object.entries(normalizedIncoming).forEach(([dateKey, bucket]) => {
+        const currentBucket = mergedHistoryMap[dateKey] && typeof mergedHistoryMap[dateKey] === "object" ? mergedHistoryMap[dateKey] : {};
+        const mergedBucket = { ...currentBucket };
+        Object.entries(bucket).forEach(([wordKey, incomingEntry]) => {
+          const currentEntry = mergedBucket[wordKey] || null;
+          if (!currentEntry) {
+            mergedBucket[wordKey] = incomingEntry;
+            return;
+          }
+          const left = Number(currentEntry.lastJudgedAt) || 0;
+          const right = Number(incomingEntry?.lastJudgedAt) || 0;
+          mergedBucket[wordKey] = right >= left ? incomingEntry : currentEntry;
+        });
+        mergedHistoryMap[dateKey] = mergedBucket;
+      });
+
+      transaction.set(ref, {
+        uid: targetUid,
+        historyMap: mergedHistoryMap,
+        sourceDeviceId,
+        sourceDeviceName,
+        schemaVersion: MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_SCHEMA_VERSION,
+        updatedAtMs: Date.now(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      return { saved: true, existsBefore, historyMap: mergedHistoryMap };
+    });
+
+    return {
+      ok: true,
+      saved: Boolean(result?.saved),
+      exists: Boolean(result?.existsBefore),
+      uid: targetUid,
+      skipped: result?.skipped || "",
+      historyMap: result?.historyMap || null
+    };
+  } catch (error) {
+    console.error("Failed to save mobile vocabulary today history state to Firestore", error);
+    return { ok: false, saved: false, exists: false, uid: targetUid, error };
+  }
+}
+
+function subscribeMobileVocabularyTodayHistoryStateFromFirestore(onChange, options = {}) {
+  if (typeof onChange !== "function") {
+    return () => {};
+  }
+  const targetUid = String(options?.targetUid || auth.currentUser?.uid || "").trim();
+  const ref = getMobileVocabularyTodayHistoryStateDocRef(targetUid);
+  if (!ref || !targetUid) {
+    return () => {};
+  }
+
+  return onSnapshot(ref, (snapshot) => {
+    if (!snapshot.exists()) {
+      onChange({ ok: true, exists: false, uid: targetUid, historyMap: null });
+      return;
+    }
+    const normalized = normalizeMobileVocabularyTodayHistoryStateDoc(snapshot.data());
+    onChange({
+      ok: true,
+      exists: true,
+      uid: targetUid,
+      historyMap: normalized.historyMap,
+      updatedAtMs: normalized.updatedAtMs,
+      sourceDeviceId: normalized.sourceDeviceId,
+      sourceDeviceName: normalized.sourceDeviceName,
+      schemaVersion: normalized.schemaVersion
+    });
+  }, (error) => {
+    onChange({ ok: false, exists: false, uid: targetUid, historyMap: null, error });
+  });
+}
+
+window.loadMobileVocabularyTodayHistoryStateFromFirestore = loadMobileVocabularyTodayHistoryStateFromFirestore;
+window.saveMobileVocabularyTodayHistoryStateToFirestore = saveMobileVocabularyTodayHistoryStateToFirestore;
+window.subscribeMobileVocabularyTodayHistoryStateFromFirestore = subscribeMobileVocabularyTodayHistoryStateFromFirestore;
 
 function getMobileVocabularyStateDocRef(targetUid = "") {
   const uid = String(targetUid || auth.currentUser?.uid || "").trim();

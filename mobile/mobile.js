@@ -73,6 +73,9 @@
   let mobilePointStateCache = null;
   let mobilePointStateCacheUid = "";
   let mobilePointHistoryVisibleCount = MOBILE_POINT_HISTORY_PAGE_SIZE;
+  let mobileHomeTodayLearningSource = "localStorage";
+  let mobileHomeTodayLearningEntries = [];
+  let mobileHomeTodayLearningRefreshPromise = null;
   let mobilePointSyncCurrentUid = "";
   let mobilePointSyncReady = false;
   let mobilePointSyncAllowCreate = false;
@@ -3057,6 +3060,12 @@
   let vocabularySyncUnsubscribe = null;
   let vocabularySyncCache = null;
   let vocabularySyncCacheUid = "";
+  let vocabularyTodayHistorySyncCurrentUid = "";
+  let vocabularyTodayHistorySyncReady = false;
+  let vocabularyTodayHistorySyncAllowCreate = false;
+  let vocabularyTodayHistorySyncInFlight = null;
+  let vocabularyTodayHistorySyncQueued = false;
+  let vocabularyTodayHistorySyncUnsubscribe = null;
 
   const state = {
     settings: {
@@ -4242,13 +4251,57 @@
     return safeMap;
   }
 
+  function getMobileVocabularyTodayHistoryStorageKey(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    const safeUid = String(uid || "").trim();
+    return safeUid ? `${MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY}:${safeUid}` : MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY;
+  }
+
+  function mergeVocabularyTodayHistoryMapByLatest(baseMap, incomingMap) {
+    const base = normalizeVocabularyTodayHistoryMap(baseMap || {});
+    const incoming = normalizeVocabularyTodayHistoryMap(incomingMap || {});
+    const merged = {};
+    const dateKeys = new Set([...Object.keys(base), ...Object.keys(incoming)]);
+
+    dateKeys.forEach((dateKey) => {
+      const baseBucket = base[dateKey] && typeof base[dateKey] === "object" ? base[dateKey] : {};
+      const incomingBucket = incoming[dateKey] && typeof incoming[dateKey] === "object" ? incoming[dateKey] : {};
+      const mergedBucket = {};
+      const wordKeys = new Set([...Object.keys(baseBucket), ...Object.keys(incomingBucket)]);
+
+      wordKeys.forEach((wordKey) => {
+        const baseEntry = baseBucket[wordKey] || null;
+        const incomingEntry = incomingBucket[wordKey] || null;
+        if (!baseEntry && incomingEntry) {
+          mergedBucket[wordKey] = incomingEntry;
+          return;
+        }
+        if (!incomingEntry && baseEntry) {
+          mergedBucket[wordKey] = baseEntry;
+          return;
+        }
+        if (!baseEntry || !incomingEntry) return;
+        const leftUpdated = Number(baseEntry.lastJudgedAt) || 0;
+        const rightUpdated = Number(incomingEntry.lastJudgedAt) || 0;
+        mergedBucket[wordKey] = rightUpdated >= leftUpdated ? incomingEntry : baseEntry;
+      });
+
+      if (Object.keys(mergedBucket).length) {
+        merged[dateKey] = mergedBucket;
+      }
+    });
+
+    return merged;
+  }
+
   function loadVocabularyTodayHistoryMap() {
     const previousMap = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
       ? state.vocabularyTodayHistoryMap
       : {};
+    const uid = getCurrentMobileFirebaseUser()?.uid || "";
+    const storageKey = getMobileVocabularyTodayHistoryStorageKey(uid);
 
     try {
-      const raw = window.localStorage.getItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
+      const raw = window.localStorage.getItem(storageKey) || window.localStorage.getItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
       if (!raw) {
         state.vocabularyTodayHistoryMap = previousMap;
         return state.vocabularyTodayHistoryMap;
@@ -4269,7 +4322,13 @@
       const bucket = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
         ? state.vocabularyTodayHistoryMap
         : {};
-      window.localStorage.setItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY, JSON.stringify(bucket));
+      const uid = getCurrentMobileFirebaseUser()?.uid || "";
+      const storageKey = getMobileVocabularyTodayHistoryStorageKey(uid);
+      window.localStorage.setItem(storageKey, JSON.stringify(bucket));
+      if (!uid) {
+        window.localStorage.setItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY, JSON.stringify(bucket));
+      }
+      scheduleMobileVocabularyTodayHistorySync();
     } catch (_error) {
       // Ignore storage failures; keep the in-memory map for the current session.
     }
@@ -4347,6 +4406,151 @@
         if (weaknessDiff !== 0) return weaknessDiff;
         return String(left.word || "").localeCompare(String(right.word || ""), "ja");
       });
+  }
+
+  function handleVocabularyTodayHistorySyncRemoteSnapshot(snapshot) {
+    if (!snapshot?.ok || !snapshot.exists || !snapshot.historyMap) {
+      return;
+    }
+    const uid = String(snapshot.uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
+    const incomingMap = normalizeVocabularyTodayHistoryMap(snapshot.historyMap);
+    if (!incomingMap || !Object.keys(incomingMap).length) {
+      return;
+    }
+    const currentLocal = loadVocabularyTodayHistoryMap();
+    const mergedMap = mergeVocabularyTodayHistoryMapByLatest(currentLocal, incomingMap);
+    state.vocabularyTodayHistoryMap = mergedMap;
+    saveVocabularyTodayHistoryMap();
+    if (uid) {
+      const mobileSyncKey = getMobileVocabularyTodayHistoryStorageKey(uid);
+      window.localStorage.setItem(mobileSyncKey, JSON.stringify(mergedMap));
+    }
+  }
+
+  async function initializeMobileVocabularyTodayHistorySyncForCurrentUser(options = {}) {
+    const force = options?.force === true;
+    const uid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!uid) {
+      vocabularyTodayHistorySyncCurrentUid = "";
+      vocabularyTodayHistorySyncReady = false;
+      vocabularyTodayHistorySyncAllowCreate = false;
+      if (typeof vocabularyTodayHistorySyncUnsubscribe === "function") {
+        vocabularyTodayHistorySyncUnsubscribe();
+      }
+      vocabularyTodayHistorySyncUnsubscribe = null;
+      return false;
+    }
+
+    if (!force && vocabularyTodayHistorySyncReady && vocabularyTodayHistorySyncCurrentUid === uid) {
+      return true;
+    }
+
+    if (typeof vocabularyTodayHistorySyncUnsubscribe === "function") {
+      vocabularyTodayHistorySyncUnsubscribe();
+    }
+    vocabularyTodayHistorySyncUnsubscribe = null;
+
+    const localBaseline = loadVocabularyTodayHistoryMap();
+    const remoteLoad = window.loadMobileVocabularyTodayHistoryStateFromFirestore;
+    if (typeof remoteLoad !== "function") {
+      vocabularyTodayHistorySyncCurrentUid = uid;
+      vocabularyTodayHistorySyncReady = false;
+      vocabularyTodayHistorySyncAllowCreate = false;
+      return false;
+    }
+
+    let remoteResult = null;
+    try {
+      remoteResult = await remoteLoad({ targetUid: uid });
+    } catch (_error) {
+      remoteResult = null;
+    }
+
+    if (remoteResult?.ok && remoteResult.exists && remoteResult.historyMap) {
+      state.vocabularyTodayHistoryMap = mergeVocabularyTodayHistoryMapByLatest(localBaseline, remoteResult.historyMap);
+      saveVocabularyTodayHistoryMap();
+      vocabularyTodayHistorySyncCurrentUid = uid;
+      vocabularyTodayHistorySyncReady = true;
+      vocabularyTodayHistorySyncAllowCreate = false;
+    } else {
+      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
+      saveVocabularyTodayHistoryMap();
+      vocabularyTodayHistorySyncCurrentUid = uid;
+      vocabularyTodayHistorySyncReady = true;
+      vocabularyTodayHistorySyncAllowCreate = true;
+    }
+
+    const subscribeRemote = window.subscribeMobileVocabularyTodayHistoryStateFromFirestore;
+    if (typeof subscribeRemote === "function") {
+      vocabularyTodayHistorySyncUnsubscribe = subscribeRemote((snapshot) => {
+        handleVocabularyTodayHistorySyncRemoteSnapshot(snapshot);
+      }, { targetUid: uid });
+    }
+
+    if (vocabularyTodayHistorySyncReady) {
+      await flushMobileVocabularyTodayHistorySync();
+    }
+    return vocabularyTodayHistorySyncReady;
+  }
+
+  async function flushMobileVocabularyTodayHistorySync() {
+    if (vocabularyTodayHistorySyncInFlight) {
+      vocabularyTodayHistorySyncQueued = true;
+      return vocabularyTodayHistorySyncInFlight;
+    }
+
+    vocabularyTodayHistorySyncInFlight = (async () => {
+      do {
+        vocabularyTodayHistorySyncQueued = false;
+        const uid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+        if (!uid || !vocabularyTodayHistorySyncReady || vocabularyTodayHistorySyncCurrentUid !== uid) {
+          break;
+        }
+
+        const saveRemote = window.saveMobileVocabularyTodayHistoryStateToFirestore;
+        if (typeof saveRemote !== "function") {
+          break;
+        }
+
+        const sourceMap = loadVocabularyTodayHistoryMap();
+        const result = await saveRemote(sourceMap, {
+          targetUid: uid,
+          allowCreate: vocabularyTodayHistorySyncAllowCreate,
+          sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
+          sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+        }).catch(() => null);
+
+        if (!result?.ok || !result.saved) {
+          break;
+        }
+
+        if (result.historyMap) {
+          state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(result.historyMap) || {};
+          saveVocabularyTodayHistoryMap();
+        }
+
+        vocabularyTodayHistorySyncAllowCreate = false;
+      } while (vocabularyTodayHistorySyncQueued);
+    })();
+
+    try {
+      await vocabularyTodayHistorySyncInFlight;
+    } finally {
+      vocabularyTodayHistorySyncInFlight = null;
+    }
+  }
+
+  function scheduleMobileVocabularyTodayHistorySync() {
+    const uid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!uid) return;
+    const latest = state.vocabularyTodayHistoryMap || {};
+    const storageKey = getMobileVocabularyTodayHistoryStorageKey(uid);
+    window.localStorage.setItem(storageKey, JSON.stringify(latest));
+    if (!vocabularyTodayHistorySyncReady || vocabularyTodayHistorySyncCurrentUid !== uid) {
+      initializeMobileVocabularyTodayHistorySyncForCurrentUser().catch(() => false);
+      return;
+    }
+    flushMobileVocabularyTodayHistorySync().catch(() => undefined);
   }
 
   function getVocabularyPastHistoryStatus(skillState, fieldName) {
@@ -9650,7 +9854,45 @@
     aliasNode.classList.toggle("hidden", !shouldShow);
   }
 
-  function getMobileHomeTodayLearningSummary() {
+  async function loadMobileFormalLearningHistoryEntriesForToday({ forceRefresh = false } = {}) {
+    const user = typeof window.getMobileFirebaseCurrentUser === "function"
+      ? window.getMobileFirebaseCurrentUser()
+      : (window.MobileFirebase?.auth?.currentUser || null);
+    const uid = String(user?.uid || "").trim();
+    const firestore = window.MobileFirebase?.firestore || null;
+    if (!uid || !firestore) {
+      return { ok: false, entries: [], source: "localStorage" };
+    }
+
+    if (!forceRefresh && mobileHomeTodayLearningSource === "firestore" && Array.isArray(mobileHomeTodayLearningEntries) && mobileHomeTodayLearningEntries.length) {
+      return { ok: true, entries: mobileHomeTodayLearningEntries.slice(), source: "firestore" };
+    }
+
+    try {
+      const sdk = await getMobileFirestoreSdk();
+      const snapshot = await sdk.getDocs(sdk.query(
+        sdk.collection(firestore, "users", uid, "learningHistory"),
+        sdk.orderBy("createdAt", "desc")
+      ));
+      const normalizedEntries = snapshot.docs.map(normalizeMobileAdminLearningHistoryFirestoreEntry);
+      const todayDayKey = getMobileLearningHistoryDayKey(Date.now());
+      const todayEntries = normalizedEntries.filter((entry) => {
+        if (!entry) return false;
+        const entryDayKey = getMobileLearningHistoryDayKey(Number(entry.endedAt) || Number(entry.startedAt) || Number(entry.createdAt) || Date.now());
+        return entryDayKey === todayDayKey;
+      });
+      mobileHomeTodayLearningEntries = todayEntries.slice();
+      mobileHomeTodayLearningSource = "firestore";
+      return { ok: true, entries: todayEntries.slice(), source: "firestore" };
+    } catch (error) {
+      console.error("Failed to load formal mobile learning history for home summary", error);
+      mobileHomeTodayLearningEntries = [];
+      mobileHomeTodayLearningSource = "localStorage";
+      return { ok: false, entries: [], source: "localStorage" };
+    }
+  }
+
+  function summarizeHomeTodayLearningEntries(entries) {
     const todayDayKey = getMobileLearningHistoryDayKey(Date.now());
     const result = {
       word: { count: 0, points: 0 },
@@ -9658,9 +9900,9 @@
       translation: { count: 0, points: 0 }
     };
 
-    const entries = Array.isArray(loadMobileLearningHistoryEntries()) ? loadMobileLearningHistoryEntries() : [];
-    entries.forEach((entry) => {
-      if (!entry || getMobileLearningHistoryDayKey(entry.endedAt) !== todayDayKey) {
+    const sourceEntries = Array.isArray(entries) ? entries : [];
+    sourceEntries.forEach((entry) => {
+      if (!entry || getMobileLearningHistoryDayKey(entry.endedAt || entry.startedAt || Date.now()) !== todayDayKey) {
         return;
       }
 
@@ -9691,6 +9933,42 @@
     });
 
     return result;
+  }
+
+  function getMobileHomeTodayLearningSummary() {
+    if (mobileHomeTodayLearningSource === "firestore") {
+      return summarizeHomeTodayLearningEntries(Array.isArray(mobileHomeTodayLearningEntries) ? mobileHomeTodayLearningEntries : []);
+    }
+
+    const fallbackEntries = Array.isArray(loadMobileLearningHistoryEntries()) ? loadMobileLearningHistoryEntries() : [];
+    return summarizeHomeTodayLearningEntries(fallbackEntries);
+  }
+
+  async function refreshMobileHomeTodayLearningSummaryFromFirestore() {
+    if (mobileHomeTodayLearningRefreshPromise) {
+      return mobileHomeTodayLearningRefreshPromise;
+    }
+
+    mobileHomeTodayLearningRefreshPromise = (async () => {
+      const remoteResult = await loadMobileFormalLearningHistoryEntriesForToday({ forceRefresh: true });
+      if (remoteResult.ok) {
+        mobileHomeTodayLearningSource = "firestore";
+        mobileHomeTodayLearningEntries = remoteResult.entries.slice();
+        renderMobileHomeTodayLearningSummary();
+        return true;
+      }
+
+      mobileHomeTodayLearningSource = "localStorage";
+      mobileHomeTodayLearningEntries = Array.isArray(loadMobileLearningHistoryEntries()) ? loadMobileLearningHistoryEntries().slice() : [];
+      renderMobileHomeTodayLearningSummary();
+      return false;
+    })();
+
+    try {
+      return await mobileHomeTodayLearningRefreshPromise;
+    } finally {
+      mobileHomeTodayLearningRefreshPromise = null;
+    }
   }
 
   function renderMobileHomeTodayLearningSummary() {
@@ -10344,6 +10622,7 @@
           initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
           initializeWordOrderStatsSyncForCurrentUser({ force: true }).catch(() => false);
           initializeMobileVocabularySyncForCurrentUser({ force: true }).catch(() => false);
+          refreshMobileHomeTodayLearningSummaryFromFirestore().catch(() => false);
         });
       renderHome();
       return;
@@ -10401,6 +10680,7 @@
           initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
           initializeWordOrderStatsSyncForCurrentUser({ force: true }).catch(() => false);
           initializeMobileVocabularySyncForCurrentUser({ force: true }).catch(() => false);
+          refreshMobileHomeTodayLearningSummaryFromFirestore().catch(() => false);
         });
       renderHome();
       return;
