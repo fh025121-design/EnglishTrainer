@@ -3049,6 +3049,14 @@
   let mobileAuthLastStatus = "pending";
   let mobileAuthLastUid = "";
   let mobileAuthListenerBound = false;
+  let vocabularySyncCurrentUid = "";
+  let vocabularySyncReady = false;
+  let vocabularySyncAllowCreate = false;
+  let vocabularySyncInFlight = null;
+  let vocabularySyncQueued = false;
+  let vocabularySyncUnsubscribe = null;
+  let vocabularySyncCache = null;
+  let vocabularySyncCacheUid = "";
 
   const state = {
     settings: {
@@ -4391,11 +4399,25 @@
       .sort((left, right) => Number(right.lastLearnedAt || 0) - Number(left.lastLearnedAt || 0));
   }
 
+  function getVocabularyPastHistoryDisplayEntries() {
+    const entries = Array.isArray(getVocabularyPastHistoryEntries()) ? getVocabularyPastHistoryEntries().slice() : [];
+    return entries.sort((left, right) => {
+      const leftHasDelta = [left?.pronunciationStatus, left?.meaningStatus].includes("△");
+      const rightHasDelta = [right?.pronunciationStatus, right?.meaningStatus].includes("△");
+
+      if (leftHasDelta !== rightHasDelta) {
+        return leftHasDelta ? -1 : 1;
+      }
+
+      return Number(right?.lastLearnedAt || 0) - Number(left?.lastLearnedAt || 0);
+    });
+  }
+
   function renderVocabularyPastHistoryScreen() {
     const list = elements.vocabularyPastHistoryList;
     if (!list) return;
 
-    const entries = getVocabularyPastHistoryEntries();
+    const entries = getVocabularyPastHistoryDisplayEntries();
     list.innerHTML = "";
 
     if (!entries.length) {
@@ -7123,6 +7145,259 @@
       vocabularyStudy: state.vocabularyStudy ? sanitizeVocabularyStudyState(state.vocabularyStudy) : null
     };
     window.localStorage.setItem(MOBILE_STORAGE_KEY, JSON.stringify(snapshot));
+    const uid = getMobileVocabularySyncUid();
+    if (uid) {
+      scheduleMobileVocabularySync();
+    }
+  }
+
+  function getMobileVocabularyStorageKey(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    const safeUid = String(uid || "").trim();
+    return safeUid ? `english-trainer-mobile-vocabulary-state-v1:${safeUid}` : "english-trainer-mobile-vocabulary-state-v1";
+  }
+
+  function loadMobileVocabularyStateForSync(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    try {
+      const raw = window.localStorage.getItem(getMobileVocabularyStorageKey(uid));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? sanitizeVocabularyStudyState(parsed) || null : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function saveMobileVocabularyStateForSync(studyState, uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    const normalized = studyState && typeof studyState === "object" ? sanitizeVocabularyStudyState(studyState) : null;
+    if (!normalized) {
+      window.localStorage.removeItem(getMobileVocabularyStorageKey(uid));
+      return null;
+    }
+    window.localStorage.setItem(getMobileVocabularyStorageKey(uid), JSON.stringify(normalized));
+    return normalized;
+  }
+
+  function clearMobileVocabularyStateForSync(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    window.localStorage.removeItem(getMobileVocabularyStorageKey(uid));
+  }
+
+  function getMobileVocabularySyncUid() {
+    return String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+  }
+
+  function mergeVocabularyStudyStateByLatest(baseStudyState, incomingStudyState) {
+    const base = sanitizeVocabularyStudyState(baseStudyState) || createVocabularyStudyState();
+    const incoming = sanitizeVocabularyStudyState(incomingStudyState) || null;
+    if (!incoming) return base;
+    if (!base || !base.entries) return incoming;
+
+    const mergedById = new Map();
+    const ids = new Set([
+      ...base.entries.map((entry) => String(entry?.id || entry?.word || "").trim()).filter(Boolean),
+      ...incoming.entries.map((entry) => String(entry?.id || entry?.word || "").trim()).filter(Boolean)
+    ]);
+
+    ids.forEach((wordId) => {
+      const baseEntry = base.entries.find((entry) => String(entry?.id || entry?.word || "").trim() === wordId) || null;
+      const incomingEntry = incoming.entries.find((entry) => String(entry?.id || entry?.word || "").trim() === wordId) || null;
+      if (!baseEntry && incomingEntry) {
+        mergedById.set(wordId, normalizeVocabularyWordRecord(incomingEntry, mergedById.size));
+        return;
+      }
+      if (!incomingEntry && baseEntry) {
+        mergedById.set(wordId, normalizeVocabularyWordRecord(baseEntry, mergedById.size));
+        return;
+      }
+      const leftUpdated = Number(baseEntry?.lastJudgedAt || baseEntry?.createdAt || 0) || 0;
+      const rightUpdated = Number(incomingEntry?.lastJudgedAt || incomingEntry?.createdAt || 0) || 0;
+      const winner = rightUpdated >= leftUpdated ? incomingEntry : baseEntry;
+      mergedById.set(wordId, normalizeVocabularyWordRecord(winner, mergedById.size));
+    });
+
+    const mergedEntries = [...mergedById.values()].filter(Boolean);
+    const mergedStudy = createVocabularyStudyState(mergedEntries);
+    if (Number.isFinite(Number(base.targetWordCount)) || Number.isFinite(Number(incoming.targetWordCount))) {
+      mergedStudy.targetWordCount = Math.max(
+        0,
+        Number(base.targetWordCount || incoming.targetWordCount || mergedStudy.targetWordCount) || mergedStudy.targetWordCount
+      );
+    }
+    return mergedStudy;
+  }
+
+  function handleVocabularySyncRemoteSnapshot(snapshot) {
+    if (!snapshot?.ok || !snapshot.exists || !snapshot.studyState) {
+      return;
+    }
+    const uid = String(snapshot.uid || getMobileVocabularySyncUid() || "").trim();
+    const incomingStudy = sanitizeVocabularyStudyState(snapshot.studyState);
+    if (!incomingStudy) {
+      return;
+    }
+    const currentLocal = loadMobileVocabularyStateForSync(uid) || state.vocabularyStudy || buildVocabularyRealStudyState();
+    const mergedStudy = mergeVocabularyStudyStateByLatest(currentLocal, incomingStudy);
+    if (sanitizeVocabularyStudyState(mergedStudy)) {
+      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(mergedStudy, getVocabularyRealWordBank());
+      saveState();
+      saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
+    }
+    const pending = loadMobileVocabularyStateForSync(uid);
+    if (!pending) {
+      clearMobileVocabularyStateForSync(uid);
+      return;
+    }
+    if (JSON.stringify(sanitizeVocabularyStudyState(pending)) === JSON.stringify(sanitizeVocabularyStudyState(mergedStudy))) {
+      clearMobileVocabularyStateForSync(uid);
+      return;
+    }
+    saveMobileVocabularyStateForSync(mergedStudy, uid);
+  }
+
+  async function initializeMobileVocabularySyncForCurrentUser(options = {}) {
+    const force = options?.force === true;
+    const uid = getMobileVocabularySyncUid();
+    if (!uid) {
+      vocabularySyncCurrentUid = "";
+      vocabularySyncReady = false;
+      vocabularySyncAllowCreate = false;
+      if (typeof vocabularySyncUnsubscribe === "function") {
+        vocabularySyncUnsubscribe();
+      }
+      vocabularySyncUnsubscribe = null;
+      return false;
+    }
+
+    if (!force && vocabularySyncReady && vocabularySyncCurrentUid === uid) {
+      return true;
+    }
+
+    if (typeof vocabularySyncUnsubscribe === "function") {
+      vocabularySyncUnsubscribe();
+    }
+    vocabularySyncUnsubscribe = null;
+
+    const localBaseline = loadMobileVocabularyStateForSync(uid) || state.vocabularyStudy || buildVocabularyRealStudyState();
+    const remoteLoad = window.loadMobileVocabularyStateFromFirestore;
+    if (typeof remoteLoad !== "function") {
+      vocabularySyncCurrentUid = uid;
+      vocabularySyncReady = false;
+      vocabularySyncAllowCreate = false;
+      return false;
+    }
+
+    let remoteResult = null;
+    try {
+      remoteResult = await remoteLoad({ targetUid: uid });
+    } catch (_error) {
+      remoteResult = null;
+    }
+
+    if (remoteResult?.ok && remoteResult.exists && remoteResult.studyState) {
+      const mergedStudy = mergeVocabularyStudyStateByLatest(localBaseline, remoteResult.studyState);
+      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(mergedStudy, getVocabularyRealWordBank());
+      saveState();
+      saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
+      vocabularySyncCurrentUid = uid;
+      vocabularySyncReady = true;
+      vocabularySyncAllowCreate = false;
+    } else {
+      const nextBaseline = sanitizeVocabularyStudyState(localBaseline) ? localBaseline : buildVocabularyRealStudyState();
+      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(nextBaseline, getVocabularyRealWordBank());
+      saveState();
+      saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
+      vocabularySyncCurrentUid = uid;
+      vocabularySyncReady = true;
+      vocabularySyncAllowCreate = true;
+    }
+
+    const subscribeRemote = window.subscribeMobileVocabularyStateFromFirestore;
+    if (typeof subscribeRemote === "function") {
+      vocabularySyncUnsubscribe = subscribeRemote((snapshot) => {
+        handleVocabularySyncRemoteSnapshot(snapshot);
+      }, { targetUid: uid });
+    }
+
+    if (vocabularySyncReady) {
+      await flushMobileVocabularySync();
+    }
+    return vocabularySyncReady;
+  }
+
+  async function flushMobileVocabularySync() {
+    if (vocabularySyncInFlight) {
+      vocabularySyncQueued = true;
+      return vocabularySyncInFlight;
+    }
+
+    vocabularySyncInFlight = (async () => {
+      do {
+        vocabularySyncQueued = false;
+        const uid = getMobileVocabularySyncUid();
+        if (!uid || !vocabularySyncReady || vocabularySyncCurrentUid !== uid) {
+          break;
+        }
+
+        const saveRemote = window.saveMobileVocabularyStateToFirestore;
+        if (typeof saveRemote !== "function") {
+          break;
+        }
+
+        const sourceStudy = loadMobileVocabularyStateForSync(uid) || state.vocabularyStudy || buildVocabularyRealStudyState();
+        const normalizedSource = sanitizeVocabularyStudyState(sourceStudy) ? sourceStudy : state.vocabularyStudy || buildVocabularyRealStudyState();
+        saveMobileVocabularyStateForSync(normalizedSource, uid);
+
+        const result = await saveRemote(normalizedSource, {
+          targetUid: uid,
+          allowCreate: vocabularySyncAllowCreate,
+          sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
+          sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+        }).catch(() => null);
+
+        if (!result?.ok || !result.saved) {
+          break;
+        }
+
+        if (result.studyState) {
+          state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(result.studyState, getVocabularyRealWordBank());
+          saveState();
+          saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
+        }
+        clearMobileVocabularyStateForSync(uid);
+        vocabularySyncAllowCreate = false;
+      } while (vocabularySyncQueued);
+    })();
+
+    try {
+      await vocabularySyncInFlight;
+    } finally {
+      vocabularySyncInFlight = null;
+    }
+  }
+
+  function scheduleMobileVocabularySync() {
+    const uid = getMobileVocabularySyncUid();
+    if (!uid) return;
+    const latest = state.vocabularyStudy || buildVocabularyRealStudyState();
+    saveMobileVocabularyStateForSync(latest, uid);
+    if (!vocabularySyncReady || vocabularySyncCurrentUid !== uid) {
+      initializeMobileVocabularySyncForCurrentUser().catch(() => false);
+      return;
+    }
+    flushMobileVocabularySync().catch(() => undefined);
+  }
+
+  function saveMobileVocabularyState(targetStudyState, options = {}) {
+    const nextStudy = sanitizeVocabularyStudyState(targetStudyState) ? targetStudyState : state.vocabularyStudy || buildVocabularyRealStudyState();
+    state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(nextStudy, getVocabularyRealWordBank());
+    saveState();
+    if (options?.skipSync !== true) {
+      scheduleMobileVocabularySync();
+    }
+    return state.vocabularyStudy;
+  }
+
+  function saveVocabularyStudyStateToSync(targetStudyState, options = {}) {
+    return saveMobileVocabularyState(targetStudyState, options);
   }
 
   function getVocabularySource() {
@@ -10068,6 +10343,7 @@
           flushMobilePendingLearningHistoryEntries().catch(() => 0);
           initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
           initializeWordOrderStatsSyncForCurrentUser({ force: true }).catch(() => false);
+          initializeMobileVocabularySyncForCurrentUser({ force: true }).catch(() => false);
         });
       renderHome();
       return;
@@ -10088,6 +10364,15 @@
     wordOrderStatsSyncCurrentUid = "";
     wordOrderStatsSyncReady = false;
     wordOrderStatsCache = null;
+    if (typeof vocabularySyncUnsubscribe === "function") {
+      vocabularySyncUnsubscribe();
+    }
+    vocabularySyncUnsubscribe = null;
+    vocabularySyncCurrentUid = "";
+    vocabularySyncReady = false;
+    vocabularySyncAllowCreate = false;
+    vocabularySyncCache = null;
+    vocabularySyncCacheUid = "";
     flushMobilePendingLearningHistoryEntries().catch(() => 0);
   }
 
@@ -10115,6 +10400,7 @@
           flushMobilePendingLearningHistoryEntries().catch(() => 0);
           initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
           initializeWordOrderStatsSyncForCurrentUser({ force: true }).catch(() => false);
+          initializeMobileVocabularySyncForCurrentUser({ force: true }).catch(() => false);
         });
       renderHome();
       return;

@@ -10,6 +10,10 @@ const checks = [
     ok: /getVocabularyHistoryWeaknessScore\s*\(|weaknessDiff|sort\s*\(\(left, right\)\s*=>/.test(source)
   },
   {
+    name: "past history display sorts delta entries before non-delta entries",
+    ok: /getVocabularyPastHistoryDisplayEntries|includes\("△"\)|lastLearnedAt\s*\|\|\s*0/.test(source)
+  },
+  {
     name: "today history word rows reveal grade and meaning on click",
     ok: /vocabulary-history-word-button|vocabulary-history-detail|classList\.toggle\("is-open"\)/.test(source)
   }

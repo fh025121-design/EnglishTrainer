@@ -36,6 +36,9 @@ const MOBILE_POINT_SYNC_SCHEMA_VERSION = 1;
 const MOBILE_WORD_ORDER_SYNC_DOC_COLLECTION = "mobileSync";
 const MOBILE_WORD_ORDER_SYNC_DOC_ID = "wordOrderStatsV1";
 const MOBILE_WORD_ORDER_SYNC_SCHEMA_VERSION = 1;
+const MOBILE_VOCABULARY_SYNC_DOC_COLLECTION = "mobileSync";
+const MOBILE_VOCABULARY_SYNC_DOC_ID = "vocabularyStateV1";
+const MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION = 1;
 
 window.MobileFirebaseAuthState = {
   status: "pending",
@@ -671,6 +674,155 @@ function subscribeMobileWordOrderStatsFromFirestore(onChange, options = {}) {
   });
 }
 
+function getMobileVocabularyStateDocRef(targetUid = "") {
+  const uid = String(targetUid || auth.currentUser?.uid || "").trim();
+  if (!uid) return null;
+  return doc(firestore, "users", uid, MOBILE_VOCABULARY_SYNC_DOC_COLLECTION, MOBILE_VOCABULARY_SYNC_DOC_ID);
+}
+
+function sanitizeVocabularyStudyStateForSync(value) {
+  if (!value || typeof value !== "object") return null;
+  if (Array.isArray(value.entries)) {
+    return value;
+  }
+  if (Array.isArray(value.studyState?.entries)) {
+    return value.studyState;
+  }
+  return null;
+}
+
+function normalizeMobileVocabularyStateDoc(docData) {
+  const source = docData && typeof docData === "object" ? docData : {};
+  const studyState = sanitizeVocabularyStudyStateForSync(source.studyState) || sanitizeVocabularyStudyStateForSync(source.vocabularyStudy) || null;
+  return {
+    studyState,
+    updatedAtMs: Math.max(0, Number(source.updatedAtMs) || 0),
+    sourceDeviceId: String(source.sourceDeviceId || "").trim(),
+    sourceDeviceName: String(source.sourceDeviceName || "").trim(),
+    schemaVersion: Math.max(0, Number(source.schemaVersion) || MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION)
+  };
+}
+
+async function loadMobileVocabularyStateFromFirestore(options = {}) {
+  const currentUid = String(auth.currentUser?.uid || "").trim();
+  const targetUid = String(options?.targetUid || currentUid || "").trim();
+  const ref = getMobileVocabularyStateDocRef(targetUid);
+  if (!ref || !targetUid) {
+    return { ok: false, exists: false, uid: targetUid, studyState: null };
+  }
+
+  try {
+    const snapshot = await getDoc(ref);
+    if (!snapshot.exists()) {
+      return { ok: true, exists: false, uid: targetUid, studyState: null };
+    }
+    const normalized = normalizeMobileVocabularyStateDoc(snapshot.data());
+    return {
+      ok: true,
+      exists: true,
+      uid: targetUid,
+      studyState: normalized.studyState,
+      updatedAtMs: normalized.updatedAtMs,
+      sourceDeviceId: normalized.sourceDeviceId,
+      sourceDeviceName: normalized.sourceDeviceName,
+      schemaVersion: normalized.schemaVersion
+    };
+  } catch (error) {
+    console.error("Failed to load mobile vocabulary state from Firestore", error);
+    return { ok: false, exists: false, uid: targetUid, studyState: null, error };
+  }
+}
+
+async function saveMobileVocabularyStateToFirestore(studyState, options = {}) {
+  const user = auth.currentUser;
+  const targetUid = String(options?.targetUid || user?.uid || "").trim();
+  const ref = getMobileVocabularyStateDocRef(targetUid);
+  if (!ref || !targetUid || !studyState || typeof studyState !== "object") {
+    return { ok: false, saved: false, exists: false, uid: targetUid };
+  }
+
+  const allowCreate = options?.allowCreate === true;
+  const sourceDeviceId = String(options?.sourceDeviceId || "").trim();
+  const sourceDeviceName = String(options?.sourceDeviceName || "").trim();
+
+  try {
+    const result = await runTransaction(firestore, async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      const existsBefore = snapshot.exists();
+      if (!existsBefore && !allowCreate) {
+        return {
+          saved: false,
+          existsBefore,
+          skipped: "missing-remote",
+          studyState: null
+        };
+      }
+
+      const currentStudyState = existsBefore ? normalizeMobileVocabularyStateDoc(snapshot.data()).studyState : null;
+      const mergedStudyState = currentStudyState ? window.mergeVocabularyStudyStateByLatest?.(currentStudyState, studyState) || studyState : studyState;
+
+      transaction.set(ref, {
+        uid: targetUid,
+        studyState: mergedStudyState,
+        sourceDeviceId,
+        sourceDeviceName,
+        schemaVersion: MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION,
+        updatedAtMs: Date.now(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      return {
+        saved: true,
+        existsBefore,
+        studyState: mergedStudyState
+      };
+    });
+
+    return {
+      ok: true,
+      saved: Boolean(result?.saved),
+      exists: Boolean(result?.existsBefore),
+      uid: targetUid,
+      skipped: result?.skipped || "",
+      studyState: result?.studyState || null
+    };
+  } catch (error) {
+    console.error("Failed to save mobile vocabulary state to Firestore", error);
+    return { ok: false, saved: false, exists: false, uid: targetUid, error };
+  }
+}
+
+function subscribeMobileVocabularyStateFromFirestore(onChange, options = {}) {
+  if (typeof onChange !== "function") {
+    return () => {};
+  }
+  const targetUid = String(options?.targetUid || auth.currentUser?.uid || "").trim();
+  const ref = getMobileVocabularyStateDocRef(targetUid);
+  if (!ref || !targetUid) {
+    return () => {};
+  }
+
+  return onSnapshot(ref, (snapshot) => {
+    if (!snapshot.exists()) {
+      onChange({ ok: true, exists: false, uid: targetUid, studyState: null });
+      return;
+    }
+    const normalized = normalizeMobileVocabularyStateDoc(snapshot.data());
+    onChange({
+      ok: true,
+      exists: true,
+      uid: targetUid,
+      studyState: normalized.studyState,
+      updatedAtMs: normalized.updatedAtMs,
+      sourceDeviceId: normalized.sourceDeviceId,
+      sourceDeviceName: normalized.sourceDeviceName,
+      schemaVersion: normalized.schemaVersion
+    });
+  }, (error) => {
+    onChange({ ok: false, exists: false, uid: targetUid, studyState: null, error });
+  });
+}
+
 async function initMobileFirebaseAuthUi() {
   bindAuthUi();
   setLoginBusy(false);
@@ -715,6 +867,9 @@ window.subscribeMobilePointStateFromFirestore = subscribeMobilePointStateFromFir
 window.loadMobileWordOrderStatsFromFirestore = loadMobileWordOrderStatsFromFirestore;
 window.saveMobileWordOrderStatsToFirestore = saveMobileWordOrderStatsToFirestore;
 window.subscribeMobileWordOrderStatsFromFirestore = subscribeMobileWordOrderStatsFromFirestore;
+window.loadMobileVocabularyStateFromFirestore = loadMobileVocabularyStateFromFirestore;
+window.saveMobileVocabularyStateToFirestore = saveMobileVocabularyStateToFirestore;
+window.subscribeMobileVocabularyStateFromFirestore = subscribeMobileVocabularyStateFromFirestore;
 window.getMobileFirebaseCurrentUser = () => auth.currentUser || ({ email: "demo@example.com" });
 window.MobileFirebase = Object.freeze({ app, auth, firestore });
 window.MobileFirebaseReady = initMobileFirebaseAuthUi();
