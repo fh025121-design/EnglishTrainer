@@ -7796,6 +7796,48 @@
     window.localStorage.removeItem(SPEAKING_PROGRESS_KEY);
   }
 
+  function getMobileVocabularyDebugCounts() {
+    const studyEntries = state.vocabularyStudy && Array.isArray(state.vocabularyStudy.entries)
+      ? state.vocabularyStudy.entries
+      : [];
+    const learnedCount = studyEntries.filter((entry) => {
+      const pronLevel = Number(entry?.pronunciation?.level || 0) || 0;
+      const meaningLevel = Number(entry?.meaningState?.level || 0) || 0;
+      return pronLevel > 0 || meaningLevel > 0;
+    }).length;
+    const todayHistoryMap = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
+      ? state.vocabularyTodayHistoryMap
+      : {};
+    const todayHistoryCount = Object.keys(todayHistoryMap[getVocabularyHistoryTodayKey()] || {}).length;
+    return {
+      learnedCount,
+      todayHistoryCount,
+      totalStudyEntries: studyEntries.length
+    };
+  }
+
+  function renderMobileVocabularyDebugPanel() {
+    const panel = document.getElementById("mobileVocabularyDebugPanel");
+    const textNode = document.getElementById("mobileVocabularyDebugText");
+    if (!panel || !textNode) return;
+    const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+    const resetInfo = getMobileVocabularyResetAppliedState(currentUid);
+    const debugCounts = getMobileVocabularyDebugCounts();
+    const resetVersion = Number(resetInfo?.resetVersion || 0) || 0;
+    const appliedResetVersion = Number(resetInfo?.resetVersion || 0) || 0;
+    textNode.textContent = [
+      `Auth UID: ${currentUid || "-"}`,
+      `vocabularyStateOwnerUid: ${String(vocabularyStateOwnerUid || "-")}`,
+      `resetVersion: ${resetVersion}`,
+      `appliedResetVersion: ${appliedResetVersion}`,
+      `studyLearnedCount: ${debugCounts.learnedCount}`,
+      `studyEntries: ${debugCounts.totalStudyEntries}`,
+      `todayHistoryCount: ${debugCounts.todayHistoryCount}`,
+      `currentScreen: ${state.currentScreen || "-"}`
+    ].join(" | ");
+    panel.hidden = false;
+  }
+
   function saveState() {
     const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
     const safeStudyState = currentUid && vocabularyStateOwnerUid === currentUid && state.vocabularyStudy
@@ -7807,6 +7849,7 @@
       vocabularyStudy: safeStudyState
     };
     window.localStorage.setItem(MOBILE_STORAGE_KEY, JSON.stringify(snapshot));
+    renderMobileVocabularyDebugPanel();
     const uid = getMobileVocabularySyncUid();
     if (uid && vocabularyStateOwnerUid === uid && isVocabularyStateOwnerCurrentUid(uid)) {
       scheduleMobileVocabularySync();
@@ -10597,6 +10640,7 @@
       currentScreen: state.currentScreen,
       todayHistoryEntries: Object.keys((state.vocabularyTodayHistoryMap || {})[getVocabularyHistoryTodayKey()] || {}).length
     });
+    renderMobileVocabularyDebugPanel();
     renderMobileHomeAccountAlias();
   }
 
