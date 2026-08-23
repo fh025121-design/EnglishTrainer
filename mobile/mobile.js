@@ -4960,6 +4960,42 @@
     };
   }
 
+  function updateVocabularyTeacherCheckSelectionState(cardId) {
+    const contentEl = elements.vocabularyTeacherCheckContent;
+    const session = state.teacherCheckSession;
+    if (!contentEl || !session || !cardId) return;
+    const card = contentEl.querySelector(`[data-teacher-check-card-id="${CSS.escape(String(cardId))}"]`);
+    if (!card) return;
+    const decision = session.decisions && session.decisions[cardId] ? session.decisions[cardId] : { pronunciation: "none", meaning: "none" };
+    const fieldGroups = ["pronunciation", "meaning"];
+    fieldGroups.forEach((fieldName) => {
+      const buttons = card.querySelectorAll(`[data-teacher-check-field="${fieldName}"]`);
+      buttons.forEach((button) => {
+        const isSelected = String(button.dataset.teacherCheckValue || "") === String(decision[fieldName] || "none");
+        button.classList.toggle("is-selected", isSelected);
+      });
+    });
+  }
+
+  function updateVocabularyTeacherCheckMeaningToggleState(cardId) {
+    const contentEl = elements.vocabularyTeacherCheckContent;
+    const session = state.teacherCheckSession;
+    if (!contentEl || !session || !cardId) return;
+    const card = contentEl.querySelector(`[data-teacher-check-card-id="${CSS.escape(String(cardId))}"]`);
+    if (!card) return;
+    const showMeaning = Array.isArray(session.showMeaningIds) && session.showMeaningIds.includes(cardId);
+    const toggleButton = card.querySelector(".vocabulary-teacher-check-meaning-toggle");
+    const preview = card.querySelector(".vocabulary-teacher-check-meaning-preview");
+    const candidate = (Array.isArray(session.candidates) ? session.candidates : []).find((entry) => String(entry.id || "") === String(cardId));
+    if (toggleButton) {
+      toggleButton.textContent = showMeaning ? "意味を隠す" : "意味を見る";
+    }
+    if (preview) {
+      preview.classList.toggle("is-hidden", !showMeaning);
+      preview.textContent = showMeaning && candidate ? candidate.meaning : "";
+    }
+  }
+
   function handleVocabularyTeacherCheckAction(button, event) {
     if (!button || !event || !state.teacherCheckSession) return;
     const action = String(button.dataset.teacherCheckAction || "").trim();
@@ -4981,12 +5017,11 @@
     if (action === "toggle-meaning") {
       const session = state.teacherCheckSession;
       const showMeaningIds = Array.isArray(session.showMeaningIds) ? session.showMeaningIds : [];
-      const nextIds = showMeaningIds.filter((value) => String(value || "").trim() !== candidateId);
-      if (!showMeaningIds.includes(candidateId)) {
-        nextIds.push(candidateId);
-      }
-      session.showMeaningIds = nextIds;
-      renderVocabularyTeacherCheckScreen();
+      const hasCandidate = showMeaningIds.includes(candidateId);
+      session.showMeaningIds = hasCandidate
+        ? showMeaningIds.filter((value) => String(value || "").trim() !== candidateId)
+        : [...showMeaningIds, candidateId];
+      updateVocabularyTeacherCheckMeaningToggleState(candidateId);
       return;
     }
 
@@ -4998,7 +5033,7 @@
       if (!session.decisions[candidateId]) session.decisions[candidateId] = { pronunciation: "none", meaning: "none" };
       const currentValue = session.decisions[candidateId][field] || "none";
       session.decisions[candidateId][field] = currentValue === value ? "none" : value;
-      renderVocabularyTeacherCheckScreen();
+      updateVocabularyTeacherCheckSelectionState(candidateId);
       return;
     }
   }
