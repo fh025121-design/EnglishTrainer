@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/24 15:00", note: "モバイル版のみ: GitHub Pages の stale mobile bundle を回避するため、mobile cache token を更新して配信再読込用のバンドル差し替えを反映。実装ロジックは変更せず、Pages 配信の更新履歴とバージョン表示のみを更新。" },
     { version: "2026/08/23 18:05", note: "モバイル版のみ: 実機確認用に Vocabulary 修正分を GitHub Pages へ再配信するため、mobile cache token を更新し、再読込・Vocabulary・今日の履歴・UID同期の確認対象が新バンドルから動く状態へ整理。既存の実装内容はそのまま維持し、更新履歴とバージョン表示も同時に更新。" },
     { version: "2026/08/23 12:00", note: "モバイル版のみ: 先生チェック №64 の UI 修正が実機で読まれない状態を確認し、GitHub Pages の stale cache を回避するため mobile cache token を更新。teacher-check の実装内容と draft 保存ロジックは変更せず、配信対象のキャッシュ更新と更新履歴を同時に反映。" },
     { version: "2026/08/23 00:20", note: "モバイル版のみ: Vocabulary の今日の履歴を Firestore の UID 共有状態へ同期し、同一ユーザーならブラウザを変えても今日の判定状況が一致するよう調整。日付キー別マージ、UID別 localStorage キー、保存時の同期スケジューリング、空リモート状態の保護を追加。既存の分岐・先生チェック・Vocabulary 状態同期と併用し、更新履歴とバージョン表示も同時に更新。" },
