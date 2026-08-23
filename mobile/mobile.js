@@ -4431,21 +4431,21 @@
 
       const pronunciation = document.createElement("span");
       pronunciation.className = "vocabulary-history-status";
-      pronunciation.textContent = entry.pronunciationStatus;
+      pronunciation.textContent = ` ${entry.pronunciationStatus}`;
 
       const meaning = document.createElement("span");
       meaning.className = "vocabulary-history-status";
-      meaning.textContent = entry.meaningStatus;
+      meaning.textContent = ` ${entry.meaningStatus}`;
 
       const lastLearned = document.createElement("span");
       lastLearned.className = "vocabulary-history-status";
-      lastLearned.textContent = new Date(entry.lastLearnedAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
+      lastLearned.textContent = ` ${new Date(entry.lastLearnedAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}`;
 
       const detail = document.createElement("div");
       detail.className = "vocabulary-history-detail";
       detail.hidden = true;
       detail.innerHTML = `
-        <span class="vocabulary-history-detail-text">${entry.grade}級　${entry.partOfSpeech}　${entry.meaning}</span>
+        <span class="vocabulary-history-detail-text">${entry.grade}級　　${entry.partOfSpeech}　　${entry.meaning}</span>
       `;
 
       const setRowExpanded = (isOpen) => {
