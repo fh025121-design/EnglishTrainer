@@ -3983,10 +3983,12 @@
     elements.vocabularySamplePronunciationText.textContent = normalizeVocabularyPronunciationDisplay(wordItem);
 
     const accentVisible = sample.pronunciationChecked;
-    const meaningVisible = sample.meaningRevealed || sample.meaningChecked;
     const pronunciationSelected = sample.pronunciationChoice;
     const meaningSelected = sample.meaningChoice;
-    const canRevealMeaning = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+    const pronunciationJudged = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+    const meaningVisible = sample.meaningRevealed || sample.meaningChecked || pronunciationJudged;
+    const meaningChoiceVisible = sample.meaningRevealed || sample.meaningChecked || pronunciationJudged;
+    const canRevealMeaning = pronunciationJudged;
 
     elements.vocabularySamplePronunciationArea.classList.remove("hidden");
     elements.vocabularySampleMeaningArea.classList.remove("hidden");
@@ -4040,12 +4042,12 @@
     const meaningChoiceRow = elements.vocabularySampleMeaningResultBlock.querySelector(".vocabulary-sample-meaning-row");
     const meaningJudgmentSlot = elements.vocabularySampleMeaningResultBlock.querySelector(".vocabulary-sample-meaning-judgment-slot");
     if (meaningChoiceRow) {
-      meaningChoiceRow.classList.toggle("is-visible", meaningVisible);
+      meaningChoiceRow.classList.toggle("is-visible", meaningChoiceVisible);
     }
     if (meaningJudgmentSlot) {
-      meaningJudgmentSlot.classList.toggle("is-visible", meaningVisible);
+      meaningJudgmentSlot.classList.toggle("is-visible", meaningChoiceVisible);
     }
-    if (meaningVisible) {
+    if (sample.meaningRevealed || sample.meaningChecked) {
       elements.vocabularySampleMeaningResultText.textContent = wordItem.meaning;
       elements.vocabularySampleMeaningResultText.style.visibility = "visible";
       elements.vocabularySampleMeaningResultText.style.opacity = "1";
@@ -13522,12 +13524,33 @@
     }
   }
 
+  function isMobileReloadNavigation() {
+    if (!window || !window.performance) return false;
+    try {
+      const entries = window.performance.getEntriesByType("navigation");
+      if (entries && entries.length && entries[0] && entries[0].type) {
+        return entries[0].type === "reload";
+      }
+    } catch (_error) {
+      // noop
+    }
+    try {
+      return Boolean(window.performance.navigation) && window.performance.navigation.type === 1;
+    } catch (_error) {
+      return false;
+    }
+  }
+
   function handlePageHide() {
     pauseMobileLearningHistorySession(Date.now());
     stopSpeakingAudio();
   }
 
   function handlePageShow() {
+    if (isMobileReloadNavigation() && !getVocabularyTeacherCheckRouteScreen()) {
+      showScreen("homeScreen");
+      renderHome();
+    }
     resumeMobileLearningHistorySession(Date.now());
     const speechSynthesis = getSpeechSynthesisEngine();
     if (!speechSynthesis || !speechSynthesis.paused) return;
@@ -14448,7 +14471,10 @@
     bindEvents();
     bindMobileAuthState();
     flushMobilePendingLearningHistoryEntries().catch(() => 0);
-    if (getVocabularyTeacherCheckRouteScreen()) {
+    if (isMobileReloadNavigation() && !getVocabularyTeacherCheckRouteScreen()) {
+      showScreen("homeScreen");
+      renderHome();
+    } else if (getVocabularyTeacherCheckRouteScreen()) {
       openVocabularyTeacherCheckScreen();
     }
   }

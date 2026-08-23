@@ -31,3 +31,9 @@ test('mobile vocabulary practice generates canonical history entries using compl
   assert.match(source, /questionCount:\s*getVocabularySampleCompletedWordCount\s*\(/, 'should save the number of completed words as questionCount');
   assert.match(source, /mode:\s*["']Vocabulary["']/, 'should use the canonical Vocabulary mode label for history entries');
 });
+
+test('mobile app defaults back to the home screen after a fresh load or reload', () => {
+  assert.match(source, /function\s+isMobileReloadNavigation\s*\(/, 'should detect an actual reload navigation state');
+  assert.match(source, /handlePageShow\s*\(\)[\s\S]*?isMobileReloadNavigation\s*\(/, 'should gate the home-screen reset on reload detection');
+  assert.match(source, /initialize\s*\(\)[\s\S]*?isMobileReloadNavigation\s*\(/, 'should apply the reload guard during initialization');
+});
