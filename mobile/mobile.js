@@ -3073,6 +3073,27 @@
   let vocabularyTodayHistorySyncQueued = false;
   let vocabularyTodayHistorySyncUnsubscribe = null;
 
+  const vocabularySyncDebugState = {
+    study: {
+      stage: "idle",
+      localLearnedCount: 0,
+      remoteLearnedCount: 0,
+      mergeLearnedCount: 0,
+      currentLearnedCount: 0,
+      remoteUpdatedAtMs: 0,
+      localCompareUpdatedAtMs: 0
+    },
+    todayHistory: {
+      stage: "idle",
+      localTodayHistoryCount: 0,
+      remoteTodayHistoryCount: 0,
+      mergeTodayHistoryCount: 0,
+      currentTodayHistoryCount: 0,
+      remoteUpdatedAtMs: 0,
+      localCompareUpdatedAtMs: 0
+    }
+  };
+
   const state = {
     settings: {
       rangeMode: "auto",
@@ -4652,30 +4673,66 @@
     }
     const uid = String(snapshot.uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
     const incomingMap = normalizeVocabularyTodayHistoryMap(snapshot.historyMap);
+    const localBaseline = loadVocabularyTodayHistoryMap();
+    const localTodayHistoryCount = getVocabularyTodayHistoryCount(localBaseline, getVocabularyHistoryTodayKey());
+    const remoteTodayHistoryCount = getVocabularyTodayHistoryCount(incomingMap, getVocabularyHistoryTodayKey());
+    const localCompareUpdatedAtMs = getVocabularyTodayHistoryMostRecentUpdatedAt(localBaseline, getVocabularyHistoryTodayKey());
+    const remoteUpdatedAtMs = Number(snapshot?.updatedAtMs || 0) || 0;
+
     if (!incomingMap || !Object.keys(incomingMap).length) {
-      const localBaseline = loadVocabularyTodayHistoryMap();
       const hasLocalEntries = Object.keys(localBaseline || {}).length > 0;
       if (hasLocalEntries) {
         state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
+        updateVocabularySyncDebugState("todayHistory", {
+          stage: "remote-empty",
+          localTodayHistoryCount,
+          remoteTodayHistoryCount,
+          mergeTodayHistoryCount: getVocabularyTodayHistoryCount(state.vocabularyTodayHistoryMap, getVocabularyHistoryTodayKey()),
+          currentTodayHistoryCount: getVocabularyTodayHistoryCount(state.vocabularyTodayHistoryMap, getVocabularyHistoryTodayKey()),
+          remoteUpdatedAtMs,
+          localCompareUpdatedAtMs
+        });
+        renderMobileVocabularyDebugPanel();
         if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
           renderVocabularyTodayHistoryScreen();
         }
         return;
       }
       state.vocabularyTodayHistoryMap = {};
+      updateVocabularySyncDebugState("todayHistory", {
+        stage: "remote-empty",
+        localTodayHistoryCount,
+        remoteTodayHistoryCount,
+        mergeTodayHistoryCount: 0,
+        currentTodayHistoryCount: 0,
+        remoteUpdatedAtMs,
+        localCompareUpdatedAtMs
+      });
+      renderMobileVocabularyDebugPanel();
       if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
         renderVocabularyTodayHistoryScreen();
       }
       return;
     }
-    const currentLocal = loadVocabularyTodayHistoryMap();
+    const currentLocal = localBaseline;
     const mergedMap = mergeVocabularyTodayHistoryMapByLatest(currentLocal, incomingMap);
+    const mergedTodayHistoryCount = getVocabularyTodayHistoryCount(mergedMap, getVocabularyHistoryTodayKey());
     state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(mergedMap) || {};
     saveVocabularyTodayHistoryMap();
     if (uid) {
       const mobileSyncKey = getMobileVocabularyTodayHistoryStorageKey(uid);
       window.localStorage.setItem(mobileSyncKey, JSON.stringify(state.vocabularyTodayHistoryMap));
     }
+    updateVocabularySyncDebugState("todayHistory", {
+      stage: "merge-apply",
+      localTodayHistoryCount,
+      remoteTodayHistoryCount,
+      mergeTodayHistoryCount,
+      currentTodayHistoryCount: getVocabularyTodayHistoryCount(state.vocabularyTodayHistoryMap, getVocabularyHistoryTodayKey()),
+      remoteUpdatedAtMs,
+      localCompareUpdatedAtMs
+    });
+    renderMobileVocabularyDebugPanel();
     if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
       renderVocabularyTodayHistoryScreen();
     }
@@ -4724,12 +4781,31 @@
       ? normalizeVocabularyTodayHistoryMap(remoteResult.historyMap)
       : {};
     if (remoteResult?.ok && remoteResult.exists && Object.keys(remoteHistoryMap).length) {
-      state.vocabularyTodayHistoryMap = mergeVocabularyTodayHistoryMapByLatest(localBaseline, remoteHistoryMap);
+      const mergedHistoryMap = mergeVocabularyTodayHistoryMapByLatest(localBaseline, remoteHistoryMap);
+      updateVocabularySyncDebugState("todayHistory", {
+        stage: "remote-load",
+        localTodayHistoryCount: getVocabularyTodayHistoryCount(localBaseline, getVocabularyHistoryTodayKey()),
+        remoteTodayHistoryCount: getVocabularyTodayHistoryCount(remoteHistoryMap, getVocabularyHistoryTodayKey()),
+        mergeTodayHistoryCount: getVocabularyTodayHistoryCount(mergedHistoryMap, getVocabularyHistoryTodayKey()),
+        currentTodayHistoryCount: getVocabularyTodayHistoryCount(mergedHistoryMap, getVocabularyHistoryTodayKey()),
+        remoteUpdatedAtMs: Number(remoteResult?.updatedAtMs || 0) || 0,
+        localCompareUpdatedAtMs: getVocabularyTodayHistoryMostRecentUpdatedAt(localBaseline, getVocabularyHistoryTodayKey())
+      });
+      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(mergedHistoryMap) || {};
       saveVocabularyTodayHistoryMap();
       vocabularyTodayHistorySyncCurrentUid = uid;
       vocabularyTodayHistorySyncReady = true;
       vocabularyTodayHistorySyncAllowCreate = false;
     } else {
+      updateVocabularySyncDebugState("todayHistory", {
+        stage: "local-only",
+        localTodayHistoryCount: getVocabularyTodayHistoryCount(localBaseline, getVocabularyHistoryTodayKey()),
+        remoteTodayHistoryCount: 0,
+        mergeTodayHistoryCount: getVocabularyTodayHistoryCount(localBaseline, getVocabularyHistoryTodayKey()),
+        currentTodayHistoryCount: getVocabularyTodayHistoryCount(localBaseline, getVocabularyHistoryTodayKey()),
+        remoteUpdatedAtMs: 0,
+        localCompareUpdatedAtMs: getVocabularyTodayHistoryMostRecentUpdatedAt(localBaseline, getVocabularyHistoryTodayKey())
+      });
       state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
       saveVocabularyTodayHistoryMap();
       vocabularyTodayHistorySyncCurrentUid = uid;
@@ -7873,19 +7949,71 @@
     window.localStorage.removeItem(SPEAKING_PROGRESS_KEY);
   }
 
-  function getMobileVocabularyDebugCounts() {
-    const studyEntries = state.vocabularyStudy && Array.isArray(state.vocabularyStudy.entries)
-      ? state.vocabularyStudy.entries
-      : [];
-    const learnedCount = studyEntries.filter((entry) => {
+  function getVocabularyStudyLearnedCount(studyState) {
+    const entries = studyState && Array.isArray(studyState.entries) ? studyState.entries : [];
+    return entries.filter((entry) => {
       const pronLevel = Number(entry?.pronunciation?.level || 0) || 0;
       const meaningLevel = Number(entry?.meaningState?.level || 0) || 0;
       return pronLevel > 0 && meaningLevel > 0;
     }).length;
+  }
+
+  function getVocabularyStudyMostRecentUpdatedAt(studyState) {
+    const entries = studyState && Array.isArray(studyState.entries) ? studyState.entries : [];
+    if (!entries.length) return 0;
+    return entries.reduce((maxTimestamp, entry) => {
+      const timestamps = [
+        Number(entry?.lastJudgedAt || 0),
+        Number(entry?.createdAt || 0),
+        Number(entry?.pronunciationTeacherCheckUpdatedAt || 0),
+        Number(entry?.meaningTeacherCheckUpdatedAt || 0),
+        Number(entry?.pronunciation?.lastJudgedAt || 0),
+        Number(entry?.pronunciation?.teacherCheckUpdatedAt || 0),
+        Number(entry?.meaningState?.lastJudgedAt || 0),
+        Number(entry?.meaningState?.teacherCheckUpdatedAt || 0)
+      ];
+      const latestEntryTimestamp = Math.max(0, ...timestamps.filter(Number.isFinite));
+      return Math.max(maxTimestamp, latestEntryTimestamp);
+    }, 0);
+  }
+
+  function getVocabularyTodayHistoryCount(historyMap, dateKey = getVocabularyHistoryTodayKey()) {
+    if (!historyMap || typeof historyMap !== "object") return 0;
+    const bucket = historyMap[dateKey] && typeof historyMap[dateKey] === "object" ? historyMap[dateKey] : {};
+    return Object.keys(bucket).length;
+  }
+
+  function getVocabularyTodayHistoryMostRecentUpdatedAt(historyMap, dateKey = getVocabularyHistoryTodayKey()) {
+    if (!historyMap || typeof historyMap !== "object") return 0;
+    const bucket = historyMap[dateKey] && typeof historyMap[dateKey] === "object" ? historyMap[dateKey] : {};
+    return Object.values(bucket).reduce((maxTimestamp, entry) => {
+      const latestEntryTimestamp = Math.max(
+        0,
+        Number(entry?.lastJudgedAt || 0),
+        Number(entry?.pronunciationTeacherCheckUpdatedAt || 0),
+        Number(entry?.meaningTeacherCheckUpdatedAt || 0)
+      );
+      return Math.max(maxTimestamp, latestEntryTimestamp);
+    }, 0);
+  }
+
+  function updateVocabularySyncDebugState(category, payload = {}) {
+    if (!category || !vocabularySyncDebugState[category]) return;
+    vocabularySyncDebugState[category] = {
+      ...vocabularySyncDebugState[category],
+      ...payload
+    };
+  }
+
+  function getMobileVocabularyDebugCounts() {
+    const studyEntries = state.vocabularyStudy && Array.isArray(state.vocabularyStudy.entries)
+      ? state.vocabularyStudy.entries
+      : [];
+    const learnedCount = getVocabularyStudyLearnedCount(state.vocabularyStudy);
     const todayHistoryMap = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
       ? state.vocabularyTodayHistoryMap
       : {};
-    const todayHistoryCount = Object.keys(todayHistoryMap[getVocabularyHistoryTodayKey()] || {}).length;
+    const todayHistoryCount = getVocabularyTodayHistoryCount(todayHistoryMap, getVocabularyHistoryTodayKey());
     return {
       learnedCount,
       todayHistoryCount,
@@ -7902,6 +8030,8 @@
     const debugCounts = getMobileVocabularyDebugCounts();
     const resetVersion = Number(resetInfo?.resetVersion || 0) || 0;
     const appliedResetVersion = Number(resetInfo?.resetVersion || 0) || 0;
+    const studyTrace = vocabularySyncDebugState.study || {};
+    const todayTrace = vocabularySyncDebugState.todayHistory || {};
     textNode.textContent = [
       `Auth UID: ${currentUid || "-"}`,
       `vocabularyStateOwnerUid: ${String(vocabularyStateOwnerUid || "-")}`,
@@ -7909,7 +8039,9 @@
       `appliedResetVersion: ${appliedResetVersion}`,
       `studyLearnedCount: ${debugCounts.learnedCount}`,
       `studyEntries: ${debugCounts.totalStudyEntries}`,
+      `studySync: stage=${studyTrace.stage || "idle"} local=${studyTrace.localLearnedCount ?? debugCounts.learnedCount} remote=${studyTrace.remoteLearnedCount ?? 0} merge=${studyTrace.mergeLearnedCount ?? debugCounts.learnedCount} current=${studyTrace.currentLearnedCount ?? debugCounts.learnedCount} remoteUpdatedAtMs=${studyTrace.remoteUpdatedAtMs ?? 0} localCompareUpdatedAtMs=${studyTrace.localCompareUpdatedAtMs ?? 0}`,
       `todayHistoryCount: ${debugCounts.todayHistoryCount}`,
+      `todayHistorySync: stage=${todayTrace.stage || "idle"} local=${todayTrace.localTodayHistoryCount ?? debugCounts.todayHistoryCount} remote=${todayTrace.remoteTodayHistoryCount ?? 0} merge=${todayTrace.mergeTodayHistoryCount ?? debugCounts.todayHistoryCount} current=${todayTrace.currentTodayHistoryCount ?? debugCounts.todayHistoryCount} remoteUpdatedAtMs=${todayTrace.remoteUpdatedAtMs ?? 0} localCompareUpdatedAtMs=${todayTrace.localCompareUpdatedAtMs ?? 0}`,
       `currentScreen: ${state.currentScreen || "-"}`
     ].join(" | ");
     panel.hidden = false;
@@ -8262,35 +8394,72 @@
       return;
     }
     const incomingStudy = sanitizeVocabularyStudyState(snapshot.studyState);
+    const localBaseline = loadMobileVocabularyStateForSync(uid) || state.vocabularyStudy || buildVocabularyRealStudyState();
+    const localLearnedCount = getVocabularyStudyLearnedCount(localBaseline);
+    const remoteLearnedCount = getVocabularyStudyLearnedCount(incomingStudy);
+    const localCompareUpdatedAtMs = getVocabularyStudyMostRecentUpdatedAt(localBaseline);
+    const remoteUpdatedAtMs = Number(snapshot?.updatedAtMs || 0) || 0;
+
     if (!incomingStudy || !Array.isArray(incomingStudy.entries) || !incomingStudy.entries.length) {
-      const localBaseline = loadMobileVocabularyStateForSync(uid) || state.vocabularyStudy || buildVocabularyRealStudyState();
       if (sanitizeVocabularyStudyState(localBaseline)) {
         state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(localBaseline, getVocabularyRealWordBank());
         saveState();
         saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
       }
+      updateVocabularySyncDebugState("study", {
+        stage: "remote-empty",
+        localLearnedCount,
+        remoteLearnedCount,
+        mergeLearnedCount: localLearnedCount,
+        currentLearnedCount: getVocabularyStudyLearnedCount(state.vocabularyStudy),
+        remoteUpdatedAtMs,
+        localCompareUpdatedAtMs
+      });
+      renderMobileVocabularyDebugPanel();
       if (state.currentScreen === "vocabularyPastHistoryScreen") {
         renderVocabularyPastHistoryScreen();
       }
       return;
     }
-    const currentLocal = loadMobileVocabularyStateForSync(uid) || state.vocabularyStudy || buildVocabularyRealStudyState();
+    const currentLocal = localBaseline;
     const mergedStudy = mergeVocabularyStudyStateByLatest(currentLocal, incomingStudy);
+    const mergedLearnedCount = getVocabularyStudyLearnedCount(mergedStudy);
     if (sanitizeVocabularyStudyState(mergedStudy)) {
       state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(mergedStudy, getVocabularyRealWordBank());
       saveState();
       saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
     }
+    updateVocabularySyncDebugState("study", {
+      stage: "merge-apply",
+      localLearnedCount,
+      remoteLearnedCount,
+      mergeLearnedCount,
+      currentLearnedCount: getVocabularyStudyLearnedCount(state.vocabularyStudy),
+      remoteUpdatedAtMs,
+      localCompareUpdatedAtMs
+    });
     const pending = loadMobileVocabularyStateForSync(uid);
     if (!pending) {
       clearMobileVocabularyStateForSync(uid);
+      renderMobileVocabularyDebugPanel();
       return;
     }
     if (JSON.stringify(sanitizeVocabularyStudyState(pending)) === JSON.stringify(sanitizeVocabularyStudyState(mergedStudy))) {
       clearMobileVocabularyStateForSync(uid);
+      renderMobileVocabularyDebugPanel();
       return;
     }
     saveMobileVocabularyStateForSync(mergedStudy, uid);
+    updateVocabularySyncDebugState("study", {
+      stage: "state-reflect",
+      localLearnedCount,
+      remoteLearnedCount,
+      mergeLearnedCount,
+      currentLearnedCount: getVocabularyStudyLearnedCount(state.vocabularyStudy),
+      remoteUpdatedAtMs,
+      localCompareUpdatedAtMs
+    });
+    renderMobileVocabularyDebugPanel();
     if (state.currentScreen === "vocabularyPastHistoryScreen") {
       renderVocabularyPastHistoryScreen();
     }
@@ -8367,7 +8536,17 @@
     }
 
     if (remoteResult?.ok && remoteResult.exists && remoteResult.studyState) {
-      const mergedStudy = mergeVocabularyStudyStateByLatest(localBaseline, remoteResult.studyState);
+      const remoteStudyState = sanitizeVocabularyStudyState(remoteResult.studyState) || createEmptyVocabularyStudyState();
+      const mergedStudy = mergeVocabularyStudyStateByLatest(localBaseline, remoteStudyState);
+      updateVocabularySyncDebugState("study", {
+        stage: "remote-load",
+        localLearnedCount: getVocabularyStudyLearnedCount(localBaseline),
+        remoteLearnedCount: getVocabularyStudyLearnedCount(remoteStudyState),
+        mergeLearnedCount: getVocabularyStudyLearnedCount(mergedStudy),
+        currentLearnedCount: getVocabularyStudyLearnedCount(mergedStudy),
+        remoteUpdatedAtMs: Number(remoteResult?.updatedAtMs || 0) || 0,
+        localCompareUpdatedAtMs: getVocabularyStudyMostRecentUpdatedAt(localBaseline)
+      });
       state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(mergedStudy, getVocabularyRealWordBank());
       vocabularyStateOwnerUid = uid;
       saveState();
@@ -8377,6 +8556,15 @@
       vocabularySyncAllowCreate = false;
     } else {
       const nextBaseline = sanitizeVocabularyStudyState(localBaseline) ? localBaseline : buildVocabularyRealStudyState();
+      updateVocabularySyncDebugState("study", {
+        stage: "local-only",
+        localLearnedCount: getVocabularyStudyLearnedCount(nextBaseline),
+        remoteLearnedCount: 0,
+        mergeLearnedCount: getVocabularyStudyLearnedCount(nextBaseline),
+        currentLearnedCount: getVocabularyStudyLearnedCount(nextBaseline),
+        remoteUpdatedAtMs: 0,
+        localCompareUpdatedAtMs: getVocabularyStudyMostRecentUpdatedAt(nextBaseline)
+      });
       state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(nextBaseline, getVocabularyRealWordBank());
       vocabularyStateOwnerUid = uid;
       saveState();
