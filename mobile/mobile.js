@@ -3942,8 +3942,48 @@
     return raw;
   }
 
+  function normalizeVocabularySampleSessionState(sample = state.vocabularySample, preferredWordItem = getVocabularySampleWordItem()) {
+    if (!sample || typeof sample !== "object") return sample;
+
+    const currentWordItem = preferredWordItem || getVocabularySampleWordItem();
+    const itemKey = currentWordItem
+      ? `${String(currentWordItem.id || currentWordItem.word || "").trim()}|${String(currentWordItem.partOfSpeech || "").trim()}`
+      : "";
+
+    if (itemKey) {
+      const currentWordKey = String(sample.currentWordKey || sample.currentWordId || "").trim();
+      if (!currentWordKey || currentWordKey !== itemKey) {
+        sample.currentWordKey = itemKey;
+        sample.currentWordId = itemKey;
+        sample.pronunciationChoice = null;
+        sample.meaningChoice = null;
+        sample.meaningChecked = false;
+        sample.meaningRevealed = false;
+        sample.currentWordCompleted = false;
+      }
+    }
+
+    if (sample.pronunciationChoice !== "ok" && sample.pronunciationChoice !== "ng") {
+      sample.meaningChoice = null;
+      sample.meaningChecked = false;
+      sample.meaningRevealed = false;
+    }
+
+    if (sample.currentWordKey && itemKey && sample.currentWordKey !== itemKey) {
+      sample.pronunciationChoice = null;
+      sample.meaningChoice = null;
+      sample.meaningChecked = false;
+      sample.meaningRevealed = false;
+      sample.currentWordCompleted = false;
+      sample.currentWordKey = itemKey;
+      sample.currentWordId = itemKey;
+    }
+
+    return sample;
+  }
+
   function renderVocabularySampleScreen() {
-    const sample = state.vocabularySample || null;
+    const sample = normalizeVocabularySampleSessionState(state.vocabularySample || null, getVocabularySampleWordItem());
     if (!sample) {
       showScreen("speakingHomeScreen");
       return;
@@ -4116,6 +4156,9 @@
         exampleTranslation: item.exampleTranslation || ""
       }));
     }
+    state.vocabularySample.currentWordKey = `${String(state.vocabularySample.words[0]?.id || state.vocabularySample.words[0]?.word || "").trim()}|${String(state.vocabularySample.words[0]?.partOfSpeech || "").trim()}`;
+    state.vocabularySample.currentWordId = state.vocabularySample.currentWordKey;
+    normalizeVocabularySampleSessionState(state.vocabularySample, getVocabularySampleWordItem());
     if (!state.learningHistorySession) {
       startMobileLearningHistorySession({
         source: "vocabulary",
@@ -5363,11 +5406,13 @@
   }
 
   function handleVocabularySampleChoice(kind, value) {
-    const sample = state.vocabularySample;
+    const sample = normalizeVocabularySampleSessionState(state.vocabularySample || null, getVocabularySampleWordItem());
     if (!sample) return;
     const item = getVocabularySampleWordItem();
     if (!item) return;
     const itemKey = `${String(item.id || item.word || "").trim()}|${String(item.partOfSpeech || "").trim()}`;
+    sample.currentWordKey = itemKey;
+    sample.currentWordId = itemKey;
 
     if (value === "ok") {
       playVocabularySampleCorrectChime();
