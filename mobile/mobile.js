@@ -4325,6 +4325,20 @@
     return safeMap;
   }
 
+  function readVocabularyTodayHistoryMapFromStorageKey(storageKey) {
+    if (!storageKey || !String(storageKey || "").trim()) {
+      return {};
+    }
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw || !raw.trim()) return {};
+      const parsed = JSON.parse(raw);
+      return normalizeVocabularyTodayHistoryMap(parsed) || {};
+    } catch (_error) {
+      return {};
+    }
+  }
+
   function getMobileVocabularyTodayHistoryStorageKey(uid = getCurrentMobileFirebaseUser()?.uid || "") {
     const safeUid = String(uid || "").trim();
     return safeUid ? `${MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY}:${safeUid}` : MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY;
@@ -4372,42 +4386,52 @@
     const previousMap = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
       ? state.vocabularyTodayHistoryMap
       : {};
-    if (!currentUid) {
-      state.vocabularyTodayHistoryMap = {};
-      return state.vocabularyTodayHistoryMap;
+
+    const candidateKeys = [];
+    if (currentUid) {
+      candidateKeys.push(getMobileVocabularyTodayHistoryStorageKey(currentUid));
     }
-    const storageKey = getMobileVocabularyTodayHistoryStorageKey(currentUid);
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw || !raw.trim()) {
-      state.vocabularyTodayHistoryMap = {};
-      return state.vocabularyTodayHistoryMap;
+    candidateKeys.push(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
+
+    let nextMap = {};
+    candidateKeys.forEach((storageKey) => {
+      const loaded = readVocabularyTodayHistoryMapFromStorageKey(storageKey);
+      if (!Object.keys(loaded).length) return;
+      nextMap = mergeVocabularyTodayHistoryMapByLatest(nextMap, loaded);
+    });
+
+    if (!Object.keys(nextMap).length && Object.keys(previousMap).length) {
+      nextMap = normalizeVocabularyTodayHistoryMap(previousMap) || {};
     }
 
-    try {
-      const parsed = JSON.parse(raw);
-      const safeMap = normalizeVocabularyTodayHistoryMap(parsed);
-      state.vocabularyTodayHistoryMap = safeMap || {};
+    state.vocabularyTodayHistoryMap = nextMap;
+    if (currentUid) {
       vocabularyTodayHistoryOwnerUid = currentUid;
-      return state.vocabularyTodayHistoryMap;
-    } catch (_error) {
-      state.vocabularyTodayHistoryMap = {};
-      return state.vocabularyTodayHistoryMap;
     }
+    return state.vocabularyTodayHistoryMap;
   }
 
   function saveVocabularyTodayHistoryMap() {
     try {
       const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
-      if (!currentUid || (vocabularyTodayHistoryOwnerUid && vocabularyTodayHistoryOwnerUid !== currentUid)) {
-        return;
-      }
       const bucket = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
         ? state.vocabularyTodayHistoryMap
         : {};
-      const storageKey = getMobileVocabularyTodayHistoryStorageKey(currentUid);
-      window.localStorage.setItem(storageKey, JSON.stringify(bucket));
-      vocabularyTodayHistoryOwnerUid = currentUid;
-      scheduleMobileVocabularyTodayHistorySync();
+      const storageKeys = [];
+      if (currentUid) {
+        storageKeys.push(getMobileVocabularyTodayHistoryStorageKey(currentUid));
+      }
+      storageKeys.push(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
+      storageKeys.forEach((storageKey) => {
+        if (!storageKey || !String(storageKey || "").trim()) return;
+        window.localStorage.setItem(storageKey, JSON.stringify(bucket));
+      });
+      if (currentUid) {
+        vocabularyTodayHistoryOwnerUid = currentUid;
+      }
+      if (currentUid) {
+        scheduleMobileVocabularyTodayHistorySync();
+      }
     } catch (_error) {
       // Ignore storage failures; keep the in-memory map for the current session.
     }
@@ -5278,6 +5302,9 @@
     if (kind === "pronunciation") {
       sample.pronunciationChoice = value;
       sample.pronunciationChecked = true;
+      sample.meaningChoice = null;
+      sample.meaningChecked = false;
+      sample.meaningRevealed = false;
       recordVocabularySampleHistoryJudgment(item, "pronunciation", value);
       updateVocabularyStudyEntryAfterJudgment(item, "pronunciation", value);
     }
@@ -5300,6 +5327,7 @@
     }
 
     renderVocabularySampleScreen();
+    showScreen("vocabularySampleScreen");
   }
 
   function formatTimestampToJstDisplay(timestamp) {
@@ -13535,7 +13563,14 @@
       // noop
     }
     try {
-      return Boolean(window.performance.navigation) && window.performance.navigation.type === 1;
+      if (Boolean(window.performance.navigation) && window.performance.navigation.type === 1) {
+        return true;
+      }
+    } catch (_error) {
+      // noop
+    }
+    try {
+      return sessionStorage.getItem("englishTrainerMobileReloadGuard") === "1";
     } catch (_error) {
       return false;
     }
@@ -13544,12 +13579,23 @@
   function handlePageHide() {
     pauseMobileLearningHistorySession(Date.now());
     stopSpeakingAudio();
+    try {
+      sessionStorage.setItem("englishTrainerMobileReloadGuard", "1");
+    } catch (_error) {
+      // noop
+    }
   }
 
   function handlePageShow() {
-    if (isMobileReloadNavigation() && !getVocabularyTeacherCheckRouteScreen()) {
-      showScreen("homeScreen");
-      renderHome();
+    try {
+      const reloadGuard = sessionStorage.getItem("englishTrainerMobileReloadGuard") === "1";
+      if (reloadGuard || (isMobileReloadNavigation() && !getVocabularyTeacherCheckRouteScreen())) {
+        sessionStorage.removeItem("englishTrainerMobileReloadGuard");
+        showScreen("homeScreen");
+        renderHome();
+      }
+    } catch (_error) {
+      // noop
     }
     resumeMobileLearningHistorySession(Date.now());
     const speechSynthesis = getSpeechSynthesisEngine();
@@ -14448,6 +14494,13 @@
     document.addEventListener("visibilitychange", handlePageVisibilityChange);
     window.addEventListener("pageshow", handlePageShow);
     window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("beforeunload", () => {
+      try {
+        sessionStorage.setItem("englishTrainerMobileReloadGuard", "1");
+      } catch (_error) {
+        // noop
+      }
+    });
     window.addEventListener("online", () => {
       flushMobilePendingLearningHistoryEntries().catch(() => 0);
       scheduleMobilePointStateSync();
