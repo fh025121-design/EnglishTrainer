@@ -52,6 +52,16 @@ const checks = [
       && /renderHome\(\);\s*return;/.test(source)
   },
   {
+    name: "child reset does not trigger on ordinary non-empty vocabulary data",
+    ok: /versionIsBehind\s*&&\s*noLocalChildData/.test(source)
+      && /!snapshot\.hasStudyEntries && !snapshot\.hasTodayHistoryEntries && !snapshot\.hasTeacherCheckEntries/.test(source)
+  },
+  {
+    name: "today history reload suppression is only for actual reloads, not button taps",
+    ok: /shouldSuppressVocabularyTodayHistoryRenderAfterReload\(\)/.test(source)
+      && /return Boolean\(isMobileReloadNavigation\(\)\);/.test(source)
+  },
+  {
     name: "today history merges legacy and uid-scoped local storage safely",
     ok: /getMobileVocabularyTodayHistoryStorageKey\s*\(/.test(source)
       && /MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY/.test(source)

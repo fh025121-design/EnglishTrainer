@@ -4568,10 +4568,7 @@
     if (getVocabularyTeacherCheckRouteScreen()) {
       return false;
     }
-    return Boolean(isMobileReloadNavigation()) || Boolean(
-      sessionStorage.getItem(MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY) === "1"
-      || localStorage.getItem(MOBILE_VOCABULARY_RELOAD_GUARD_STORAGE_KEY) === "1"
-    );
+    return Boolean(isMobileReloadNavigation());
   }
 
   function handleVocabularyTodayHistorySyncRemoteSnapshot(snapshot) {
@@ -7928,10 +7925,13 @@
     const localResetVersion = Math.max(0, Number(localResetState?.resetVersion || 0) || 0);
     const localResetAtMs = Math.max(0, Number(localResetState?.resetAtMs || 0) || 0);
     const snapshot = getChildVocabularyResetStateSnapshot(targetUid);
-    const hasStaleChildState = snapshot.hasLegacySharedState || snapshot.hasStudyEntries || snapshot.hasTodayHistoryEntries || snapshot.hasTeacherCheckEntries;
+    const noLocalChildData = !snapshot.hasStudyEntries && !snapshot.hasTodayHistoryEntries && !snapshot.hasTeacherCheckEntries;
     const versionIsBehind = remoteResetVersion > localResetVersion || (remoteResetVersion === localResetVersion && remoteResetAtMs > localResetAtMs);
     const fixedTargetMatch = targetUid === MOBILE_FIXED_CHILD_UID;
-    return fixedTargetMatch && remoteResetVersion >= MOBILE_VOCABULARY_CHILD_RESET_VERSION && (versionIsBehind || hasStaleChildState || localHasStaleVocabularyState(targetUid));
+    return fixedTargetMatch
+      && remoteResetVersion >= MOBILE_VOCABULARY_CHILD_RESET_VERSION
+      && versionIsBehind
+      && noLocalChildData;
   }
 
   function applyChildVocabularyResetForCurrentUid(uid, remoteResetMeta = {}) {
