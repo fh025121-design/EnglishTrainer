@@ -4089,7 +4089,9 @@
     const accentVisible = sample.pronunciationChecked;
     const pronunciationSelected = sample.pronunciationChoice;
     const meaningSelected = sample.meaningChoice;
-    const pronunciationJudged = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+    const pronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+    const meaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
+    const pronunciationJudged = pronunciationDecision;
     const meaningVisible = sample.meaningRevealed || sample.meaningChecked || pronunciationJudged;
     const meaningChoiceVisible = sample.meaningRevealed || sample.meaningChecked || pronunciationJudged;
     const canRevealMeaning = pronunciationJudged;
@@ -4282,8 +4284,8 @@
   function handleVocabularySampleMeaningReveal() {
     const sample = state.vocabularySample;
     if (!sample) return;
-    const isPronunciationDecided = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
-    if (!isPronunciationDecided) return;
+    const pronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+    if (!pronunciationDecision) return;
     sample.meaningRevealed = true;
     sample.meaningChecked = true;
     renderVocabularySampleScreen();
@@ -5604,6 +5606,7 @@
     if (!sample) return;
     const item = getVocabularySampleWordItem();
     if (!item) return;
+    if (value !== "ok" && value !== "ng") return;
     const itemKey = `${String(item.id || item.word || "").trim()}|${String(item.partOfSpeech || "").trim()}`;
     sample.currentWordKey = itemKey;
     sample.currentWordId = itemKey;
@@ -5611,6 +5614,9 @@
     if (value === "ok") {
       playVocabularySampleCorrectChime();
     }
+
+    const pronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+    const meaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
 
     if (kind === "pronunciation") {
       sample.pronunciationChoice = value;
@@ -5628,7 +5634,9 @@
       updateVocabularyStudyEntryAfterJudgment(item, "meaning", value);
     }
 
-    if (sample.pronunciationChoice && sample.meaningChoice) {
+    const nextPronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+    const nextMeaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
+    if (nextPronunciationDecision && nextMeaningDecision) {
       if (!sample.currentWordCompleted || sample.currentWordKey !== itemKey) {
         sample.currentWordCompleted = true;
         sample.currentWordKey = itemKey;

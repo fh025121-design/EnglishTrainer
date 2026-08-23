@@ -11,7 +11,11 @@ const checks = [
   },
   {
     name: "debug learned count requires both fields to be completed",
-    ok: /const learnedCount = studyEntries\.filter\(\(entry\) => \{\s*const pronLevel = Number\(entry\?\.pronunciation\?\.level \|\| 0\) \|\| 0;\s*const meaningLevel = Number\(entry\?\.meaningState\?\.level \|\| 0\) \|\| 0;\s*return pronLevel > 0 && meaningLevel > 0;/.test(source)
+    ok: /const\s+pronLevel\s*=\s*Number\(entry\?\.pronunciation\?\.level\s*\|\|\s*0\)\s*\|\|\s*0;[\s\S]*?const\s+meaningLevel\s*=\s*Number\(entry\?\.meaningState\?\.level\s*\|\|\s*0\)\s*\|\|\s*0;[\s\S]*?return\s+pronLevel\s*>\s*0\s*&&\s*meaningLevel\s*>\s*0;/.test(source)
+  },
+  {
+    name: "vocabulary sample completion uses explicit pronunciation and meaning decisions",
+    ok: /const\s+pronunciationDecision\s*=\s*sample\.pronunciationChoice\s*===\s*"ok"\s*\|\|\s*sample\.pronunciationChoice\s*===\s*"ng";[\s\S]*?const\s+meaningDecision\s*=\s*sample\.meaningChoice\s*===\s*"ok"\s*\|\|\s*sample\.meaningChoice\s*===\s*"ng";/.test(source)
   }
 ];
 
