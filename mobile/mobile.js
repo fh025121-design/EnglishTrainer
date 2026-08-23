@@ -4299,20 +4299,35 @@
       : {};
     const uid = getCurrentMobileFirebaseUser()?.uid || "";
     const storageKey = getMobileVocabularyTodayHistoryStorageKey(uid);
+    const legacyKey = MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY;
 
     try {
-      const raw = window.localStorage.getItem(storageKey) || window.localStorage.getItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
-      if (!raw) {
-        state.vocabularyTodayHistoryMap = previousMap;
+      const candidates = [
+        { key: storageKey, value: window.localStorage.getItem(storageKey) },
+        { key: legacyKey, value: window.localStorage.getItem(legacyKey) }
+      ].filter((entry) => typeof entry.value === "string" && entry.value.trim().length > 0);
+
+      if (!candidates.length) {
+        state.vocabularyTodayHistoryMap = previousMap && Object.keys(previousMap).length ? previousMap : {};
         return state.vocabularyTodayHistoryMap;
       }
 
-      const parsed = JSON.parse(raw);
-      const safeMap = normalizeVocabularyTodayHistoryMap(parsed);
-      state.vocabularyTodayHistoryMap = Object.keys(safeMap).length ? safeMap : previousMap;
+      const mergedMap = candidates.reduce((accumulator, candidate) => {
+        try {
+          const parsed = JSON.parse(candidate.value);
+          const safeMap = normalizeVocabularyTodayHistoryMap(parsed);
+          if (!Object.keys(safeMap).length) return accumulator;
+          return mergeVocabularyTodayHistoryMapByLatest(accumulator, safeMap);
+        } catch (_error) {
+          return accumulator;
+        }
+      }, {});
+
+      const nextMap = Object.keys(mergedMap).length ? mergedMap : previousMap;
+      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(nextMap) || {};
       return state.vocabularyTodayHistoryMap;
     } catch (_error) {
-      state.vocabularyTodayHistoryMap = previousMap;
+      state.vocabularyTodayHistoryMap = previousMap && Object.keys(previousMap).length ? previousMap : {};
       return state.vocabularyTodayHistoryMap;
     }
   }
@@ -4415,15 +4430,24 @@
     const uid = String(snapshot.uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
     const incomingMap = normalizeVocabularyTodayHistoryMap(snapshot.historyMap);
     if (!incomingMap || !Object.keys(incomingMap).length) {
+      const localBaseline = loadVocabularyTodayHistoryMap();
+      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
+      saveVocabularyTodayHistoryMap();
+      if (state.currentScreen === "vocabularyTodayHistoryScreen") {
+        renderVocabularyTodayHistoryScreen();
+      }
       return;
     }
     const currentLocal = loadVocabularyTodayHistoryMap();
     const mergedMap = mergeVocabularyTodayHistoryMapByLatest(currentLocal, incomingMap);
-    state.vocabularyTodayHistoryMap = mergedMap;
+    state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(mergedMap) || {};
     saveVocabularyTodayHistoryMap();
     if (uid) {
       const mobileSyncKey = getMobileVocabularyTodayHistoryStorageKey(uid);
-      window.localStorage.setItem(mobileSyncKey, JSON.stringify(mergedMap));
+      window.localStorage.setItem(mobileSyncKey, JSON.stringify(state.vocabularyTodayHistoryMap));
+    }
+    if (state.currentScreen === "vocabularyTodayHistoryScreen") {
+      renderVocabularyTodayHistoryScreen();
     }
   }
 
@@ -4466,8 +4490,11 @@
       remoteResult = null;
     }
 
-    if (remoteResult?.ok && remoteResult.exists && remoteResult.historyMap) {
-      state.vocabularyTodayHistoryMap = mergeVocabularyTodayHistoryMapByLatest(localBaseline, remoteResult.historyMap);
+    const remoteHistoryMap = remoteResult?.ok && remoteResult.exists && remoteResult.historyMap
+      ? normalizeVocabularyTodayHistoryMap(remoteResult.historyMap)
+      : {};
+    if (remoteResult?.ok && remoteResult.exists && Object.keys(remoteHistoryMap).length) {
+      state.vocabularyTodayHistoryMap = mergeVocabularyTodayHistoryMapByLatest(localBaseline, remoteHistoryMap);
       saveVocabularyTodayHistoryMap();
       vocabularyTodayHistorySyncCurrentUid = uid;
       vocabularyTodayHistorySyncReady = true;
@@ -4478,6 +4505,9 @@
       vocabularyTodayHistorySyncCurrentUid = uid;
       vocabularyTodayHistorySyncReady = true;
       vocabularyTodayHistorySyncAllowCreate = true;
+    }
+    if (state.currentScreen === "vocabularyTodayHistoryScreen") {
+      renderVocabularyTodayHistoryScreen();
     }
 
     const subscribeRemote = window.subscribeMobileVocabularyTodayHistoryStateFromFirestore;
@@ -7435,7 +7465,16 @@
     }
     const uid = String(snapshot.uid || getMobileVocabularySyncUid() || "").trim();
     const incomingStudy = sanitizeVocabularyStudyState(snapshot.studyState);
-    if (!incomingStudy) {
+    if (!incomingStudy || !Array.isArray(incomingStudy.entries) || !incomingStudy.entries.length) {
+      const localBaseline = loadMobileVocabularyStateForSync(uid) || state.vocabularyStudy || buildVocabularyRealStudyState();
+      if (sanitizeVocabularyStudyState(localBaseline)) {
+        state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(localBaseline, getVocabularyRealWordBank());
+        saveState();
+        saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
+      }
+      if (state.currentScreen === "vocabularyPastHistoryScreen") {
+        renderVocabularyPastHistoryScreen();
+      }
       return;
     }
     const currentLocal = loadMobileVocabularyStateForSync(uid) || state.vocabularyStudy || buildVocabularyRealStudyState();
@@ -7455,6 +7494,9 @@
       return;
     }
     saveMobileVocabularyStateForSync(mergedStudy, uid);
+    if (state.currentScreen === "vocabularyPastHistoryScreen") {
+      renderVocabularyPastHistoryScreen();
+    }
   }
 
   async function initializeMobileVocabularySyncForCurrentUser(options = {}) {

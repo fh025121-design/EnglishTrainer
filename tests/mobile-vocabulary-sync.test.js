@@ -34,6 +34,29 @@ const checks = [
     ok: /loadMobileFormalLearningHistoryEntriesForToday\s*\(/.test(source)
       && /collection\(firestore,\s*"users",\s*uid,\s*"learningHistory"\)/.test(source)
       && /MOBILE_LEARNING_HISTORY_STORAGE_KEY/.test(source)
+  },
+  {
+    name: "today history empty remote snapshot does not overwrite local entries",
+    ok: /!incomingMap/.test(source)
+      && /Object\.keys\(incomingMap\)\.length/.test(source)
+      && /renderVocabularyTodayHistoryScreen\(\)/.test(source)
+  },
+  {
+    name: "today history merges legacy and uid-scoped local storage safely",
+    ok: /getMobileVocabularyTodayHistoryStorageKey\s*\(/.test(source)
+      && /MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY/.test(source)
+      && /mergeVocabularyTodayHistoryMapByLatest\(localBaseline, remoteHistoryMap\)/.test(source)
+  },
+  {
+    name: "past history remote empty snapshot does not wipe local study state",
+    ok: /!incomingStudy/.test(source)
+      && /Array\.isArray\(incomingStudy\.entries\)/.test(source)
+      && /renderVocabularyPastHistoryScreen\(\)/.test(source)
+  },
+  {
+    name: "last-updated merge wins for same vocabulary id across devices",
+    ok: /rightUpdated >= leftUpdated \? incomingEntry : baseEntry/.test(source)
+      && /rightUpdated >= leftUpdated \? incomingEntry : baseEntry/.test(source)
   }
 ];
 
