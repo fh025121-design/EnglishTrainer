@@ -4,10 +4,13 @@ const path = require("path");
 
 const source = fs.readFileSync(path.join(__dirname, "..", "mobile", "mobile.js"), "utf8");
 
+const functionMatch = source.match(/function isNewVocabularyPracticeHistoryEntry\(entry\) \{[\s\S]*?\n  \}/);
+assert.ok(functionMatch, "isNewVocabularyPracticeHistoryEntry function should exist");
+
 const checks = [
   {
-    name: "new vocabulary history entries are identified by day-keyed vocabulary mode",
-    ok: /function isNewMobileVocabularyHistoryEntry\(entry\)/.test(source)
+    name: "new vocabulary history entries accept the current mobile category label",
+    ok: /category === "単語練習"/.test(functionMatch[0])
   },
   {
     name: "vocabulary history points are aggregated into the mobile point breakdown",
@@ -15,7 +18,7 @@ const checks = [
   },
   {
     name: "summary total includes vocabulary points from saved earnedPoints",
-    ok: /getMobileVocabularyEarnedPointsByDay\(|todayVocabulary|totalVocabulary/.test(source)
+    ok: /todayVocabulary/.test(source) && /getMobileVocabularyPracticePointsByDayFromHistory\(\)/.test(source)
   }
 ];
 

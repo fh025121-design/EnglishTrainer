@@ -1,7 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
-    { version: "2026/08/24 23:44", note: "モバイル版のみ: 子UID の『今日の履歴』を親と同じ openVocabularyTodayHistoryScreen → renderVocabularyTodayHistoryScreen → 表示経路へ揃え、子UID専用のホーム戻し guard だけを除去。UID別キャッシュ・Firestore保存path・読み込みpath・Vocabulary同期・ポイント処理・遠隔同期の実装は維持し、今日の履歴画面の共通遷移だけを修正。バージョン表示と cache token も同じ実JST 23:44 に更新。" },
+    { version: "2026/08/25 01:08", note: "モバイル版のみ: Speaking の単語練習履歴が category=\"単語練習\" で保存される一方、集計判定が Vocabulary 前提だったため、日別ポイント集計と獲得総計に新規 Speaking 単語練習が落ちていた。判定と正規化を両方で対応し、learningHistory から再集計される vocabulary 集計に新規履歴が含まれるよう最小修正。バージョン表示と cache token も同じ実JST 01:08 に更新。" },
     { version: "2026/08/24 23:22", note: "モバイル版のみ: 今日の履歴キャッシュを Auth UID 単位に統一し、親→子／子→親切替や F5 後に前ユーザーのキャッシュを再利用しないよう修正。保存path・保存形式・Firestore Rules・Vocabulary同期・ポイント処理は変更せず、今日の学習サマリのキャッシュと再読込順序だけを共通化。バージョン表示と cache token も同じ実JST 23:22 に更新。" },
     { version: "2026/08/24 22:20", note: "モバイル版のみ: 単語練習と語順トレの完了・中断時に、既存の共通ポイント獲得画面へ遷移して獲得ポイントを表示するよう調整。保存処理・Firestore同期・和訳トレーロジック・既存の日次上限・ポイント計算は変更せず、表示と共通経路の利用だけを揃えた。バージョン表示と cache token も同じ実JST 22:20 に更新。" },
     { version: "2026/08/24 21:45", note: "モバイル版のみ: 学習履歴の日別詳細で、Vocabulary / 単語練習 の表示時に Week・曜日を非表示にし、単語練習は『単語練習』のみを表示する表示修正を実施。内部コード・保存値・Firestore保存値・Vocabulary保存同期処理・他のWeek管理教材の表示は変更せず、表示計算だけを修正。既存履歴データの書き換えなし、バージョン表示と cache token も同じ JST 21:45 に更新。" },

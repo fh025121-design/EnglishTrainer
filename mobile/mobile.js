@@ -204,8 +204,9 @@
   function isNewVocabularyPracticeHistoryEntry(entry) {
     if (!entry || typeof entry !== "object") return false;
     const category = resolveMobileLearningHistoryCategory(entry);
+    const normalizedCategory = category === "単語練習" ? "Vocabulary" : category;
     const dayNumber = String(entry.dayNumber || "").trim();
-    return category === "Vocabulary" && isIsoDayKey(dayNumber);
+    return (normalizedCategory === "Vocabulary" || category === "単語練習") && isIsoDayKey(dayNumber);
   }
 
   function isNewMobileVocabularyHistoryEntry(entry) {
@@ -6343,7 +6344,7 @@
     if (category === "応答文特訓") return { key: "response", label: "応答文特訓" };
     if (category === "不規則動詞特訓") return { key: "irregularVerb", label: "不規則動詞特訓" };
     if (category === "過去の間違い") return { key: "reviewPc", label: "過去の間違い" };
-    if (category === "Vocabulary") return { key: "vocabulary", label: "Vocabulary" };
+    if (category === "Vocabulary" || category === "単語練習") return { key: "vocabulary", label: "単語練習" };
     if (category === "会話練習") return { key: "conversation", label: "会話練習" };
     if (category === "復習") return { key: "review", label: "復習" };
     if (category === "語順") return { key: "wordOrder", label: "語順" };
@@ -10902,8 +10903,8 @@
       const dayNumber = String(entry.dayNumber || "").trim();
       const entryPoints = parseMobileLearningHistoryEarnedPoints(entry.earnedPoints);
       const questionCount = Math.max(0, Number(entry.questionCount) || 0);
-      const isNewVocabularyEntry = category === "Vocabulary" && isIsoDayKey(dayNumber);
-      const isLegacyVocabularyEntry = category === "Vocabulary" && /week/i.test(dayNumber);
+      const isNewVocabularyEntry = (category === "Vocabulary" || category === "単語練習") && isIsoDayKey(dayNumber);
+      const isLegacyVocabularyEntry = (category === "Vocabulary" || category === "単語練習") && /week/i.test(dayNumber);
 
       if (isNewVocabularyEntry || (/vocabulary/i.test(modeText) || /単語/i.test(modeText)) && !isLegacyVocabularyEntry) {
         result.word.count += questionCount;
