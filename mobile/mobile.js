@@ -8175,7 +8175,10 @@
 
   function saveState() {
     const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
-    const canPersistStudyState = currentUid && (!vocabularyStateOwnerUid || vocabularyStateOwnerUid === currentUid);
+    if (currentUid && !vocabularyStateOwnerUid) {
+      vocabularyStateOwnerUid = currentUid;
+    }
+    const canPersistStudyState = currentUid && vocabularyStateOwnerUid === currentUid;
     const safeStudyState = canPersistStudyState && state.vocabularyStudy
       ? sanitizeVocabularyStudyState(state.vocabularyStudy) || createEmptyVocabularyStudyState()
       : null;
@@ -8194,7 +8197,7 @@
     }
     renderMobileVocabularyDebugPanel();
     const uid = getMobileVocabularySyncUid();
-    if (uid && (!vocabularyStateOwnerUid || vocabularyStateOwnerUid === uid) && isVocabularyStateOwnerCurrentUid(uid)) {
+    if (uid && vocabularyStateOwnerUid === uid && isVocabularyStateOwnerCurrentUid(uid)) {
       scheduleMobileVocabularySync();
     }
   }
@@ -8854,7 +8857,13 @@
 
   function saveMobileVocabularyState(targetStudyState, options = {}) {
     const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
-    if (!currentUid || !isVocabularyStateOwnerCurrentUid(currentUid)) {
+    if (!currentUid) {
+      return state.vocabularyStudy || null;
+    }
+    if (!vocabularyStateOwnerUid) {
+      vocabularyStateOwnerUid = currentUid;
+    }
+    if (vocabularyStateOwnerUid !== currentUid) {
       return state.vocabularyStudy || null;
     }
     const nextStudy = sanitizeVocabularyStudyState(targetStudyState) ? targetStudyState : state.vocabularyStudy || buildVocabularyRealStudyState();
