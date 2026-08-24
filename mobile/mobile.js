@@ -8636,10 +8636,22 @@
   async function initializeMobileVocabularySyncForCurrentUser(options = {}) {
     const force = options?.force === true;
     const uid = getMobileVocabularySyncUid();
+    console.log("[MobileVocabularySyncDiag] initialize start", {
+      force,
+      uid,
+      vocabularySyncReady,
+      vocabularySyncCurrentUid,
+      currentFirebaseUser: !!(window.getMobileFirebaseCurrentUser && window.getMobileFirebaseCurrentUser())
+    });
     if (!uid) {
       vocabularySyncCurrentUid = "";
       vocabularySyncReady = false;
       vocabularySyncAllowCreate = false;
+      console.log("[MobileVocabularySyncDiag] initialize early exit: empty uid", {
+        uid,
+        vocabularySyncReady,
+        vocabularySyncCurrentUid
+      });
       if (typeof vocabularySyncUnsubscribe === "function") {
         vocabularySyncUnsubscribe();
       }
@@ -11914,12 +11926,23 @@
         vocabularyStateOwnerUid = "";
         vocabularyTodayHistoryOwnerUid = "";
       }
+      console.log("[MobileVocabularySyncDiag] applyMobileAuthState trigger", {
+        status: nextStatus,
+        uid: nextUid,
+        previousOwner,
+        force: true
+      });
       refreshMobileFamilyIdentityCache()
         .catch(() => false)
         .finally(() => {
           flushMobilePendingLearningHistoryEntries().catch(() => 0);
           initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
           initializeWordOrderStatsSyncForCurrentUser({ force: true }).catch(() => false);
+          console.log("[MobileVocabularySyncDiag] applyMobileAuthState init call", {
+            status: nextStatus,
+            uid: nextUid,
+            force: true
+          });
           initializeMobileVocabularySyncForCurrentUser({ force: true }).catch(() => false);
           refreshMobileHomeTodayLearningSummaryFromFirestore().catch(() => false);
         });
@@ -11972,12 +11995,22 @@
       mobilePointStateCache = null;
       mobilePointStateCacheUid = "";
       mobilePointSyncAllowCreate = false;
+      console.log("[MobileVocabularySyncDiag] bindMobileAuthState trigger", {
+        status: "logged-in",
+        uid: mobileAuthLastUid,
+        force: true
+      });
       refreshMobileFamilyIdentityCache()
         .catch(() => false)
         .finally(() => {
           flushMobilePendingLearningHistoryEntries().catch(() => 0);
           initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
           initializeWordOrderStatsSyncForCurrentUser({ force: true }).catch(() => false);
+          console.log("[MobileVocabularySyncDiag] bindMobileAuthState init call", {
+            status: "logged-in",
+            uid: mobileAuthLastUid,
+            force: true
+          });
           initializeMobileVocabularySyncForCurrentUser({ force: true }).catch(() => false);
           refreshMobileHomeTodayLearningSummaryFromFirestore().catch(() => false);
         });
