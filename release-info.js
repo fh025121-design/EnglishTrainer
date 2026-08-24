@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/24 21:48", note: "モバイル版のみ: F5直後の Auth 復元未完了時に、履歴取得が開始されてしまい currentUid 未確定のまま子UID判定 false / deviceType=pc / 0件取得が発生していたため、Auth UID 未確定時は履歴取得を開始せず、認証完了後の既存経路で正しい子UIDで再取得するよう最小修正。保存path・学習履歴保存・Firestore Rules・親UID同期・Vocabulary には触れず、子UIDの F5 後の 0 件誤取得を防ぐ。バージョン表示と cache token も同じ JST 21:48 に更新。" },
     { version: "2026/08/24 20:41", note: "モバイル版のみ: 子UIDの履歴画面が初期 deviceType=pc のままになっていたため、子UIDの mobile 履歴が即座にフィルタ除外されて 0 件になる問題を最小修正。保存path・読込path・UID切替・Firestore Rules・親UID同期には触れず、子UID の mobile 履歴画面だけを初期値 mobile に変更し、バージョン表示と cache token も同じ JST 20:41 に更新。" },
     { version: "2026/08/24 20:24", note: "モバイル版のみ: 一時追加した Vocabulary Debug の画面表示と診断ログを撤去し、保存・同期・Firestore への実処理に影響を及ぼさないよう整理。既存の正常な同期ロジックと保存経路は維持し、公開版のバージョン表示・モバイル画面表示・cache token を同じ実際の JST 20:24 で揃えて更新。" },
     { version: "2026/08/24 19:14", note: "モバイル版のみ: 1語完了時の保存結果を一時診断欄へ追加表示し、Firestore 保存仕様・同期条件・UID/ready/owner・remote load には触れずに、保存結果の changedWordId / chunkId / ok / saved / skipped / error を確認できるようにした。既存の保存処理と同期ロジックは維持し、公開版のバージョン表示と cache token も同時に実際の JST 19:14 に揃えて更新。" },

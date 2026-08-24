@@ -6914,6 +6914,21 @@
 
   async function unlockMobileAdminLearningHistory() {
     if (!elements.mobileAdminLearningHistoryPanel) return;
+    const currentUser = typeof window.getMobileFirebaseCurrentUser === "function"
+      ? window.getMobileFirebaseCurrentUser()
+      : (window.MobileFirebase?.auth?.currentUser || null);
+    const currentUid = String(currentUser?.uid || "").trim();
+    if (!currentUid) {
+      mobileAdminLearningHistorySourceEntries = [];
+      mobileAdminLearningHistorySelectedDayKey = "";
+      if (elements.mobileAdminLearningHistoryStatusText) {
+        elements.mobileAdminLearningHistoryStatusText.textContent = "認証状態を確認しています...";
+        elements.mobileAdminLearningHistoryStatusText.classList.remove("hidden");
+      }
+      hideMobileAdminLearningHistory();
+      return;
+    }
+
     if (elements.mobileAdminLearningHistoryStatusText) {
       elements.mobileAdminLearningHistoryStatusText.textContent = "読み込み中...";
       elements.mobileAdminLearningHistoryStatusText.classList.remove("hidden");
@@ -6925,10 +6940,6 @@
         throw new Error("family options unavailable");
       }
 
-      const currentUser = typeof window.getMobileFirebaseCurrentUser === "function"
-        ? window.getMobileFirebaseCurrentUser()
-        : (window.MobileFirebase?.auth?.currentUser || null);
-      const currentUid = String(currentUser?.uid || "").trim();
       const selectedParent = mobileAdminLearningHistoryFamilyChildren.find((child) => child.key === "parent") || null;
       const selectedSon = mobileAdminLearningHistoryFamilyChildren.find((child) => child.key === "son") || null;
       const isChildLogin = Boolean(selectedSon?.uid && currentUid && selectedSon.uid === currentUid);
@@ -7071,9 +7082,9 @@
     const firestore = window.MobileFirebase?.firestore || null;
     const currentUid = String(user?.uid || "").trim();
     const path = "families/inoue";
-    if (!firestore) {
-      console.log("[Family DEBUG]\npath:", path, "\nfamilyUid:", "", "\nauthState:", user ? "logged-in" : "logged-out");
-      return buildMobileAdminFamilyOptions(null, user);
+    if (!currentUid || !firestore) {
+      console.log("[Family DEBUG]\npath:", path, "\nfamilyUid:", "", "\ncurrentUid:", currentUid, "\nauthState:", user ? "logged-in" : "logged-out");
+      return [];
     }
 
     console.log("[Family DEBUG]\npath:", path, "\nfamilyUid:", "", "\ncurrentUid:", currentUid, "\nauthState:", user ? "logged-in" : "logged-out");
