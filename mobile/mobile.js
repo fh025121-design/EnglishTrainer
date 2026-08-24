@@ -85,6 +85,7 @@
   let mobilePointHistoryVisibleCount = MOBILE_POINT_HISTORY_PAGE_SIZE;
   let mobileHomeTodayLearningSource = "localStorage";
   let mobileHomeTodayLearningEntries = [];
+  let mobileHomeTodayLearningCacheUid = "";
   let mobileHomeTodayLearningRefreshPromise = null;
   let mobilePointSyncCurrentUid = "";
   let mobilePointSyncReady = false;
@@ -10829,6 +10830,22 @@
     aliasNode.classList.toggle("hidden", !shouldShow);
   }
 
+  function clearMobileHomeTodayLearningCacheForUid(uid = mobileHomeTodayLearningCacheUid) {
+    const safeUid = String(uid || "").trim();
+    if (safeUid) {
+      mobileHomeTodayLearningCacheUid = safeUid;
+    } else {
+      mobileHomeTodayLearningCacheUid = "";
+    }
+    mobileHomeTodayLearningEntries = [];
+    mobileHomeTodayLearningSource = "localStorage";
+  }
+
+  function getMobileHomeTodayLearningCacheKey(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    const safeUid = String(uid || "").trim();
+    return safeUid ? `${MOBILE_LEARNING_HISTORY_STORAGE_KEY}:${safeUid}` : MOBILE_LEARNING_HISTORY_STORAGE_KEY;
+  }
+
   async function loadMobileFormalLearningHistoryEntriesForToday({ forceRefresh = false } = {}) {
     const user = typeof window.getMobileFirebaseCurrentUser === "function"
       ? window.getMobileFirebaseCurrentUser()
@@ -10836,10 +10853,15 @@
     const uid = String(user?.uid || "").trim();
     const firestore = window.MobileFirebase?.firestore || null;
     if (!uid || !firestore) {
+      clearMobileHomeTodayLearningCacheForUid();
       return { ok: false, entries: [], source: "localStorage" };
     }
 
-    if (!forceRefresh && mobileHomeTodayLearningSource === "firestore" && Array.isArray(mobileHomeTodayLearningEntries) && mobileHomeTodayLearningEntries.length) {
+    if (mobileHomeTodayLearningCacheUid && mobileHomeTodayLearningCacheUid !== uid) {
+      clearMobileHomeTodayLearningCacheForUid(uid);
+    }
+
+    if (!forceRefresh && mobileHomeTodayLearningSource === "firestore" && mobileHomeTodayLearningCacheUid === uid && Array.isArray(mobileHomeTodayLearningEntries) && mobileHomeTodayLearningEntries.length) {
       return { ok: true, entries: mobileHomeTodayLearningEntries.slice(), source: "firestore" };
     }
 
@@ -10857,12 +10879,12 @@
         return entryDayKey === todayDayKey;
       });
       mobileHomeTodayLearningEntries = todayEntries.slice();
+      mobileHomeTodayLearningCacheUid = uid;
       mobileHomeTodayLearningSource = "firestore";
       return { ok: true, entries: todayEntries.slice(), source: "firestore" };
     } catch (error) {
       console.error("Failed to load formal mobile learning history for home summary", error);
-      mobileHomeTodayLearningEntries = [];
-      mobileHomeTodayLearningSource = "localStorage";
+      clearMobileHomeTodayLearningCacheForUid(uid);
       return { ok: false, entries: [], source: "localStorage" };
     }
   }
@@ -10911,7 +10933,11 @@
   }
 
   function getMobileHomeTodayLearningSummary() {
-    if (mobileHomeTodayLearningSource === "firestore") {
+    const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (currentUid && mobileHomeTodayLearningCacheUid && currentUid !== mobileHomeTodayLearningCacheUid) {
+      clearMobileHomeTodayLearningCacheForUid(currentUid);
+    }
+    if (mobileHomeTodayLearningSource === "firestore" && mobileHomeTodayLearningCacheUid === currentUid) {
       return summarizeHomeTodayLearningEntries(Array.isArray(mobileHomeTodayLearningEntries) ? mobileHomeTodayLearningEntries : []);
     }
 
@@ -10922,6 +10948,17 @@
   async function refreshMobileHomeTodayLearningSummaryFromFirestore() {
     if (mobileHomeTodayLearningRefreshPromise) {
       return mobileHomeTodayLearningRefreshPromise;
+    }
+
+    const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!currentUid) {
+      clearMobileHomeTodayLearningCacheForUid();
+      renderMobileHomeTodayLearningSummary();
+      return false;
+    }
+
+    if (mobileHomeTodayLearningCacheUid && mobileHomeTodayLearningCacheUid !== currentUid) {
+      clearMobileHomeTodayLearningCacheForUid(currentUid);
     }
 
     mobileHomeTodayLearningRefreshPromise = (async () => {
@@ -11589,8 +11626,10 @@
     if (nextStatus === mobileAuthLastStatus && nextUid === mobileAuthLastUid) return;
     mobileAuthLastStatus = nextStatus;
     mobileAuthLastUid = nextUid;
+    if (nextUid && mobileHomeTodayLearningCacheUid && mobileHomeTodayLearningCacheUid !== nextUid) {
+      clearMobileHomeTodayLearningCacheForUid(nextUid);
+    }
     if (user) {
-      const nextUid = String(user?.uid || "").trim();
       const previousOwner = String(vocabularyStateOwnerUid || "").trim();
       if (previousOwner && previousOwner !== nextUid) {
         state.teacherCheckSession = null;
@@ -11611,6 +11650,7 @@
       renderHome();
       return;
     }
+    clearMobileHomeTodayLearningCacheForUid();
     if (typeof mobilePointSyncUnsubscribe === "function") {
       mobilePointSyncUnsubscribe();
     }
@@ -11654,6 +11694,9 @@
     if (authState.status === "logged-in" || currentUser) {
       mobileAuthLastStatus = "logged-in";
       mobileAuthLastUid = String(currentUser?.uid || "").trim();
+      if (mobileAuthLastUid && mobileHomeTodayLearningCacheUid && mobileHomeTodayLearningCacheUid !== mobileAuthLastUid) {
+        clearMobileHomeTodayLearningCacheForUid(mobileAuthLastUid);
+      }
       mobilePointStateCache = null;
       mobilePointStateCacheUid = "";
       mobilePointSyncAllowCreate = false;

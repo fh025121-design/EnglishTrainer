@@ -67,4 +67,12 @@ test('№76-1 fixed child UID reset must ignore stale cached family UID and stal
   assert.match(source, /versionIsBehind/);
 });
 
-console.log(`UID ownership regression tests added (${scenarioNames.length + 4})`);
+test('№151-1 today home history cache must be bound to the active UID and cleared on UID changes', () => {
+  assert.match(source, /mobileHomeTodayLearningCacheUid/);
+  assert.match(source, /getMobileHomeTodayLearningCacheKey\s*\(/);
+  assert.match(source, /clearMobileHomeTodayLearningCacheForUid\s*\(/);
+  assert.match(source, /mobileHomeTodayLearningCacheUid.*!==.*currentUid|currentUid.*!==.*mobileHomeTodayLearningCacheUid/);
+  assert.match(source, /mobileHomeTodayLearningEntries = \[]/);
+});
+
+console.log(`UID ownership regression tests added (${scenarioNames.length + 5})`);
