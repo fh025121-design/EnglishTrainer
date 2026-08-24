@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/24 22:20", note: "モバイル版のみ: 単語練習と語順トレの完了・中断時に、既存の共通ポイント獲得画面へ遷移して獲得ポイントを表示するよう調整。保存処理・Firestore同期・和訳トレーロジック・既存の日次上限・ポイント計算は変更せず、表示と共通経路の利用だけを揃えた。バージョン表示と cache token も同じ実JST 22:20 に更新。" },
     { version: "2026/08/24 21:45", note: "モバイル版のみ: 学習履歴の日別詳細で、Vocabulary / 単語練習 の表示時に Week・曜日を非表示にし、単語練習は『単語練習』のみを表示する表示修正を実施。内部コード・保存値・Firestore保存値・Vocabulary保存同期処理・他のWeek管理教材の表示は変更せず、表示計算だけを修正。既存履歴データの書き換えなし、バージョン表示と cache token も同じ JST 21:45 に更新。" },
     { version: "2026/08/24 21:31", note: "モバイル版のみ: 学習履歴の日別詳細で、ユーザー向け表示名として Vocabulary / vocabulary 等を「単語練習」に変換する表示修正を実施。内部コード上のモード名・保存値・Firestore保存値・Vocabulary保存同期処理は変更せず、日別詳細の見た目だけを統一。既存データの書き換えなし、他の学習種別名の変更なし、バージョン表示と cache token も同じ JST 21:31 に更新。" },
     { version: "2026/08/24 21:08", note: "モバイル版のみ: 親子で共通の Vocabulary / learningHistory 保存同期経路を正として、子UIDだけ残っていた一時的な child reset 特例を撤去し、Auth UID 未確定時は fetch/save を開始しない共通条件へ統一。deviceType は UI/表示条件に限定し、Vocabulary の saveState → localStorage → sync → Firestore → merge 復元、learningHistory の Auth 確定後取得を親子共通に整理。Firestore Rules・ポイント処理・既存保存形式は変更せず、バージョン表示と cache token も同じ JST 21:08 に更新。" },

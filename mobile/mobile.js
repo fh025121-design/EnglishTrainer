@@ -56,6 +56,14 @@
     translation: Object.freeze({
       title: "🎉 和訳トレーニングお疲れさま！",
       categoryLabel: "和訳"
+    }),
+    speakingVocabulary: Object.freeze({
+      title: "🎉 単語練習お疲れさま！",
+      categoryLabel: "Speaking"
+    }),
+    wordOrder: Object.freeze({
+      title: "🎉 語順トレーニングお疲れさま！",
+      categoryLabel: "語順"
     })
   });
   const MOBILE_DAY_MIN = 1;
@@ -10394,10 +10402,12 @@
     const correctCount = Math.max(0, Number(training?.correctCount) || 0);
     const incorrectCount = Math.max(0, Number(training?.incorrectCount) || 0);
     const questionCount = Math.max(0, correctCount + incorrectCount);
+    const earnedPoints = Math.max(0, Number(training?.sessionEarnedPoints) || 0);
     return {
       questionCount,
       correctCount,
-      accuracy: questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0
+      accuracy: questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0,
+      earnedPoints
     };
   }
 
@@ -10662,6 +10672,11 @@
     if (training.questionIndex >= training.questions.length - 1) {
       training.completed = true;
       finalizeWordOrderLearningHistorySession("completed");
+      const earnedPoints = Math.max(0, Number(training.sessionEarnedPoints) || 0);
+      if (earnedPoints > 0) {
+        openPointRewardScreen("wordOrder", earnedPoints, { onClose: renderHome });
+        return;
+      }
       renderWordOrderTraining();
       return;
     }
@@ -10699,7 +10714,8 @@
     recordWordOrderQuestionResult(question.id, isCorrect);
     if (isCorrect) {
       training.correctCount += 1;
-      awardWordOrderPoints(1);
+      const gained = awardWordOrderPoints(1);
+      training.sessionEarnedPoints = Math.max(0, Number(training.sessionEarnedPoints) || 0) + Math.max(0, Number(gained) || 0);
       training.feedback = "正解です！";
       training.correctAnswer = "";
       playWordOrderCorrectChime();
@@ -12590,6 +12606,7 @@
       renderSpeakingWordDaySelectScreen();
       return;
     }
+    const earnedPoints = Math.max(0, Number(practice.completedCount || 0) * 2);
     finalizeSpeakingWordLearningHistorySession("completed");
     if (!practice.pointAwarded) {
       practice.pointAwarded = true;
@@ -12600,6 +12617,11 @@
     elements.speakingWordCompleteTitleText.textContent = `${getSpeakingWordWeekShortLabel(practice.weekId)} ${weekday}曜日`;
     elements.speakingWordCompleteMetaText.textContent = `${total} / ${total} 完了 ✅`;
     showScreen("speakingWordCompleteScreen");
+    if (earnedPoints > 0) {
+      openPointRewardScreen("speakingVocabulary", earnedPoints, { onClose: renderHome });
+      return;
+    }
+    renderHome();
   }
 
   function startSpeakingWordWeekPractice(weekId, dayKey) {
@@ -12618,6 +12640,7 @@
       showExampleJapanese: false,
       readCount: 0,
       answeredCount: 0,
+      completedCount: 0,
       correctCount: 0,
       currentItemCorrect: false,
       recognitionInProgress: false,
@@ -12645,15 +12668,17 @@
       return {
         questionCount: 0,
         correctCount: 0,
-        accuracy: 0
+        accuracy: 0,
+        earnedPoints: 0
       };
     }
-    const questionCount = Math.max(0, Number(practice.answeredCount) || 0);
+    const completedCount = Math.max(0, Number(practice.completedCount) || 0);
     const correctCount = Math.max(0, Number(practice.correctCount) || 0);
     return {
-      questionCount,
+      questionCount: completedCount,
       correctCount,
-      accuracy: questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0
+      accuracy: completedCount > 0 ? Math.round((correctCount / completedCount) * 100) : 0,
+      earnedPoints: completedCount * 2
     };
   }
 
@@ -12674,9 +12699,15 @@
   }
 
   function leaveSpeakingWordPracticeToDaySelect() {
+    const practice = state.speakingUi.speakingWordPractice;
+    const earnedPoints = practice ? Math.max(0, Number(practice.completedCount || 0) * 2) : 0;
     finalizeSpeakingWordLearningHistorySession("interrupted");
     stopSpeakingWordPracticeRecognition();
     state.speakingUi.speakingWordPractice = null;
+    if (earnedPoints > 0) {
+      openPointRewardScreen("speakingVocabulary", earnedPoints, { onClose: renderSpeakingWordDaySelectScreen });
+      return;
+    }
     renderSpeakingWordDaySelectScreen();
   }
 
@@ -12779,7 +12810,9 @@
     const practice = state.speakingUi.speakingWordPractice;
     if (!practice || practice.readCount < 2) return;
 
-    practice.answeredCount = Math.max(0, Number(practice.answeredCount) || 0) + 1;
+    const nextCompletedCount = Math.max(0, Number(practice.completedCount) || 0) + 1;
+    practice.completedCount = nextCompletedCount;
+    practice.answeredCount = nextCompletedCount;
     if (practice.currentItemCorrect) {
       practice.correctCount = Math.max(0, Number(practice.correctCount) || 0) + 1;
     }
