@@ -5618,7 +5618,7 @@
     return true;
   }
 
-  function handleVocabularySampleChoice(kind, value) {
+  async function handleVocabularySampleChoice(kind, value) {
     const sample = normalizeVocabularySampleSessionState(state.vocabularySample || null, getVocabularySampleWordItem());
     if (!sample) return;
     const item = getVocabularySampleWordItem();
@@ -5631,9 +5631,6 @@
     if (value === "ok") {
       playVocabularySampleCorrectChime();
     }
-
-    const pronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
-    const meaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
 
     if (kind === "pronunciation") {
       sample.pronunciationChoice = value;
@@ -5660,6 +5657,9 @@
         sample.completedWordCount = getVocabularySampleCompletedWordCount(sample) + 1;
         advanceVocabularyNormalProgress();
       }
+      saveState();
+      await flushMobileVocabularySync();
+      await flushMobileVocabularyTodayHistorySync();
       continueVocabularySample();
       return;
     }
