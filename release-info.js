@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/24 15:00", note: "モバイル版のみ: 実際の JST 15:00 を取得し、VS で確認しているモバイル画面のバージョン表示・公開版のバージョン表示・cache token を同じ時刻で揃えて更新。UTC を JST として扱わず、今回の更新時点の実日本時間で配信更新を反映。" },
     { version: "2026/08/24 14:16", note: "モバイル版のみ: 実際の JST 14:16 を取得し、VS で確認しているモバイル画面のバージョン表示・公開版のバージョン表示・cache token を同じ時刻で揃えて更新。UTC を JST として扱わず、今回の更新時点の実日本時間で配信更新を反映。" },
     { version: "2026/08/24 13:37", note: "モバイル版のみ: 実際の JST 13:37 を取得し、画面バージョン表示と cache token を同じ時刻で更新。UTC を JST として扱わず、今回の更新時点の実日本時間で配信更新を反映。" },
     { version: "2026/08/24 13:10", note: "モバイル版のみ: 同一UIDのブラウザ間同期で Firestore を正本として扱う canonical 判定と empty remote snapshot の保護を修正し、today-history の重複宣言による構文不整合を解消。親A→親B→親C の同期確認に向けて、同一UID 正本化と更新履歴の整合を維持。" },
