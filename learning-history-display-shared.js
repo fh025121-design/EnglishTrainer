@@ -51,7 +51,7 @@
     if (mode === "前置詞特訓" || lowerMode === "preposition" || lowerMode === "preposition-training") return "前置詞特訓";
     if (mode === "応答文特訓" || lowerMode === "response" || lowerMode === "response-training") return "応答文特訓";
     if (mode === "不規則動詞特訓" || lowerMode === "irregular-verb" || lowerMode === "irregular-verb-training") return "不規則動詞特訓";
-    if (mode === "単語・熟語学習") return "Vocabulary";
+    if (mode === "単語・熟語学習" || mode === "Vocabulary" || lowerMode === "vocabulary") return "単語練習";
     if (mode.includes("熟語") || lowerMode.includes("phrase") || lowerMode.includes("idiom")) return "熟語特訓";
     if (mode.includes("単語")) return "単語特訓";
     return mode || "不明";

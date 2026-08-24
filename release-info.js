@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/24 21:31", note: "モバイル版のみ: 学習履歴の日別詳細で、ユーザー向け表示名として Vocabulary / vocabulary 等を「単語練習」に変換する表示修正を実施。内部コード上のモード名・保存値・Firestore保存値・Vocabulary保存同期処理は変更せず、日別詳細の見た目だけを統一。既存データの書き換えなし、他の学習種別名の変更なし、バージョン表示と cache token も同じ JST 21:31 に更新。" },
     { version: "2026/08/24 21:08", note: "モバイル版のみ: 親子で共通の Vocabulary / learningHistory 保存同期経路を正として、子UIDだけ残っていた一時的な child reset 特例を撤去し、Auth UID 未確定時は fetch/save を開始しない共通条件へ統一。deviceType は UI/表示条件に限定し、Vocabulary の saveState → localStorage → sync → Firestore → merge 復元、learningHistory の Auth 確定後取得を親子共通に整理。Firestore Rules・ポイント処理・既存保存形式は変更せず、バージョン表示と cache token も同じ JST 21:08 に更新。" },
     { version: "2026/08/24 21:48", note: "モバイル版のみ: F5直後の Auth 復元未完了時に、履歴取得が開始されてしまい currentUid 未確定のまま子UID判定 false / deviceType=pc / 0件取得が発生していたため、Auth UID 未確定時は履歴取得を開始せず、認証完了後の既存経路で正しい子UIDで再取得するよう最小修正。保存path・学習履歴保存・Firestore Rules・親UID同期・Vocabulary には触れず、子UIDの F5 後の 0 件誤取得を防ぐ。バージョン表示と cache token も同じ JST 21:48 に更新。" },
     { version: "2026/08/24 20:41", note: "モバイル版のみ: 子UIDの履歴画面が初期 deviceType=pc のままになっていたため、子UIDの mobile 履歴が即座にフィルタ除外されて 0 件になる問題を最小修正。保存path・読込path・UID切替・Firestore Rules・親UID同期には触れず、子UID の mobile 履歴画面だけを初期値 mobile に変更し、バージョン表示と cache token も同じ JST 20:41 に更新。" },

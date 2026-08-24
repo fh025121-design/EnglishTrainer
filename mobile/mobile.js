@@ -6140,11 +6140,15 @@
 
     const dayNumber = String(entry?.dayNumber || "").trim();
     const parsed = parseMobileLearningHistoryDayNumberInfo(dayNumber);
+    const isVocabularyDisplayValue =
+      mode === "Vocabulary" || lowerMode === "vocabulary" || lowerMode === "typing" ||
+      mode === "vocabulary" || mode.includes("Vocabulary") || lowerMode.includes("vocabulary") ||
+      mode.includes("単語") || mode.includes("熟語") || /^day\d+/i.test(dayNumber);
     if (mode === "スピーキング") {
-      return parsed.dayKey ? "会話練習" : "Vocabulary";
+      return parsed.dayKey ? "会話練習" : "単語練習";
     }
-    if (mode.includes("単語") || mode.includes("熟語") || lowerMode === "typing" || /^day\d+/i.test(dayNumber)) {
-      return "Vocabulary";
+    if (isVocabularyDisplayValue) {
+      return "単語練習";
     }
     return mode || "-";
   }
