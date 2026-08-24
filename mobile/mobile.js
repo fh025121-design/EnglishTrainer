@@ -4705,16 +4705,42 @@
     if (isMobileVocabularySyncRateLimited("todayHistory") || isMobileVocabularySyncDuplicateBurst("todayHistory")) {
       return;
     }
-    if (!snapshot?.ok || !snapshot.exists || !snapshot.historyMap) {
+    if (!snapshot?.ok || !snapshot.exists) {
       return;
     }
     const uid = String(snapshot.uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
-    const incomingMap = normalizeVocabularyTodayHistoryMap(snapshot.historyMap);
+    const incomingMap = normalizeVocabularyTodayHistoryMap(snapshot.historyMap || {});
     const localBaseline = normalizeVocabularyTodayHistoryMap(state.vocabularyTodayHistoryMap) || {};
     const localTodayHistoryCount = getVocabularyTodayHistoryCount(localBaseline, getVocabularyHistoryTodayKey());
     const remoteTodayHistoryCount = getVocabularyTodayHistoryCount(incomingMap, getVocabularyHistoryTodayKey());
     const localCompareUpdatedAtMs = getVocabularyTodayHistoryMostRecentUpdatedAt(localBaseline, getVocabularyHistoryTodayKey());
     const remoteUpdatedAtMs = Number(snapshot?.updatedAtMs || 0) || 0;
+
+    if (isSameUidSyncCanonical(uid)) {
+      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(incomingMap) || {};
+      if (!Object.keys(state.vocabularyTodayHistoryMap || {}).length && Object.keys(localBaseline || {}).length) {
+        state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
+      }
+      saveVocabularyTodayHistoryMap();
+      if (uid) {
+        const mobileSyncKey = getMobileVocabularyTodayHistoryStorageKey(uid);
+        window.localStorage.setItem(mobileSyncKey, JSON.stringify(state.vocabularyTodayHistoryMap));
+      }
+      updateVocabularySyncDebugState("todayHistory", {
+        stage: "same-uid-canonical",
+        localTodayHistoryCount,
+        remoteTodayHistoryCount,
+        mergeTodayHistoryCount: remoteTodayHistoryCount,
+        currentTodayHistoryCount: getVocabularyTodayHistoryCount(state.vocabularyTodayHistoryMap, getVocabularyHistoryTodayKey()),
+        remoteUpdatedAtMs,
+        localCompareUpdatedAtMs
+      });
+      renderMobileVocabularyDebugPanel();
+      if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
+        renderVocabularyTodayHistoryScreen();
+      }
+      return;
+    }
 
     if (!incomingMap || !Object.keys(incomingMap).length) {
       const hasLocalEntries = Object.keys(localBaseline || {}).length > 0;
@@ -4823,10 +4849,16 @@
     const remoteHistoryMap = remoteResult?.ok && remoteResult.exists && remoteResult.historyMap
       ? normalizeVocabularyTodayHistoryMap(remoteResult.historyMap)
       : {};
-    if (remoteResult?.ok && remoteResult.exists && Object.keys(remoteHistoryMap).length) {
-      const mergedHistoryMap = mergeVocabularyTodayHistoryMapByLatest(localBaseline, remoteHistoryMap);
+    if (remoteResult?.ok && remoteResult.exists) {
+      const sameUidCanonical = isSameUidSyncCanonical(uid);
+      const usesCanonicalRemote = sameUidCanonical || Object.keys(remoteHistoryMap).length > 0;
+      const mergedHistoryMap = sameUidCanonical
+        ? normalizeVocabularyTodayHistoryMap(remoteHistoryMap) || {}
+        : usesCanonicalRemote
+          ? mergeVocabularyTodayHistoryMapByLatest(localBaseline, remoteHistoryMap)
+          : localBaseline;
       updateVocabularySyncDebugState("todayHistory", {
-        stage: "remote-load",
+        stage: sameUidCanonical ? "remote-load-canonical" : usesCanonicalRemote ? "remote-load" : "local-only",
         localTodayHistoryCount: getVocabularyTodayHistoryCount(localBaseline, getVocabularyHistoryTodayKey()),
         remoteTodayHistoryCount: getVocabularyTodayHistoryCount(remoteHistoryMap, getVocabularyHistoryTodayKey()),
         mergeTodayHistoryCount: getVocabularyTodayHistoryCount(mergedHistoryMap, getVocabularyHistoryTodayKey()),
@@ -8085,6 +8117,12 @@
     }, 0);
   }
 
+  function isSameUidSyncCanonical(uid = getCurrentMobileFirebaseUser()?.uid || "") {
+    const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+    const targetUid = String(uid || currentUid || "").trim();
+    return Boolean(currentUid) && Boolean(targetUid) && targetUid === currentUid;
+  }
+
   function updateVocabularySyncDebugState(category, payload = {}) {
     if (!category || !vocabularySyncDebugState[category]) return;
     vocabularySyncDebugState[category] = {
@@ -8485,15 +8523,38 @@
       return;
     }
 
-    if (!snapshot?.ok || !snapshot.exists || !snapshot.studyState) {
+    if (!snapshot?.ok || !snapshot.exists) {
       return;
     }
-    const incomingStudy = sanitizeVocabularyStudyState(snapshot.studyState);
+    const incomingStudy = sanitizeVocabularyStudyState(snapshot.studyState || null);
     const localBaseline = sanitizeVocabularyStudyState(state.vocabularyStudy) ? state.vocabularyStudy : buildVocabularyRealStudyState();
     const localLearnedCount = getVocabularyStudyLearnedCount(localBaseline);
     const remoteLearnedCount = getVocabularyStudyLearnedCount(incomingStudy);
     const localCompareUpdatedAtMs = getVocabularyStudyMostRecentUpdatedAt(localBaseline);
     const remoteUpdatedAtMs = Number(snapshot?.updatedAtMs || 0) || 0;
+
+    if (isSameUidSyncCanonical(uid)) {
+      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(incomingStudy, getVocabularyRealWordBank());
+      if (!sanitizeVocabularyStudyState(state.vocabularyStudy) && sanitizeVocabularyStudyState(localBaseline)) {
+        state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(localBaseline, getVocabularyRealWordBank());
+      }
+      saveState();
+      saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
+      updateVocabularySyncDebugState("study", {
+        stage: "same-uid-canonical",
+        localLearnedCount,
+        remoteLearnedCount,
+        mergeLearnedCount: getVocabularyStudyLearnedCount(state.vocabularyStudy),
+        currentLearnedCount: getVocabularyStudyLearnedCount(state.vocabularyStudy),
+        remoteUpdatedAtMs,
+        localCompareUpdatedAtMs
+      });
+      renderMobileVocabularyDebugPanel();
+      if (state.currentScreen === "vocabularyPastHistoryScreen") {
+        renderVocabularyPastHistoryScreen();
+      }
+      return;
+    }
 
     if (!incomingStudy || !Array.isArray(incomingStudy.entries) || !incomingStudy.entries.length) {
       if (sanitizeVocabularyStudyState(localBaseline)) {
@@ -8636,11 +8697,14 @@
       return true;
     }
 
-    if (remoteResult?.ok && remoteResult.exists && remoteResult.studyState) {
-      const remoteStudyState = sanitizeVocabularyStudyState(remoteResult.studyState) || createEmptyVocabularyStudyState();
-      const mergedStudy = mergeVocabularyStudyStateByLatest(localBaseline, remoteStudyState);
+    if (remoteResult?.ok && remoteResult.exists) {
+      const remoteStudyState = sanitizeVocabularyStudyState(remoteResult.studyState || null) || createEmptyVocabularyStudyState();
+      const sameUidCanonical = isSameUidSyncCanonical(uid);
+      const mergedStudy = sameUidCanonical
+        ? remoteStudyState
+        : mergeVocabularyStudyStateByLatest(localBaseline, remoteStudyState);
       updateVocabularySyncDebugState("study", {
-        stage: "remote-load",
+        stage: sameUidCanonical ? "remote-load-canonical" : "remote-load",
         localLearnedCount: getVocabularyStudyLearnedCount(localBaseline),
         remoteLearnedCount: getVocabularyStudyLearnedCount(remoteStudyState),
         mergeLearnedCount: getVocabularyStudyLearnedCount(mergedStudy),

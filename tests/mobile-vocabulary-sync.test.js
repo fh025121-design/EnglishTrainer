@@ -84,6 +84,13 @@ const checks = [
       && /pronunciationTeacherCheckUpdatedAt/.test(source)
       && /meaningTeacherCheckUpdatedAt/.test(source)
       && /lastJudgedAt/.test(source)
+  },
+  {
+    name: "same-uid Firestore is treated as canonical for study and today-history sync",
+    ok: /isSameUidSyncCanonical\s*\(/.test(source)
+      && /sameUidCanonical/.test(source)
+      && /state\.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank\(incomingStudy/.test(source)
+      && /state\.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap\(incomingMap\)/.test(source)
   }
 ];
 
