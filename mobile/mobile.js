@@ -5283,8 +5283,12 @@
       .slice(0, 50);
   }
 
-  function buildVocabularyTeacherCheckCandidates() {
-    return getVocabularyTeacherCheckCandidates();
+  function buildVocabularyTeacherCheckCandidates(session = state.teacherCheckSession) {
+    const allCandidates = getVocabularyTeacherCheckCandidates();
+    const completedIds = new Set(Array.isArray(session?.completedCandidateIds)
+      ? session.completedCandidateIds.map((value) => String(value || "").trim()).filter(Boolean)
+      : []);
+    return allCandidates.filter((candidate) => !completedIds.has(String(candidate.id || "").trim()));
   }
 
   function getVocabularyTeacherCheckPageInfo(session) {
@@ -5314,6 +5318,63 @@
       pageCandidates,
       isCurrentPageComplete
     };
+  }
+
+  function finalizeVocabularyTeacherCheckSession() {
+    const session = state.teacherCheckSession;
+    if (!session) return;
+    const now = Date.now();
+    Object.entries(session.decisions || {}).forEach(([wordId, decision]) => {
+      if (!decision || typeof decision !== "object") return;
+      const targetEntry = getVocabularyStudyEntryById(String(wordId || "").trim()) || null;
+      if (!targetEntry) return;
+
+      const pronunciationSkill = targetEntry.pronunciation || null;
+      const meaningSkill = targetEntry.meaningState || null;
+
+      if (decision.pronunciation && decision.pronunciation !== "none" && pronunciationSkill) {
+        applyTeacherCheckState(pronunciationSkill, "pronunciation", decision.pronunciation, { entry: targetEntry, now });
+      }
+      if (decision.meaning && decision.meaning !== "none" && meaningSkill) {
+        applyTeacherCheckState(meaningSkill, "meaning", decision.meaning, { entry: targetEntry, now });
+      }
+      if (decision.pronunciation === "none" && pronunciationSkill) {
+        applyTeacherCheckState(pronunciationSkill, "pronunciation", "none", { entry: targetEntry, now });
+      }
+      if (decision.meaning === "none" && meaningSkill) {
+        applyTeacherCheckState(meaningSkill, "meaning", "none", { entry: targetEntry, now });
+      }
+    });
+
+    state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(state.vocabularyStudy || buildVocabularyRealStudyState(), getVocabularyRealWordBank());
+    saveState();
+    saveMobileVocabularyStateForSync(state.vocabularyStudy, getMobileVocabularySyncUid());
+    scheduleMobileVocabularySync();
+    state.teacherCheckSession = null;
+    renderVocabularyPastHistoryScreen();
+  }
+
+  function completeVocabularyTeacherCheckCurrentBlock() {
+    if (!state.teacherCheckSession) return;
+    const session = state.teacherCheckSession;
+    const pageInfo = getVocabularyTeacherCheckPageInfo(session);
+    const currentIds = pageInfo.pageCandidates.map((candidate) => String(candidate.id || "").trim()).filter(Boolean);
+    if (!currentIds.length) return;
+
+    const completed = new Set(Array.isArray(session.completedCandidateIds)
+      ? session.completedCandidateIds.map((value) => String(value || "").trim()).filter(Boolean)
+      : []);
+    currentIds.forEach((id) => completed.add(id));
+    session.completedCandidateIds = Array.from(completed);
+    session.candidates = buildVocabularyTeacherCheckCandidates(session);
+    session.pageIndex = 0;
+
+    if (!session.candidates.length) {
+      finalizeVocabularyTeacherCheckSession();
+      return;
+    }
+
+    renderVocabularyTeacherCheckScreen();
   }
 
   function renderVocabularyTeacherCheckScreen() {
@@ -5357,13 +5418,13 @@
       prevBtn.classList.toggle("hidden", pageInfo.pageIndex === 0);
       prevBtn.textContent = "前の10問";
     }
+    const currentBlockCount = Math.max(1, pageInfo.pageCandidates.length);
     if (nextBtn) {
-      nextBtn.classList.toggle("hidden", pageInfo.pageIndex >= pageInfo.pageCount - 1);
-      nextBtn.textContent = "次の10問";
+      nextBtn.classList.remove("hidden");
+      nextBtn.textContent = `この${currentBlockCount}問を完了`;
     }
     if (completeBtn) {
-      completeBtn.classList.toggle("hidden", pageInfo.pageIndex < pageInfo.pageCount - 1);
-      completeBtn.textContent = "チェック完了";
+      completeBtn.classList.add("hidden");
     }
 
     contentEl.innerHTML = `
@@ -5518,11 +5579,16 @@
   }
 
   function openVocabularyTeacherCheckScreen() {
-    state.teacherCheckSession = {
-      candidates: buildVocabularyTeacherCheckCandidates(),
-      decisions: {},
-      showMeaningIds: []
-    };
+    if (!state.teacherCheckSession) {
+      state.teacherCheckSession = {
+        candidates: [],
+        decisions: {},
+        showMeaningIds: [],
+        completedCandidateIds: []
+      };
+    }
+    state.teacherCheckSession.candidates = buildVocabularyTeacherCheckCandidates(state.teacherCheckSession);
+    state.teacherCheckSession.pageIndex = 0;
     renderVocabularyTeacherCheckScreen();
     showScreen("vocabularyTeacherCheckScreen");
   }
@@ -14564,12 +14630,10 @@
         if (hasUnfinished) {
           const metaEl = elements.vocabularyTeacherCheckMeta;
           if (metaEl) metaEl.textContent = "未判定が残っています";
-          window.alert("現在の10問に未判定があります。発音と意味の両方を判定してください。");
+          window.alert("現在のブロックに未判定があります。発音と意味の両方を判定してください。");
           return;
         }
-        if (pageInfo.pageIndex >= pageInfo.pageCount - 1) return;
-        session.pageIndex = pageInfo.pageIndex + 1;
-        renderVocabularyTeacherCheckScreen();
+        completeVocabularyTeacherCheckCurrentBlock();
       });
     }
     if (elements.vocabularyTeacherCheckCompleteBtn) {
@@ -14588,39 +14652,11 @@
           if (metaEl) {
             metaEl.textContent = `未判定: ${first.word}`;
           }
-          window.alert("未判定の単語があります。発音と意味の両方を判定してください。")
+          window.alert("未判定の単語があります。発音と意味の両方を判定してください。");
           return;
         }
 
-        const now = Date.now();
-        Object.entries(session.decisions || {}).forEach(([wordId, decision]) => {
-          if (!decision || typeof decision !== "object") return;
-          const targetEntry = getVocabularyStudyEntryById(String(wordId || "").trim()) || null;
-          if (!targetEntry) return;
-
-          const pronunciationSkill = targetEntry.pronunciation || null;
-          const meaningSkill = targetEntry.meaningState || null;
-
-          if (decision.pronunciation && decision.pronunciation !== "none" && pronunciationSkill) {
-            applyTeacherCheckState(pronunciationSkill, "pronunciation", decision.pronunciation, { entry: targetEntry, now });
-          }
-          if (decision.meaning && decision.meaning !== "none" && meaningSkill) {
-            applyTeacherCheckState(meaningSkill, "meaning", decision.meaning, { entry: targetEntry, now });
-          }
-          if (decision.pronunciation === "none" && pronunciationSkill) {
-            applyTeacherCheckState(pronunciationSkill, "pronunciation", "none", { entry: targetEntry, now });
-          }
-          if (decision.meaning === "none" && meaningSkill) {
-            applyTeacherCheckState(meaningSkill, "meaning", "none", { entry: targetEntry, now });
-          }
-        });
-
-        state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(state.vocabularyStudy || buildVocabularyRealStudyState(), getVocabularyRealWordBank());
-        saveState();
-        saveMobileVocabularyStateForSync(state.vocabularyStudy, getMobileVocabularySyncUid());
-        scheduleMobileVocabularySync();
-        state.teacherCheckSession = null;
-        renderVocabularyPastHistoryScreen();
+        finalizeVocabularyTeacherCheckSession();
       });
     }
     elements.vocabularySampleNextBtn.addEventListener("click", continueVocabularySample);
