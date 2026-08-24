@@ -31,6 +31,14 @@ const checks = [
       && /setMobileReloadNavigationGuard\s*\(/.test(source)
       && /consumeMobileReloadNavigationGuard\s*\(/.test(source)
       && /localStorage\.key\(index\)|startsWith\(storagePrefix\)/.test(source)
+  },
+  {
+    name: "logged-in load prefers uid-scoped study/history caches over the legacy shared snapshot",
+    ok: /if \(currentUid\) \{[\s\S]*loadMobileVocabularyStateForSync\(currentUid\)[\s\S]*getMobileVocabularyTodayHistoryStorageKey\(currentUid\)/.test(source)
+  },
+  {
+    name: "logged-in save clears the legacy shared vocabulary snapshot to avoid cross-user leakage",
+    ok: /if \(currentUid\) \{[\s\S]*removeItem\(MOBILE_STORAGE_KEY\)[\s\S]*removeItem\(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY\)/.test(source)
   }
 ];
 

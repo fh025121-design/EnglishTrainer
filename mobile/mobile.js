@@ -4530,8 +4530,12 @@
       : {};
 
     if (currentUid) {
-      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(previousMap) || {};
+      const uidStorageKey = getMobileVocabularyTodayHistoryStorageKey(currentUid);
+      const uidMap = readVocabularyTodayHistoryMapFromStorageKey(uidStorageKey);
+      const nextMap = Object.keys(uidMap).length ? uidMap : normalizeVocabularyTodayHistoryMap(previousMap) || {};
+      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(nextMap) || {};
       vocabularyTodayHistoryOwnerUid = currentUid;
+      window.localStorage.removeItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
       return state.vocabularyTodayHistoryMap;
     }
 
@@ -4580,17 +4584,13 @@
         ? state.vocabularyTodayHistoryMap
         : {};
       const storageKeys = [];
-      console.log("[TRACE-V82] saveVocabularyTodayHistoryMap before", {
-        currentUid,
-        currentScreen: state.currentScreen,
-        bucketKeys: Object.keys(bucket).length,
-        todayEntries: Object.keys(bucket[getVocabularyHistoryTodayKey()] || {}).length,
-        bucketPreview: bucket[getVocabularyHistoryTodayKey()] ? Object.keys(bucket[getVocabularyHistoryTodayKey()]) : []
-      });
       if (currentUid) {
-        storageKeys.push(getMobileVocabularyTodayHistoryStorageKey(currentUid));
+        const uidStorageKey = getMobileVocabularyTodayHistoryStorageKey(currentUid);
+        storageKeys.push(uidStorageKey);
+        window.localStorage.removeItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
+      } else {
+        storageKeys.push(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
       }
-      storageKeys.push(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
       storageKeys.forEach((storageKey) => {
         if (!storageKey || !String(storageKey || "").trim()) return;
         window.localStorage.setItem(storageKey, JSON.stringify(bucket));
@@ -4601,13 +4601,6 @@
       if (currentUid) {
         scheduleMobileVocabularyTodayHistorySync();
       }
-      console.log("[TRACE-V82] saveVocabularyTodayHistoryMap after", {
-        currentUid,
-        currentScreen: state.currentScreen,
-        storedKeys: storageKeys,
-        bucketKeys: Object.keys(bucket).length,
-        todayEntries: Object.keys(bucket[getVocabularyHistoryTodayKey()] || {}).length
-      });
     } catch (_error) {
       // Ignore storage failures; keep the in-memory map for the current session.
     }
@@ -7355,10 +7348,17 @@
       vocabularyTodayHistoryOwnerUid = "";
     }
     if (currentUid) {
+      const uidStudy = loadMobileVocabularyStateForSync(currentUid);
+      const uidHistory = readVocabularyTodayHistoryMapFromStorageKey(getMobileVocabularyTodayHistoryStorageKey(currentUid));
       Object.assign(state, createDefaultMobileState());
-      state.vocabularyStudy = createEmptyVocabularyStudyState();
-      state.vocabularyTodayHistoryMap = {};
+      state.vocabularyStudy = sanitizeVocabularyStudyState(uidStudy)
+        ? mergeVocabularyStudyStateWithCurrentBank(uidStudy, getVocabularyRealWordBank())
+        : buildVocabularyRealStudyState();
+      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(uidHistory) || {};
       vocabularyStateOwnerUid = currentUid;
+      vocabularyTodayHistoryOwnerUid = currentUid;
+      window.localStorage.removeItem(MOBILE_STORAGE_KEY);
+      window.localStorage.removeItem(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY);
       return;
     }
     if (!raw) {
@@ -8183,7 +8183,14 @@
       stats: state.stats,
       vocabularyStudy: safeStudyState
     };
-    window.localStorage.setItem(MOBILE_STORAGE_KEY, JSON.stringify(snapshot));
+    if (currentUid) {
+      const uidStorageKey = getMobileVocabularyStorageKey(currentUid);
+      const uidStudy = safeStudyState || createEmptyVocabularyStudyState();
+      window.localStorage.setItem(uidStorageKey, JSON.stringify(uidStudy));
+      window.localStorage.removeItem(MOBILE_STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(MOBILE_STORAGE_KEY, JSON.stringify(snapshot));
+    }
     renderMobileVocabularyDebugPanel();
     const uid = getMobileVocabularySyncUid();
     if (uid && vocabularyStateOwnerUid === uid && isVocabularyStateOwnerCurrentUid(uid)) {
