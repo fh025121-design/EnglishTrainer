@@ -3087,7 +3087,15 @@
       mergeLearnedCount: 0,
       currentLearnedCount: 0,
       remoteUpdatedAtMs: 0,
-      localCompareUpdatedAtMs: 0
+      localCompareUpdatedAtMs: 0,
+      changedWordId: "",
+      chunkId: "",
+      saveResult: {
+        ok: false,
+        saved: false,
+        skipped: "",
+        error: ""
+      }
     },
     todayHistory: {
       stage: "idle",
@@ -8159,6 +8167,8 @@
     const appliedResetVersion = Number(resetInfo?.resetVersion || 0) || 0;
     const studyTrace = vocabularySyncDebugState.study || {};
     const todayTrace = vocabularySyncDebugState.todayHistory || {};
+    const saveResult = studyTrace.saveResult && typeof studyTrace.saveResult === "object" ? studyTrace.saveResult : {};
+    const saveError = saveResult.error ? String(saveResult.error.message || saveResult.error || "") : "-";
     const uidAtInit = String(getMobileVocabularySyncUid() || "").trim();
     const initSummary = [
       `initUid=${uidAtInit || "-"}`,
@@ -8174,6 +8184,7 @@
       `studyLearnedCount: ${debugCounts.learnedCount}`,
       `studyEntries: ${debugCounts.totalStudyEntries}`,
       `studySync: stage=${studyTrace.stage || "idle"} local=${studyTrace.localLearnedCount ?? debugCounts.learnedCount} remote=${studyTrace.remoteLearnedCount ?? 0} merge=${studyTrace.mergeLearnedCount ?? debugCounts.learnedCount} current=${studyTrace.currentLearnedCount ?? debugCounts.learnedCount} remoteUpdatedAtMs=${studyTrace.remoteUpdatedAtMs ?? 0} localCompareUpdatedAtMs=${studyTrace.localCompareUpdatedAtMs ?? 0}`,
+      `save: changedWordId=${studyTrace.changedWordId || "-"} chunkId=${studyTrace.chunkId || "-"} ok=${String(Boolean(saveResult.ok))} saved=${String(Boolean(saveResult.saved))} skipped=${saveResult.skipped || "-"} error=${saveError}`,
       `todayHistoryCount: ${debugCounts.todayHistoryCount}`,
       `todayHistorySync: stage=${todayTrace.stage || "idle"} local=${todayTrace.localTodayHistoryCount ?? debugCounts.todayHistoryCount} remote=${todayTrace.remoteTodayHistoryCount ?? 0} merge=${todayTrace.mergeTodayHistoryCount ?? debugCounts.todayHistoryCount} current=${todayTrace.currentTodayHistoryCount ?? debugCounts.todayHistoryCount} remoteUpdatedAtMs=${todayTrace.remoteUpdatedAtMs ?? 0} localCompareUpdatedAtMs=${todayTrace.localCompareUpdatedAtMs ?? 0}`,
       initSummary,
@@ -8836,6 +8847,20 @@
           }
           break;
         }
+
+        const saveResultData = {
+          ok: Boolean(result?.ok),
+          saved: Boolean(result?.saved),
+          skipped: String(result?.skipped || "").trim(),
+          error: result?.error ? (result.error.message || String(result.error)) : ""
+        };
+        const saveChunkId = Array.isArray(result?.chunkIds) && result.chunkIds.length ? String(result.chunkIds[0] || "").trim() : "";
+        updateVocabularySyncDebugState("study", {
+          changedWordId: String(changedWordId || "").trim(),
+          chunkId: saveChunkId,
+          saveResult: saveResultData
+        });
+        renderMobileVocabularyDebugPanel();
 
         if (shouldThrottleMobileVocabularySyncError("study", result?.error)) {
           applyMobileVocabularySyncRateLimit("study", result.error);
