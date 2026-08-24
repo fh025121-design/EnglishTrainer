@@ -5650,8 +5650,9 @@
         sample.completedWordCount = getVocabularySampleCompletedWordCount(sample) + 1;
         advanceVocabularyNormalProgress();
       }
-      saveState();
-      await flushMobileVocabularySync();
+      const changedWordId = String(item.id || item.word || "").trim();
+      saveState(changedWordId);
+      await flushMobileVocabularySync(changedWordId);
       await flushMobileVocabularyTodayHistorySync();
       continueVocabularySample();
       return;
@@ -8173,7 +8174,7 @@
     panel.hidden = false;
   }
 
-  function saveState() {
+  function saveState(changedWordId = "") {
     const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
     if (currentUid && !vocabularyStateOwnerUid) {
       vocabularyStateOwnerUid = currentUid;
@@ -8198,7 +8199,7 @@
     renderMobileVocabularyDebugPanel();
     const uid = getMobileVocabularySyncUid();
     if (uid && vocabularyStateOwnerUid === uid && isVocabularyStateOwnerCurrentUid(uid)) {
-      scheduleMobileVocabularySync();
+      scheduleMobileVocabularySync(changedWordId);
     }
   }
 
@@ -8770,7 +8771,7 @@
     return vocabularySyncReady;
   }
 
-  async function flushMobileVocabularySync() {
+  async function flushMobileVocabularySync(changedWordId = "") {
     if (vocabularySyncInFlight) {
       vocabularySyncQueued = true;
       return vocabularySyncInFlight;
@@ -8806,7 +8807,8 @@
             targetUid: uid,
             allowCreate: vocabularySyncAllowCreate,
             sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
-            sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+            sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName()),
+            changedWordId: String(changedWordId || "").trim()
           });
         } catch (error) {
           if (shouldThrottleMobileVocabularySyncError("study", error)) {
@@ -8825,7 +8827,7 @@
 
         if (result.studyState) {
           state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(result.studyState, getVocabularyRealWordBank());
-          saveState();
+          saveState(String(changedWordId || "").trim());
           saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
         }
         clearMobileVocabularyStateForSync(uid);
@@ -8840,7 +8842,7 @@
     }
   }
 
-  function scheduleMobileVocabularySync() {
+  function scheduleMobileVocabularySync(changedWordId = "") {
     const uid = getMobileVocabularySyncUid();
     if (!uid || !isVocabularyStateOwnerCurrentUid(uid)) return;
     if (isMobileVocabularySyncRateLimited("study") || isMobileVocabularySyncDuplicateBurst("study")) {
@@ -8852,7 +8854,7 @@
       initializeMobileVocabularySyncForCurrentUser().catch(() => false);
       return;
     }
-    flushMobileVocabularySync().catch(() => undefined);
+    flushMobileVocabularySync(changedWordId).catch(() => undefined);
   }
 
   function saveMobileVocabularyState(targetStudyState, options = {}) {
@@ -8869,9 +8871,9 @@
     const nextStudy = sanitizeVocabularyStudyState(targetStudyState) ? targetStudyState : state.vocabularyStudy || buildVocabularyRealStudyState();
     state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(nextStudy, getVocabularyRealWordBank());
     vocabularyStateOwnerUid = currentUid;
-    saveState();
+    saveState(String(options?.changedWordId || "").trim());
     if (options?.skipSync !== true) {
-      scheduleMobileVocabularySync();
+      scheduleMobileVocabularySync(String(options?.changedWordId || "").trim());
     }
     return state.vocabularyStudy;
   }

@@ -12,6 +12,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   getFirestore,
   onSnapshot,
   runTransaction,
@@ -38,7 +39,10 @@ const MOBILE_WORD_ORDER_SYNC_DOC_ID = "wordOrderStatsV1";
 const MOBILE_WORD_ORDER_SYNC_SCHEMA_VERSION = 1;
 const MOBILE_VOCABULARY_SYNC_DOC_COLLECTION = "mobileSync";
 const MOBILE_VOCABULARY_SYNC_DOC_ID = "vocabularyStateV1";
+const MOBILE_VOCABULARY_SYNC_CHUNK_COLLECTION = "vocabularyStateChunks";
 const MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION = 1;
+const MOBILE_VOCABULARY_SYNC_CHUNK_SIZE = 150;
+const MOBILE_VOCABULARY_SYNC_CHUNK_PREFIX = "vocabularyStateChunk";
 const MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_DOC_COLLECTION = "mobileSync";
 const MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_DOC_ID = "vocabularyTodayHistoryV1";
 const MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_SCHEMA_VERSION = 1;
@@ -873,6 +877,19 @@ function getMobileVocabularyStateDocRef(targetUid = "") {
   return doc(firestore, "users", uid, MOBILE_VOCABULARY_SYNC_DOC_COLLECTION, MOBILE_VOCABULARY_SYNC_DOC_ID);
 }
 
+function getMobileVocabularyStateChunkCollectionRef(targetUid = "") {
+  const uid = String(targetUid || auth.currentUser?.uid || "").trim();
+  if (!uid) return null;
+  return collection(firestore, "users", uid, MOBILE_VOCABULARY_SYNC_DOC_COLLECTION, MOBILE_VOCABULARY_SYNC_CHUNK_COLLECTION);
+}
+
+function getMobileVocabularyStateChunkDocRef(targetUid = "", chunkId = "") {
+  const uid = String(targetUid || auth.currentUser?.uid || "").trim();
+  const safeChunkId = String(chunkId || "").trim();
+  if (!uid || !safeChunkId) return null;
+  return doc(firestore, "users", uid, MOBILE_VOCABULARY_SYNC_DOC_COLLECTION, MOBILE_VOCABULARY_SYNC_CHUNK_COLLECTION, safeChunkId);
+}
+
 function sanitizeVocabularyStudyStateForSync(value) {
   if (!value || typeof value !== "object") return null;
   if (Array.isArray(value.entries)) {
@@ -882,6 +899,62 @@ function sanitizeVocabularyStudyStateForSync(value) {
     return value.studyState;
   }
   return null;
+}
+
+function getVocabularyStateChunkIndexFromChunkId(chunkId = "") {
+  const safeChunkId = String(chunkId || "").trim();
+  const match = safeChunkId.match(/-(\d+)$/);
+  const numeric = match ? Number(match[1]) : 0;
+  return Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+}
+
+function buildVocabularyStateChunkIdForIndex(index = 0) {
+  const numericIndex = Math.max(0, Number(index) || 0);
+  return `${MOBILE_VOCABULARY_SYNC_CHUNK_PREFIX}-${String(Math.floor(numericIndex / MOBILE_VOCABULARY_SYNC_CHUNK_SIZE)).padStart(3, "0")}`;
+}
+
+function getVocabularyStateChunkIdForEntryId(studyState, entryId = "") {
+  const targetId = String(entryId || "").trim();
+  if (!targetId) return "";
+  const entries = Array.isArray(studyState?.entries) ? studyState.entries : [];
+  const foundIndex = entries.findIndex((entry) => String(entry?.id || entry?.word || "").trim() === targetId);
+  if (foundIndex < 0) return "";
+  return buildVocabularyStateChunkIdForIndex(foundIndex);
+}
+
+function getVocabularyStateChunkIdsForStudyState(studyState) {
+  const entries = Array.isArray(studyState?.entries) ? studyState.entries : [];
+  const chunks = new Set();
+  entries.forEach((entry, index) => {
+    const entryId = String(entry?.id || entry?.word || "").trim();
+    if (!entryId) return;
+    chunks.add(buildVocabularyStateChunkIdForIndex(index));
+  });
+  return [...chunks].sort((a, b) => getVocabularyStateChunkIndexFromChunkId(a) - getVocabularyStateChunkIndexFromChunkId(b));
+}
+
+function getVocabularyStateEntriesForChunk(studyState, chunkId = "") {
+  const safeChunkId = String(chunkId || "").trim();
+  const entries = Array.isArray(studyState?.entries) ? studyState.entries : [];
+  if (!safeChunkId || !entries.length) return [];
+  const chunkIndex = getVocabularyStateChunkIndexFromChunkId(safeChunkId);
+  const start = chunkIndex * MOBILE_VOCABULARY_SYNC_CHUNK_SIZE;
+  const end = start + MOBILE_VOCABULARY_SYNC_CHUNK_SIZE;
+  return entries.slice(start, end);
+}
+
+function normalizeMobileVocabularyStateChunkDoc(docData) {
+  const source = docData && typeof docData === "object" ? docData : {};
+  const chunkId = String(source.chunkId || "").trim();
+  const entries = Array.isArray(source.entries) ? source.entries : [];
+  return {
+    chunkId,
+    entries,
+    updatedAtMs: Math.max(0, Number(source.updatedAtMs) || 0),
+    sourceDeviceId: String(source.sourceDeviceId || "").trim(),
+    sourceDeviceName: String(source.sourceDeviceName || "").trim(),
+    schemaVersion: Math.max(0, Number(source.schemaVersion) || MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION)
+  };
 }
 
 function normalizeMobileVocabularyStateDoc(docData) {
@@ -901,31 +974,41 @@ function normalizeMobileVocabularyStateDoc(docData) {
 async function loadMobileVocabularyStateFromFirestore(options = {}) {
   const currentUid = String(auth.currentUser?.uid || "").trim();
   const targetUid = String(options?.targetUid || currentUid || "").trim();
-  const ref = getMobileVocabularyStateDocRef(targetUid);
-  if (!ref || !targetUid) {
+  const collectionRef = getMobileVocabularyStateChunkCollectionRef(targetUid);
+  if (!collectionRef || !targetUid) {
     return { ok: false, exists: false, uid: targetUid, studyState: null };
   }
 
   try {
-    const snapshot = await getDoc(ref);
-    if (!snapshot.exists()) {
+    const snapshot = await getDocs(collectionRef);
+    if (snapshot.empty) {
       return { ok: true, exists: false, uid: targetUid, studyState: null };
     }
-    const normalized = normalizeMobileVocabularyStateDoc(snapshot.data());
+
+    const chunkDocs = snapshot.docs
+      .map((docSnap) => normalizeMobileVocabularyStateChunkDoc(docSnap.data()))
+      .filter((chunk) => chunk && Array.isArray(chunk.entries) && chunk.entries.length)
+      .sort((a, b) => getVocabularyStateChunkIndexFromChunkId(a.chunkId) - getVocabularyStateChunkIndexFromChunkId(b.chunkId));
+
+    const mergedEntries = chunkDocs.flatMap((chunk) => chunk.entries);
+    const studyState = mergedEntries.length
+      ? { entries: mergedEntries, targetWordCount: mergedEntries.length }
+      : null;
+
     return {
       ok: true,
-      exists: true,
+      exists: Boolean(studyState),
       uid: targetUid,
-      studyState: normalized.studyState,
-      updatedAtMs: normalized.updatedAtMs,
-      resetVersion: normalized.resetVersion,
-      resetAtMs: normalized.resetAtMs,
-      sourceDeviceId: normalized.sourceDeviceId,
-      sourceDeviceName: normalized.sourceDeviceName,
-      schemaVersion: normalized.schemaVersion
+      studyState,
+      updatedAtMs: chunkDocs.reduce((maxValue, chunk) => Math.max(maxValue, Number(chunk.updatedAtMs) || 0), 0),
+      resetVersion: 0,
+      resetAtMs: 0,
+      sourceDeviceId: "",
+      sourceDeviceName: "",
+      schemaVersion: MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION
     };
   } catch (error) {
-    console.error("Failed to load mobile vocabulary state from Firestore", error);
+    console.error("Failed to load mobile vocabulary state chunks from Firestore", error);
     return { ok: false, exists: false, uid: targetUid, studyState: null, error };
   }
 }
@@ -933,74 +1016,62 @@ async function loadMobileVocabularyStateFromFirestore(options = {}) {
 async function saveMobileVocabularyStateToFirestore(studyState, options = {}) {
   const user = auth.currentUser;
   const targetUid = String(options?.targetUid || user?.uid || "").trim();
-  const ref = getMobileVocabularyStateDocRef(targetUid);
-  if (!ref || !targetUid || !studyState || typeof studyState !== "object") {
+  if (!targetUid || !studyState || typeof studyState !== "object") {
     return { ok: false, saved: false, exists: false, uid: targetUid };
   }
 
-  const allowCreate = options?.allowCreate === true;
   const sourceDeviceId = String(options?.sourceDeviceId || "").trim();
   const sourceDeviceName = String(options?.sourceDeviceName || "").trim();
-  const incomingResetVersion = Math.max(0, Number(options?.resetVersion || 0) || 0);
-  const incomingResetAtMs = Math.max(0, Number(options?.resetAtMs || 0) || 0);
+  const changedWordId = String(options?.changedWordId || "").trim();
+  const safeStudyState = sanitizeVocabularyStudyStateForSync(studyState) || { entries: [] };
+  const chunkIds = changedWordId
+    ? [getVocabularyStateChunkIdForEntryId(safeStudyState, changedWordId)]
+    : getVocabularyStateChunkIdsForStudyState(safeStudyState);
+  const validChunkIds = chunkIds.filter(Boolean);
+
+  if (!validChunkIds.length) {
+    return { ok: false, saved: false, exists: false, uid: targetUid, skipped: "no-chunk" };
+  }
 
   try {
     const result = await runTransaction(firestore, async (transaction) => {
-      const snapshot = await transaction.get(ref);
-      const existsBefore = snapshot.exists();
-      if (!existsBefore && !allowCreate) {
-        return {
-          saved: false,
-          existsBefore,
-          skipped: "missing-remote",
-          studyState: null
-        };
+      for (const chunkId of validChunkIds) {
+        const chunkEntries = getVocabularyStateEntriesForChunk(safeStudyState, chunkId);
+        const chunkRef = getMobileVocabularyStateChunkDocRef(targetUid, chunkId);
+        if (!chunkRef) continue;
+        transaction.set(chunkRef, {
+          uid: targetUid,
+          chunkId,
+          entries: chunkEntries,
+          sourceDeviceId,
+          sourceDeviceName,
+          schemaVersion: MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION,
+          updatedAtMs: Date.now(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
       }
-
-      const currentDoc = existsBefore ? normalizeMobileVocabularyStateDoc(snapshot.data()) : {
-        studyState: null,
-        resetVersion: 0,
-        resetAtMs: 0
-      };
-      const currentStudyState = currentDoc.studyState;
-      const mergedStudyState = currentStudyState ? window.mergeVocabularyStudyStateByLatest?.(currentStudyState, studyState) || studyState : studyState;
-      const nextResetVersion = incomingResetVersion > 0 ? incomingResetVersion : currentDoc.resetVersion;
-      const nextResetAtMs = incomingResetAtMs > 0 ? incomingResetAtMs : currentDoc.resetAtMs;
-
-      transaction.set(ref, {
-        uid: targetUid,
-        studyState: mergedStudyState,
-        resetVersion: nextResetVersion,
-        resetAtMs: nextResetAtMs,
-        sourceDeviceId,
-        sourceDeviceName,
-        schemaVersion: MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION,
-        updatedAtMs: Date.now(),
-        updatedAt: serverTimestamp()
-      }, { merge: true });
 
       return {
         saved: true,
-        existsBefore,
-        studyState: mergedStudyState,
-        resetVersion: nextResetVersion,
-        resetAtMs: nextResetAtMs
+        chunkIds: validChunkIds,
+        studyState: safeStudyState,
+        changedWordId
       };
     });
 
     return {
       ok: true,
       saved: Boolean(result?.saved),
-      exists: Boolean(result?.existsBefore),
+      exists: true,
       uid: targetUid,
-      skipped: result?.skipped || "",
-      studyState: result?.studyState || null,
-      resetVersion: result?.resetVersion || 0,
-      resetAtMs: result?.resetAtMs || 0
+      skipped: "",
+      studyState: result?.studyState || safeStudyState,
+      changedWordId,
+      chunkIds: result?.chunkIds || validChunkIds
     };
   } catch (error) {
-    console.error("Failed to save mobile vocabulary state to Firestore", error);
-    return { ok: false, saved: false, exists: false, uid: targetUid, error };
+    console.error("Failed to save mobile vocabulary state chunks to Firestore", error);
+    return { ok: false, saved: false, exists: false, uid: targetUid, error, changedWordId, chunkIds: validChunkIds };
   }
 }
 
@@ -1009,28 +1080,33 @@ function subscribeMobileVocabularyStateFromFirestore(onChange, options = {}) {
     return () => {};
   }
   const targetUid = String(options?.targetUid || auth.currentUser?.uid || "").trim();
-  const ref = getMobileVocabularyStateDocRef(targetUid);
-  if (!ref || !targetUid) {
+  const collectionRef = getMobileVocabularyStateChunkCollectionRef(targetUid);
+  if (!collectionRef || !targetUid) {
     return () => {};
   }
 
-  return onSnapshot(ref, (snapshot) => {
-    if (!snapshot.exists()) {
+  return onSnapshot(collectionRef, (snapshot) => {
+    if (snapshot.empty) {
       onChange({ ok: true, exists: false, uid: targetUid, studyState: null });
       return;
     }
-    const normalized = normalizeMobileVocabularyStateDoc(snapshot.data());
+
+    const mergedDocs = snapshot.docs
+      .map((docSnap) => normalizeMobileVocabularyStateChunkDoc(docSnap.data()))
+      .filter((chunk) => chunk && Array.isArray(chunk.entries) && chunk.entries.length)
+      .sort((a, b) => getVocabularyStateChunkIndexFromChunkId(a.chunkId) - getVocabularyStateChunkIndexFromChunkId(b.chunkId));
+
+    const mergedEntries = mergedDocs.flatMap((chunk) => chunk.entries);
+    const studyState = mergedEntries.length ? { entries: mergedEntries, targetWordCount: mergedEntries.length } : null;
     onChange({
       ok: true,
-      exists: true,
+      exists: Boolean(studyState),
       uid: targetUid,
-      studyState: normalized.studyState,
-      updatedAtMs: normalized.updatedAtMs,
-      resetVersion: normalized.resetVersion,
-      resetAtMs: normalized.resetAtMs,
-      sourceDeviceId: normalized.sourceDeviceId,
-      sourceDeviceName: normalized.sourceDeviceName,
-      schemaVersion: normalized.schemaVersion
+      studyState,
+      updatedAtMs: mergedDocs.reduce((maxValue, chunk) => Math.max(maxValue, Number(chunk.updatedAtMs) || 0), 0),
+      sourceDeviceId: "",
+      sourceDeviceName: "",
+      schemaVersion: MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION
     });
   }, (error) => {
     onChange({ ok: false, exists: false, uid: targetUid, studyState: null, error });
