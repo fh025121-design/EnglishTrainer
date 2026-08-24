@@ -64,5 +64,9 @@ service cloud.firestore {
     match /users/{uid}/mobileSync/{documentId} {
       allow read, write: if isSelfUid(uid);
     }
+
+    match /users/{uid}/mobileSync/vocabularyStateChunks/chunks/{chunkId} {
+      allow read, write: if isSelfUid(uid);
+    }
   }
 }
