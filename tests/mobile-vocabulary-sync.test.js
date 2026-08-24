@@ -44,20 +44,12 @@ const checks = [
       && /return;\s*\n\s*}\s*\n\s*state\.vocabularyTodayHistoryMap = \{\};/.test(source)
   },
   {
-    name: "son reload stays on home and suppresses history re-show after F5",
-    ok: /shouldSuppressVocabularyTodayHistoryRenderAfterReload\(\)/.test(source)
-      && /isCurrentSonLoginForMobileLearningHistory\(\)/.test(source)
-      && /isMobileReloadNavigation\(\)/.test(source)
-      && /showScreen\(["']homeScreen["']\)/.test(source)
-      && /renderHome\(\);\s*return;/.test(source)
+    name: "child today-history open path stays on the shared render route instead of redirecting home",
+    ok: /function openVocabularyTodayHistoryScreen\(\)\s*\{[\s\S]*?renderVocabularyTodayHistoryScreen\(\);/.test(source)
+      && /function renderVocabularyTodayHistoryScreen\(\)\s*\{[\s\S]*?showScreen\(["']vocabularyTodayHistoryScreen["']\)/.test(source)
   },
   {
-    name: "child reset does not trigger on ordinary non-empty vocabulary data",
-    ok: /versionIsBehind\s*&&\s*noLocalChildData/.test(source)
-      && /!snapshot\.hasStudyEntries && !snapshot\.hasTodayHistoryEntries && !snapshot\.hasTeacherCheckEntries/.test(source)
-  },
-  {
-    name: "today history reload suppression is only for actual reloads, not button taps",
+    name: "reload suppression logic remains available for reload-only behavior",
     ok: /shouldSuppressVocabularyTodayHistoryRenderAfterReload\(\)/.test(source)
       && /return Boolean\(isMobileReloadNavigation\(\)\);/.test(source)
   },

@@ -5143,14 +5143,8 @@
   }
 
   function renderVocabularyTodayHistoryScreen() {
-    if (shouldSuppressVocabularyTodayHistoryRenderAfterReload()) {
-      if (state.currentScreen !== "homeScreen") {
-        showScreen("homeScreen");
-      }
-      renderHome();
-      return;
-    }
-
+    // 子UIDでも親と同じ画面遷移経路を使う。
+    // reload suppression は他の経路で必要なら残し、今日の履歴を開く直後の child 専用ホーム戻しだけは抑止する。
     const list = elements.vocabularyTodayHistoryList;
     if (!list) return;
 
