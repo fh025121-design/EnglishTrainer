@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260824-1914";
+        const defaultToken = "20260824-2024";
         const queryToken = new URLSearchParams(window.location.search).get("v") || "";
         const cacheToken = queryToken || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -43,11 +43,6 @@
     </div>
 
     <div class="mobile-app-shell">
-      <div id="mobileVocabularyDebugPanel" class="mobile-vocabulary-debug-panel" aria-live="polite">
-        <div class="mobile-vocabulary-debug-title">Vocabulary Debug</div>
-        <div id="mobileVocabularyDebugText" class="mobile-vocabulary-debug-text">loading...</div>
-      </div>
-
       <section id="homeScreen" class="screen active">
         <header class="hero-card">
           <p class="hero-icon">🎤 English Trainer <span id="mobileHomeAccountAlias" class="home-account-tag hidden"></span></p>
@@ -891,7 +886,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260824-1846";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260824-2024";
         const scriptSources = [
           { src: "firebase.js", type: "module" },
           { src: "../data.js", type: "text/javascript" },
