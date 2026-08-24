@@ -3045,7 +3045,7 @@
   let mobileAdminLearningHistoryFamilyChildren = [];
   let mobileAdminLearningHistorySelectedChildKey = "parent";
   let mobileAdminLearningHistorySelectedChildUid = "";
-  let mobileAdminLearningHistorySelectedDeviceType = "pc";
+  let mobileAdminLearningHistorySelectedDeviceType = "mobile";
   let mobileAdminLearningHistorySourceEntries = [];
   let mobileRuntimeDeviceId = "";
   let mobileCachedSonUid = "";
@@ -6940,7 +6940,7 @@
           || mobileAdminLearningHistoryFamilyChildren[0]);
       mobileAdminLearningHistorySelectedChildKey = isChildLogin ? "son" : selected.key;
       mobileAdminLearningHistorySelectedChildUid = isChildLogin ? currentUid : selected.uid;
-      mobileAdminLearningHistorySelectedDeviceType = "pc";
+      mobileAdminLearningHistorySelectedDeviceType = isChildLogin ? "mobile" : "pc";
       mobileAdminLearningHistorySelectedDayKey = "";
       mobileAdminLearningHistorySourceEntries = await loadMobileAdminLearningHistoryEntriesFromFirestore(mobileAdminLearningHistorySelectedChildUid);
       renderMobileAdminLearningHistoryList();
