@@ -8159,6 +8159,13 @@
     const appliedResetVersion = Number(resetInfo?.resetVersion || 0) || 0;
     const studyTrace = vocabularySyncDebugState.study || {};
     const todayTrace = vocabularySyncDebugState.todayHistory || {};
+    const uidAtInit = String(getMobileVocabularySyncUid() || "").trim();
+    const initSummary = [
+      `initUid=${uidAtInit || "-"}`,
+      `ready=${String(vocabularySyncReady)}`,
+      `currentUid=${String(vocabularySyncCurrentUid || "-")}`,
+      `reason=${uidAtInit ? "uid-present" : "uid-empty"}`
+    ].join(" | ");
     textNode.textContent = [
       `Auth UID: ${currentUid || "-"}`,
       `vocabularyStateOwnerUid: ${String(vocabularyStateOwnerUid || "-")}`,
@@ -8169,6 +8176,7 @@
       `studySync: stage=${studyTrace.stage || "idle"} local=${studyTrace.localLearnedCount ?? debugCounts.learnedCount} remote=${studyTrace.remoteLearnedCount ?? 0} merge=${studyTrace.mergeLearnedCount ?? debugCounts.learnedCount} current=${studyTrace.currentLearnedCount ?? debugCounts.learnedCount} remoteUpdatedAtMs=${studyTrace.remoteUpdatedAtMs ?? 0} localCompareUpdatedAtMs=${studyTrace.localCompareUpdatedAtMs ?? 0}`,
       `todayHistoryCount: ${debugCounts.todayHistoryCount}`,
       `todayHistorySync: stage=${todayTrace.stage || "idle"} local=${todayTrace.localTodayHistoryCount ?? debugCounts.todayHistoryCount} remote=${todayTrace.remoteTodayHistoryCount ?? 0} merge=${todayTrace.mergeTodayHistoryCount ?? debugCounts.todayHistoryCount} current=${todayTrace.currentTodayHistoryCount ?? debugCounts.todayHistoryCount} remoteUpdatedAtMs=${todayTrace.remoteUpdatedAtMs ?? 0} localCompareUpdatedAtMs=${todayTrace.localCompareUpdatedAtMs ?? 0}`,
+      initSummary,
       `currentScreen: ${state.currentScreen || "-"}`
     ].join(" | ");
     panel.hidden = false;
