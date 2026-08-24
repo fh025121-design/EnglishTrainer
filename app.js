@@ -5210,9 +5210,6 @@ function renderAdminLearningHistoryHistoryWatch(targetUid, options = {}) {
   const loadToken = ++adminLearningHistoryFirestoreLoadToken;
   renderAdminLearningHistoryState("読み込み中...", { countText: "読み込み中..." });
 
-  const currentUser = getCurrentPcFirebaseUser();
-  const currentUid = String(currentUser?.uid || "").trim();
-  const watchedTargetUid = String(targetUid || "").trim();
   const isChildLogin = Boolean(currentUid && watchedTargetUid && watchedTargetUid === currentUid && !adminLearningHistoryCanSelectFamily);
   const effectiveTargetUid = isChildLogin ? currentUid : watchedTargetUid;
   const safeOptions = isChildLogin ? { ...options, allowOtherUser: false } : { ...options, allowOtherUser: false };
