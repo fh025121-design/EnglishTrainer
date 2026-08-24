@@ -7321,7 +7321,7 @@
   function isVocabularyStateOwnerCurrentUid(uid = getCurrentMobileFirebaseUser()?.uid || "") {
     const currentUid = String(uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
     const ownerUid = String(vocabularyStateOwnerUid || "").trim();
-    return Boolean(currentUid) && ownerUid === currentUid;
+    return Boolean(currentUid) && (!ownerUid || ownerUid === currentUid);
   }
 
   function detachVocabularyRuntimeStateForUserSwitch(nextUid = getCurrentMobileFirebaseUser()?.uid || "") {
@@ -8175,7 +8175,8 @@
 
   function saveState() {
     const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
-    const safeStudyState = currentUid && vocabularyStateOwnerUid === currentUid && state.vocabularyStudy
+    const canPersistStudyState = currentUid && (!vocabularyStateOwnerUid || vocabularyStateOwnerUid === currentUid);
+    const safeStudyState = canPersistStudyState && state.vocabularyStudy
       ? sanitizeVocabularyStudyState(state.vocabularyStudy) || createEmptyVocabularyStudyState()
       : null;
     const snapshot = {
@@ -8193,7 +8194,7 @@
     }
     renderMobileVocabularyDebugPanel();
     const uid = getMobileVocabularySyncUid();
-    if (uid && vocabularyStateOwnerUid === uid && isVocabularyStateOwnerCurrentUid(uid)) {
+    if (uid && (!vocabularyStateOwnerUid || vocabularyStateOwnerUid === uid) && isVocabularyStateOwnerCurrentUid(uid)) {
       scheduleMobileVocabularySync();
     }
   }
