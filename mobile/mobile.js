@@ -6165,9 +6165,10 @@
     const weekDay = getMobileLearningHistoryWeekDayContext(entry);
     const categoryText = resolveMobileLearningHistoryCategory(entry);
     const dayNumberText = String(entry?.dayNumber || "").trim();
+    const isVocabularyHistoryLabel = categoryText === "単語練習" || mode === "Vocabulary" || mode === "vocabulary" || mode.toLowerCase() === "vocabulary";
     const shouldShowDayNumber = categoryText === "語順" || mode.includes("word-order") || mode.includes("wordorder");
     const shouldShowRangeDash = categoryText === "復習";
-    const shouldHideWeekDay = categoryText === "和訳" || mode.includes("translation");
+    const shouldHideWeekDay = categoryText === "和訳" || mode.includes("translation") || isVocabularyHistoryLabel;
     return {
       weekDayText: shouldShowDayNumber && dayNumberText
         ? dayNumberText
