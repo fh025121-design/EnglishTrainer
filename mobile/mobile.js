@@ -4077,8 +4077,8 @@
     const pronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
     const meaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
     const pronunciationJudged = pronunciationDecision;
-    const meaningVisible = sample.meaningRevealed || sample.meaningChecked || pronunciationJudged;
-    const meaningChoiceVisible = sample.meaningRevealed || sample.meaningChecked || pronunciationJudged;
+    const meaningVisible = sample.meaningRevealed || sample.meaningChecked;
+    const meaningChoiceVisible = sample.meaningRevealed || sample.meaningChecked;
     const canRevealMeaning = pronunciationJudged;
 
     elements.vocabularySamplePronunciationArea.classList.remove("hidden");
