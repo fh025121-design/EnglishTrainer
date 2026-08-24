@@ -4779,7 +4779,7 @@
       stage: "merge-apply",
       localTodayHistoryCount,
       remoteTodayHistoryCount,
-      mergeTodayHistoryCount,
+      mergeTodayHistoryCount: mergedTodayHistoryCount,
       currentTodayHistoryCount: getVocabularyTodayHistoryCount(state.vocabularyTodayHistoryMap, getVocabularyHistoryTodayKey()),
       remoteUpdatedAtMs,
       localCompareUpdatedAtMs
