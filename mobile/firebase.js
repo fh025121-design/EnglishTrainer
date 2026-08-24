@@ -40,6 +40,7 @@ const MOBILE_WORD_ORDER_SYNC_SCHEMA_VERSION = 1;
 const MOBILE_VOCABULARY_SYNC_DOC_COLLECTION = "mobileSync";
 const MOBILE_VOCABULARY_SYNC_DOC_ID = "vocabularyStateV1";
 const MOBILE_VOCABULARY_SYNC_CHUNK_COLLECTION = "vocabularyStateChunks";
+const MOBILE_VOCABULARY_SYNC_CHUNK_SUBCOLLECTION = "chunks";
 const MOBILE_VOCABULARY_SYNC_SCHEMA_VERSION = 1;
 const MOBILE_VOCABULARY_SYNC_CHUNK_SIZE = 150;
 const MOBILE_VOCABULARY_SYNC_CHUNK_PREFIX = "vocabularyStateChunk";
@@ -880,14 +881,29 @@ function getMobileVocabularyStateDocRef(targetUid = "") {
 function getMobileVocabularyStateChunkCollectionRef(targetUid = "") {
   const uid = String(targetUid || auth.currentUser?.uid || "").trim();
   if (!uid) return null;
-  return collection(firestore, "users", uid, MOBILE_VOCABULARY_SYNC_DOC_COLLECTION, MOBILE_VOCABULARY_SYNC_CHUNK_COLLECTION);
+  return collection(
+    firestore,
+    "users",
+    uid,
+    MOBILE_VOCABULARY_SYNC_DOC_COLLECTION,
+    MOBILE_VOCABULARY_SYNC_CHUNK_COLLECTION,
+    MOBILE_VOCABULARY_SYNC_CHUNK_SUBCOLLECTION
+  );
 }
 
 function getMobileVocabularyStateChunkDocRef(targetUid = "", chunkId = "") {
   const uid = String(targetUid || auth.currentUser?.uid || "").trim();
   const safeChunkId = String(chunkId || "").trim();
   if (!uid || !safeChunkId) return null;
-  return doc(firestore, "users", uid, MOBILE_VOCABULARY_SYNC_DOC_COLLECTION, MOBILE_VOCABULARY_SYNC_CHUNK_COLLECTION, safeChunkId);
+  return doc(
+    firestore,
+    "users",
+    uid,
+    MOBILE_VOCABULARY_SYNC_DOC_COLLECTION,
+    MOBILE_VOCABULARY_SYNC_CHUNK_COLLECTION,
+    MOBILE_VOCABULARY_SYNC_CHUNK_SUBCOLLECTION,
+    safeChunkId
+  );
 }
 
 function sanitizeVocabularyStudyStateForSync(value) {
