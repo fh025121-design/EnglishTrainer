@@ -18,8 +18,8 @@ const checks = [
     ok: /if \(!sample \|\| sample\.historyFinalized\)\s*return;\s*sample\.historyFinalized\s*=\s*true;/.test(source)
   },
   {
-    name: "home summary counts new vocabulary but excludes legacy day labels",
-    ok: /isNewVocabularyEntry\s*=\s*category\s*===\s*"Vocabulary"\s*&&\s*isIsoDayKey\(dayNumber\);[\s\S]*?isLegacyVocabularyEntry\s*=\s*category\s*===\s*"Vocabulary"\s*&&\s*\/week\/i\.test\(dayNumber\)/.test(source)
+    name: "home summary counts new vocabulary by iso day key while excluding legacy week-style labels",
+    ok: /const isNewVocabularyEntry = \(category === "Vocabulary" \|\| category === "単語練習"\) && isIsoDayKey\(dayNumber\);[\s\S]*?const isLegacyVocabularyEntry = \(category === "Vocabulary" \|\| category === "単語練習"\) && \/week\/i\.test\(dayNumber\);/.test(source)
   },
   {
     name: "zero question-count entries are rejected before save",
