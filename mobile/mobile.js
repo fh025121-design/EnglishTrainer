@@ -4594,7 +4594,7 @@
   }
 
   function recordVocabularySampleHistoryJudgment(wordItem, kind, value) {
-    if (!wordItem || !kind || !value) return;
+    if (!wordItem || !kind || !value) return false;
     const todayKey = getVocabularyHistoryTodayKey();
     const wordKey = getVocabularyHistoryWordKey(wordItem);
     const bucket = state.vocabularyTodayHistoryMap && typeof state.vocabularyTodayHistoryMap === "object"
@@ -4626,10 +4626,28 @@
     if (!existing.grade || !["5", "4", "3"].includes(String(existing.grade).trim())) {
       existing.grade = String(wordItem.grade ?? wordItem.level ?? wordItem.sourceLevel ?? wordItem.gradeLevel ?? "5").trim() || "5";
     }
+
+    const pronunciationReady = String(existing.pronunciation || "—").trim() !== "—";
+    const meaningReady = String(existing.meaning || "—").trim() !== "—";
+    if (!pronunciationReady || !meaningReady) {
+      if (todayMap[wordKey]) {
+        delete todayMap[wordKey];
+        if (!Object.keys(todayMap).length) {
+          delete bucket[todayKey];
+        } else {
+          bucket[todayKey] = todayMap;
+        }
+        state.vocabularyTodayHistoryMap = bucket;
+        saveVocabularyTodayHistoryMap();
+      }
+      return false;
+    }
+
     todayMap[wordKey] = existing;
     bucket[todayKey] = todayMap;
     state.vocabularyTodayHistoryMap = bucket;
     saveVocabularyTodayHistoryMap();
+    return true;
   }
 
   function getVocabularyHistoryDetailData(entry) {
@@ -4659,7 +4677,7 @@
     const todayMap = bucket[todayKey] && typeof bucket[todayKey] === "object" ? bucket[todayKey] : {};
     return Object.values(todayMap)
       .filter((entry) => entry && String(entry.word || "").trim())
-      .filter((entry) => entry.pronunciation !== "—" || entry.meaning !== "—")
+      .filter((entry) => String(entry.pronunciation || "—").trim() !== "—" && String(entry.meaning || "—").trim() !== "—")
       .sort((left, right) => {
         const weaknessDiff = getVocabularyHistoryWeaknessScore(right) - getVocabularyHistoryWeaknessScore(left);
         if (weaknessDiff !== 0) return weaknessDiff;

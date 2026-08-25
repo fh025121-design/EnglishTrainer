@@ -24,6 +24,10 @@ const checks = [
   {
     name: "zero question-count entries are rejected before save",
     ok: /if \(Math\.max\(0,\s*Number\(sanitized\.questionCount\)\s*\|\|\s*0\)\s*===\s*0\)\s*\{\s*return;/.test(source)
+  },
+  {
+    name: "today history excludes partially completed judgments",
+    ok: /String\(entry\.pronunciation \|\| "—"\)\.trim\(\) !== "—" && String\(entry\.meaning \|\| "—"\)\.trim\(\) !== "—"/.test(source)
   }
 ];
 
