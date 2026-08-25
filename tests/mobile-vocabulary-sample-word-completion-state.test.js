@@ -33,7 +33,8 @@ function buildSandbox() {
   const sharedState = {
     vocabularySample: null,
     vocabularyStudy: null,
-    vocabularyTodayHistoryMap: {}
+    vocabularyTodayHistoryMap: {},
+    wordLearningState: {}
   };
   let continueVocabularySampleCallCount = 0;
   let chimeCallCount = 0;
@@ -59,6 +60,32 @@ function buildSandbox() {
       },
       addEventListener() {},
       location: { search: "" }
+    },
+    getCurrentMobileFirebaseUser: () => ({ uid: "" }),
+    finalizeWordLearningStateForCompletion: (wordId, pronunciationStatus, meaningStatus) => {
+      const safeWordId = String(wordId || "").trim();
+      if (!safeWordId) return null;
+      const current = sharedState.wordLearningState[safeWordId] || {
+        wordId: safeWordId,
+        pronunciationStatus: "－",
+        meaningStatus: "－",
+        lastStudiedAt: 0,
+        questionCount: 0
+      };
+      const nextEntry = {
+        ...current,
+        wordId: safeWordId,
+        pronunciationStatus: String(pronunciationStatus || current.pronunciationStatus || "－").trim() || "－",
+        meaningStatus: String(meaningStatus || current.meaningStatus || "－").trim() || "－",
+        lastStudiedAt: Date.now(),
+        questionCount: Math.max(0, Number(current.questionCount) || 0) + 1
+      };
+      sharedState.wordLearningState[safeWordId] = nextEntry;
+      return nextEntry;
+    },
+    saveWordLearningStateForSync: (map) => {
+      sharedState.wordLearningState = map && typeof map === "object" ? map : {};
+      return sharedState.wordLearningState;
     },
     getVocabularyRealWordBank: () => [{
       id: "w1",
@@ -189,6 +216,9 @@ function buildSandbox() {
   await sandbox.handleVocabularySampleChoice("meaning", "ok");
   assert.strictEqual(sandbox.state.vocabularySample.completedWordCount, 1, "apple completion should count once");
   assert.strictEqual(sandbox.state.vocabularySample.completedWordIds.includes("apple|名詞"), true, "apple should be counted once in completedWordIds");
+  assert.strictEqual(sandbox.state.wordLearningState.apple?.pronunciationStatus, "○", "apple completion should write the canonical pronunciation state");
+  assert.strictEqual(sandbox.state.wordLearningState.apple?.meaningStatus, "○", "apple completion should write the canonical meaning state");
+  assert.strictEqual(sandbox.state.wordLearningState.apple?.questionCount, 1, "apple completion should increment canonical questionCount once");
   assert.strictEqual(sandbox.getVocabularyTodayHistoryEntries().length, 1, "apple completion should show exactly one today-history row");
   assert.strictEqual(getChimeCount(), 1, "only the final ○○ pair should trigger the correct chime");
   assert.strictEqual(getContinueCount(), 1, "apple completion should trigger exactly one continue call");

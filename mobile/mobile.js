@@ -5952,6 +5952,18 @@
     sample.currentWordId = itemKey;
     sample.completedWordCount = sample.completedWordIds.length;
 
+    const completionWordId = String(item.id || item.word || itemKey || "").trim();
+    const completionPronunciationStatus = sample.pronunciationChoice === "ok" ? "○" : "△";
+    const completionMeaningStatus = sample.meaningChoice === "ok" ? "○" : "△";
+    const finalizedWordState = finalizeWordLearningStateForCompletion(
+      completionWordId,
+      completionPronunciationStatus,
+      completionMeaningStatus
+    );
+    if (finalizedWordState) {
+      saveWordLearningStateForSync(state.wordLearningState, getCurrentMobileFirebaseUser()?.uid || "");
+    }
+
     if (sample.pronunciationChoice === "ok" && sample.meaningChoice === "ok") {
       playVocabularySampleCorrectChime();
     }
