@@ -4638,22 +4638,6 @@
       existing.grade = String(wordItem.grade ?? wordItem.level ?? wordItem.sourceLevel ?? wordItem.gradeLevel ?? "5").trim() || "5";
     }
 
-    const pronunciationReady = String(existing.pronunciation || "—").trim() !== "—";
-    const meaningReady = String(existing.meaning || "—").trim() !== "—";
-    if (!pronunciationReady || !meaningReady) {
-      if (todayMap[wordKey]) {
-        delete todayMap[wordKey];
-        if (!Object.keys(todayMap).length) {
-          delete bucket[todayKey];
-        } else {
-          bucket[todayKey] = todayMap;
-        }
-        state.vocabularyTodayHistoryMap = bucket;
-        saveVocabularyTodayHistoryMap();
-      }
-      return false;
-    }
-
     todayMap[wordKey] = existing;
     bucket[todayKey] = todayMap;
     state.vocabularyTodayHistoryMap = bucket;
@@ -5646,46 +5630,64 @@
     if (kind === "pronunciation") {
       sample.pronunciationChoice = value;
       sample.pronunciationChecked = true;
-      sample.meaningChoice = null;
-      sample.meaningChecked = false;
-      sample.meaningRevealed = false;
-      recordVocabularySampleHistoryJudgment(item, "pronunciation", value);
-      updateVocabularyStudyEntryAfterJudgment(item, "pronunciation", value);
+      sample.meaningChoice = sample.meaningChoice === "ok" || sample.meaningChoice === "ng" ? sample.meaningChoice : null;
+      sample.meaningChecked = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
+      sample.meaningRevealed = sample.meaningChecked;
+      const nextPronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+      const nextMeaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
+      if (!nextPronunciationDecision || !nextMeaningDecision) {
+        renderVocabularySampleScreen();
+        showScreen("vocabularySampleScreen");
+        return;
+      }
     }
+
     if (kind === "meaning") {
       sample.meaningChoice = value;
       sample.meaningChecked = true;
-      recordVocabularySampleHistoryJudgment(item, "meaning", value);
-      updateVocabularyStudyEntryAfterJudgment(item, "meaning", value);
+      sample.meaningRevealed = true;
+      const nextPronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
+      const nextMeaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
+      if (!nextPronunciationDecision || !nextMeaningDecision) {
+        renderVocabularySampleScreen();
+        showScreen("vocabularySampleScreen");
+        return;
+      }
     }
 
     const nextPronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
     const nextMeaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
-    if (nextPronunciationDecision && nextMeaningDecision) {
-      const completedWordIds = getVocabularySampleCompletedWordIds(sample);
-      const wordAlreadyCompleted = completedWordIds.includes(itemKey);
-      if (!wordAlreadyCompleted) {
-        sample.completedWordIds = [...completedWordIds, itemKey];
-        sample.currentWordCompleted = true;
-        sample.currentWordKey = itemKey;
-        sample.currentWordId = itemKey;
-        sample.completedWordCount = sample.completedWordIds.length;
-        updateVocabularyStudyEntryAfterJudgment(item, "pronunciation", sample.pronunciationChoice);
-        updateVocabularyStudyEntryAfterJudgment(item, "meaning", sample.meaningChoice);
-        recordVocabularySampleHistoryJudgment(item, "pronunciation", sample.pronunciationChoice);
-        recordVocabularySampleHistoryJudgment(item, "meaning", sample.meaningChoice);
-        advanceVocabularyNormalProgress();
-      }
-      const changedWordId = String(item.id || item.word || "").trim();
-      saveState(changedWordId);
-      await flushMobileVocabularySync(changedWordId);
-      await flushMobileVocabularyTodayHistorySync();
-      continueVocabularySample();
+    if (!(nextPronunciationDecision && nextMeaningDecision)) {
+      renderVocabularySampleScreen();
+      showScreen("vocabularySampleScreen");
       return;
     }
 
-    renderVocabularySampleScreen();
-    showScreen("vocabularySampleScreen");
+    const completedWordIds = getVocabularySampleCompletedWordIds(sample);
+    const wordAlreadyCompleted = completedWordIds.includes(itemKey);
+    if (wordAlreadyCompleted) {
+      renderVocabularySampleScreen();
+      showScreen("vocabularySampleScreen");
+      return;
+    }
+
+    sample.completedWordIds = [...completedWordIds, itemKey];
+    sample.currentWordCompleted = true;
+    sample.currentWordKey = itemKey;
+    sample.currentWordId = itemKey;
+    sample.completedWordCount = sample.completedWordIds.length;
+
+    recordVocabularySampleHistoryJudgment(item, "pronunciation", sample.pronunciationChoice);
+    recordVocabularySampleHistoryJudgment(item, "meaning", sample.meaningChoice);
+    updateVocabularyStudyEntryAfterJudgment(item, "pronunciation", sample.pronunciationChoice);
+    updateVocabularyStudyEntryAfterJudgment(item, "meaning", sample.meaningChoice);
+    advanceVocabularyNormalProgress();
+
+    const changedWordId = String(item.id || item.word || "").trim();
+    saveState(changedWordId);
+    await flushMobileVocabularySync(changedWordId);
+    await flushMobileVocabularyTodayHistorySync();
+    continueVocabularySample();
   }
 
   function formatTimestampToJstDisplay(timestamp) {
