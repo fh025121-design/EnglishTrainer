@@ -4882,13 +4882,26 @@
 
         const sourceMap = loadVocabularyTodayHistoryMap();
         vocabularyTodayHistorySyncLastOperationAtMs = Date.now();
+        let remoteHistoryResult = null;
+        try {
+          remoteHistoryResult = await window.loadMobileVocabularyTodayHistoryStateFromFirestore?.({ targetUid: uid });
+        } catch (_error) {
+          remoteHistoryResult = null;
+        }
+        const remoteHistoryMap = remoteHistoryResult?.ok && remoteHistoryResult.exists && remoteHistoryResult.historyMap
+          ? normalizeVocabularyTodayHistoryMap(remoteHistoryResult.historyMap) || {}
+          : null;
+        const remoteHistoryUpdatedAtMs = Number(remoteHistoryResult?.updatedAtMs || 0) || 0;
+
         let result = null;
         try {
           result = await saveRemote(sourceMap, {
             targetUid: uid,
             allowCreate: vocabularyTodayHistorySyncAllowCreate,
             sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
-            sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+            sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName()),
+            remoteHistoryMap,
+            remoteUpdatedAtMs: remoteHistoryUpdatedAtMs
           });
         } catch (error) {
           if (shouldThrottleMobileVocabularySyncError("todayHistory", error)) {
@@ -8542,6 +8555,17 @@
         saveMobileVocabularyStateForSync(normalizedSource, uid);
         vocabularySyncLastOperationAtMs = Date.now();
 
+        let remoteStudyResult = null;
+        try {
+          remoteStudyResult = await window.loadMobileVocabularyStateFromFirestore?.({ targetUid: uid });
+        } catch (_error) {
+          remoteStudyResult = null;
+        }
+        const remoteStudyState = remoteStudyResult?.ok && remoteStudyResult.exists && remoteStudyResult.studyState
+          ? sanitizeVocabularyStudyState(remoteStudyResult.studyState) || null
+          : null;
+        const remoteStudyUpdatedAtMs = Number(remoteStudyResult?.updatedAtMs || 0) || 0;
+
         let result = null;
         try {
           result = await saveRemote(normalizedSource, {
@@ -8549,7 +8573,9 @@
             allowCreate: vocabularySyncAllowCreate,
             sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
             sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName()),
-            changedWordId: String(changedWordId || "").trim()
+            changedWordId: String(changedWordId || "").trim(),
+            remoteStudyState,
+            remoteUpdatedAtMs: remoteStudyUpdatedAtMs
           });
         } catch (error) {
           if (shouldThrottleMobileVocabularySyncError("study", error)) {

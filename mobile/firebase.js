@@ -774,6 +774,27 @@ async function saveMobileVocabularyTodayHistoryStateToFirestore(historyMap, opti
 
   const allowCreate = options?.allowCreate === true;
   const normalizedIncoming = sanitizeVocabularyTodayHistoryMapForSync(historyMap);
+  const remoteHistoryMap = options?.remoteHistoryMap && typeof options.remoteHistoryMap === "object"
+    ? sanitizeVocabularyTodayHistoryMapForSync(options.remoteHistoryMap)
+    : null;
+  const remoteUpdatedAtMs = Math.max(0, Number(options?.remoteUpdatedAtMs || 0) || 0);
+  const localUpdatedAtMs = Object.values(normalizedIncoming).reduce((maxValue, bucket) => {
+    if (!bucket || typeof bucket !== "object") return maxValue;
+    const bucketValue = Object.values(bucket).reduce((innerMax, entry) => Math.max(innerMax, Number(entry?.lastJudgedAt) || 0), 0);
+    return Math.max(maxValue, bucketValue);
+  }, 0);
+
+  if (remoteHistoryMap && remoteUpdatedAtMs > 0 && localUpdatedAtMs > 0 && localUpdatedAtMs < remoteUpdatedAtMs) {
+    return {
+      ok: true,
+      saved: false,
+      exists: true,
+      uid: targetUid,
+      skipped: "stale-local-write",
+      historyMap: normalizedIncoming
+    };
+  }
+
   const sourceDeviceId = String(options?.sourceDeviceId || "").trim();
   const sourceDeviceName = String(options?.sourceDeviceName || "").trim();
 
@@ -1040,6 +1061,37 @@ async function saveMobileVocabularyStateToFirestore(studyState, options = {}) {
   const sourceDeviceName = String(options?.sourceDeviceName || "").trim();
   const changedWordId = String(options?.changedWordId || "").trim();
   const safeStudyState = sanitizeVocabularyStudyStateForSync(studyState) || { entries: [] };
+  const remoteStudyState = options?.remoteStudyState && typeof options.remoteStudyState === "object"
+    ? sanitizeVocabularyStudyStateForSync(options.remoteStudyState) || null
+    : null;
+  const remoteUpdatedAtMs = Math.max(0, Number(options?.remoteUpdatedAtMs || 0) || 0);
+  const localUpdatedAtMs = safeStudyState.entries.reduce((maxValue, entry) => {
+    const timestamps = [
+      Number(entry?.lastJudgedAt) || 0,
+      Number(entry?.createdAt) || 0,
+      Number(entry?.pronunciation?.lastJudgedAt) || 0,
+      Number(entry?.pronunciation?.teacherCheckUpdatedAt) || 0,
+      Number(entry?.meaningState?.lastJudgedAt) || 0,
+      Number(entry?.meaningState?.teacherCheckUpdatedAt) || 0,
+      Number(entry?.pronunciationTeacherCheckUpdatedAt) || 0,
+      Number(entry?.meaningTeacherCheckUpdatedAt) || 0
+    ];
+    return Math.max(maxValue, ...timestamps);
+  }, 0);
+
+  if (remoteStudyState && remoteUpdatedAtMs > 0 && localUpdatedAtMs > 0 && localUpdatedAtMs < remoteUpdatedAtMs) {
+    return {
+      ok: true,
+      saved: false,
+      exists: true,
+      uid: targetUid,
+      skipped: "stale-local-write",
+      studyState: safeStudyState,
+      changedWordId,
+      chunkIds: []
+    };
+  }
+
   const chunkIds = changedWordId
     ? [getVocabularyStateChunkIdForEntryId(safeStudyState, changedWordId)]
     : getVocabularyStateChunkIdsForStudyState(safeStudyState);

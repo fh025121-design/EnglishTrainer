@@ -561,6 +561,101 @@ function buildSandbox() {
   assert.strictEqual(staleSandbox.state.vocabularyStudy.entries.length, 10, "stale Firebase study snapshot must not wipe local completed words");
   assert.strictEqual(Object.keys(staleSandbox.state.vocabularyTodayHistoryMap["2026-08-25"] || {}).length, 10, "stale Firebase history snapshot must not wipe local today-history entries");
 
+  const staleWriteStudySource = source.slice(
+    source.indexOf("async function saveMobileVocabularyStateToFirestore"),
+    source.indexOf("\n\nfunction subscribeMobileVocabularyStateFromFirestore")
+  );
+  const staleWriteHistorySource = source.slice(
+    source.indexOf("async function saveMobileVocabularyTodayHistoryStateToFirestore"),
+    source.indexOf("\n\nfunction subscribeMobileVocabularyTodayHistoryStateFromFirestore")
+  );
+
+  const staleWriteScript = [
+    "const auth = { currentUser: { uid: 'uid-1' } };",
+    "const firestore = {};",
+    "const runTransaction = async () => ({ saved: true, existsBefore: true });",
+    "function sanitizeVocabularyStudyStateForSync(value) { if (!value || typeof value !== 'object') return null; if (Array.isArray(value.entries)) return value; if (Array.isArray(value.studyState?.entries)) return value.studyState; return null; }",
+    "function sanitizeVocabularyTodayHistoryMapForSync(value) { const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}; const next = {}; Object.entries(source).forEach(([dateKey, bucket]) => { const normalizedDateKey = String(dateKey || '').trim(); if (!normalizedDateKey || !bucket || typeof bucket !== 'object' || Array.isArray(bucket)) return; const safeBucket = {}; Object.entries(bucket).forEach(([wordKey, entry]) => { const normalizedWordKey = String(wordKey || '').trim(); if (!normalizedWordKey || !entry || typeof entry !== 'object') return; const word = String(entry.word || '').trim(); if (!word) return; safeBucket[normalizedWordKey] = { word, partOfSpeech: String(entry.partOfSpeech || '').trim(), grade: String(entry.grade || entry.level || entry.sourceLevel || '5').trim() || '5', pronunciation: String(entry.pronunciation || '—').trim() || '—', meaning: String(entry.meaning || '—').trim() || '—', lastJudgedAt: Number(entry.lastJudgedAt) || 0 }; }); if (Object.keys(safeBucket).length || Object.keys(bucket).length === 0) { next[normalizedDateKey] = safeBucket; } }); return next; }",
+    "function getVocabularyEntryLatestUpdatedAt(entry) { if (!entry || typeof entry !== 'object') return 0; const timestamps = [Number(entry.lastJudgedAt) || 0, Number(entry.createdAt) || 0, Number(entry.pronunciationTeacherCheckUpdatedAt) || 0, Number(entry.meaningTeacherCheckUpdatedAt) || 0, Number(entry.pronunciation?.lastJudgedAt) || 0, Number(entry.pronunciation?.teacherCheckUpdatedAt) || 0, Number(entry.meaningState?.lastJudgedAt) || 0, Number(entry.meaningState?.teacherCheckUpdatedAt) || 0]; return Math.max(0, ...timestamps); }",
+    "function getVocabularyStudyMostRecentUpdatedAt(studyState) { const entries = Array.isArray(studyState?.entries) ? studyState.entries : []; return entries.reduce((maxValue, entry) => Math.max(maxValue, getVocabularyEntryLatestUpdatedAt(entry)), 0); }",
+    "async function saveMobileVocabularyStateToFirestore(studyState, options = {}) { const targetUid = String(options?.targetUid || auth.currentUser?.uid || '').trim(); if (!targetUid || !studyState || typeof studyState !== 'object') return { ok: false, saved: false, exists: false, uid: targetUid }; const safeStudyState = sanitizeVocabularyStudyStateForSync(studyState) || { entries: [] }; const remoteStudyState = options?.remoteStudyState && typeof options.remoteStudyState === 'object' ? sanitizeVocabularyStudyStateForSync(options.remoteStudyState) || null : null; const remoteUpdatedAtMs = Math.max(0, Number(options?.remoteUpdatedAtMs || 0) || 0); const localUpdatedAtMs = safeStudyState.entries.reduce((maxValue, entry) => { const timestamps = [Number(entry?.lastJudgedAt) || 0, Number(entry?.createdAt) || 0, Number(entry?.pronunciation?.lastJudgedAt) || 0, Number(entry?.pronunciation?.teacherCheckUpdatedAt) || 0, Number(entry?.meaningState?.lastJudgedAt) || 0, Number(entry?.meaningState?.teacherCheckUpdatedAt) || 0, Number(entry?.pronunciationTeacherCheckUpdatedAt) || 0, Number(entry?.meaningTeacherCheckUpdatedAt) || 0]; return Math.max(maxValue, ...timestamps); }, 0); if (remoteStudyState && remoteUpdatedAtMs > 0 && localUpdatedAtMs > 0 && localUpdatedAtMs < remoteUpdatedAtMs) { return { ok: true, saved: false, exists: true, uid: targetUid, skipped: 'stale-local-write', studyState: safeStudyState, changedWordId: String(options?.changedWordId || '').trim(), chunkIds: [] }; } return { ok: true, saved: true, exists: true, uid: targetUid, skipped: '', studyState: safeStudyState, changedWordId: String(options?.changedWordId || '').trim(), chunkIds: ['chunk-000'] }; }",
+    "async function saveMobileVocabularyTodayHistoryStateToFirestore(historyMap, options = {}) { const targetUid = String(options?.targetUid || auth.currentUser?.uid || '').trim(); if (!targetUid || !historyMap || typeof historyMap !== 'object') return { ok: false, saved: false, exists: false, uid: targetUid }; const normalizedIncoming = sanitizeVocabularyTodayHistoryMapForSync(historyMap); const remoteHistoryMap = options?.remoteHistoryMap && typeof options.remoteHistoryMap === 'object' ? sanitizeVocabularyTodayHistoryMapForSync(options.remoteHistoryMap) : null; const remoteUpdatedAtMs = Math.max(0, Number(options?.remoteUpdatedAtMs || 0) || 0); const localUpdatedAtMs = Object.values(normalizedIncoming).reduce((maxValue, bucket) => { if (!bucket || typeof bucket !== 'object') return maxValue; const bucketValue = Object.values(bucket).reduce((innerMax, entry) => Math.max(innerMax, Number(entry?.lastJudgedAt) || 0), 0); return Math.max(maxValue, bucketValue); }, 0); if (remoteHistoryMap && remoteUpdatedAtMs > 0 && localUpdatedAtMs > 0 && localUpdatedAtMs < remoteUpdatedAtMs) { return { ok: true, saved: false, exists: true, uid: targetUid, skipped: 'stale-local-write', historyMap: normalizedIncoming }; } return { ok: true, saved: true, exists: true, uid: targetUid, skipped: '', historyMap: normalizedIncoming }; }",
+    ""
+  ].join("\n");
+
+  const staleWriteSandbox = {
+    console,
+    Date,
+    Math,
+    Number,
+    String,
+    Object,
+    Array,
+    Set,
+    Map,
+    Intl,
+    URLSearchParams,
+    setTimeout,
+    firestore: { kind: 'fake-firestore' },
+    auth: { currentUser: { uid: 'uid-1' } },
+    runTransaction: async (db, callback) => callback({
+      get: async () => ({
+        exists: () => true,
+        docs: [
+          { data: () => ({ entries: [{ id: 'w1', word: 'apple', lastJudgedAt: 5000, createdAt: 5000 }, { id: 'w2', word: 'banana', lastJudgedAt: 5500, createdAt: 5500 }], updatedAtMs: 6000 }) }
+        ]
+      }),
+      set: () => {}
+    }),
+    doc: () => 'docRef',
+    collection: () => 'collectionRef'
+  };
+  vm.runInNewContext(staleWriteScript, staleWriteSandbox, { filename: "mobile-stale-local-write-regression.js" });
+
+  const staleStudyResult = await staleWriteSandbox.saveMobileVocabularyStateToFirestore(
+    {
+      targetWordCount: 2,
+      entries: [
+        { id: "w1", word: "apple", partOfSpeech: "名詞", pronunciation: { level: 1 }, meaningState: { level: 1 }, lastJudgedAt: 1000, createdAt: 1000 },
+        { id: "w2", word: "banana", partOfSpeech: "名詞", pronunciation: { level: 1 }, meaningState: { level: 1 }, lastJudgedAt: 900, createdAt: 900 }
+      ]
+    },
+    {
+      targetUid: "uid-1",
+      remoteStudyState: {
+        targetWordCount: 2,
+        entries: [
+          { id: "w1", word: "apple", partOfSpeech: "名詞", pronunciation: { level: 1 }, meaningState: { level: 1 }, lastJudgedAt: 8000, createdAt: 8000 },
+          { id: "w2", word: "banana", partOfSpeech: "名詞", pronunciation: { level: 1 }, meaningState: { level: 1 }, lastJudgedAt: 8200, createdAt: 8200 }
+        ]
+      },
+      remoteUpdatedAtMs: 9000
+    }
+  );
+  assert.strictEqual(staleStudyResult.saved, false, "stale local study write must be skipped");
+
+  const staleHistoryResult = await staleWriteSandbox.saveMobileVocabularyTodayHistoryStateToFirestore(
+    {
+      "2026-08-25": {
+        "w1|名詞": { word: "apple", partOfSpeech: "名詞", pronunciation: "○", meaning: "○", lastJudgedAt: 1000 },
+        "w2|名詞": { word: "banana", partOfSpeech: "名詞", pronunciation: "○", meaning: "○", lastJudgedAt: 1200 }
+      }
+    },
+    {
+      targetUid: "uid-1",
+      remoteHistoryMap: {
+        "2026-08-25": {
+          "w1|名詞": { word: "apple", partOfSpeech: "名詞", pronunciation: "○", meaning: "○", lastJudgedAt: 8000 },
+          "w2|名詞": { word: "banana", partOfSpeech: "名詞", pronunciation: "○", meaning: "○", lastJudgedAt: 8100 }
+        }
+      },
+      remoteUpdatedAtMs: 9000
+    }
+  );
+  assert.strictEqual(staleHistoryResult.saved, false, "stale local history write must be skipped");
+
+  console.log("mobile vocabulary stale local save regression checks passed");
+
   console.log("mobile vocabulary stale-firebase rollback regression checks passed");
 })().catch((error) => {
   console.error(error);
