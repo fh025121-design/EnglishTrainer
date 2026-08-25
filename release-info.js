@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/25 16:39", note: "モバイル版のみ: Speaking 単語練習を『2判定が揃った時点で1語確定』に整理し、1個目の判定は pending のみとして保持し、2個目の判定で完了イベントを1回だけ発火するよう修正。○○ のときだけ correct chime を再生し、○△ / △○ / △△ でも completedWordCount / 今日履歴 / 次語進行が重複なく更新されることを確認。PC版・語順・和訳・ポイント計算・Firestore形式は変更せず、バージョン表示と cache token も同じ実JST 16:39 に更新。" },
     { version: "2026/08/25 15:13", note: "モバイル版のみ: Speaking 単語練習の 1 語完了時に、保存・同期の失敗が UI の次語進行を止めていた問題を修正し、発音・意味の両判定が確定した時点で continueVocabularySample() へ進むように分離。今日の履歴保存の失敗は UI 完了条件から外し、同一単語の apple / banana の連続完了が index / completedWordCount / 今日履歴に重複なく残ることを確認。PC版・語順・和訳・reward・ポイント計算・過去履歴は変更せず、バージョン表示と cache token も同じ実JST 15:13 に更新。" },
     { version: "2026/08/25 14:40", note: "モバイル版のみ: Speaking 単語練習の完了判定時に、同一単語の状態が最初の判定で保存されないまま early return していた問題を修正し、単語ID単位で一意な完了イベントとして保存・合算・今日履歴・続行処理が重複しないよう調整。PC版・ポイント計算・Firestore 形式・共通 reward 画面は変更せず、No.165 の修正を公開版へ反映し、バージョン表示と cache token も同じ実JST 14:40 に更新。" },
     { version: "2026/08/25 12:44", note: "モバイル版のみ: Speaking 単語練習の 1 語完了イベントを単語ID単位で一意化し、completedWordCount / Vocabulary 学習状態 / 今日履歴 / saveState の同期が重複しないよう修正。PC版・ポイント計算・Firestore 形式・共通 reward 画面は変更せず、No.164 の単語完了状態更新だけを正しい経路に統一し、バージョン表示と cache token も同じ実JST 12:44 に更新。" },
