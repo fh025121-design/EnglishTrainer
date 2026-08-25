@@ -5672,11 +5672,15 @@
     const changedWordId = String(item.id || item.word || "").trim();
     try {
       saveState(changedWordId);
-      await flushMobileVocabularySync(changedWordId);
-      await flushMobileVocabularyTodayHistorySync();
     } catch (_error) {
-      // Keep the UI completion flow independent from history persistence errors.
+      // Keep the UI completion flow independent from local persistence errors.
     }
+
+    Promise.resolve()
+      .then(() => flushMobileVocabularySync(changedWordId))
+      .then(() => flushMobileVocabularyTodayHistorySync())
+      .catch(() => undefined);
+
     continueVocabularySample();
   }
 

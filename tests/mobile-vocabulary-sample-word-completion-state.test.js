@@ -225,6 +225,82 @@ function buildSandbox() {
   assert.strictEqual(failingSave.sandbox.state.vocabularySample.index, 1, "save failures must not block the next-word advance");
   assert.strictEqual(failingSave.getContinueCount(), 1, "completion should still continue despite persistence errors");
 
+  const fiveWordSequence = [
+    ["pronunciation", "ok"],
+    ["meaning", "ok"],
+    ["pronunciation", "ok"],
+    ["meaning", "ng"],
+    ["pronunciation", "ng"],
+    ["meaning", "ok"],
+    ["pronunciation", "ng"],
+    ["meaning", "ng"],
+    ["pronunciation", "ok"],
+    ["meaning", "ok"]
+  ];
+
+  const fiveWordSandbox = buildSandbox();
+  fiveWordSandbox.sandbox.state.vocabularySample = createSample([
+    { id: "w1", word: "apple", partOfSpeech: "名詞", meaning: "りんご" },
+    { id: "w2", word: "banana", partOfSpeech: "名詞", meaning: "バナナ" },
+    { id: "w3", word: "cherry", partOfSpeech: "名詞", meaning: "さくらんぼ" },
+    { id: "w4", word: "date", partOfSpeech: "名詞", meaning: "日付" },
+    { id: "w5", word: "elderberry", partOfSpeech: "名詞", meaning: "エルダベリー" }
+  ]);
+  fiveWordSandbox.sandbox.state.vocabularyStudy = fiveWordSandbox.sandbox.buildVocabularyRealStudyState();
+  fiveWordSandbox.sandbox.state.vocabularyTodayHistoryMap = {};
+  fiveWordSandbox.resetContinueCount();
+  fiveWordSandbox.resetChimeCount();
+
+  for (const [kind, value] of fiveWordSequence) {
+    await fiveWordSandbox.sandbox.handleVocabularySampleChoice(kind, value);
+  }
+
+  assert.strictEqual(fiveWordSandbox.sandbox.state.vocabularySample.completedWordCount, 5, "five completions must accumulate to five completed words");
+  assert.strictEqual(fiveWordSandbox.sandbox.state.vocabularySample.completedWordIds.length, 5, "five completions must record five unique word ids");
+  assert.strictEqual(fiveWordSandbox.sandbox.getVocabularyTodayHistoryEntries().length, 5, "five completions must produce five today-history entries");
+  assert.strictEqual(fiveWordSandbox.getContinueCount(), 5, "the five-word flow must advance through every word");
+  assert.strictEqual(fiveWordSandbox.getChimeCount(), 2, "only the two ○○ outcomes should trigger the correct chime");
+
+  const syncFailureSandbox = buildSandbox();
+  syncFailureSandbox.sandbox.state.vocabularySample = createSample([
+    { id: "w1", word: "apple", partOfSpeech: "名詞", meaning: "りんご" },
+    { id: "w2", word: "banana", partOfSpeech: "名詞", meaning: "バナナ" },
+    { id: "w3", word: "cherry", partOfSpeech: "名詞", meaning: "さくらんぼ" },
+    { id: "w4", word: "date", partOfSpeech: "名詞", meaning: "日付" },
+    { id: "w5", word: "elderberry", partOfSpeech: "名詞", meaning: "エルダベリー" }
+  ]);
+  syncFailureSandbox.sandbox.state.vocabularyStudy = syncFailureSandbox.sandbox.buildVocabularyRealStudyState();
+  syncFailureSandbox.sandbox.state.vocabularyTodayHistoryMap = {};
+  syncFailureSandbox.sandbox.saveState = () => {
+    throw new Error("sync failed");
+  };
+  syncFailureSandbox.sandbox.flushMobileVocabularySync = async () => {
+    throw new Error("sync failed");
+  };
+  syncFailureSandbox.sandbox.flushMobileVocabularyTodayHistorySync = async () => {
+    throw new Error("sync failed");
+  };
+  syncFailureSandbox.resetContinueCount();
+
+  for (const [kind, value] of [
+    ["pronunciation", "ok"],
+    ["meaning", "ok"],
+    ["pronunciation", "ok"],
+    ["meaning", "ng"],
+    ["pronunciation", "ng"],
+    ["meaning", "ok"],
+    ["pronunciation", "ng"],
+    ["meaning", "ng"],
+    ["pronunciation", "ok"],
+    ["meaning", "ok"]
+  ]) {
+    await syncFailureSandbox.sandbox.handleVocabularySampleChoice(kind, value);
+  }
+
+  assert.strictEqual(syncFailureSandbox.sandbox.state.vocabularySample.completedWordCount, 5, "sync failures must not stop completion progression");
+  assert.strictEqual(syncFailureSandbox.sandbox.getVocabularyTodayHistoryEntries().length, 5, "sync failures must not remove today-history entries");
+  assert.strictEqual(syncFailureSandbox.sandbox.state.vocabularySample.index, 5, "the five-word run must reach the end without stalling");
+
   console.log("mobile vocabulary completion state checks passed");
 })().catch((error) => {
   console.error(error);
