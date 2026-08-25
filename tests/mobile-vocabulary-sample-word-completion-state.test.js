@@ -301,6 +301,126 @@ function buildSandbox() {
   assert.strictEqual(syncFailureSandbox.sandbox.getVocabularyTodayHistoryEntries().length, 5, "sync failures must not remove today-history entries");
   assert.strictEqual(syncFailureSandbox.sandbox.state.vocabularySample.index, 5, "the five-word run must reach the end without stalling");
 
+  const historyScript = [
+    source.match(/function createVocabularyTeacherCheckState\(overrides = \{\}\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function createVocabularySkillState\(overrides = \{\}\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyGradeValue\(entry\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function normalizeVocabularyWordRecord\(entry, index = 0\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function mergeVocabularyStudyStateByLatest\(baseStudyState, incomingStudyState\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyPastHistoryEntries\(\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyTeacherCheckCandidates\(\) \{[\s\S]*?\n  \}/)?.[0]
+  ].filter(Boolean).join("\n");
+
+  const historySandbox = {
+    console,
+    Date,
+    Math,
+    Number,
+    String,
+    Object,
+    Array,
+    Set,
+    Map,
+    Intl,
+    URLSearchParams,
+    state: {
+      vocabularyStudy: {
+        targetWordCount: 1000,
+        entries: [
+          {
+            id: "w1",
+            word: "apple",
+            partOfSpeech: "名詞",
+            meaning: "りんご",
+            pronunciation: { level: 1, lastSelfResult: "ok", teacherCheckState: { pronunciation: "none", meaning: "none" } },
+            meaningState: { level: 1, lastSelfResult: "ok", teacherCheckState: { pronunciation: "none", meaning: "none" } },
+            lastJudgedAt: Date.now(),
+            createdAt: Date.now()
+          },
+          {
+            id: "w2",
+            word: "banana",
+            partOfSpeech: "名詞",
+            meaning: "バナナ",
+            pronunciation: { level: 1, lastSelfResult: "ok", teacherCheckState: { pronunciation: "none", meaning: "none" } },
+            meaningState: { level: 1, lastSelfResult: "ok", teacherCheckState: { pronunciation: "none", meaning: "none" } },
+            lastJudgedAt: Date.now(),
+            createdAt: Date.now()
+          }
+        ],
+        progressMap: {},
+        session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+        gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+      },
+      vocabularyTodayHistoryMap: {},
+      vocabularyPastHistoryFilter: "all",
+      currentScreen: "homeScreen"
+    },
+    getVocabularyRealWordBank: () => [
+      { id: "w1", word: "apple", partOfSpeech: "名詞", meaning: "りんご", level: "5" },
+      { id: "w2", word: "banana", partOfSpeech: "名詞", meaning: "バナナ", level: "5" }
+    ],
+    getVocabularyStudyEntryById: (wordId) => {
+      const normalizedId = String(wordId || "").trim();
+      return historySandbox.state.vocabularyStudy.entries.find((entry) => String(entry.id || entry.word || "").trim() === normalizedId) || null;
+    },
+    getVocabularyCurrentSelfStatus: (skillState) => {
+      if (!skillState || typeof skillState !== "object") return "none";
+      const raw = String(skillState.lastSelfResult || "").trim();
+      if (raw === "ok") return "○";
+      if (raw === "ng") return "△";
+      return "none";
+    },
+    getVocabularyTeacherCheckStatusText: (skillState, fieldName = "pronunciation") => {
+      if (!skillState || typeof skillState !== "object") return "none";
+      const teacherValue = String(skillState.teacherCheckStatus || skillState.teacherCheckState?.[fieldName] || "none").trim();
+      if (teacherValue === "◎" || teacherValue === "ok") return "◎";
+      if (teacherValue === "△" || teacherValue === "ng") return "△";
+      return "none";
+    },
+    sanitizeVocabularyStudyState: (rawStudy) => {
+      if (!rawStudy || typeof rawStudy !== "object") return null;
+      const entries = Array.isArray(rawStudy.entries) ? rawStudy.entries : [];
+      return { ...rawStudy, entries: entries.map((entry) => ({ ...entry })) };
+    },
+    createVocabularyStudyState: (entries = []) => ({
+      targetWordCount: 1000,
+      entries,
+      progressMap: Object.fromEntries(entries.map((entry) => [String(entry.id || entry.word || ""), entry])),
+      session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+      gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+    }),
+    getVocabularyPastHistoryStatus: (skillState, fieldName = "pronunciation") => {
+      if (!skillState || typeof skillState !== "object") return "—";
+      const raw = String(skillState.lastSelfResult || "").trim();
+      if (raw === "ok") return "○";
+      if (raw === "ng") return "△";
+      const setting = skillState.teacherCheckState?.[fieldName] || skillState.teacherCheckStatus || "";
+      const teacher = String(setting || "").trim();
+      if (teacher === "ok" || teacher === "◎") return "○";
+      if (teacher === "ng" || teacher === "△") return "△";
+      return "—";
+    }
+  };
+  vm.runInNewContext(historyScript, historySandbox, { filename: "mobile-history-regression.js" });
+
+  const normalized = vm.runInContext("normalizeVocabularyWordRecord(state.vocabularyStudy.entries[0], 0)", historySandbox);
+  assert.strictEqual(normalized.pronunciation.lastSelfResult, "ok", "normalizeVocabularyWordRecord must preserve the pronunciation self-result");
+  assert.strictEqual(normalized.meaningState.lastSelfResult, "ok", "normalizeVocabularyWordRecord must preserve the meaning self-result");
+
+  const mergedStudy = vm.runInContext("mergeVocabularyStudyStateByLatest({ targetWordCount: 1000, entries: [state.vocabularyStudy.entries[0]] }, { targetWordCount: 1000, entries: [state.vocabularyStudy.entries[1]] })", historySandbox);
+  assert.strictEqual(mergedStudy.entries.length, 2, "mergeVocabularyStudyStateByLatest should keep both entries");
+  assert.strictEqual(mergedStudy.entries[0].pronunciation.lastSelfResult, "ok", "merged study entries must retain pronunciation self-results");
+  assert.strictEqual(mergedStudy.entries[0].meaningState.lastSelfResult, "ok", "merged study entries must retain meaning self-results");
+
+  const pastHistoryEntries = vm.runInContext("getVocabularyPastHistoryEntries()", historySandbox);
+  assert.strictEqual(Array.isArray(pastHistoryEntries) && pastHistoryEntries.length, 2, "past-history should include both completed words");
+  assert.strictEqual(pastHistoryEntries[0].pronunciationStatus, "○", "past-history pronunciation should retain the self-judgment");
+  assert.strictEqual(pastHistoryEntries[0].meaningStatus, "○", "past-history meaning should retain the self-judgment");
+
+  const teacherCandidates = vm.runInContext("getVocabularyTeacherCheckCandidates()", historySandbox);
+  assert.strictEqual(Array.isArray(teacherCandidates) && teacherCandidates.length, 2, "teacher-check candidate count should match the two self-completed words");
+
   console.log("mobile vocabulary completion state checks passed");
 })().catch((error) => {
   console.error(error);
