@@ -4192,6 +4192,7 @@
       timerDeadlineAt: null,
       timerIntervalId: null,
       completedWordCount: 0,
+      completedWordIds: [],
       historyFinalized: false,
       currentWordKey: null,
       currentWordCompleted: false
@@ -4350,10 +4351,20 @@
     return score;
   }
 
+  function getVocabularySampleCompletedWordIds(sample = state.vocabularySample) {
+    if (!sample || typeof sample !== "object") return [];
+    const rawIds = Array.isArray(sample.completedWordIds) ? sample.completedWordIds : [];
+    return rawIds.map((wordId) => String(wordId || "").trim()).filter(Boolean);
+  }
+
   function getVocabularySampleCompletedWordCount(sample = state.vocabularySample) {
     if (!sample || typeof sample !== "object") return 0;
     const count = Number(sample.completedWordCount);
-    return Number.isFinite(count) ? Math.max(0, count) : 0;
+    const trackedCount = getVocabularySampleCompletedWordIds(sample).length;
+    if (Number.isFinite(count)) {
+      return Math.max(0, Math.max(count, trackedCount));
+    }
+    return Math.max(0, trackedCount);
   }
 
   function finalizeVocabularySampleHistorySession(completedReason = "completed") {
@@ -5651,10 +5662,18 @@
     const nextPronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
     const nextMeaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
     if (nextPronunciationDecision && nextMeaningDecision) {
-      if (!sample.currentWordCompleted || sample.currentWordKey !== itemKey) {
+      const completedWordIds = getVocabularySampleCompletedWordIds(sample);
+      const wordAlreadyCompleted = completedWordIds.includes(itemKey);
+      if (!wordAlreadyCompleted) {
+        sample.completedWordIds = [...completedWordIds, itemKey];
         sample.currentWordCompleted = true;
         sample.currentWordKey = itemKey;
-        sample.completedWordCount = getVocabularySampleCompletedWordCount(sample) + 1;
+        sample.currentWordId = itemKey;
+        sample.completedWordCount = sample.completedWordIds.length;
+        updateVocabularyStudyEntryAfterJudgment(item, "pronunciation", sample.pronunciationChoice);
+        updateVocabularyStudyEntryAfterJudgment(item, "meaning", sample.meaningChoice);
+        recordVocabularySampleHistoryJudgment(item, "pronunciation", sample.pronunciationChoice);
+        recordVocabularySampleHistoryJudgment(item, "meaning", sample.meaningChoice);
         advanceVocabularyNormalProgress();
       }
       const changedWordId = String(item.id || item.word || "").trim();
