@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/25 23:32", note: "モバイル版のみ: Vocabulary 同期を state 全体の更新時刻比較ではなく、単語ごとの最新判定時刻で merge するよう修正。apple / banana の別単語を同時学習しても互いに捨てず、同一単語の新しい判定だけが残るようにし、異なる UID のデータは merge しない。PC版・語順・和訳・UI は変更せず、バージョン表示と cache token も同じ実JST 23:32 に更新。" },
     { version: "2026/08/25 22:30", note: "モバイル版のみ: Vocabulary 学習中に、ローカル完了が Firebase の古い snapshot で巻き戻される不具合を修正。handleVocabularySyncRemoteSnapshot と handleVocabularyTodayHistorySyncRemoteSnapshot で、空・古い・同一 UID の stale remote を無視し、ローカルの完了済み語彙と今日履歴を保持するよう保護。PC版・語順・和訳・UI は変更せず、バージョン表示と cache token も同じ実JST 22:30 に更新。" },
     { version: "2026/08/25 19:56", note: "モバイル版のみ: Vocabulary の self-result を normalize / merge の両経路で保持し、発音・意味の判定が消えないよう修正。今日の履歴・過去の履歴・学習中語数・Speaking の○語・先生チェック候補が同じ canonical state から増減するよう整備し、PC版・語順・和訳・ポイント計算・Firestore 形式は変更せず、バージョン表示と cache token も同じ実JST 19:56 に更新。" },
     { version: "2026/08/25 16:39", note: "モバイル版のみ: Speaking 単語練習を『2判定が揃った時点で1語確定』に整理し、1個目の判定は pending のみとして保持し、2個目の判定で完了イベントを1回だけ発火するよう修正。○○ のときだけ correct chime を再生し、○△ / △○ / △△ でも completedWordCount / 今日履歴 / 次語進行が重複なく更新されることを確認。PC版・語順・和訳・ポイント計算・Firestore形式は変更せず、バージョン表示と cache token も同じ実JST 16:39 に更新。" },

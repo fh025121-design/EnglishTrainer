@@ -1055,9 +1055,11 @@ function buildSandbox() {
     updatedAtMs: 3000
   });
 
+  const sameUidStudyWordIds = Array.from(sameUidDifferentWordSandbox.state.vocabularyStudy.entries.map((entry) => String(entry.id).trim())).sort();
+  const sameUidHistoryKeys = Array.from(Object.keys(sameUidDifferentWordSandbox.state.vocabularyTodayHistoryMap["2026-08-25"] || {}));
   assert.strictEqual(sameUidDifferentWordSandbox.state.vocabularyStudy.entries.length, 2, "same-uid sync must keep apple and banana after both completions");
-  assert.deepStrictEqual(sameUidDifferentWordSandbox.state.vocabularyStudy.entries.map((entry) => String(entry.id).trim()).sort(), ["apple", "banana"], "same-uid sync must retain both words");
-  assert.strictEqual(Object.keys(sameUidDifferentWordSandbox.state.vocabularyTodayHistoryMap["2026-08-25"] || {}).length, 2, "same-uid history sync must keep both apple and banana today-history entries");
+  assert.deepStrictEqual(sameUidStudyWordIds, ["apple", "banana"], "same-uid sync must retain both words");
+  assert.strictEqual(sameUidHistoryKeys.length, 2, "same-uid history sync must keep both apple and banana today-history entries");
 
   const sameWordTimestampSandbox = {
     console,
@@ -1072,7 +1074,11 @@ function buildSandbox() {
     Intl,
     URLSearchParams,
     state: { vocabularyStudy: null },
-    getVocabularyRealWordBank: () => [{ id: "apple", word: "apple", partOfSpeech: "名詞", meaning: "りんご", level: "5" }]
+    getVocabularyRealWordBank: () => [{ id: "apple", word: "apple", partOfSpeech: "名詞", meaning: "りんご", level: "5" }],
+    getVocabularySyncEntryLatestUpdatedAt: (targetValue) => {
+      const numericValue = Number(targetValue);
+      return Number.isFinite(numericValue) ? Math.max(0, numericValue) : 0;
+    }
   };
 
   vm.runInNewContext(wordMergeScript, sameWordTimestampSandbox, { filename: "mobile-sameword-fieldtimestamp-regression.js" });
