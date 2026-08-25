@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/25 10:23", note: "モバイル版のみ: Speaking 単語練習の終了・中断時に、完了語数が 1 語以上のときだけ和訳トレと同じ共通ポイント獲得画面を表示し、0 語完了時は既存の戻り先へそのまま進むよう修正。ポイント計算・保存・集計・Firestore同期・語順トレ・PC版は変更せず、表示経路のみを共通化。バージョン表示と cache token も同じ実JST 10:23 に更新。" },
     { version: "2026/08/25 01:49", note: "PC版のみ: app.js の起動時構文エラーを最小修正し、同一スコープ内の二重宣言を解消して正常起動パスを回復。ホーム画面の既存表示・各学習ボタン・履歴・ポイント回帰は本修正では確認のみで、起動停止の最上流要因だけを止めた。バージョン表示と cache token も同じ実JST 01:49 に更新。" },
     { version: "2026/08/25 01:08", note: "モバイル版のみ: Speaking の単語練習履歴が category=\"単語練習\" で保存される一方、集計判定が Vocabulary 前提だったため、日別ポイント集計と獲得総計に新規 Speaking 単語練習が落ちていた。判定と正規化を両方で対応し、learningHistory から再集計される vocabulary 集計に新規履歴が含まれるよう最小修正。バージョン表示と cache token も同じ実JST 01:08 に更新。" },
     { version: "2026/08/24 23:22", note: "モバイル版のみ: 今日の履歴キャッシュを Auth UID 単位に統一し、親→子／子→親切替や F5 後に前ユーザーのキャッシュを再利用しないよう修正。保存path・保存形式・Firestore Rules・Vocabulary同期・ポイント処理は変更せず、今日の学習サマリのキャッシュと再読込順序だけを共通化。バージョン表示と cache token も同じ実JST 23:22 に更新。" },
