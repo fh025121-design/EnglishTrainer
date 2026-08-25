@@ -3307,6 +3307,46 @@
     const meaningTeacherCheckValue = String(entry?.meaningTeacherCheck || entry?.meaningState?.teacherCheckStatus || entry?.teacherCheckState?.meaning || "none").trim() || "none";
     const pronunciationTeacherCheckUpdatedAt = Number(entry?.pronunciationTeacherCheckUpdatedAt || pronunciation.teacherCheckUpdatedAt || pronunciation.teacherCheckState?.pronunciationUpdatedAt || entry?.lastJudgedAt || pronunciation.lastJudgedAt || 0) || 0;
     const meaningTeacherCheckUpdatedAt = Number(entry?.meaningTeacherCheckUpdatedAt || meaning.teacherCheckUpdatedAt || meaning.teacherCheckState?.meaningUpdatedAt || entry?.lastJudgedAt || meaning.lastJudgedAt || 0) || 0;
+    const normalizedPronunciation = createVocabularySkillState({
+      currentState: pronunciation.currentState || "unlearned",
+      level: Number(pronunciation.level || 0),
+      nextReviewAt: pronunciation.nextReviewAt || null,
+      lastJudgedAt: pronunciation.lastJudgedAt || null,
+      lastJudgedBy: pronunciation.lastJudgedBy || "self",
+      lastSelfResult: pronunciation.lastSelfResult || entry?.lastSelfResult || null,
+      lastSelfJudgedAt: pronunciation.lastSelfJudgedAt || entry?.lastSelfJudgedAt || null,
+      teacherCheckStatus: pronunciationTeacherCheckValue,
+      teacherCheckState: createVocabularyTeacherCheckState({
+        pronunciation: pronunciationTeacherCheckValue,
+        meaning: meaningTeacherCheckValue
+      }),
+      teacherCheckUpdatedAt: Number(pronunciation.teacherCheckUpdatedAt || pronunciationTeacherCheckUpdatedAt || 0) || null,
+      ...pronunciation,
+      teacherCheckState: createVocabularyTeacherCheckState(pronunciation.teacherCheckState || {
+        pronunciation: pronunciationTeacherCheckValue,
+        meaning: meaningTeacherCheckValue
+      })
+    });
+    const normalizedMeaningState = createVocabularySkillState({
+      currentState: meaning.currentState || "unlearned",
+      level: Number(meaning.level || 0),
+      nextReviewAt: meaning.nextReviewAt || null,
+      lastJudgedAt: meaning.lastJudgedAt || null,
+      lastJudgedBy: meaning.lastJudgedBy || "self",
+      lastSelfResult: meaning.lastSelfResult || entry?.lastSelfResult || null,
+      lastSelfJudgedAt: meaning.lastSelfJudgedAt || entry?.lastSelfJudgedAt || null,
+      teacherCheckStatus: meaningTeacherCheckValue,
+      teacherCheckState: createVocabularyTeacherCheckState({
+        pronunciation: pronunciationTeacherCheckValue,
+        meaning: meaningTeacherCheckValue
+      }),
+      teacherCheckUpdatedAt: Number(meaning.teacherCheckUpdatedAt || meaningTeacherCheckUpdatedAt || 0) || null,
+      ...meaning,
+      teacherCheckState: createVocabularyTeacherCheckState(meaning.teacherCheckState || {
+        pronunciation: pronunciationTeacherCheckValue,
+        meaning: meaningTeacherCheckValue
+      })
+    });
     return {
       id: wordId,
       word,
@@ -3322,46 +3362,12 @@
       meaningTeacherCheck: meaningTeacherCheckValue,
       pronunciationTeacherCheckUpdatedAt,
       meaningTeacherCheckUpdatedAt,
-      pronunciation: createVocabularySkillState({
-        currentState: pronunciation.currentState || "unlearned",
-        level: Number(pronunciation.level || 0),
-        nextReviewAt: pronunciation.nextReviewAt || null,
-        lastJudgedAt: pronunciation.lastJudgedAt || null,
-        lastJudgedBy: pronunciation.lastJudgedBy || "self",
-        teacherCheckStatus: pronunciationTeacherCheckValue,
-        teacherCheckState: createVocabularyTeacherCheckState({
-          pronunciation: pronunciationTeacherCheckValue,
-          meaning: meaningTeacherCheckValue
-        }),
-        teacherCheckUpdatedAt: Number(pronunciation.teacherCheckUpdatedAt || pronunciationTeacherCheckUpdatedAt || 0) || null,
-        ...pronunciation,
-        teacherCheckState: createVocabularyTeacherCheckState(pronunciation.teacherCheckState || {
-          pronunciation: pronunciationTeacherCheckValue,
-          meaning: meaningTeacherCheckValue
-        })
-      }),
-      meaningState: createVocabularySkillState({
-        currentState: meaning.currentState || "unlearned",
-        level: Number(meaning.level || 0),
-        nextReviewAt: meaning.nextReviewAt || null,
-        lastJudgedAt: meaning.lastJudgedAt || null,
-        lastJudgedBy: meaning.lastJudgedBy || "self",
-        teacherCheckStatus: meaningTeacherCheckValue,
-        teacherCheckState: createVocabularyTeacherCheckState({
-          pronunciation: pronunciationTeacherCheckValue,
-          meaning: meaningTeacherCheckValue
-        }),
-        teacherCheckUpdatedAt: Number(meaning.teacherCheckUpdatedAt || meaningTeacherCheckUpdatedAt || 0) || null,
-        ...meaning,
-        teacherCheckState: createVocabularyTeacherCheckState(meaning.teacherCheckState || {
-          pronunciation: pronunciationTeacherCheckValue,
-          meaning: meaningTeacherCheckValue
-        })
-      }),
+      pronunciation: normalizedPronunciation,
+      meaningState: normalizedMeaningState,
       lastJudgedAt: entry?.lastJudgedAt || null,
       lastJudgedBy: entry?.lastJudgedBy || "self",
-      lastSelfResult: entry?.lastSelfResult || null,
-      lastSelfJudgedAt: entry?.lastSelfJudgedAt || null,
+      lastSelfResult: entry?.lastSelfResult || normalizedPronunciation.lastSelfResult || normalizedMeaningState.lastSelfResult || null,
+      lastSelfJudgedAt: entry?.lastSelfJudgedAt || normalizedPronunciation.lastSelfJudgedAt || normalizedMeaningState.lastSelfJudgedAt || null,
       lastHumanConfirmedAt: entry?.lastHumanConfirmedAt || null,
       sessionFailedAt: entry?.sessionFailedAt || null,
       sessionRetryAfterQuestionCount: Number(entry?.sessionRetryAfterQuestionCount || 0),
@@ -8290,6 +8296,8 @@
       const meaningStatus = String(meaningStatusSource?.meaningTeacherCheck || meaningStatusSource?.meaningState?.teacherCheckStatus || meaningStatusSource?.teacherCheckState?.meaning || "none").trim() || "none";
       const pronTimestamp = Math.max(leftPronUpdated, rightPronUpdated);
       const meaningTimestamp = Math.max(leftMeaningUpdated, rightMeaningUpdated);
+      const winningPronunciationSource = rightPronUpdated >= leftPronUpdated ? incomingEntry?.pronunciation || {} : baseEntry?.pronunciation || {};
+      const winningMeaningSource = rightMeaningUpdated >= leftMeaningUpdated ? incomingEntry?.meaningState || {} : baseEntry?.meaningState || {};
 
       mergedEntry.pronunciationTeacherCheck = pronStatus;
       mergedEntry.meaningTeacherCheck = meaningStatus;
@@ -8297,6 +8305,9 @@
       mergedEntry.meaningTeacherCheckUpdatedAt = meaningTimestamp;
       mergedEntry.pronunciation = createVocabularySkillState({
         ...mergedEntry.pronunciation,
+        ...winningPronunciationSource,
+        lastSelfResult: winningPronunciationSource.lastSelfResult || mergedEntry.pronunciation?.lastSelfResult || null,
+        lastSelfJudgedAt: winningPronunciationSource.lastSelfJudgedAt || mergedEntry.pronunciation?.lastSelfJudgedAt || null,
         teacherCheckStatus: pronStatus,
         teacherCheckState: createVocabularyTeacherCheckState({
           pronunciation: pronStatus,
@@ -8308,6 +8319,9 @@
       });
       mergedEntry.meaningState = createVocabularySkillState({
         ...mergedEntry.meaningState,
+        ...winningMeaningSource,
+        lastSelfResult: winningMeaningSource.lastSelfResult || mergedEntry.meaningState?.lastSelfResult || null,
+        lastSelfJudgedAt: winningMeaningSource.lastSelfJudgedAt || mergedEntry.meaningState?.lastSelfJudgedAt || null,
         teacherCheckStatus: meaningStatus,
         teacherCheckState: createVocabularyTeacherCheckState({
           pronunciation: pronStatus,
@@ -8319,6 +8333,8 @@
       });
       mergedEntry.lastJudgedAt = winnerEntry.lastJudgedAt || mergedEntry.lastJudgedAt || null;
       mergedEntry.lastJudgedBy = winnerEntry.lastJudgedBy || mergedEntry.lastJudgedBy || "self";
+      mergedEntry.lastSelfResult = mergedEntry.pronunciation?.lastSelfResult || mergedEntry.meaningState?.lastSelfResult || winnerEntry.lastSelfResult || null;
+      mergedEntry.lastSelfJudgedAt = mergedEntry.pronunciation?.lastSelfJudgedAt || mergedEntry.meaningState?.lastSelfJudgedAt || winnerEntry.lastSelfJudgedAt || null;
 
       mergedById.set(wordId, mergedEntry);
     });
