@@ -421,7 +421,147 @@ function buildSandbox() {
   const teacherCandidates = vm.runInContext("getVocabularyTeacherCheckCandidates()", historySandbox);
   assert.strictEqual(Array.isArray(teacherCandidates) && teacherCandidates.length, 2, "teacher-check candidate count should match the two self-completed words");
 
-  console.log("mobile vocabulary completion state checks passed");
+  const staleSandbox = {
+    console,
+    Date,
+    Math,
+    Number,
+    String,
+    Object,
+    Array,
+    Set,
+    Map,
+    Intl,
+    URLSearchParams,
+    state: {
+      vocabularyStudy: {
+        targetWordCount: 1000,
+        entries: Array.from({ length: 10 }, (_, index) => ({
+          id: `w${index + 1}`,
+          word: `word${index + 1}`,
+          partOfSpeech: "名詞",
+          meaning: `意味${index + 1}`,
+          pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: Date.now(), teacherCheckState: { pronunciation: "none", meaning: "none" } },
+          meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: Date.now(), teacherCheckState: { pronunciation: "none", meaning: "none" } },
+          lastJudgedAt: Date.now(),
+          lastLearnedAt: Date.now()
+        })),
+        progressMap: {},
+        session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+        gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+      },
+      vocabularyTodayHistoryMap: {
+        "2026-08-25": Object.fromEntries(Array.from({ length: 10 }, (_, index) => [`w${index + 1}|名詞`, {
+          word: `word${index + 1}`,
+          partOfSpeech: "名詞",
+          grade: "5",
+          pronunciation: "○",
+          meaning: "○",
+          lastJudgedAt: Date.now()
+        }]))
+      },
+      currentScreen: "vocabularySampleScreen"
+    },
+    window: {
+      localStorage: {
+        getItem() { return null; },
+        setItem() {},
+        removeItem() {}
+      },
+      addEventListener() {},
+      location: { search: "" }
+    },
+    getCurrentMobileFirebaseUser: () => ({ uid: "uid-1" }),
+    getMobileVocabularySyncUid: () => "uid-1",
+    getVocabularyRealWordBank: () => Array.from({ length: 10 }, (_, index) => ({
+      id: `w${index + 1}`,
+      word: `word${index + 1}`,
+      partOfSpeech: "名詞",
+      meaning: `意味${index + 1}`,
+      level: "5"
+    })),
+    getMobileVocabularyStorageKey: () => "mobile-vocabulary-state-uid-1",
+    getMobileVocabularyTodayHistoryStorageKey: () => "mobile-vocabulary-today-history-uid-1",
+    normalizeVocabularyTodayHistoryMap: (rawMap) => (rawMap && typeof rawMap === "object" ? rawMap : {}),
+    sanitizeVocabularyStudyState: (rawStudy) => rawStudy && typeof rawStudy === "object" ? { ...rawStudy, entries: Array.isArray(rawStudy.entries) ? rawStudy.entries.map((entry) => ({ ...entry })) : [] } : null,
+    mergeVocabularyStudyStateWithCurrentBank: (studyState) => studyState,
+    getVocabularyStudyLearnedCount: (studyState) => {
+      const entries = Array.isArray(studyState?.entries) ? studyState.entries : [];
+      return entries.filter((entry) => Number(entry?.pronunciation?.level || 0) > 0 && Number(entry?.meaningState?.level || 0) > 0).length;
+    },
+    getVocabularyTodayHistoryCount: (historyMap, dateKey = "2026-08-25") => Object.keys((historyMap && historyMap[dateKey]) || {}).length,
+    getVocabularyHistoryTodayKey: () => "2026-08-25",
+    saveState: () => {},
+    saveMobileVocabularyStateForSync: () => {},
+    saveVocabularyTodayHistoryMap: () => {},
+    renderVocabularyPastHistoryScreen: () => {},
+    renderVocabularyTodayHistoryScreen: () => {},
+    loadMobileVocabularyStateForSync: () => null,
+    clearMobileVocabularyStateForSync: () => {},
+    shouldThrottleMobileVocabularySyncError: () => false,
+    applyMobileVocabularySyncRateLimit: () => {},
+    isMobileVocabularySyncRateLimited: () => false,
+    isMobileVocabularySyncDuplicateBurst: () => false,
+    isSameUidSyncCanonical: () => true,
+    shouldSuppressVocabularyTodayHistoryRenderAfterReload: () => false,
+    getVocabularyTodayHistoryMostRecentUpdatedAt: (historyMap, dateKey = "2026-08-25") => Object.values((historyMap && historyMap[dateKey]) || {}).reduce((maxValue, entry) => Math.max(maxValue, Number(entry?.lastJudgedAt || 0)), 0),
+    getVocabularyStudyMostRecentUpdatedAt: (studyState) => {
+      const entries = Array.isArray(studyState?.entries) ? studyState.entries : [];
+      return entries.reduce((maxValue, entry) => Math.max(maxValue, Number(entry?.lastJudgedAt || 0), Number(entry?.lastLearnedAt || 0)), 0);
+    }
+  };
+
+  const staleScript = [
+    source.match(/function createVocabularyTeacherCheckState\(overrides = \{\}\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function createVocabularySkillState\(overrides = \{\}\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyGradeValue\(entry\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function normalizeVocabularyWordRecord\(entry, index = 0\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function createVocabularyStudyState\(wordEntries = \[\]\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function createEmptyVocabularyStudyState\(\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function sanitizeVocabularyStudyState\(rawStudy\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyTeacherCheckUpdatedAtForField\(entry, fieldName\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyEntryLatestUpdatedAt\(entry\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function mergeVocabularyTodayHistoryMapByLatest\(baseMap, incomingMap\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyStudyLearnedCount\(studyState\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyStudyMostRecentUpdatedAt\(studyState\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyTodayHistoryCount\(historyMap, dateKey = getVocabularyHistoryTodayKey\(\)\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyTodayHistoryMostRecentUpdatedAt\(historyMap, dateKey = getVocabularyHistoryTodayKey\(\)\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function normalizeVocabularyTodayHistoryMap\(rawMap\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function mergeVocabularyStudyStateByLatest\(baseStudyState, incomingStudyState\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function handleVocabularySyncRemoteSnapshot\(snapshot\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function handleVocabularyTodayHistorySyncRemoteSnapshot\(snapshot\) \{[\s\S]*?\n  \}/)?.[0]
+  ].filter(Boolean).join("\n");
+
+  vm.runInNewContext(staleScript, staleSandbox, { filename: "mobile-stale-snapshot-regression.js" });
+
+  staleSandbox.handleVocabularySyncRemoteSnapshot({
+    ok: true,
+    exists: true,
+    uid: "uid-1",
+    studyState: {
+      targetWordCount: 1000,
+      entries: [],
+      progressMap: {},
+      session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+      gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+    },
+    updatedAtMs: Date.now() - 60_000
+  });
+
+  staleSandbox.handleVocabularyTodayHistorySyncRemoteSnapshot({
+    ok: true,
+    exists: true,
+    uid: "uid-1",
+    historyMap: {
+      "2026-08-25": {}
+    },
+    updatedAtMs: Date.now() - 60_000
+  });
+
+  assert.strictEqual(staleSandbox.state.vocabularyStudy.entries.length, 10, "stale Firebase study snapshot must not wipe local completed words");
+  assert.strictEqual(Object.keys(staleSandbox.state.vocabularyTodayHistoryMap["2026-08-25"] || {}).length, 10, "stale Firebase history snapshot must not wipe local today-history entries");
+
+  console.log("mobile vocabulary stale-firebase rollback regression checks passed");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

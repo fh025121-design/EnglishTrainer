@@ -4716,7 +4716,10 @@
     const remoteUpdatedAtMs = Number(snapshot?.updatedAtMs || 0) || 0;
 
     if (isSameUidSyncCanonical(uid)) {
-      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(incomingMap) || {};
+      const shouldKeepLocalForStaleRemote = Boolean(remoteUpdatedAtMs > 0 && localCompareUpdatedAtMs > remoteUpdatedAtMs)
+        || (!Object.keys(incomingMap || {}).length && Object.keys(localBaseline || {}).length && (!remoteUpdatedAtMs || remoteUpdatedAtMs <= localCompareUpdatedAtMs));
+      const canonicalHistoryMap = shouldKeepLocalForStaleRemote ? localBaseline : incomingMap;
+      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(canonicalHistoryMap) || {};
       if (!Object.keys(state.vocabularyTodayHistoryMap || {}).length && Object.keys(localBaseline || {}).length) {
         state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
       }
@@ -8370,7 +8373,11 @@
     const remoteUpdatedAtMs = Number(snapshot?.updatedAtMs || 0) || 0;
 
     if (isSameUidSyncCanonical(uid)) {
-      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(incomingStudy, getVocabularyRealWordBank());
+      const shouldKeepLocalForStaleRemote = Boolean(remoteUpdatedAtMs > 0 && localCompareUpdatedAtMs > remoteUpdatedAtMs)
+        || (!incomingStudy || !Array.isArray(incomingStudy.entries) || !incomingStudy.entries.length)
+        && sanitizeVocabularyStudyState(localBaseline) && localCompareUpdatedAtMs >= remoteUpdatedAtMs;
+      const canonicalStudy = shouldKeepLocalForStaleRemote ? localBaseline : incomingStudy;
+      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(canonicalStudy, getVocabularyRealWordBank());
       if (!sanitizeVocabularyStudyState(state.vocabularyStudy) && sanitizeVocabularyStudyState(localBaseline)) {
         state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(localBaseline, getVocabularyRealWordBank());
       }
