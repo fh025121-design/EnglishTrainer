@@ -36,6 +36,7 @@ function buildSandbox() {
     vocabularyTodayHistoryMap: {}
   };
   let continueVocabularySampleCallCount = 0;
+  let chimeCallCount = 0;
 
   const sandbox = {
     console,
@@ -121,7 +122,10 @@ function buildSandbox() {
       const rawIds = Array.isArray(sample.completedWordIds) ? sample.completedWordIds : [];
       return rawIds.map((wordId) => String(wordId || "").trim()).filter(Boolean);
     },
-    playVocabularySampleCorrectChime: () => true,
+    playVocabularySampleCorrectChime: () => {
+      chimeCallCount += 1;
+      return true;
+    },
     renderVocabularySampleScreen: () => {},
     showScreen: () => {},
     saveState: () => {},
@@ -155,14 +159,18 @@ function buildSandbox() {
   return {
     sandbox,
     getContinueCount: () => continueVocabularySampleCallCount,
+    getChimeCount: () => chimeCallCount,
     resetContinueCount: () => {
       continueVocabularySampleCallCount = 0;
+    },
+    resetChimeCount: () => {
+      chimeCallCount = 0;
     }
   };
 }
 
 (async () => {
-  const { sandbox, getContinueCount, resetContinueCount } = buildSandbox();
+  const { sandbox, getContinueCount, getChimeCount, resetContinueCount, resetChimeCount } = buildSandbox();
 
   const words = [
     { id: "apple", word: "apple", partOfSpeech: "名詞", meaning: "りんご" },
@@ -172,13 +180,17 @@ function buildSandbox() {
   sandbox.state.vocabularyStudy = sandbox.buildVocabularyRealStudyState();
   sandbox.state.vocabularyTodayHistoryMap = {};
   resetContinueCount();
+  resetChimeCount();
 
   await sandbox.handleVocabularySampleChoice("pronunciation", "ok");
-  await sandbox.handleVocabularySampleChoice("meaning", "ng");
+  assert.strictEqual(sandbox.state.vocabularySample.completedWordCount, 0, "the first judgment must not finalize a word");
+  assert.strictEqual(getChimeCount(), 0, "the first judgment must not trigger a correct chime");
 
+  await sandbox.handleVocabularySampleChoice("meaning", "ok");
   assert.strictEqual(sandbox.state.vocabularySample.completedWordCount, 1, "apple completion should count once");
   assert.strictEqual(sandbox.state.vocabularySample.completedWordIds.includes("apple|名詞"), true, "apple should be counted once in completedWordIds");
   assert.strictEqual(sandbox.getVocabularyTodayHistoryEntries().length, 1, "apple completion should show exactly one today-history row");
+  assert.strictEqual(getChimeCount(), 1, "only the final ○○ pair should trigger the correct chime");
   assert.strictEqual(getContinueCount(), 1, "apple completion should trigger exactly one continue call");
 
   await sandbox.handleVocabularySampleChoice("pronunciation", "ng");

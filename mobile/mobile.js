@@ -5623,10 +5623,6 @@
     sample.currentWordKey = itemKey;
     sample.currentWordId = itemKey;
 
-    if (value === "ok") {
-      playVocabularySampleCorrectChime();
-    }
-
     if (kind === "pronunciation") {
       sample.pronunciationChoice = value;
       sample.pronunciationChecked = true;
@@ -5664,6 +5660,10 @@
     sample.currentWordKey = itemKey;
     sample.currentWordId = itemKey;
     sample.completedWordCount = sample.completedWordIds.length;
+
+    if (sample.pronunciationChoice === "ok" && sample.meaningChoice === "ok") {
+      playVocabularySampleCorrectChime();
+    }
 
     updateVocabularyStudyEntryAfterJudgment(item, "pronunciation", sample.pronunciationChoice);
     updateVocabularyStudyEntryAfterJudgment(item, "meaning", sample.meaningChoice);
