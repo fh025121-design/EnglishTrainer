@@ -112,6 +112,13 @@ const sandbox = {
   flushMobileVocabularySync: async () => {},
   flushMobileVocabularyTodayHistorySync: async () => {},
   advanceVocabularyNormalProgress: () => {},
+  getVocabularyTodayHistoryEntries: () => {
+    const todayKey = sandbox.getVocabularyHistoryTodayKey();
+    const todayMap = sharedState.vocabularyTodayHistoryMap[todayKey] || {};
+    return Object.values(todayMap)
+      .filter((entry) => entry && String(entry.word || "").trim())
+      .filter((entry) => String(entry.pronunciation || "—").trim() !== "—" && String(entry.meaning || "—").trim() !== "—");
+  },
   continueVocabularySample: () => {
     const sample = sharedState.vocabularySample;
     if (!sample) return;
@@ -154,6 +161,39 @@ assert.strictEqual(sharedState.vocabularySample.completedWordCount, 1, "first co
 assert.strictEqual(sharedState.vocabularySample.completedWordIds.includes(itemKey), true, "same word should be recorded once");
 assert.ok(sharedState.vocabularyStudy.entries.some((entry) => String(entry.id) === "w1"), "study state should include the completed word");
 assert.strictEqual(Boolean(sharedState.vocabularyTodayHistoryMap["2026-08-25"]?.[itemKey]), true, "today history should store the completed word result");
+
+sharedState.vocabularySample = {
+  words: [{ id: "w2", word: "banana", partOfSpeech: "名詞", meaning: "バナナ" }],
+  index: 0,
+  pronunciationChecked: false,
+  pronunciationChoice: null,
+  meaningChecked: false,
+  meaningChoice: null,
+  meaningRevealed: false,
+  finished: false,
+  sessionExpired: false,
+  timerDeadlineAt: null,
+  timerIntervalId: null,
+  completedWordCount: 0,
+  completedWordIds: [],
+  historyFinalized: false,
+  currentWordKey: null,
+  currentWordCompleted: false,
+  currentWordId: null
+};
+
+sharedState.vocabularyTodayHistoryMap = {};
+const partialEntryKey = `${String(sharedState.vocabularySample.words[0].id || sharedState.vocabularySample.words[0].word || "").trim()}|${String(sharedState.vocabularySample.words[0].partOfSpeech || "").trim()}`;
+sandbox.handleVocabularySampleChoice("pronunciation", "ok");
+assert.strictEqual(sharedState.vocabularyTodayHistoryMap["2026-08-25"]?.[partialEntryKey]?.pronunciation, "○", "pronunciation-only decision should persist the same entry with meaning still pending");
+assert.strictEqual(sharedState.vocabularyTodayHistoryMap["2026-08-25"]?.[partialEntryKey]?.meaning, "—", "pending meaning should remain as a placeholder");
+assert.strictEqual(sharedState.vocabularySample.completedWordCount, 0, "pronunciation-only judgment should not complete the word");
+assert.strictEqual(sandbox.getVocabularyTodayHistoryEntries().length, 0, "partial history rows should not appear in the visible today history list");
+
+sandbox.handleVocabularySampleChoice("meaning", "ok");
+assert.strictEqual(sharedState.vocabularyTodayHistoryMap["2026-08-25"]?.[partialEntryKey]?.meaning, "○", "meaning decision should update the same entry rather than creating a second key");
+assert.strictEqual(sharedState.vocabularySample.completedWordCount, 1, "completed word should count exactly once after both judgments");
+assert.strictEqual(sandbox.getVocabularyTodayHistoryEntries().length, 1, "visible today history should show the completed word after both judgments");
 
 sharedState.vocabularySample.currentWordCompleted = false;
 sandbox.handleVocabularySampleChoice("pronunciation", "ok");

@@ -5633,26 +5633,14 @@
       sample.meaningChoice = sample.meaningChoice === "ok" || sample.meaningChoice === "ng" ? sample.meaningChoice : null;
       sample.meaningChecked = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
       sample.meaningRevealed = sample.meaningChecked;
-      const nextPronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
-      const nextMeaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
-      if (!nextPronunciationDecision || !nextMeaningDecision) {
-        renderVocabularySampleScreen();
-        showScreen("vocabularySampleScreen");
-        return;
-      }
+      recordVocabularySampleHistoryJudgment(item, "pronunciation", sample.pronunciationChoice);
     }
 
     if (kind === "meaning") {
       sample.meaningChoice = value;
       sample.meaningChecked = true;
       sample.meaningRevealed = true;
-      const nextPronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
-      const nextMeaningDecision = sample.meaningChoice === "ok" || sample.meaningChoice === "ng";
-      if (!nextPronunciationDecision || !nextMeaningDecision) {
-        renderVocabularySampleScreen();
-        showScreen("vocabularySampleScreen");
-        return;
-      }
+      recordVocabularySampleHistoryJudgment(item, "meaning", sample.meaningChoice);
     }
 
     const nextPronunciationDecision = sample.pronunciationChoice === "ok" || sample.pronunciationChoice === "ng";
@@ -5677,8 +5665,6 @@
     sample.currentWordId = itemKey;
     sample.completedWordCount = sample.completedWordIds.length;
 
-    recordVocabularySampleHistoryJudgment(item, "pronunciation", sample.pronunciationChoice);
-    recordVocabularySampleHistoryJudgment(item, "meaning", sample.meaningChoice);
     updateVocabularyStudyEntryAfterJudgment(item, "pronunciation", sample.pronunciationChoice);
     updateVocabularyStudyEntryAfterJudgment(item, "meaning", sample.meaningChoice);
     advanceVocabularyNormalProgress();
