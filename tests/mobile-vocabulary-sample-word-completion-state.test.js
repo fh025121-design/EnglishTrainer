@@ -654,9 +654,469 @@ function buildSandbox() {
   );
   assert.strictEqual(staleHistoryResult.saved, false, "stale local history write must be skipped");
 
-  console.log("mobile vocabulary stale local save regression checks passed");
+  const wordMergeScript = [
+    source.match(/function createVocabularyTeacherCheckState\(overrides = \{\}\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function createVocabularySkillState\(overrides = \{\}\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyGradeValue\(entry\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function normalizeVocabularyWordRecord\(entry, index = 0\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function createVocabularyStudyState\(wordEntries = \[\]\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function createEmptyVocabularyStudyState\(\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function sanitizeVocabularyStudyState\(rawStudy\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyTeacherCheckUpdatedAtForField\(entry, fieldName\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyEntryLatestUpdatedAt\(entry\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function mergeVocabularyTodayHistoryMapByLatest\(baseMap, incomingMap\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyStudyLearnedCount\(studyState\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyStudyMostRecentUpdatedAt\(studyState\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyTodayHistoryCount\(historyMap, dateKey = getVocabularyHistoryTodayKey\(\)\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function getVocabularyTodayHistoryMostRecentUpdatedAt\(historyMap, dateKey = getVocabularyHistoryTodayKey\(\)\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function normalizeVocabularyTodayHistoryMap\(rawMap\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function mergeVocabularyStudyStateByLatest\(baseStudyState, incomingStudyState\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function handleVocabularySyncRemoteSnapshot\(snapshot\) \{[\s\S]*?\n  \}/)?.[0],
+    source.match(/function handleVocabularyTodayHistorySyncRemoteSnapshot\(snapshot\) \{[\s\S]*?\n  \}/)?.[0]
+  ].filter(Boolean).join("\n");
 
+  const wordMergeSandbox = {
+    console,
+    Date,
+    Math,
+    Number,
+    String,
+    Object,
+    Array,
+    Set,
+    Map,
+    Intl,
+    URLSearchParams,
+    state: {
+      vocabularyStudy: {
+        targetWordCount: 1000,
+        entries: [
+          {
+            id: "apple",
+            word: "apple",
+            partOfSpeech: "名詞",
+            pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 1000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+            meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 1000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+            lastJudgedAt: 1000,
+            createdAt: 1000
+          }
+        ],
+        progressMap: {},
+        session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+        gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+      },
+      vocabularyTodayHistoryMap: {
+        "2026-08-25": {
+          "apple|名詞": { word: "apple", partOfSpeech: "名詞", pronunciation: "○", meaning: "○", lastJudgedAt: 1000 }
+        }
+      },
+      currentScreen: "vocabularySampleScreen"
+    },
+    window: {
+      localStorage: {
+        getItem() { return null; },
+        setItem() {},
+        removeItem() {}
+      },
+      addEventListener() {},
+      location: { search: "" }
+    },
+    getCurrentMobileFirebaseUser: () => ({ uid: "uid-1" }),
+    getMobileVocabularySyncUid: () => "uid-1",
+    getVocabularyRealWordBank: () => [
+      { id: "apple", word: "apple", partOfSpeech: "名詞", meaning: "りんご", level: "5" },
+      { id: "banana", word: "banana", partOfSpeech: "名詞", meaning: "バナナ", level: "5" }
+    ],
+    getMobileVocabularyTodayHistoryStorageKey: () => "mobile-vocabulary-today-history-uid-1",
+    getVocabularySyncEntryLatestUpdatedAt: (targetValue) => {
+      const numericValue = Number(targetValue);
+      return Number.isFinite(numericValue) ? Math.max(0, numericValue) : 0;
+    },
+    sanitizeVocabularyStudyState: (rawStudy) => rawStudy && typeof rawStudy === "object" ? { ...rawStudy, entries: Array.isArray(rawStudy.entries) ? rawStudy.entries.map((entry) => ({ ...entry })) : [] } : null,
+    mergeVocabularyStudyStateWithCurrentBank: (studyState) => studyState,
+    getVocabularyStudyLearnedCount: (studyState) => {
+      const entries = Array.isArray(studyState?.entries) ? studyState.entries : [];
+      return entries.filter((entry) => Number(entry?.pronunciation?.level || 0) > 0 && Number(entry?.meaningState?.level || 0) > 0).length;
+    },
+    getVocabularyTodayHistoryCount: (historyMap, dateKey = "2026-08-25") => Object.keys((historyMap && historyMap[dateKey]) || {}).length,
+    getVocabularyHistoryTodayKey: () => "2026-08-25",
+    saveState: () => {},
+    saveMobileVocabularyStateForSync: () => {},
+    saveVocabularyTodayHistoryMap: () => {},
+    renderVocabularyPastHistoryScreen: () => {},
+    renderVocabularyTodayHistoryScreen: () => {},
+    loadMobileVocabularyStateForSync: () => null,
+    clearMobileVocabularyStateForSync: () => {},
+    shouldThrottleMobileVocabularySyncError: () => false,
+    applyMobileVocabularySyncRateLimit: () => {},
+    isMobileVocabularySyncRateLimited: () => false,
+    isMobileVocabularySyncDuplicateBurst: () => false,
+    isSameUidSyncCanonical: () => true,
+    shouldSuppressVocabularyTodayHistoryRenderAfterReload: () => false,
+    getVocabularyTodayHistoryMostRecentUpdatedAt: (historyMap, dateKey = "2026-08-25") => Object.values((historyMap && historyMap[dateKey]) || {}).reduce((maxValue, entry) => Math.max(maxValue, Number(entry?.lastJudgedAt || 0)), 0),
+    getVocabularyStudyMostRecentUpdatedAt: (studyState) => {
+      const entries = Array.isArray(studyState?.entries) ? studyState.entries : [];
+      return entries.reduce((maxValue, entry) => Math.max(maxValue, Number(entry?.lastJudgedAt || 0), Number(entry?.createdAt || 0)), 0);
+    }
+  };
+
+  vm.runInNewContext(wordMergeScript, wordMergeSandbox, { filename: "mobile-word-merge-regression.js" });
+
+  wordMergeSandbox.handleVocabularySyncRemoteSnapshot({
+    ok: true,
+    exists: true,
+    uid: "uid-1",
+    studyState: {
+      targetWordCount: 1000,
+      entries: [{
+        id: "banana",
+        word: "banana",
+        partOfSpeech: "名詞",
+        pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 5000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+        meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 5000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+        lastJudgedAt: 5000,
+        createdAt: 5000
+      }],
+      progressMap: {},
+      session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+      gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+    },
+    updatedAtMs: 9000
+  });
+
+  assert.strictEqual(wordMergeSandbox.state.vocabularyStudy.entries.length, 2, "same-uid sync must retain both different words");
+  assert.ok(wordMergeSandbox.state.vocabularyStudy.entries.some((entry) => String(entry.id).trim() === "apple"), "apple should stay after same-uid sync");
+  assert.ok(wordMergeSandbox.state.vocabularyStudy.entries.some((entry) => String(entry.id).trim() === "banana"), "banana should be added after same-uid sync");
+
+  wordMergeSandbox.handleVocabularyTodayHistorySyncRemoteSnapshot({
+    ok: true,
+    exists: true,
+    uid: "uid-1",
+    historyMap: {
+      "2026-08-25": {
+        "banana|名詞": { word: "banana", partOfSpeech: "名詞", pronunciation: "○", meaning: "○", lastJudgedAt: 5000 }
+      }
+    },
+    updatedAtMs: 9000
+  });
+
+  assert.strictEqual(Object.keys(wordMergeSandbox.state.vocabularyTodayHistoryMap["2026-08-25"] || {}).length, 2, "same-uid history sync must retain both different word keys");
+  assert.ok(Object.prototype.hasOwnProperty.call(wordMergeSandbox.state.vocabularyTodayHistoryMap["2026-08-25"] || {}, "apple|名詞"), "apple history should remain");
+  assert.ok(Object.prototype.hasOwnProperty.call(wordMergeSandbox.state.vocabularyTodayHistoryMap["2026-08-25"] || {}, "banana|名詞"), "banana history should be added");
+
+  const newerAppleState = {
+    targetWordCount: 1000,
+    entries: [{
+      id: "apple",
+      word: "apple",
+      partOfSpeech: "名詞",
+      pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 1000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+      meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 1000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+      lastJudgedAt: 1000,
+      createdAt: 1000
+    }],
+    progressMap: {},
+    session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+    gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+  };
+
+  const newerAppleRemote = {
+    targetWordCount: 1000,
+    entries: [{
+      id: "apple",
+      word: "apple",
+      partOfSpeech: "名詞",
+      pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 2000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+      meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 2000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+      lastJudgedAt: 2000,
+      createdAt: 2000
+    }],
+    progressMap: {},
+    session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+    gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+  };
+
+  const mergedApple = wordMergeSandbox.mergeVocabularyStudyStateByLatest(newerAppleState, newerAppleRemote);
+  assert.strictEqual(mergedApple.entries.length, 1, "same-word merge should keep one entry");
+  assert.strictEqual(Number(mergedApple.entries[0].lastJudgedAt || 0), 2000, "newer same-word judgment should win");
+
+  const uidGuardSandbox = {
+    console,
+    Date,
+    Math,
+    Number,
+    String,
+    Object,
+    Array,
+    Set,
+    Map,
+    Intl,
+    URLSearchParams,
+    state: {
+      vocabularyStudy: {
+        targetWordCount: 1000,
+        entries: [{
+          id: "apple",
+          word: "apple",
+          partOfSpeech: "名詞",
+          pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 1000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+          meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 1000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+          lastJudgedAt: 1000,
+          createdAt: 1000
+        }],
+        progressMap: {},
+        session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+        gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+      },
+      vocabularyTodayHistoryMap: {
+        "2026-08-25": {
+          "apple|名詞": { word: "apple", partOfSpeech: "名詞", pronunciation: "○", meaning: "○", lastJudgedAt: 1000 }
+        }
+      },
+      currentScreen: "vocabularySampleScreen"
+    },
+    window: {
+      localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+      addEventListener() {},
+      location: { search: "" }
+    },
+    getCurrentMobileFirebaseUser: () => ({ uid: "uid-parent" }),
+    getMobileVocabularySyncUid: () => "uid-parent",
+    getVocabularyRealWordBank: () => [{ id: "apple", word: "apple", partOfSpeech: "名詞", meaning: "りんご", level: "5" }, { id: "banana", word: "banana", partOfSpeech: "名詞", meaning: "バナナ", level: "5" }],
+    getMobileVocabularyTodayHistoryStorageKey: () => "mobile-vocabulary-today-history-uid-parent",
+    sanitizeVocabularyStudyState: (rawStudy) => rawStudy && typeof rawStudy === "object" ? { ...rawStudy, entries: Array.isArray(rawStudy.entries) ? rawStudy.entries.map((entry) => ({ ...entry })) : [] } : null,
+    mergeVocabularyStudyStateWithCurrentBank: (studyState) => studyState,
+    getVocabularyStudyLearnedCount: (studyState) => (Array.isArray(studyState?.entries) ? studyState.entries.length : 0),
+    getVocabularyHistoryTodayKey: () => "2026-08-25",
+    getVocabularyTodayHistoryCount: (historyMap, dateKey = "2026-08-25") => Object.keys((historyMap && historyMap[dateKey]) || {}).length,
+    saveState: () => {},
+    saveMobileVocabularyStateForSync: () => {},
+    saveVocabularyTodayHistoryMap: () => {},
+    renderVocabularyPastHistoryScreen: () => {},
+    renderVocabularyTodayHistoryScreen: () => {},
+    loadMobileVocabularyStateForSync: () => null,
+    clearMobileVocabularyStateForSync: () => {},
+    shouldThrottleMobileVocabularySyncError: () => false,
+    applyMobileVocabularySyncRateLimit: () => {},
+    isMobileVocabularySyncRateLimited: () => false,
+    isMobileVocabularySyncDuplicateBurst: () => false,
+    isSameUidSyncCanonical: (uid) => String(uid || "").trim() === "uid-parent",
+    shouldSuppressVocabularyTodayHistoryRenderAfterReload: () => false,
+    getVocabularyTodayHistoryMostRecentUpdatedAt: (historyMap, dateKey = "2026-08-25") => Object.values((historyMap && historyMap[dateKey]) || {}).reduce((maxValue, entry) => Math.max(maxValue, Number(entry?.lastJudgedAt || 0)), 0),
+    getVocabularyStudyMostRecentUpdatedAt: (studyState) => {
+      const entries = Array.isArray(studyState?.entries) ? studyState.entries : [];
+      return entries.reduce((maxValue, entry) => Math.max(maxValue, Number(entry?.lastJudgedAt || 0), Number(entry?.createdAt || 0)), 0);
+    }
+  };
+
+  vm.runInNewContext(wordMergeScript, uidGuardSandbox, { filename: "mobile-uid-guard-regression.js" });
+
+  uidGuardSandbox.handleVocabularySyncRemoteSnapshot({
+    ok: true,
+    exists: true,
+    uid: "uid-son",
+    studyState: {
+      targetWordCount: 1000,
+      entries: [{
+        id: "banana",
+        word: "banana",
+        partOfSpeech: "名詞",
+        pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 3000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+        meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 3000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+        lastJudgedAt: 3000,
+        createdAt: 3000
+      }],
+      progressMap: {},
+      session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+      gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+    },
+    updatedAtMs: 4000
+  });
+
+  uidGuardSandbox.handleVocabularyTodayHistorySyncRemoteSnapshot({
+    ok: true,
+    exists: true,
+    uid: "uid-son",
+    historyMap: {
+      "2026-08-25": {
+        "banana|名詞": { word: "banana", partOfSpeech: "名詞", pronunciation: "○", meaning: "○", lastJudgedAt: 3000 }
+      }
+    },
+    updatedAtMs: 4000
+  });
+
+  assert.strictEqual(uidGuardSandbox.state.vocabularyStudy.entries.length, 1, "different UID study data must not be merged into parent state");
+  assert.strictEqual(Object.keys(uidGuardSandbox.state.vocabularyTodayHistoryMap["2026-08-25"] || {}).length, 1, "different UID history data must not be merged into parent history");
+  assert.strictEqual(uidGuardSandbox.state.vocabularyStudy.entries[0].id, "apple", "parent study keeps only its own apple entry");
+  assert.ok(Object.prototype.hasOwnProperty.call(uidGuardSandbox.state.vocabularyTodayHistoryMap["2026-08-25"] || {}, "apple|名詞"), "parent history keeps only its own apple history");
+
+  const sameUidDifferentWordSandbox = {
+    console,
+    Date,
+    Math,
+    Number,
+    String,
+    Object,
+    Array,
+    Set,
+    Map,
+    Intl,
+    URLSearchParams,
+    state: {
+      vocabularyStudy: {
+        targetWordCount: 1000,
+        entries: [{
+          id: "apple",
+          word: "apple",
+          partOfSpeech: "名詞",
+          pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 1000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+          meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 1000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+          lastJudgedAt: 1000,
+          createdAt: 1000
+        }],
+        progressMap: {},
+        session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+        gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+      },
+      vocabularyTodayHistoryMap: {
+        "2026-08-25": {
+          "apple|名詞": { word: "apple", partOfSpeech: "名詞", pronunciation: "○", meaning: "○", lastJudgedAt: 1000 }
+        }
+      },
+      currentScreen: "vocabularySampleScreen"
+    },
+    window: {
+      localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+      addEventListener() {},
+      location: { search: "" }
+    },
+    getCurrentMobileFirebaseUser: () => ({ uid: "uid-1" }),
+    getMobileVocabularySyncUid: () => "uid-1",
+    getVocabularyRealWordBank: () => [{ id: "apple", word: "apple", partOfSpeech: "名詞", meaning: "りんご", level: "5" }, { id: "banana", word: "banana", partOfSpeech: "名詞", meaning: "バナナ", level: "5" }],
+    getMobileVocabularyTodayHistoryStorageKey: () => "mobile-vocabulary-today-history-uid-1",
+    sanitizeVocabularyStudyState: (rawStudy) => rawStudy && typeof rawStudy === "object" ? { ...rawStudy, entries: Array.isArray(rawStudy.entries) ? rawStudy.entries.map((entry) => ({ ...entry })) : [] } : null,
+    mergeVocabularyStudyStateWithCurrentBank: (studyState) => studyState,
+    getVocabularyStudyLearnedCount: (studyState) => (Array.isArray(studyState?.entries) ? studyState.entries.length : 0),
+    getVocabularyHistoryTodayKey: () => "2026-08-25",
+    getVocabularyTodayHistoryCount: (historyMap, dateKey = "2026-08-25") => Object.keys((historyMap && historyMap[dateKey]) || {}).length,
+    saveState: () => {},
+    saveMobileVocabularyStateForSync: () => {},
+    saveVocabularyTodayHistoryMap: () => {},
+    renderVocabularyPastHistoryScreen: () => {},
+    renderVocabularyTodayHistoryScreen: () => {},
+    loadMobileVocabularyStateForSync: () => null,
+    clearMobileVocabularyStateForSync: () => {},
+    shouldThrottleMobileVocabularySyncError: () => false,
+    applyMobileVocabularySyncRateLimit: () => {},
+    isMobileVocabularySyncRateLimited: () => false,
+    isMobileVocabularySyncDuplicateBurst: () => false,
+    isSameUidSyncCanonical: () => true,
+    shouldSuppressVocabularyTodayHistoryRenderAfterReload: () => false,
+    getVocabularyTodayHistoryMostRecentUpdatedAt: (historyMap, dateKey = "2026-08-25") => Object.values((historyMap && historyMap[dateKey]) || {}).reduce((maxValue, entry) => Math.max(maxValue, Number(entry?.lastJudgedAt || 0)), 0),
+    getVocabularyStudyMostRecentUpdatedAt: (studyState) => {
+      const entries = Array.isArray(studyState?.entries) ? studyState.entries : [];
+      return entries.reduce((maxValue, entry) => Math.max(maxValue, Number(entry?.lastJudgedAt || 0), Number(entry?.createdAt || 0)), 0);
+    }
+  };
+
+  vm.runInNewContext(wordMergeScript, sameUidDifferentWordSandbox, { filename: "mobile-sameuid-differentword-regression.js" });
+
+  sameUidDifferentWordSandbox.handleVocabularySyncRemoteSnapshot({
+    ok: true,
+    exists: true,
+    uid: "uid-1",
+    studyState: {
+      targetWordCount: 1000,
+      entries: [{
+        id: "banana",
+        word: "banana",
+        partOfSpeech: "名詞",
+        pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 2000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+        meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 2000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+        lastJudgedAt: 2000,
+        createdAt: 2000
+      }],
+      progressMap: {},
+      session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+      gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+    },
+    updatedAtMs: 3000
+  });
+
+  sameUidDifferentWordSandbox.handleVocabularyTodayHistorySyncRemoteSnapshot({
+    ok: true,
+    exists: true,
+    uid: "uid-1",
+    historyMap: {
+      "2026-08-25": {
+        "banana|名詞": { word: "banana", partOfSpeech: "名詞", pronunciation: "○", meaning: "○", lastJudgedAt: 2000 }
+      }
+    },
+    updatedAtMs: 3000
+  });
+
+  assert.strictEqual(sameUidDifferentWordSandbox.state.vocabularyStudy.entries.length, 2, "same-uid sync must keep apple and banana after both completions");
+  assert.deepStrictEqual(sameUidDifferentWordSandbox.state.vocabularyStudy.entries.map((entry) => String(entry.id).trim()).sort(), ["apple", "banana"], "same-uid sync must retain both words");
+  assert.strictEqual(Object.keys(sameUidDifferentWordSandbox.state.vocabularyTodayHistoryMap["2026-08-25"] || {}).length, 2, "same-uid history sync must keep both apple and banana today-history entries");
+
+  const sameWordTimestampSandbox = {
+    console,
+    Date,
+    Math,
+    Number,
+    String,
+    Object,
+    Array,
+    Set,
+    Map,
+    Intl,
+    URLSearchParams,
+    state: { vocabularyStudy: null },
+    getVocabularyRealWordBank: () => [{ id: "apple", word: "apple", partOfSpeech: "名詞", meaning: "りんご", level: "5" }]
+  };
+
+  vm.runInNewContext(wordMergeScript, sameWordTimestampSandbox, { filename: "mobile-sameword-fieldtimestamp-regression.js" });
+
+  const localSameWordState = {
+    targetWordCount: 1000,
+    entries: [{
+      id: "apple",
+      word: "apple",
+      partOfSpeech: "名詞",
+      pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 1000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+      meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 1000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+      lastJudgedAt: 1000,
+      createdAt: 1000
+    }],
+    progressMap: {},
+    session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+    gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+  };
+
+  const remoteSameWordState = {
+    targetWordCount: 1000,
+    entries: [{
+      id: "apple",
+      word: "apple",
+      partOfSpeech: "名詞",
+      pronunciation: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 2000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+      meaningState: { level: 1, lastSelfResult: "ok", lastSelfJudgedAt: 3000, teacherCheckState: { pronunciation: "none", meaning: "none" } },
+      lastJudgedAt: 3000,
+      createdAt: 3000
+    }],
+    progressMap: {},
+    session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+    gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+  };
+
+  const mergedSameWord = sameWordTimestampSandbox.mergeVocabularyStudyStateByLatest(localSameWordState, remoteSameWordState);
+  assert.strictEqual(mergedSameWord.entries.length, 1, "same-word merge must keep a single apple entry");
+  assert.strictEqual(Number(mergedSameWord.entries[0].pronunciation.lastSelfJudgedAt || 0), 2000, "newer pronunciation judgment must win");
+  assert.strictEqual(Number(mergedSameWord.entries[0].meaningState.lastSelfJudgedAt || 0), 3000, "newer meaning judgment must win");
+
+  console.log("mobile vocabulary stale local save regression checks passed");
   console.log("mobile vocabulary stale-firebase rollback regression checks passed");
+  console.log("No.175 same-uid merge, same-word newer-field merge, and different-uid isolation checks passed");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

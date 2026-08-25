@@ -4708,6 +4708,12 @@
       return;
     }
     const uid = String(snapshot.uid || getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!snapshot?.ok || !snapshot.exists || !uid) {
+      return;
+    }
+    if (!isSameUidSyncCanonical(uid)) {
+      return;
+    }
     const incomingMap = normalizeVocabularyTodayHistoryMap(snapshot.historyMap || {});
     const localBaseline = normalizeVocabularyTodayHistoryMap(state.vocabularyTodayHistoryMap) || {};
     const localTodayHistoryCount = getVocabularyTodayHistoryCount(localBaseline, getVocabularyHistoryTodayKey());
@@ -4715,44 +4721,15 @@
     const localCompareUpdatedAtMs = getVocabularyTodayHistoryMostRecentUpdatedAt(localBaseline, getVocabularyHistoryTodayKey());
     const remoteUpdatedAtMs = Number(snapshot?.updatedAtMs || 0) || 0;
 
-    if (isSameUidSyncCanonical(uid)) {
-      const shouldKeepLocalForStaleRemote = Boolean(remoteUpdatedAtMs > 0 && localCompareUpdatedAtMs > remoteUpdatedAtMs)
-        || (!Object.keys(incomingMap || {}).length && Object.keys(localBaseline || {}).length && (!remoteUpdatedAtMs || remoteUpdatedAtMs <= localCompareUpdatedAtMs));
-      const canonicalHistoryMap = shouldKeepLocalForStaleRemote ? localBaseline : incomingMap;
-      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(canonicalHistoryMap) || {};
-      if (!Object.keys(state.vocabularyTodayHistoryMap || {}).length && Object.keys(localBaseline || {}).length) {
-        state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
-      }
-      saveVocabularyTodayHistoryMap();
-      if (uid) {
-        const mobileSyncKey = getMobileVocabularyTodayHistoryStorageKey(uid);
-        window.localStorage.setItem(mobileSyncKey, JSON.stringify(state.vocabularyTodayHistoryMap));
-      }
-      if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
-        renderVocabularyTodayHistoryScreen();
-      }
-      return;
+    const shouldKeepLocalForStaleRemote = Boolean(remoteUpdatedAtMs > 0 && localCompareUpdatedAtMs > remoteUpdatedAtMs)
+      || (!Object.keys(incomingMap || {}).length && Object.keys(localBaseline || {}).length && (!remoteUpdatedAtMs || remoteUpdatedAtMs <= localCompareUpdatedAtMs));
+    const mergedHistoryMap = shouldKeepLocalForStaleRemote
+      ? normalizeVocabularyTodayHistoryMap(localBaseline) || {}
+      : mergeVocabularyTodayHistoryMapByLatest(localBaseline, incomingMap);
+    state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(mergedHistoryMap) || {};
+    if (!Object.keys(state.vocabularyTodayHistoryMap || {}).length && Object.keys(localBaseline || {}).length) {
+      state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
     }
-
-    if (!incomingMap || !Object.keys(incomingMap).length) {
-      const hasLocalEntries = Object.keys(localBaseline || {}).length > 0;
-      if (hasLocalEntries) {
-        state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(localBaseline) || {};
-        if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
-          renderVocabularyTodayHistoryScreen();
-        }
-        return;
-      }
-      state.vocabularyTodayHistoryMap = {};
-      if (!shouldSuppressVocabularyTodayHistoryRenderAfterReload() && state.currentScreen === "vocabularyTodayHistoryScreen") {
-        renderVocabularyTodayHistoryScreen();
-      }
-      return;
-    }
-    const currentLocal = localBaseline;
-    const mergedMap = mergeVocabularyTodayHistoryMapByLatest(currentLocal, incomingMap);
-    const mergedTodayHistoryCount = getVocabularyTodayHistoryCount(mergedMap, getVocabularyHistoryTodayKey());
-    state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(mergedMap) || {};
     saveVocabularyTodayHistoryMap();
     if (uid) {
       const mobileSyncKey = getMobileVocabularyTodayHistoryStorageKey(uid);
@@ -4813,12 +4790,9 @@
       : {};
     if (remoteResult?.ok && remoteResult.exists) {
       const sameUidCanonical = isSameUidSyncCanonical(uid);
-      const usesCanonicalRemote = sameUidCanonical || Object.keys(remoteHistoryMap).length > 0;
       const mergedHistoryMap = sameUidCanonical
-        ? normalizeVocabularyTodayHistoryMap(remoteHistoryMap) || {}
-        : usesCanonicalRemote
-          ? mergeVocabularyTodayHistoryMapByLatest(localBaseline, remoteHistoryMap)
-          : localBaseline;
+        ? mergeVocabularyTodayHistoryMapByLatest(localBaseline, remoteHistoryMap)
+        : mergeVocabularyTodayHistoryMapByLatest(localBaseline, remoteHistoryMap);
       state.vocabularyTodayHistoryMap = normalizeVocabularyTodayHistoryMap(mergedHistoryMap) || {};
       saveVocabularyTodayHistoryMap();
       vocabularyTodayHistorySyncCurrentUid = uid;
@@ -8375,7 +8349,10 @@
       return;
     }
     const uid = String(snapshot?.uid || getMobileVocabularySyncUid() || "").trim();
-    if (!snapshot?.ok || !snapshot.exists) {
+    if (!snapshot?.ok || !snapshot.exists || !uid) {
+      return;
+    }
+    if (!isSameUidSyncCanonical(uid)) {
       return;
     }
     const incomingStudy = sanitizeVocabularyStudyState(snapshot.studyState || null);
@@ -8385,52 +8362,18 @@
     const localCompareUpdatedAtMs = getVocabularyStudyMostRecentUpdatedAt(localBaseline);
     const remoteUpdatedAtMs = Number(snapshot?.updatedAtMs || 0) || 0;
 
-    if (isSameUidSyncCanonical(uid)) {
-      const shouldKeepLocalForStaleRemote = Boolean(remoteUpdatedAtMs > 0 && localCompareUpdatedAtMs > remoteUpdatedAtMs)
-        || (!incomingStudy || !Array.isArray(incomingStudy.entries) || !incomingStudy.entries.length)
-        && sanitizeVocabularyStudyState(localBaseline) && localCompareUpdatedAtMs >= remoteUpdatedAtMs;
-      const canonicalStudy = shouldKeepLocalForStaleRemote ? localBaseline : incomingStudy;
-      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(canonicalStudy, getVocabularyRealWordBank());
-      if (!sanitizeVocabularyStudyState(state.vocabularyStudy) && sanitizeVocabularyStudyState(localBaseline)) {
-        state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(localBaseline, getVocabularyRealWordBank());
-      }
-      saveState();
-      saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
-      if (state.currentScreen === "vocabularyPastHistoryScreen") {
-        renderVocabularyPastHistoryScreen();
-      }
-      return;
+    const shouldKeepLocalForStaleRemote = Boolean(remoteUpdatedAtMs > 0 && localCompareUpdatedAtMs > remoteUpdatedAtMs)
+      || (!incomingStudy || !Array.isArray(incomingStudy.entries) || !incomingStudy.entries.length)
+      && sanitizeVocabularyStudyState(localBaseline) && localCompareUpdatedAtMs >= remoteUpdatedAtMs;
+    const mergedStudy = shouldKeepLocalForStaleRemote
+      ? localBaseline
+      : mergeVocabularyStudyStateByLatest(localBaseline, incomingStudy || localBaseline);
+    state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(mergedStudy, getVocabularyRealWordBank());
+    if (!sanitizeVocabularyStudyState(state.vocabularyStudy) && sanitizeVocabularyStudyState(localBaseline)) {
+      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(localBaseline, getVocabularyRealWordBank());
     }
-
-    if (!incomingStudy || !Array.isArray(incomingStudy.entries) || !incomingStudy.entries.length) {
-      if (sanitizeVocabularyStudyState(localBaseline)) {
-        state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(localBaseline, getVocabularyRealWordBank());
-        saveState();
-        saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
-      }
-      if (state.currentScreen === "vocabularyPastHistoryScreen") {
-        renderVocabularyPastHistoryScreen();
-      }
-      return;
-    }
-    const currentLocal = localBaseline;
-    const mergedStudy = mergeVocabularyStudyStateByLatest(currentLocal, incomingStudy);
-    const mergedLearnedCount = getVocabularyStudyLearnedCount(mergedStudy);
-    if (sanitizeVocabularyStudyState(mergedStudy)) {
-      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(mergedStudy, getVocabularyRealWordBank());
-      saveState();
-      saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
-    }
-    const pending = loadMobileVocabularyStateForSync(uid);
-    if (!pending) {
-      clearMobileVocabularyStateForSync(uid);
-      return;
-    }
-    if (JSON.stringify(sanitizeVocabularyStudyState(pending)) === JSON.stringify(sanitizeVocabularyStudyState(mergedStudy))) {
-      clearMobileVocabularyStateForSync(uid);
-      return;
-    }
-    saveMobileVocabularyStateForSync(mergedStudy, uid);
+    saveState();
+    saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
     if (state.currentScreen === "vocabularyPastHistoryScreen") {
       renderVocabularyPastHistoryScreen();
     }
@@ -8483,10 +8426,7 @@
 
     if (remoteResult?.ok && remoteResult.exists) {
       const remoteStudyState = sanitizeVocabularyStudyState(remoteResult.studyState || null) || createEmptyVocabularyStudyState();
-      const sameUidCanonical = isSameUidSyncCanonical(uid);
-      const mergedStudy = sameUidCanonical
-        ? remoteStudyState
-        : mergeVocabularyStudyStateByLatest(localBaseline, remoteStudyState);
+      const mergedStudy = mergeVocabularyStudyStateByLatest(localBaseline, remoteStudyState);
       state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(mergedStudy, getVocabularyRealWordBank());
       vocabularyStateOwnerUid = uid;
       saveState();
