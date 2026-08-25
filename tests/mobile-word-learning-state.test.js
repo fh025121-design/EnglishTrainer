@@ -1,0 +1,179 @@
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+
+const source = fs.readFileSync(path.join(__dirname, "..", "mobile", "mobile.js"), "utf8");
+
+function makeSandbox() {
+  const store = {};
+  const realBank = [
+    { id: "w1", word: "apple", partOfSpeech: "名詞", meaning: "りんご", level: "5" },
+    { id: "w2", word: "banana", partOfSpeech: "名詞", meaning: "バナナ", level: "5" },
+    { id: "w3", word: "cherry", partOfSpeech: "名詞", meaning: "さくらんぼ", level: "5" }
+  ];
+
+  const createElementStub = () => ({
+    style: {},
+    dataset: {},
+    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+    appendChild() {},
+    setAttribute() {},
+    getAttribute() { return null; },
+    querySelector() { return null; },
+    querySelectorAll() { return []; },
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent() { return true; },
+    cloneNode() { return createElementStub(); },
+    focus() {},
+    blur() {},
+    click() {},
+    innerHTML: "",
+    textContent: "",
+    value: "",
+    checked: false,
+    disabled: false,
+    options: [],
+    selectedIndex: 0,
+    length: 0,
+    children: [],
+    parentNode: null,
+    closest() { return null; },
+    matches() { return false; },
+    contains() { return false; }
+  });
+
+  const elementCache = new Map();
+  const document = {
+    body: { classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } } },
+    getElementById(id) {
+      const key = String(id || "");
+      if (!elementCache.has(key)) {
+        elementCache.set(key, createElementStub());
+      }
+      return elementCache.get(key);
+    },
+    querySelector() { return createElementStub(); },
+    querySelectorAll() { return []; },
+    addEventListener() {},
+    createElement() {
+      return createElementStub();
+    }
+  };
+
+  const windowObj = {
+    localStorage: {
+      getItem(key) { return Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null; },
+      setItem(key, value) { store[key] = String(value); },
+      removeItem(key) { delete store[key]; }
+    },
+    addEventListener() {},
+    removeEventListener() {},
+    location: { search: "", href: "https://example.com/mobile/index.html" },
+    document,
+    MOBILE_VOCABULARY_REAL_WORD_BANK: realBank,
+    ENGLISH_TRAINER_RELEASE_INFO: { releaseHistory: [{ version: "test" }] },
+    navigator: { userAgent: "node" }
+  };
+
+  document.readyState = "loading";
+  windowObj.addEventListener = () => {};
+  document.addEventListener = () => {};
+
+  const sandbox = {
+    console,
+    Date,
+    Math,
+    Number,
+    String,
+    Object,
+    Array,
+    Set,
+    Map,
+    Intl,
+    URLSearchParams,
+    Audio: function () { return { preload() {}, play() { return Promise.resolve(); } }; },
+    window: windowObj,
+    document,
+    state: { wordLearningState: {}, vocabularyStudy: null, vocabularyTodayHistoryMap: {} },
+    getCurrentMobileFirebaseUser: () => ({ uid: "uid-1" }),
+    getVocabularyRealWordBank: () => realBank,
+    buildVocabularyRealStudyState: () => ({
+      targetWordCount: 1000,
+      entries: [],
+      progressMap: {},
+      session: { questionCount: 0, failedWordIds: [], recentFailedWordIds: [] },
+      gradeSummary: { 5: { total: 0, mastered: 0 }, 4: { total: 0, mastered: 0 }, 3: { total: 0, mastered: 0 } }
+    }),
+    saveMobileVocabularyStateForSync: () => null,
+    loadMobileVocabularyStateForSync: () => null,
+    scheduleMobileVocabularySync: () => {},
+    flushMobileVocabularySync: async () => {},
+    flushMobileVocabularyTodayHistorySync: async () => {},
+    renderVocabularyPastHistoryScreen: () => {},
+    showScreen: () => {},
+    saveState: () => {},
+    getMobileVocabularySyncUid: () => "uid-1"
+  };
+
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: "mobile.js" });
+  return { sandbox, store };
+}
+
+(async () => {
+  const { sandbox, store } = makeSandbox();
+
+  assert.ok(typeof sandbox.window.createWordLearningStateEntry === "function", "word learning state entry factory should exist");
+  assert.ok(typeof sandbox.window.normalizeWordLearningStatus === "function", "status normalizer should exist");
+  assert.ok(typeof sandbox.window.getWordLearningStateManagementRows === "function", "management-row helper should exist");
+  assert.ok(typeof sandbox.window.saveWordLearningStateForSync === "function", "local save helper should exist");
+  assert.ok(typeof sandbox.window.mergeWordLearningStateByLatest === "function", "wordId merge helper should exist");
+
+  const empty = sandbox.window.createWordLearningStateEntry("w1");
+  assert.strictEqual(empty.pronunciationStatus, "－", "new entries start unjudged");
+  assert.strictEqual(empty.meaningStatus, "－", "new entries start unjudged");
+  assert.strictEqual(empty.questionCount, 0, "new entries start at zero completions");
+
+  const first = sandbox.window.finalizeWordLearningStateForCompletion("w1", "○", "○");
+  assert.strictEqual(first.pronunciationStatus, "○", "first completion keeps pronunciation status");
+  assert.strictEqual(first.meaningStatus, "○", "first completion keeps meaning status");
+  assert.strictEqual(first.questionCount, 1, "one completion increments questionCount");
+  assert.ok(Number.isFinite(first.lastStudiedAt), "lastStudiedAt should be set");
+
+  const second = sandbox.window.finalizeWordLearningStateForCompletion("w1", "△", "○");
+  assert.strictEqual(second.pronunciationStatus, "△", "later completion uses newer status");
+  assert.strictEqual(second.meaningStatus, "○", "later completion updates meaning status");
+  assert.strictEqual(second.questionCount, 2, "repeated completion increments again");
+
+  const map = sandbox.window.sanitizeWordLearningStateMap({
+    w1: { wordId: "w1", pronunciationStatus: "△", meaningStatus: "○", lastStudiedAt: 10, questionCount: 2 },
+    w2: { wordId: "w2", pronunciationStatus: "－", meaningStatus: "－", lastStudiedAt: null, questionCount: 0 }
+  });
+  assert.strictEqual(map.w1.questionCount, 2, "sanitizer keeps valid completion counts");
+
+  const merged = sandbox.window.mergeWordLearningStateByLatest(
+    { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 10, questionCount: 1 }, w2: { wordId: "w2", pronunciationStatus: "－", meaningStatus: "－", lastStudiedAt: null, questionCount: 0 } },
+    { w1: { wordId: "w1", pronunciationStatus: "△", meaningStatus: "○", lastStudiedAt: 20, questionCount: 2 }, w3: { wordId: "w3", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 30, questionCount: 1 } }
+  );
+  assert.strictEqual(merged.w1.questionCount, 2, "newer same word state wins");
+  assert.strictEqual(merged.w3.questionCount, 1, "new word is added by merge");
+
+  const localKey = sandbox.window.getWordLearningStateStorageKey("uid-1");
+  sandbox.window.saveWordLearningStateForSync({ w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 123, questionCount: 1 } }, "uid-1");
+  const savedRaw = JSON.parse(store[localKey]);
+  assert.strictEqual(savedRaw.w1.questionCount, 1, "saved map persists questionCount");
+
+  const restored = sandbox.window.loadWordLearningStateForSync("uid-1");
+  assert.strictEqual(restored.w1.meaningStatus, "○", "restore keeps meaning state after local load");
+
+  sandbox.window.saveWordLearningStateForSync(sandbox.window.buildWordLearningStateMap(), "uid-1");
+  sandbox.window.finalizeWordLearningStateForCompletion("w1", "○", "○");
+  sandbox.window.finalizeWordLearningStateForCompletion("w2", "○", "△");
+  const rows = sandbox.window.getWordLearningStateManagementRows();
+  assert.strictEqual(rows.length >= 3, true, "management rows should cover all tracked words");
+  assert.strictEqual(rows.some((row) => row.wordId === "w1" && row.questionCount === 1), true, "completed word appears in management rows");
+
+  console.log("mobile word learning state checks passed");
+})();
