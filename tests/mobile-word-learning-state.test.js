@@ -130,6 +130,7 @@ function makeSandbox() {
   assert.ok(typeof sandbox.window.getWordLearningStateManagementRows === "function", "management-row helper should exist");
   assert.ok(typeof sandbox.window.saveWordLearningStateForSync === "function", "local save helper should exist");
   assert.ok(typeof sandbox.window.mergeWordLearningStateByLatest === "function", "wordId merge helper should exist");
+  assert.ok(typeof sandbox.window.buildWordLearningStateAdminSummary === "function", "admin summary helper should exist");
 
   const empty = sandbox.window.createWordLearningStateEntry("w1");
   assert.strictEqual(empty.pronunciationStatus, "－", "new entries start unjudged");
@@ -174,6 +175,16 @@ function makeSandbox() {
   const rows = sandbox.window.getWordLearningStateManagementRows();
   assert.strictEqual(rows.length >= 3, true, "management rows should cover all tracked words");
   assert.strictEqual(rows.some((row) => row.wordId === "w1" && row.questionCount === 1), true, "completed word appears in management rows");
+
+  const adminSummary = sandbox.window.buildWordLearningStateAdminSummary({
+    w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 123456, questionCount: 1 },
+    w2: { wordId: "w2", pronunciationStatus: "△", meaningStatus: "－", lastStudiedAt: 0, questionCount: 0 },
+    w3: { wordId: "w3", pronunciationStatus: "－", meaningStatus: "－", lastStudiedAt: 0, questionCount: 0 }
+  });
+  assert.strictEqual(adminSummary.totalWords >= 3, true, "summary includes target word count");
+  assert.strictEqual(adminSummary.learnedCount, 1, "learned count reflects questionCount > 0");
+  assert.strictEqual(adminSummary.unlearnedCount, 2, "unlearned count counts zero-question words");
+  assert.strictEqual(adminSummary.rows.some((row) => row.wordId === "w1" && row.word === "apple"), true, "admin summary rows map to real vocabulary words");
 
   console.log("mobile word learning state checks passed");
 })();

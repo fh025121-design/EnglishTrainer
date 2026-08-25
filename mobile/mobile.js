@@ -3437,6 +3437,50 @@
     return rows;
   }
 
+  function formatWordLearningStateAdminTime(timestamp) {
+    const safeTimestamp = Number(timestamp) || 0;
+    if (!safeTimestamp) return "未学習";
+    const date = new Date(safeTimestamp);
+    if (Number.isNaN(date.getTime())) return "未学習";
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${month}/${day} ${hours}:${minutes}`;
+  }
+
+  function buildWordLearningStateAdminSummary(map = state.wordLearningState) {
+    const bank = Array.isArray(getVocabularyRealWordBank()) ? getVocabularyRealWordBank() : [];
+    const normalizedMap = sanitizeWordLearningStateMap(map || {});
+    const rows = bank.map((entry) => {
+      const wordId = String(entry?.id || entry?.word || "").trim();
+      const record = normalizedMap[wordId] || createWordLearningStateEntry(wordId, {
+        wordId,
+        pronunciationStatus: "－",
+        meaningStatus: "－",
+        lastStudiedAt: 0,
+        questionCount: 0
+      });
+      const questionCount = Math.max(0, Number(record?.questionCount) || 0);
+      return {
+        wordId,
+        word: String(entry?.word || wordId || "").trim(),
+        pronunciationStatus: normalizeWordLearningStatus(record?.pronunciationStatus, "－"),
+        meaningStatus: normalizeWordLearningStatus(record?.meaningStatus, "－"),
+        lastStudiedAt: Number(record?.lastStudiedAt) || 0,
+        questionCount,
+        isLearned: questionCount > 0
+      };
+    });
+    const learnedCount = rows.filter((row) => row.isLearned).length;
+    return {
+      totalWords: rows.length,
+      learnedCount,
+      unlearnedCount: Math.max(0, rows.length - learnedCount),
+      rows
+    };
+  }
+
   window.createWordLearningStateEntry = createWordLearningStateEntry;
   window.normalizeWordLearningStatus = normalizeWordLearningStatus;
   window.sanitizeWordLearningStateMap = sanitizeWordLearningStateMap;
@@ -3447,6 +3491,8 @@
   window.loadWordLearningStateForSync = loadWordLearningStateForSync;
   window.saveWordLearningStateForSync = saveWordLearningStateForSync;
   window.getWordLearningStateManagementRows = getWordLearningStateManagementRows;
+  window.formatWordLearningStateAdminTime = formatWordLearningStateAdminTime;
+  window.buildWordLearningStateAdminSummary = buildWordLearningStateAdminSummary;
 
   function createVocabularyTeacherCheckState(overrides = {}) {
     return {
@@ -7118,6 +7164,48 @@
       elements.mobileAdminLearningHistoryStatusText.textContent = "";
       elements.mobileAdminLearningHistoryStatusText.classList.add("hidden");
     }
+  }
+
+  function renderWordLearningStateAdminSummary() {
+    if (!elements.mobileAdminLearningHistoryPanel) return;
+    const summary = buildWordLearningStateAdminSummary(state.wordLearningState || {});
+    const rowsMarkup = summary.rows.map((row) => {
+      const lastStudiedText = row.lastStudiedAt ? formatWordLearningStateAdminTime(row.lastStudiedAt) : "未学習";
+      return `
+        <tr>
+          <td>${escapeHtml(row.word || row.wordId)}</td>
+          <td>${escapeHtml(row.pronunciationStatus)}</td>
+          <td>${escapeHtml(row.meaningStatus)}</td>
+          <td>${escapeHtml(lastStudiedText)}</td>
+          <td>${row.questionCount}回</td>
+        </tr>
+      `;
+    }).join("");
+
+    elements.mobileAdminLearningHistoryPanel.innerHTML = `
+      <div class="word-learning-state-admin-view">
+        <div class="word-learning-state-admin-summary">
+          <span>対象 ${summary.totalWords}語</span>
+          <span>学習済み ${summary.learnedCount}語</span>
+          <span>未学習 ${summary.unlearnedCount}語</span>
+        </div>
+        <div class="word-learning-state-admin-table-wrap">
+          <table class="word-learning-state-admin-table">
+            <thead>
+              <tr>
+                <th>単語</th>
+                <th>発音状態</th>
+                <th>意味状態</th>
+                <th>最終学習日時</th>
+                <th>出題回数</th>
+              </tr>
+            </thead>
+            <tbody>${rowsMarkup}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    elements.mobileAdminLearningHistoryPanel.classList.remove("hidden");
   }
 
   function renderMobileAdminLearningHistoryList() {
@@ -14830,6 +14918,7 @@
     elements.mobileUpdateHistoryBackBtn = document.getElementById("mobileUpdateHistoryBackBtn");
     elements.mobileAdminLearningHistoryScreen = document.getElementById("mobileAdminLearningHistoryScreen");
     elements.mobileAdminLearningHistoryBackBtn = document.getElementById("mobileAdminLearningHistoryBackBtn");
+    elements.openWordLearningStateAdminBtn = document.getElementById("openWordLearningStateAdminBtn");
     elements.mobileAdminLearningHistoryPinInput = document.getElementById("mobileAdminLearningHistoryPinInput");
     elements.mobileAdminLearningHistoryUnlockBtn = document.getElementById("mobileAdminLearningHistoryUnlockBtn");
     elements.mobileAdminLearningHistoryStatusText = document.getElementById("mobileAdminLearningHistoryStatusText");
@@ -15168,6 +15257,9 @@
     elements.openMobileAdminFromUpdateBtn.addEventListener("click", renderMobileAdminLearningHistoryScreen);
     elements.mobileUpdateHistoryBackBtn.addEventListener("click", () => showScreen("settingsScreen"));
     elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", renderHome);
+    if (elements.openWordLearningStateAdminBtn) {
+      elements.openWordLearningStateAdminBtn.addEventListener("click", renderWordLearningStateAdminSummary);
+    }
     if (elements.mobileAdminLearningHistoryUnlockBtn) {
       elements.mobileAdminLearningHistoryUnlockBtn.addEventListener("click", unlockMobileAdminLearningHistory);
     }
