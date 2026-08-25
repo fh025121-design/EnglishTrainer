@@ -5670,9 +5670,13 @@
     advanceVocabularyNormalProgress();
 
     const changedWordId = String(item.id || item.word || "").trim();
-    saveState(changedWordId);
-    await flushMobileVocabularySync(changedWordId);
-    await flushMobileVocabularyTodayHistorySync();
+    try {
+      saveState(changedWordId);
+      await flushMobileVocabularySync(changedWordId);
+      await flushMobileVocabularyTodayHistorySync();
+    } catch (_error) {
+      // Keep the UI completion flow independent from history persistence errors.
+    }
     continueVocabularySample();
   }
 

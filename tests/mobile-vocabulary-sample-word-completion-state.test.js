@@ -189,6 +189,30 @@ function buildSandbox() {
   assert.strictEqual(sandbox.getVocabularyTodayHistoryEntries().length, 2, "two completed words should show exactly two today-history rows");
   assert.strictEqual(getContinueCount(), 2, "banana completion should trigger a second continue call");
 
+  const failingSave = buildSandbox();
+  failingSave.sandbox.state.vocabularySample = createSample([
+    { id: "apple", word: "apple", partOfSpeech: "名詞", meaning: "りんご" },
+    { id: "banana", word: "banana", partOfSpeech: "名詞", meaning: "バナナ" }
+  ]);
+  failingSave.sandbox.state.vocabularyStudy = failingSave.sandbox.buildVocabularyRealStudyState();
+  failingSave.sandbox.state.vocabularyTodayHistoryMap = {};
+  failingSave.sandbox.saveState = () => {
+    throw new Error("saveState failed");
+  };
+  failingSave.sandbox.flushMobileVocabularySync = async () => {
+    throw new Error("flushMobileVocabularySync failed");
+  };
+  failingSave.sandbox.flushMobileVocabularyTodayHistorySync = async () => {
+    throw new Error("flushMobileVocabularyTodayHistorySync failed");
+  };
+  failingSave.resetContinueCount();
+
+  await failingSave.sandbox.handleVocabularySampleChoice("pronunciation", "ok");
+  await failingSave.sandbox.handleVocabularySampleChoice("meaning", "ok");
+
+  assert.strictEqual(failingSave.sandbox.state.vocabularySample.index, 1, "save failures must not block the next-word advance");
+  assert.strictEqual(failingSave.getContinueCount(), 1, "completion should still continue despite persistence errors");
+
   console.log("mobile vocabulary completion state checks passed");
 })().catch((error) => {
   console.error(error);
