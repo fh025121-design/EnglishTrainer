@@ -10484,8 +10484,15 @@
   }
 
   function leaveWordOrderTrainingToHome() {
-    if (state.wordOrderTraining) {
+    const training = state.wordOrderTraining;
+    const earnedPoints = training ? Math.max(0, Number(training.sessionEarnedPoints) || 0) : 0;
+    if (training) {
       finalizeWordOrderLearningHistorySession("interrupted");
+      state.wordOrderTraining = null;
+    }
+    if (earnedPoints > 0) {
+      openPointRewardScreen("wordOrder", earnedPoints, { onClose: renderHome });
+      return;
     }
     renderHome();
   }
