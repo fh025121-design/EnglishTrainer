@@ -39,6 +39,18 @@ const checks = [
   {
     name: "logged-in save clears the legacy shared vocabulary snapshot to avoid cross-user leakage",
     ok: /if \(currentUid\) \{[\s\S]*removeItem\(MOBILE_STORAGE_KEY\)[\s\S]*removeItem\(MOBILE_VOCABULARY_TODAY_HISTORY_STORAGE_KEY\)/.test(source)
+  },
+  {
+    name: "F5 without local study waits for Firestore instead of treating missing local state as empty canonical state",
+    ok: /function\s+markMobileVocabularyUserActivity\s*\(/.test(source)
+      && /function\s+isMobileVocabularyBrowserActive\s*\(/.test(source)
+      && /loadMobileVocabularyStateForSync\(currentUid\)[\s\S]*state\.vocabularyStudy\s*=\s*null/.test(source)
+  },
+  {
+    name: "inactive browsers suppress self-triggered stale writes until the first real interaction reactivates them",
+    ok: /function\s+isMobileVocabularySyncWriteAllowed\s*\(/.test(source)
+      && /isMobileVocabularyBrowserActive\(\)[\s\S]*return;/.test(source)
+      && /markMobileVocabularyUserActivity\(\)[\s\S]*initializeMobileVocabularySyncForCurrentUser\(\{\s*force:\s*true\s*\}\)/.test(source)
   }
 ];
 
