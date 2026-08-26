@@ -3304,6 +3304,7 @@
     const perfectPairCount = Math.max(0, Number(source.perfectPairCount || 0) || 0);
     const hasProgress = questionCount > 0;
     const lastStudiedAt = hasProgress ? (Number(source.lastStudiedAt) || Date.now()) : 0;
+    const lastSelfResult = String(source.lastSelfResult || source.lastSelfJudgedResult || source.selfResult || "").trim();
     const derivedPronunciationStatus = normalizeWordLearningStatus(source.pronunciationStatus ?? source.pronunciation ?? source.teacherCheckState?.pronunciation ?? source.pronunciationTeacherCheck ?? "－", "－");
     const derivedMeaningStatus = normalizeWordLearningStatus(source.meaningStatus ?? source.meaning ?? source.teacherCheckState?.meaning ?? source.meaningTeacherCheck ?? "－", "－");
     const derivedStatus = getWordLearningStateStatusFromEntry({ ...source, questionCount, perfectPairCount, pronunciationStatus: derivedPronunciationStatus, meaningStatus: derivedMeaningStatus });
@@ -3312,6 +3313,7 @@
       wordId: normalizedId,
       pronunciationStatus: hasProgress ? derivedPronunciationStatus : "－",
       meaningStatus: hasProgress ? derivedMeaningStatus : "－",
+      lastSelfResult: lastSelfResult || null,
       lastStudiedAt,
       questionCount,
       perfectPairCount,
@@ -3330,6 +3332,7 @@
         wordId: entry.wordId,
         pronunciationStatus: normalizeWordLearningStatus(entry.pronunciationStatus, "－"),
         meaningStatus: normalizeWordLearningStatus(entry.meaningStatus, "－"),
+        lastSelfResult: String(entry.lastSelfResult || "").trim() || null,
         lastStudiedAt: Number(entry.lastStudiedAt) || 0,
         questionCount: Math.max(0, Number(entry.questionCount) || 0),
         perfectPairCount: Math.max(0, Number(entry.perfectPairCount) || 0),
@@ -3352,12 +3355,14 @@
         wordId,
         pronunciationStatus: seedEntry.pronunciationStatus || "－",
         meaningStatus: seedEntry.meaningStatus || "－",
+        lastSelfResult: seedEntry.lastSelfResult || null,
         lastStudiedAt: seedEntry.lastStudiedAt || 0,
         questionCount: Math.max(0, Number(seedEntry.questionCount) || 0)
       }) || {
         wordId,
         pronunciationStatus: "－",
         meaningStatus: "－",
+        lastSelfResult: seedEntry.lastSelfResult || null,
         lastStudiedAt: 0,
         questionCount: 0
       };
@@ -6043,14 +6048,13 @@
   }
 
   function openVocabularyTeacherCheckScreen() {
-    if (!state.teacherCheckSession) {
-      state.teacherCheckSession = {
-        candidates: [],
-        decisions: {},
-        showMeaningIds: [],
-        completedCandidateIds: []
-      };
-    }
+    state.teacherCheckSession = {
+      candidates: [],
+      decisions: {},
+      showMeaningIds: [],
+      completedCandidateIds: [],
+      pageIndex: 0
+    };
     state.teacherCheckSession.candidates = buildVocabularyTeacherCheckCandidates(state.teacherCheckSession);
     state.teacherCheckSession.pageIndex = 0;
     renderVocabularyTeacherCheckScreen();
@@ -6059,6 +6063,10 @@
 
   window.openVocabularyTodayHistoryScreen = openVocabularyTodayHistoryScreen;
   window.renderVocabularyTodayHistoryScreen = renderVocabularyTodayHistoryScreen;
+  window.getVocabularyTeacherCheckCandidates = getVocabularyTeacherCheckCandidates;
+  window.buildVocabularyTeacherCheckCandidates = buildVocabularyTeacherCheckCandidates;
+  window.openVocabularyTeacherCheckScreen = openVocabularyTeacherCheckScreen;
+  window.renderVocabularyTeacherCheckScreen = renderVocabularyTeacherCheckScreen;
 
   function playVocabularySampleCorrectChime() {
     if (typeof Audio !== "function") return false;
