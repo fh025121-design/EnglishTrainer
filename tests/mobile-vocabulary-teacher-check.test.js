@@ -127,11 +127,11 @@ const checks = [
     ok: /vocabularyTeacherCheckScreen/.test(html) && /teacherCheck/.test(source)
   },
   {
-    name: "teacher check candidate logic requires both self results to be OK and excludes any teacher-C status already marked as complete",
+    name: "teacher check candidate logic requires both self results to be OK and does not cap the candidate group at 50",
     ok: /getVocabularyTeacherCheckCandidates\s*\(/.test(source)
       && /lastSelfResult.*ok/.test(source)
       && /teacherCheck.*◎/.test(source)
-      && /slice\(0,\s*50\)/.test(source)
+      && !/slice\(0,\s*50\)/.test(source)
   },
   {
     name: "teacher check no-candidate state is explicit and screen is list-based rather than single-item navigation",
@@ -216,5 +216,29 @@ reproductionSandbox.window.state.teacherCheckSession = {
 };
 reproductionSandbox.window.openVocabularyTeacherCheckScreen();
 assert.strictEqual(reproductionSandbox.window.state.teacherCheckSession.candidates.length, 5, "opening a fresh teacher-check session clears stale completion IDs before rebuilding candidates");
+
+const sixtyFiveSandbox = makeTeacherCheckSandbox();
+const fortyFiveWordState = Object.fromEntries(
+  Array.from({ length: 55 }, (_, index) => {
+    const wordId = `w${index + 1}`;
+    return [wordId, {
+      wordId,
+      pronunciationStatus: "○",
+      meaningStatus: "○",
+      lastSelfResult: "ok",
+      lastStudiedAt: 1000 + index,
+      questionCount: 1,
+      perfectPairCount: 0,
+      isMastered: false,
+      learningStateStatus: "learning"
+    }];
+  })
+);
+sixtyFiveSandbox.window.state.wordLearningState = fortyFiveWordState;
+const noCapCandidates = sixtyFiveSandbox.window.getVocabularyTeacherCheckCandidates();
+assert.strictEqual(noCapCandidates.length, 55, "candidate extraction returns the full matching candidate set without a 50-word cap");
+sixtyFiveSandbox.window.state.teacherCheckSession = { candidates: [], decisions: {}, showMeaningIds: [], completedCandidateIds: [], pageIndex: 0 };
+sixtyFiveSandbox.window.state.teacherCheckSession.candidates = sixtyFiveSandbox.window.buildVocabularyTeacherCheckCandidates(sixtyFiveSandbox.window.state.teacherCheckSession);
+assert.strictEqual(sixtyFiveSandbox.window.state.teacherCheckSession.candidates.length, 55, "session candidates also include the full matching set without a 50-word cap");
 
 console.log(`mobile vocabulary teacher check checks passed (${checks.length})`);

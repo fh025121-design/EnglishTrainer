@@ -5727,7 +5727,7 @@
       })
       .sort((left, right) => Number(right.lastLearnedAt || 0) - Number(left.lastLearnedAt || 0));
 
-    return candidates.slice(0, 50);
+    return candidates;
   }
 
   function buildVocabularyTeacherCheckCandidates(session = state.teacherCheckSession) {
