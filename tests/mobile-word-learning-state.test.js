@@ -116,7 +116,10 @@ function makeSandbox() {
     renderVocabularyPastHistoryScreen: () => {},
     showScreen: () => {},
     saveState: () => {},
-    getMobileVocabularySyncUid: () => "uid-1"
+    getMobileVocabularySyncUid: () => "uid-1",
+    getMobileBrowserDeviceId: () => "node-test-device",
+    sanitizeMobileLearningHistoryDeviceName: (value) => String(value || "").trim() || "node-test-device",
+    getMobileLearningHistoryDeviceName: () => "node-test-device"
   };
 
   vm.createContext(sandbox);
@@ -176,6 +179,21 @@ function makeSandbox() {
   assert.strictEqual(unlearnedMerge.w1.lastStudiedAt, 10, "learned state timestamp must be preserved when incoming data is unlearned");
   assert.strictEqual(unlearnedMerge.w1.pronunciationStatus, "○", "learned statuses must survive an unlearned merge");
   assert.strictEqual(unlearnedMerge.w1.meaningStatus, "○", "learned meanings must survive an unlearned merge");
+
+  const learningStateMerge = sandbox.window.mergeWordLearningStateByLatest(
+    { w1: { wordId: "w1", pronunciationStatus: "△", meaningStatus: "○", lastStudiedAt: 100, questionCount: 2, perfectPairCount: 1, isMastered: false, learningStateStatus: "learning" } },
+    { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 200, questionCount: 3, perfectPairCount: 3, isMastered: false, learningStateStatus: "learning" } }
+  );
+  assert.strictEqual(learningStateMerge.w1.perfectPairCount, 3, "firebase-latest perfectPairCount should survive merge");
+  assert.strictEqual(learningStateMerge.w1.isMastered, false, "firebase-latest isMastered should survive merge");
+  assert.strictEqual(learningStateMerge.w1.learningStateStatus, "learning", "firebase-latest learningStateStatus should survive merge");
+
+  const masteredStateMerge = sandbox.window.mergeWordLearningStateByLatest(
+    { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 100, questionCount: 5, perfectPairCount: 5, isMastered: true, learningStateStatus: "mastered" } },
+    { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 200, questionCount: 7, perfectPairCount: 5, isMastered: true, learningStateStatus: "mastered" } }
+  );
+  assert.strictEqual(masteredStateMerge.w1.isMastered, true, "mastered flag should survive merge");
+  assert.strictEqual(masteredStateMerge.w1.learningStateStatus, "mastered", "mastered learningStateStatus should survive merge");
 
   const localKey = sandbox.window.getWordLearningStateStorageKey("uid-1");
   sandbox.window.saveWordLearningStateForSync({ w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 123, questionCount: 1 } }, "uid-1");
@@ -335,6 +353,30 @@ function makeSandbox() {
   const visibleAdminRows = stateAdminSummary.rows.filter((row) => row.questionCount > 0);
   assert.strictEqual(visibleAdminRows.length, 3, "initial admin view should only show words with questionCount > 0");
   assert.strictEqual(stateAdminSummary.totalWords, 3, "totalWords should still represent the tracked bank size");
+
+  sandbox.window.loadMobileWordLearningStateFromFirestore = async () => ({
+    ok: true,
+    exists: true,
+    wordLearningState: {
+      remoteW1: { wordId: "remoteW1", pronunciationStatus: "◎", meaningStatus: "◎", lastStudiedAt: 777, questionCount: 4, perfectPairCount: 4, isMastered: false, learningStateStatus: "learning" }
+    }
+  });
+  sandbox.window.saveMobileWordLearningStateToFirestore = async (map) => {
+    sandbox.window.__lastSavedWordState = map;
+    return { ok: true, saved: true, wordLearningState: map };
+  };
+  sandbox.state.wordLearningState = {};
+  await sandbox.window.initializeWordLearningStateSyncForCurrentUser({ force: true });
+  assert.strictEqual(sandbox.state.wordLearningState.remoteW1.questionCount, 4, "remote Firestore state should win when loading a logged-in user");
+  assert.strictEqual(sandbox.window.localStorage.getItem("english-trainer-mobile-word-learning-state-v1:uid-1").includes("remoteW1"), true, "remote state should be written back to localStorage during load");
+
+  sandbox.state.wordLearningState = {
+    localOnly: { wordId: "localOnly", pronunciationStatus: "△", meaningStatus: "○", lastStudiedAt: 900, questionCount: 2, perfectPairCount: 1, isMastered: false, learningStateStatus: "learning" }
+  };
+  sandbox.window.saveState("localOnly");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.strictEqual(Boolean(sandbox.window.__lastSavedWordState), true, "saveState should persist wordLearningState to Firestore for logged-in users");
+  assert.strictEqual(sandbox.window.__lastSavedWordState.localOnly.questionCount, 2, "saveState should persist the sanitized local wordLearningState snapshot");
 
   console.log("mobile word learning state checks passed");
 })();

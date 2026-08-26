@@ -47,6 +47,9 @@ const MOBILE_VOCABULARY_SYNC_CHUNK_PREFIX = "vocabularyStateChunk";
 const MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_DOC_COLLECTION = "mobileSync";
 const MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_DOC_ID = "vocabularyTodayHistoryV1";
 const MOBILE_VOCABULARY_TODAY_HISTORY_SYNC_SCHEMA_VERSION = 1;
+const MOBILE_WORD_LEARNING_STATE_SYNC_DOC_COLLECTION = "mobileSync";
+const MOBILE_WORD_LEARNING_STATE_SYNC_DOC_ID = "wordLearningStateV1";
+const MOBILE_WORD_LEARNING_STATE_SYNC_SCHEMA_VERSION = 1;
 
 window.MobileFirebaseAuthState = {
   status: "pending",
@@ -1181,6 +1184,150 @@ function subscribeMobileVocabularyStateFromFirestore(onChange, options = {}) {
   });
 }
 
+function getMobileWordLearningStateDocRef(targetUid = "") {
+  const uid = String(targetUid || auth.currentUser?.uid || "").trim();
+  if (!uid) return null;
+  return doc(firestore, "users", uid, MOBILE_WORD_LEARNING_STATE_SYNC_DOC_COLLECTION, MOBILE_WORD_LEARNING_STATE_SYNC_DOC_ID);
+}
+
+function normalizeMobileWordLearningStateDoc(docData) {
+  const source = docData && typeof docData === "object" ? docData : {};
+  const wordLearningState = source.wordLearningState && typeof source.wordLearningState === "object"
+    ? source.wordLearningState
+    : {};
+  return {
+    wordLearningState,
+    updatedAtMs: Math.max(0, Number(source.updatedAtMs) || 0),
+    sourceDeviceId: String(source.sourceDeviceId || "").trim(),
+    sourceDeviceName: String(source.sourceDeviceName || "").trim(),
+    schemaVersion: Math.max(0, Number(source.schemaVersion) || MOBILE_WORD_LEARNING_STATE_SYNC_SCHEMA_VERSION)
+  };
+}
+
+async function loadMobileWordLearningStateFromFirestore(options = {}) {
+  const currentUid = String(auth.currentUser?.uid || "").trim();
+  const targetUid = String(options?.targetUid || currentUid || "").trim();
+  const ref = getMobileWordLearningStateDocRef(targetUid);
+  if (!ref || !targetUid) {
+    return { ok: false, exists: false, uid: targetUid, wordLearningState: null };
+  }
+
+  try {
+    const snapshot = await getDoc(ref);
+    if (!snapshot.exists()) {
+      return { ok: true, exists: false, uid: targetUid, wordLearningState: null };
+    }
+
+    const normalized = normalizeMobileWordLearningStateDoc(snapshot.data());
+    return {
+      ok: true,
+      exists: Boolean(Object.keys(normalized.wordLearningState || {}).length),
+      uid: targetUid,
+      wordLearningState: normalized.wordLearningState,
+      updatedAtMs: normalized.updatedAtMs,
+      sourceDeviceId: normalized.sourceDeviceId,
+      sourceDeviceName: normalized.sourceDeviceName,
+      schemaVersion: normalized.schemaVersion
+    };
+  } catch (error) {
+    console.error("Failed to load mobile wordLearningState from Firestore", error);
+    return { ok: false, exists: false, uid: targetUid, wordLearningState: null, error };
+  }
+}
+
+async function saveMobileWordLearningStateToFirestore(wordLearningState, options = {}) {
+  const user = auth.currentUser;
+  const targetUid = String(options?.targetUid || user?.uid || "").trim();
+  const ref = getMobileWordLearningStateDocRef(targetUid);
+  if (!ref || !targetUid || !wordLearningState || typeof wordLearningState !== "object") {
+    return { ok: false, saved: false, exists: false, uid: targetUid };
+  }
+
+  const allowCreate = options?.allowCreate === true;
+  const normalizedIncoming = wordLearningState && typeof wordLearningState === "object"
+    ? wordLearningState
+    : {};
+  const sourceDeviceId = String(options?.sourceDeviceId || "").trim();
+  const sourceDeviceName = String(options?.sourceDeviceName || "").trim();
+
+  try {
+    const result = await runTransaction(firestore, async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      const existsBefore = snapshot.exists();
+      if (!existsBefore && !allowCreate) {
+        return { saved: false, existsBefore, skipped: "missing-remote", wordLearningState: {} };
+      }
+
+      const currentState = existsBefore && snapshot.data()?.wordLearningState && typeof snapshot.data().wordLearningState === "object"
+        ? snapshot.data().wordLearningState
+        : {};
+      const mergedState = existsBefore
+        ? { ...currentState, ...normalizedIncoming }
+        : normalizedIncoming;
+
+      transaction.set(ref, {
+        uid: targetUid,
+        wordLearningState: mergedState,
+        sourceDeviceId,
+        sourceDeviceName,
+        schemaVersion: MOBILE_WORD_LEARNING_STATE_SYNC_SCHEMA_VERSION,
+        updatedAtMs: Date.now(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      return {
+        saved: true,
+        existsBefore,
+        wordLearningState: mergedState
+      };
+    });
+
+    return {
+      ok: true,
+      saved: Boolean(result?.saved),
+      exists: Boolean(result?.existsBefore),
+      uid: targetUid,
+      skipped: result?.skipped || "",
+      wordLearningState: result?.wordLearningState || normalizedIncoming
+    };
+  } catch (error) {
+    console.error("Failed to save mobile wordLearningState to Firestore", error);
+    return { ok: false, saved: false, exists: false, uid: targetUid, error };
+  }
+}
+
+function subscribeMobileWordLearningStateFromFirestore(onChange, options = {}) {
+  if (typeof onChange !== "function") {
+    return () => {};
+  }
+  const targetUid = String(options?.targetUid || auth.currentUser?.uid || "").trim();
+  const ref = getMobileWordLearningStateDocRef(targetUid);
+  if (!ref || !targetUid) {
+    return () => {};
+  }
+
+  return onSnapshot(ref, (snapshot) => {
+    if (!snapshot.exists()) {
+      onChange({ ok: true, exists: false, uid: targetUid, wordLearningState: null });
+      return;
+    }
+
+    const normalized = normalizeMobileWordLearningStateDoc(snapshot.data());
+    onChange({
+      ok: true,
+      exists: Boolean(Object.keys(normalized.wordLearningState || {}).length),
+      uid: targetUid,
+      wordLearningState: normalized.wordLearningState,
+      updatedAtMs: normalized.updatedAtMs,
+      sourceDeviceId: normalized.sourceDeviceId,
+      sourceDeviceName: normalized.sourceDeviceName,
+      schemaVersion: normalized.schemaVersion
+    });
+  }, (error) => {
+    onChange({ ok: false, exists: false, uid: targetUid, wordLearningState: null, error });
+  });
+}
+
 async function initMobileFirebaseAuthUi() {
   bindAuthUi();
   setLoginBusy(false);
@@ -1228,6 +1375,9 @@ window.subscribeMobileWordOrderStatsFromFirestore = subscribeMobileWordOrderStat
 window.loadMobileVocabularyStateFromFirestore = loadMobileVocabularyStateFromFirestore;
 window.saveMobileVocabularyStateToFirestore = saveMobileVocabularyStateToFirestore;
 window.subscribeMobileVocabularyStateFromFirestore = subscribeMobileVocabularyStateFromFirestore;
+window.loadMobileWordLearningStateFromFirestore = loadMobileWordLearningStateFromFirestore;
+window.saveMobileWordLearningStateToFirestore = saveMobileWordLearningStateToFirestore;
+window.subscribeMobileWordLearningStateFromFirestore = subscribeMobileWordLearningStateFromFirestore;
 window.getMobileFirebaseCurrentUser = () => auth.currentUser || ({ email: "demo@example.com" });
 window.MobileFirebase = Object.freeze({ app, auth, firestore });
 window.MobileFirebaseReady = initMobileFirebaseAuthUi();

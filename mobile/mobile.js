@@ -3648,6 +3648,9 @@
   window.buildWordLearningStateProgressSummary = buildWordLearningStateProgressSummary;
   window.applyMobileAuthState = applyMobileAuthState;
   window.bindMobileAuthState = bindMobileAuthState;
+  window.loadState = loadState;
+  window.saveState = saveState;
+  window.initializeWordLearningStateSyncForCurrentUser = initializeWordLearningStateSyncForCurrentUser;
 
   function createVocabularyTeacherCheckState(overrides = {}) {
     return {
@@ -8792,6 +8795,57 @@
     return Boolean(currentUid) && Boolean(targetUid) && targetUid === currentUid;
   }
 
+  async function initializeWordLearningStateSyncForCurrentUser(options = {}) {
+    const force = options?.force === true;
+    const uid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+    if (!uid) {
+      return false;
+    }
+
+    const remoteLoad = window.loadMobileWordLearningStateFromFirestore;
+    if (typeof remoteLoad !== "function") {
+      return false;
+    }
+
+    let remoteResult = null;
+    try {
+      remoteResult = await remoteLoad({ targetUid: uid });
+    } catch (_error) {
+      remoteResult = null;
+    }
+
+    const localMap = loadWordLearningStateForSync(uid);
+    if (remoteResult?.ok && remoteResult.exists && remoteResult.wordLearningState) {
+      const normalizedRemote = sanitizeWordLearningStateMap(remoteResult.wordLearningState || {});
+      state.wordLearningState = normalizedRemote;
+      saveWordLearningStateForSync(normalizedRemote, uid);
+      return true;
+    }
+
+    if (Object.keys(localMap || {}).length) {
+      const normalizedLocal = sanitizeWordLearningStateMap(localMap || {});
+      state.wordLearningState = normalizedLocal;
+      saveWordLearningStateForSync(normalizedLocal, uid);
+      if (typeof window.saveMobileWordLearningStateToFirestore === "function") {
+        try {
+          await window.saveMobileWordLearningStateToFirestore(normalizedLocal, {
+            targetUid: uid,
+            allowCreate: true,
+            sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
+            sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+          });
+        } catch (_error) {
+          // Ignore remote-save failures in the initial bootstrap path; the local state is already preserved.
+        }
+      }
+      return true;
+    }
+
+    state.wordLearningState = buildWordLearningStateMap();
+    saveWordLearningStateForSync(state.wordLearningState, uid);
+    return false;
+  }
+
   function saveState(changedWordId = "") {
     const currentUid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
     if (currentUid && !vocabularyStateOwnerUid) {
@@ -8815,6 +8869,14 @@
         window.localStorage.setItem(uidStorageKey, JSON.stringify(safeStudyState));
       }
       saveWordLearningStateForSync(safeWordLearningState, currentUid);
+      if (typeof window.saveMobileWordLearningStateToFirestore === "function") {
+        window.saveMobileWordLearningStateToFirestore(safeWordLearningState, {
+          targetUid: currentUid,
+          allowCreate: true,
+          sourceDeviceId: String(getMobileBrowserDeviceId() || "").trim(),
+          sourceDeviceName: sanitizeMobileLearningHistoryDeviceName(getMobileLearningHistoryDeviceName())
+        }).catch(() => 0);
+      }
       window.localStorage.removeItem(MOBILE_STORAGE_KEY);
     } else {
       window.localStorage.setItem(MOBILE_STORAGE_KEY, JSON.stringify(snapshot));

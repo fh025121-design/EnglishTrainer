@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/27 01:46", note: "モバイル版のみ: 実際の JST 01:46 を取得し、№182-18-6 の wordLearningState Firestore 同期版を公開。cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
     { version: "2026/08/27 00:03", note: "モバイル版のみ: 実際の JST 00:03 を取得し、先生チェック新仕様（3分類・おまかせ優先・1問ずつ次へ）を公開。cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
     { version: "2026/08/26 23:33", note: "モバイル版のみ: 実際の JST 23:33 を取得し、先生チェック警告修正版の公開用メタデータを最新の実JSTで統一。既存のロジックとテストは変更せず、cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ揃えて GitHub Pages 公開用に反映。" },
     { version: "2026/08/26 21:01", note: "モバイル版のみ: 実際の JST 21:01 を取得し、先生チェック候補生成を現在の wordLearningState から毎回再構築する最小修正を公開。過去の stale completedCandidateIds を新規開始時に再利用しないようにし、単語一覧の ○○ 数と先生チェック候補数が一致するように整備。公開用 cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
