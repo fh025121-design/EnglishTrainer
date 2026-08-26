@@ -201,6 +201,27 @@ function makeSandbox() {
   assert.strictEqual(adminSummary.unlearnedCount, 2, "unlearned count counts zero-question words");
   assert.strictEqual(adminSummary.rows.some((row) => row.wordId === "w1" && row.word === "apple"), true, "admin summary rows map to real vocabulary words");
 
+  const persistedF5Map = {
+    "vocab-3-although-item-484": {
+      wordId: "vocab-3-although-item-484",
+      pronunciationStatus: "△",
+      meaningStatus: "○",
+      questionCount: 1,
+      lastStudiedAt: 1234567890
+    }
+  };
+  sandbox.window.localStorage.setItem("english-trainer-mobile-word-learning-state-v1:uid-1", JSON.stringify(persistedF5Map));
+  sandbox.window.MobileFirebaseAuthState = { status: "logged-in", user: { uid: "uid-1" } };
+  sandbox.window.getMobileFirebaseCurrentUser = () => ({ uid: "uid-1" });
+  sandbox.window.bindMobileAuthState();
+  const reloadedRows = sandbox.window.getWordLearningStateManagementRows();
+  const reloadedEntry = reloadedRows.find((row) => row.wordId === "vocab-3-although-item-484");
+  assert.ok(reloadedEntry, "auth-triggered load restores the learned entry into management rows");
+  assert.strictEqual(reloadedEntry.pronunciationStatus, "△", "auth-triggered load keeps learned pronunciation status");
+  assert.strictEqual(reloadedEntry.meaningStatus, "○", "auth-triggered load keeps learned meaning status");
+  assert.strictEqual(reloadedEntry.questionCount, 1, "auth-triggered load keeps learned questionCount");
+  assert.strictEqual(reloadedEntry.lastStudiedAt, 1234567890, "auth-triggered load preserves saved lastStudiedAt");
+
   const debugSnapshot = sandbox.window.buildWordLearningStateDebugSnapshot(
     { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "△", lastStudiedAt: 12345, questionCount: 2 } },
     { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "△", lastStudiedAt: 12345, questionCount: 2 } }

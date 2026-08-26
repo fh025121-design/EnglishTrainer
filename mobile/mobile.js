@@ -3501,6 +3501,8 @@
   window.buildWordLearningStateAdminSummary = buildWordLearningStateAdminSummary;
   window.buildWordLearningStateDebugSnapshot = buildWordLearningStateDebugSnapshot;
   window.renderWordLearningStateDebugPanel = renderWordLearningStateDebugPanel;
+  window.applyMobileAuthState = applyMobileAuthState;
+  window.bindMobileAuthState = bindMobileAuthState;
 
   function createVocabularyTeacherCheckState(overrides = {}) {
     return {
@@ -12180,6 +12182,7 @@
         vocabularyStateOwnerUid = "";
         vocabularyTodayHistoryOwnerUid = "";
       }
+      loadState();
       refreshMobileFamilyIdentityCache()
         .catch(() => false)
         .finally(() => {
@@ -12242,6 +12245,7 @@
       mobilePointStateCache = null;
       mobilePointStateCacheUid = "";
       mobilePointSyncAllowCreate = false;
+      loadState();
       refreshMobileFamilyIdentityCache()
         .catch(() => false)
         .finally(() => {
