@@ -50,6 +50,11 @@
         </header>
 
         <main class="stack-layout">
+          <div id="mobileWordLearningStateDebugPanel" class="mobile-vocabulary-debug-panel hidden">
+            <p class="mobile-vocabulary-debug-title">wordLearningState 確認</p>
+            <p id="mobileWordLearningStateDebugText" class="mobile-vocabulary-debug-text">UID: - / key: - / 保存件数: 0 / 現在state件数: 0</p>
+          </div>
+
           <section id="todayLearningSummaryCard" class="panel home-today-learning-card">
             <div class="home-today-learning-header">
               <p class="home-today-learning-title">今日の学習</p>
@@ -889,7 +894,7 @@
 
     <script>
       (function () {
-        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260826-0222";
+        const cacheToken = window.MOBILE_CACHE_TOKEN || "20260826-1344";
         const scriptSources = [
           { src: "firebase.js", type: "module" },
           { src: "../data.js", type: "text/javascript" },

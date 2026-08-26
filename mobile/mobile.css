@@ -113,6 +113,14 @@ select {
   font-family: "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif;
 }
 
+.mobile-word-learning-state-debug-panel {
+  display: none;
+}
+
+.mobile-word-learning-state-debug-panel.is-visible {
+  display: block;
+}
+
 .screen {
   display: none;
 }

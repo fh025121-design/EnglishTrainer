@@ -11442,6 +11442,49 @@
     }
   }
 
+  function buildWordLearningStateDebugSnapshot() {
+    const uid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
+    const key = getWordLearningStateStorageKey(uid || "");
+    const currentMap = sanitizeWordLearningStateMap(state.wordLearningState || {});
+    let storedCount = 0;
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const savedMap = parsed && typeof parsed === "object" ? parsed : {};
+        storedCount = Object.keys(sanitizeWordLearningStateMap(savedMap)).length;
+      }
+    } catch (_error) {
+      storedCount = 0;
+    }
+    return {
+      uid: uid || "未ログイン",
+      key: uid ? key : "未ログイン（UIDなし）",
+      savedCount: storedCount,
+      currentCount: Object.keys(currentMap).length
+    };
+  }
+
+  function renderWordLearningStateDebugPanel() {
+    const panel = document.getElementById("mobileWordLearningStateDebugPanel");
+    const label = document.getElementById("mobileWordLearningStateDebugText");
+    if (!panel || !label) return;
+
+    const snapshot = buildWordLearningStateDebugSnapshot();
+    const uidText = snapshot.uid || "未ログイン";
+    const keyText = snapshot.key || "未ログイン（UIDなし）";
+    label.textContent = `UID: ${uidText} / key: ${keyText} / 保存件数: ${snapshot.savedCount} / 現在state件数: ${snapshot.currentCount}`;
+
+    if (snapshot.uid === "未ログイン") {
+      panel.classList.add("hidden");
+      panel.classList.remove("is-visible");
+      return;
+    }
+
+    panel.classList.remove("hidden");
+    panel.classList.add("is-visible");
+  }
+
   function renderMobileHomeTodayLearningSummary() {
     const todayValues = {
       word: document.getElementById("todayLearningWordValue"),
@@ -11484,6 +11527,7 @@
   function renderHome() {
     setWordOrderDayRangeValue(state.wordOrderSelectedRangeValue);
     hideMobileAdminLearningHistory();
+    renderWordLearningStateDebugPanel();
     renderMobileHomeTodayLearningSummary();
     showScreen("homeScreen");
   }

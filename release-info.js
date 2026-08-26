@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/26 13:44", note: "モバイル版のみ: 実機確認用の wordLearningState 診断表示をホーム画面へ追加し、UID / 保存key / 保存件数 / 現在state件数をその場で確認できるようにした。保存処理や復元ロジックの本体修正は行わず、診断表示だけを追加し、バージョン表示と cache token も同じ実JST 13:44 に更新。" },
     { version: "2026/08/26 03:24", note: "モバイル版のみ: 実際の 1 語完了処理から wordLearningState への接続を最小修正し、発音・意味の両判定が揃った瞬間に finalizeWordLearningStateForCompletion() を 1 回だけ呼ぶようにした。既存の saveState / sync / 本日の履歴 / 進行処理は変更せず、同一 wordId の二重加算を防ぎ、直ちに canonical status を保存するよう整備。バージョン表示と cache token も同じ実JST 03:24 に更新。" },
     { version: "2026/08/26 02:35", note: "モバイル版のみ: wordLearningState の確認用 UI を管理者画面へ追加し、現在の正本を直接読み取って『単語状態確認』画面で発音状態・意味状態・最終学習日時・出題回数を確認できるようにした。保存・同期・復習・ポイント計算のロジックは変更せず、表示用の確認画面だけを追加し、バージョン表示と cache token も同じ実JST 02:35 に更新。" },
     { version: "2026/08/26 02:22", note: "モバイル版のみ: No.182-1 の wordLearningState 正本を最終確認し、1語完了→local保存→Firebase同期→F5→別ブラウザ保持までを同一UIDで維持するよう整備。空 remote / stale remote / 文字列比較の巻き戻りを防ぎ、既存の Vocabulary legacy 経路は変更せず、今回の実装を公開版へ反映。バージョン表示と cache token も同じ実JST 02:22 に更新。" },
