@@ -3255,12 +3255,13 @@
     const normalizedId = String(wordId || overrides?.wordId || "").trim();
     if (!normalizedId) return null;
     const source = overrides && typeof overrides === "object" ? overrides : {};
-    const lastStudiedAt = Number(source.lastStudiedAt ?? Date.now()) || Date.now();
     const questionCount = Math.max(0, Number(source.questionCount || 0) || 0);
+    const hasProgress = questionCount > 0;
+    const lastStudiedAt = hasProgress ? (Number(source.lastStudiedAt) || Date.now()) : 0;
     return {
       wordId: normalizedId,
-      pronunciationStatus: normalizeWordLearningStatus(source.pronunciationStatus ?? source.pronunciation ?? "－", "－"),
-      meaningStatus: normalizeWordLearningStatus(source.meaningStatus ?? source.meaning ?? "－", "－"),
+      pronunciationStatus: hasProgress ? normalizeWordLearningStatus(source.pronunciationStatus ?? source.pronunciation ?? "－", "－") : "－",
+      meaningStatus: hasProgress ? normalizeWordLearningStatus(source.meaningStatus ?? source.meaning ?? "－", "－") : "－",
       lastStudiedAt,
       questionCount
     };
@@ -3322,32 +3323,37 @@
       const baseEntry = base[wordId] || null;
       const incomingEntry = incoming[wordId] || null;
       if (!baseEntry && incomingEntry) {
-        merged[wordId] = { ...incomingEntry };
+        merged[wordId] = { ...incomingEntry, wordId, pronunciationStatus: normalizeWordLearningStatus(incomingEntry.pronunciationStatus, "－"), meaningStatus: normalizeWordLearningStatus(incomingEntry.meaningStatus, "－"), lastStudiedAt: Math.max(0, Number(incomingEntry.questionCount) || 0) > 0 ? Number(incomingEntry.lastStudiedAt) || 0 : 0, questionCount: Math.max(0, Number(incomingEntry.questionCount) || 0) };
         return;
       }
       if (!incomingEntry && baseEntry) {
-        merged[wordId] = { ...baseEntry };
+        merged[wordId] = { ...baseEntry, wordId, pronunciationStatus: normalizeWordLearningStatus(baseEntry.pronunciationStatus, "－"), meaningStatus: normalizeWordLearningStatus(baseEntry.meaningStatus, "－"), lastStudiedAt: Math.max(0, Number(baseEntry.questionCount) || 0) > 0 ? Number(baseEntry.lastStudiedAt) || 0 : 0, questionCount: Math.max(0, Number(baseEntry.questionCount) || 0) };
         return;
       }
       if (!baseEntry || !incomingEntry) {
         return;
       }
+      const baseQuestionCount = Math.max(0, Number(baseEntry.questionCount) || 0);
+      const incomingQuestionCount = Math.max(0, Number(incomingEntry.questionCount) || 0);
       const leftUpdated = Number(baseEntry.lastStudiedAt) || 0;
       const rightUpdated = Number(incomingEntry.lastStudiedAt) || 0;
-      const winner = rightUpdated >= leftUpdated ? incomingEntry : baseEntry;
+      let winner = baseEntry;
+      if (baseQuestionCount > 0 && incomingQuestionCount <= 0) {
+        winner = baseEntry;
+      } else if (baseQuestionCount <= 0 && incomingQuestionCount > 0) {
+        winner = incomingEntry;
+      } else if (rightUpdated >= leftUpdated) {
+        winner = incomingEntry;
+      }
+      const finalQuestionCount = Math.max(baseQuestionCount, incomingQuestionCount);
+      const finalLastStudiedAt = finalQuestionCount > 0 ? Math.max(leftUpdated, rightUpdated) : 0;
       merged[wordId] = {
         ...winner,
         wordId,
-        pronunciationStatus: normalizeWordLearningStatus(
-          rightUpdated >= leftUpdated ? incomingEntry.pronunciationStatus : baseEntry.pronunciationStatus,
-          "－"
-        ),
-        meaningStatus: normalizeWordLearningStatus(
-          rightUpdated >= leftUpdated ? incomingEntry.meaningStatus : baseEntry.meaningStatus,
-          "－"
-        ),
-        lastStudiedAt: Math.max(leftUpdated, rightUpdated),
-        questionCount: Math.max(Number(baseEntry.questionCount) || 0, Number(incomingEntry.questionCount) || 0)
+        pronunciationStatus: finalQuestionCount > 0 ? normalizeWordLearningStatus(winner.pronunciationStatus, "－") : "－",
+        meaningStatus: finalQuestionCount > 0 ? normalizeWordLearningStatus(winner.meaningStatus, "－") : "－",
+        lastStudiedAt: finalLastStudiedAt,
+        questionCount: finalQuestionCount
       };
     });
     return merged;

@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/26 14:14", note: "モバイル版のみ: wordLearningState の未学習初期stateが新しい lastStudiedAt を持ち、F5 の merge で学習済み state を上書きしていた問題を修正。初期生成時に未学習語は lastStudiedAt=0 のまま維持し、merge では questionCount=0 の未学習状態が既存の学習済み状態を上書きしないようにした。バージョン表示と cache token も同じ実JST 14:14 に更新。" },
     { version: "2026/08/26 14:00", note: "モバイル版のみ: wordLearningState の一時診断表示を、総件数ではなく『直近更新単語』の wordId / 英単語 / state  / localStorage / wordId一致を1件追跡できる形式へ更新。呼び出し直後と F5 後の比較で、保存不良・復元不良・localStorage空上書きのどれが起きているかを特定しやすくし、バージョン表示と cache token も同じ実JST 14:00 に更新。" },
     { version: "2026/08/26 13:44", note: "モバイル版のみ: 実機確認用の wordLearningState 診断表示をホーム画面へ追加し、UID / 保存key / 保存件数 / 現在state件数をその場で確認できるようにした。保存処理や復元ロジックの本体修正は行わず、診断表示だけを追加し、バージョン表示と cache token も同じ実JST 13:44 に更新。" },
     { version: "2026/08/26 03:24", note: "モバイル版のみ: 実際の 1 語完了処理から wordLearningState への接続を最小修正し、発音・意味の両判定が揃った瞬間に finalizeWordLearningStateForCompletion() を 1 回だけ呼ぶようにした。既存の saveState / sync / 本日の履歴 / 進行処理は変更せず、同一 wordId の二重加算を防ぎ、直ちに canonical status を保存するよう整備。バージョン表示と cache token も同じ実JST 03:24 に更新。" },

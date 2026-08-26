@@ -137,6 +137,11 @@ function makeSandbox() {
   assert.strictEqual(empty.pronunciationStatus, "－", "new entries start unjudged");
   assert.strictEqual(empty.meaningStatus, "－", "new entries start unjudged");
   assert.strictEqual(empty.questionCount, 0, "new entries start at zero completions");
+  assert.strictEqual(empty.lastStudiedAt, 0, "new entries must not get a synthetic lastStudiedAt");
+
+  const generatedMap = sandbox.window.buildWordLearningStateMap();
+  assert.strictEqual(generatedMap.w1.lastStudiedAt, 0, "generated unlearned entries must remain unset");
+  assert.strictEqual(generatedMap.w1.questionCount, 0, "generated unlearned entries must start at zero");
 
   const first = sandbox.window.finalizeWordLearningStateForCompletion("w1", "○", "○");
   assert.strictEqual(first.pronunciationStatus, "○", "first completion keeps pronunciation status");
@@ -161,6 +166,15 @@ function makeSandbox() {
   );
   assert.strictEqual(merged.w1.questionCount, 2, "newer same word state wins");
   assert.strictEqual(merged.w3.questionCount, 1, "new word is added by merge");
+
+  const unlearnedMerge = sandbox.window.mergeWordLearningStateByLatest(
+    { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 10, questionCount: 1 } },
+    { w1: { wordId: "w1", pronunciationStatus: "－", meaningStatus: "－", lastStudiedAt: 20, questionCount: 0 } }
+  );
+  assert.strictEqual(unlearnedMerge.w1.questionCount, 1, "zero-question reset state must not replace learned state");
+  assert.strictEqual(unlearnedMerge.w1.lastStudiedAt, 10, "learned state timestamp must be preserved when incoming data is unlearned");
+  assert.strictEqual(unlearnedMerge.w1.pronunciationStatus, "○", "learned statuses must survive an unlearned merge");
+  assert.strictEqual(unlearnedMerge.w1.meaningStatus, "○", "learned meanings must survive an unlearned merge");
 
   const localKey = sandbox.window.getWordLearningStateStorageKey("uid-1");
   sandbox.window.saveWordLearningStateForSync({ w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 123, questionCount: 1 } }, "uid-1");
