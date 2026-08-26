@@ -3640,6 +3640,8 @@
   window.saveWordLearningStateForSync = saveWordLearningStateForSync;
   window.getWordLearningStateManagementRows = getWordLearningStateManagementRows;
   window.getWordLearningStateProgressEntries = getWordLearningStateProgressEntries;
+  window.getVocabularyLearningGradeEntries = getVocabularyLearningGradeEntries;
+  window.getVocabularyGradeProgressDisplay = getVocabularyGradeProgressDisplay;
   window.getVocabularyProgressListEntries = getVocabularyProgressListEntries;
   window.formatWordLearningStateAdminTime = formatWordLearningStateAdminTime;
   window.buildWordLearningStateAdminSummary = buildWordLearningStateAdminSummary;
@@ -12681,29 +12683,58 @@
     return "unlearned";
   }
 
+  function getVocabularyLearningGradeEntries() {
+    const bank = Array.isArray(getVocabularyRealWordBank()) ? getVocabularyRealWordBank() : [];
+    const bankById = new Map(bank.map((entry, index) => {
+      const normalizedEntry = normalizeVocabularyWordRecord(entry, index);
+      return [String(normalizedEntry?.id || normalizedEntry?.word || entry?.id || entry?.word || "").trim(), normalizedEntry].filter(Boolean);
+    }).filter((pair) => pair && pair.length === 2));
+    const normalizedMap = sanitizeWordLearningStateMap(state.wordLearningState || {});
+    const learningWordIds = new Set();
+    Object.values(normalizedMap).forEach((entry) => {
+      const wordId = String(entry?.wordId || "").trim();
+      if (!wordId) return;
+      if (getWordLearningStateDisplayStatus(entry) === "learning") {
+        learningWordIds.add(wordId);
+      }
+    });
+
+    return Array.from(learningWordIds)
+      .map((wordId) => {
+        const bankEntry = bankById.get(wordId) || null;
+        if (!bankEntry) return null;
+        const gradeKey = getVocabularyGradeValue(bankEntry);
+        return {
+          wordId,
+          word: String(bankEntry.word || wordId || "").trim(),
+          gradeKey,
+          grade: String(gradeKey || "5").trim(),
+          partOfSpeech: String(bankEntry.partOfSpeech || "名詞"),
+          meaning: String(bankEntry.meaning || "")
+        };
+      })
+      .filter(Boolean);
+  }
+
   function getVocabularyGradeProgressDisplay(gradeKey) {
-    const entries = Array.isArray(state.vocabularyStudy?.entries) && state.vocabularyStudy.entries.length
-      ? state.vocabularyStudy.entries
-      : getVocabularyRealWordBank().map((entry, index) => normalizeVocabularyWordRecord(entry, index)).filter(Boolean);
+    const bank = Array.isArray(getVocabularyRealWordBank()) ? getVocabularyRealWordBank() : [];
     const safeGradeKey = ["5", "4", "3"].includes(String(gradeKey || "")) ? String(gradeKey) : "5";
-    const gradeEntries = entries.filter((entry) => getVocabularyGradeValue(entry) === safeGradeKey);
-    const total = gradeEntries.length;
-    const mastered = gradeEntries.filter((entry) => getVocabularyEntryDisplayStatus(entry) === "mastered").length;
-    const learning = gradeEntries.filter((entry) => getVocabularyEntryDisplayStatus(entry) === "learning").length;
-    const unlearned = gradeEntries.filter((entry) => getVocabularyEntryDisplayStatus(entry) === "unlearned").length;
-    const activeCount = mastered + learning;
-    const status = unlearned === 0 ? "mastered" : "learning";
+    const allGradeEntries = bank.filter((entry) => getVocabularyGradeValue(entry) === safeGradeKey);
+    const learningEntries = getVocabularyLearningGradeEntries().filter((entry) => entry.gradeKey === safeGradeKey);
+    const total = allGradeEntries.length;
+    const count = learningEntries.length;
+    const status = count > 0 ? "learning" : "mastered";
     return {
       gradeKey: safeGradeKey,
       total,
-      mastered,
-      learning,
-      unlearned,
-      activeCount,
+      mastered: 0,
+      learning: count,
+      unlearned: Math.max(0, total - count),
+      activeCount: count,
       status,
       label: status === "mastered" ? "定着" : "学習中",
-      count: status === "mastered" ? mastered : activeCount,
-      summaryText: status === "mastered" ? `定着 ${mastered} / ${total}` : `学習中 ${activeCount} / ${total}`
+      count,
+      summaryText: `学習中 ${count} / ${total}`
     };
   }
 
@@ -12792,8 +12823,8 @@
 
     if (filterType === "grade") {
       const grade = ["5", "4", "3"].includes(String(filterValue || "")) ? String(filterValue) : "5";
-      return studyEntries
-        .filter((entry) => getVocabularyGradeValue(entry) === grade)
+      return getVocabularyLearningGradeEntries()
+        .filter((entry) => entry.gradeKey === grade)
         .sort((a, b) => a.word.localeCompare(b.word, "ja"));
     }
 

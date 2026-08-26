@@ -223,6 +223,34 @@ function makeSandbox() {
   assert.strictEqual(sandbox.window.normalizeWordLearningStatus("◎", "－"), "◎", "teacher success should stay distinct from ordinary ○");
   assert.strictEqual(sandbox.window.normalizeWordLearningStatus("○", "－"), "○", "ordinary success should remain ○");
 
+  sandbox.window.MOBILE_VOCABULARY_REAL_WORD_BANK = [
+    { id: "g5-a", word: "grade-5-a", partOfSpeech: "名詞", meaning: "5級A", level: "5" },
+    { id: "g5-b", word: "grade-5-b", partOfSpeech: "名詞", meaning: "5級B", level: "5" },
+    { id: "g4-a", word: "grade-4-a", partOfSpeech: "名詞", meaning: "4級A", level: "4" },
+    { id: "g4-b", word: "grade-4-b", partOfSpeech: "名詞", meaning: "4級B", level: "4" },
+    { id: "g3-a", word: "grade-3-a", partOfSpeech: "名詞", meaning: "3級A", level: "3" }
+  ];
+  sandbox.state.wordLearningState = {
+    "g5-a": { wordId: "g5-a", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 1000, questionCount: 1, isMastered: false, learningStateStatus: "learning" },
+    "g5-b": { wordId: "g5-b", pronunciationStatus: "○", meaningStatus: "△", lastStudiedAt: 1010, questionCount: 1, isMastered: false, learningStateStatus: "learning" },
+    "g4-a": { wordId: "g4-a", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 1020, questionCount: 1, isMastered: false, learningStateStatus: "learning" },
+    "g4-b": { wordId: "g4-b", pronunciationStatus: "○", meaningStatus: "△", lastStudiedAt: 1030, questionCount: 1, isMastered: false, learningStateStatus: "learning" },
+    "g3-a": { wordId: "g3-a", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 1040, questionCount: 1, isMastered: false, learningStateStatus: "learning" }
+  };
+  const learningEntries = sandbox.window.getWordLearningStateProgressEntries("learning");
+  const gradeSummary5 = sandbox.window.getVocabularyGradeProgressDisplay("5");
+  const gradeSummary4 = sandbox.window.getVocabularyGradeProgressDisplay("4");
+  const gradeSummary3 = sandbox.window.getVocabularyGradeProgressDisplay("3");
+  const gradeTotal = gradeSummary5.count + gradeSummary4.count + gradeSummary3.count;
+  assert.strictEqual(learningEntries.length, 5, "learning state should hold five unique learning words");
+  assert.strictEqual(gradeSummary5.count, 2, "5級 should count exactly the two 5級 learning words");
+  assert.strictEqual(gradeSummary4.count, 2, "4級 should count exactly the two 4級 learning words");
+  assert.strictEqual(gradeSummary3.count, 1, "3級 should count exactly the one 3級 learning word");
+  assert.strictEqual(gradeTotal, learningEntries.length, "grade totals must match the learning total without duplicates");
+  assert.strictEqual(sandbox.window.getVocabularyProgressListEntries("grade", "5").length, 2, "grade list should use the same learning-state source");
+  assert.strictEqual(sandbox.window.getVocabularyProgressListEntries("grade", "4").length, 2, "grade list should use the same learning-state source");
+  assert.strictEqual(sandbox.window.getVocabularyProgressListEntries("grade", "3").length, 1, "grade list should use the same learning-state source");
+
   const teacherCheckCanonical = sandbox.window.sanitizeWordLearningStateMap({
     w1: { wordId: "w1", pronunciationStatus: "◎", meaningStatus: "△", questionCount: 1, lastStudiedAt: 111 }
   });
