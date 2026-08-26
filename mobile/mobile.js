@@ -7299,49 +7299,6 @@
     }
   }
 
-  function renderWordLearningStateAdminSummary() {
-    if (!elements.mobileAdminLearningHistoryPanel) return;
-    const summary = buildWordLearningStateAdminSummary(state.wordLearningState || {});
-    const visibleRows = summary.rows.filter((row) => row.questionCount > 0);
-    const rowsMarkup = visibleRows.map((row) => {
-      const lastStudiedText = row.lastStudiedAt ? formatWordLearningStateAdminTime(row.lastStudiedAt) : "未学習";
-      return `
-        <tr>
-          <td>${escapeHtml(row.word || row.wordId)}</td>
-          <td>${escapeHtml(row.pronunciationStatus)}</td>
-          <td>${escapeHtml(row.meaningStatus)}</td>
-          <td>${escapeHtml(lastStudiedText)}</td>
-          <td>${row.questionCount}回</td>
-        </tr>
-      `;
-    }).join("");
-
-    elements.mobileAdminLearningHistoryPanel.innerHTML = `
-      <div class="word-learning-state-admin-view">
-        <div class="word-learning-state-admin-summary">
-          <span>対象 ${summary.totalWords}語</span>
-          <span>学習済み ${summary.learnedCount}語</span>
-          <span>未学習 ${summary.unlearnedCount}語</span>
-        </div>
-        <div class="word-learning-state-admin-table-wrap">
-          <table class="word-learning-state-admin-table">
-            <thead>
-              <tr>
-                <th>単語</th>
-                <th>発音状態</th>
-                <th>意味状態</th>
-                <th>最終学習日時</th>
-                <th>出題回数</th>
-              </tr>
-            </thead>
-            <tbody>${rowsMarkup}</tbody>
-          </table>
-        </div>
-      </div>
-    `;
-    elements.mobileAdminLearningHistoryPanel.classList.remove("hidden");
-  }
-
   function renderMobileAdminLearningHistoryList() {
     if (!elements.mobileAdminLearningHistoryPanel) return;
     const todayDayKey = getMobileLearningHistoryDayKey(Date.now());
@@ -15182,7 +15139,6 @@
     elements.mobileUpdateHistoryBackBtn = document.getElementById("mobileUpdateHistoryBackBtn");
     elements.mobileAdminLearningHistoryScreen = document.getElementById("mobileAdminLearningHistoryScreen");
     elements.mobileAdminLearningHistoryBackBtn = document.getElementById("mobileAdminLearningHistoryBackBtn");
-    elements.openWordLearningStateAdminBtn = document.getElementById("openWordLearningStateAdminBtn");
     elements.mobileAdminLearningHistoryPinInput = document.getElementById("mobileAdminLearningHistoryPinInput");
     elements.mobileAdminLearningHistoryUnlockBtn = document.getElementById("mobileAdminLearningHistoryUnlockBtn");
     elements.mobileAdminLearningHistoryStatusText = document.getElementById("mobileAdminLearningHistoryStatusText");
@@ -15341,9 +15297,6 @@
         }
       });
     }
-    if (elements.vocabularySamplePastHistoryBtn) {
-      elements.vocabularySamplePastHistoryBtn.addEventListener("click", openVocabularyPastHistoryScreen);
-    }
     if (elements.vocabularyPastHistoryBackBtn) {
       elements.vocabularyPastHistoryBackBtn.addEventListener("click", () => {
         if (state.vocabularySample) {
@@ -15352,9 +15305,6 @@
         }
         renderSpeakingHome();
       });
-    }
-    if (document.getElementById("vocabularyTeacherCheckPastHistoryBtn")) {
-      document.getElementById("vocabularyTeacherCheckPastHistoryBtn").addEventListener("click", openVocabularyTeacherCheckScreen);
     }
     elements.vocabularyTodayHistoryBackBtn.addEventListener("click", () => {
       if (state.vocabularySample) {
@@ -15377,7 +15327,7 @@
       elements.vocabularyTeacherCheckBtn.addEventListener("click", openVocabularyTeacherCheckScreen);
     }
     if (elements.vocabularyTeacherCheckBackBtn) {
-      elements.vocabularyTeacherCheckBackBtn.addEventListener("click", openVocabularyPastHistoryScreen);
+      elements.vocabularyTeacherCheckBackBtn.addEventListener("click", renderSpeakingHome);
     }
     if (elements.vocabularyTeacherCheckPrevBtn) {
       elements.vocabularyTeacherCheckPrevBtn.addEventListener("click", () => {
@@ -15532,9 +15482,6 @@
     elements.openMobileAdminFromUpdateBtn.addEventListener("click", renderMobileAdminLearningHistoryScreen);
     elements.mobileUpdateHistoryBackBtn.addEventListener("click", () => showScreen("settingsScreen"));
     elements.mobileAdminLearningHistoryBackBtn.addEventListener("click", renderHome);
-    if (elements.openWordLearningStateAdminBtn) {
-      elements.openWordLearningStateAdminBtn.addEventListener("click", renderWordLearningStateAdminSummary);
-    }
     if (elements.mobileAdminLearningHistoryUnlockBtn) {
       elements.mobileAdminLearningHistoryUnlockBtn.addEventListener("click", unlockMobileAdminLearningHistory);
     }

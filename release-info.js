@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/26 19:37", note: "モバイル版のみ: 実際の JST 19:37 を取得し、旧管理者用『単語状態確認』のボタンと専用UIを削除し、単語一覧3入口へ統一。wordLearningState・学習中/定着/未学習の集計・F5保持・先生チェック・Firebase同期には触れず、公開用 cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
     { version: "2026/08/26 19:07", note: "モバイル版のみ: 実際の JST 19:07 を取得し、単語一覧の入口名変更と一覧画面の切替表示を反映。学習メニューの「単語一覧」から wordLearningState ベースの学習中/定着/未学習一覧へ遷移し、公開用 cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
     { version: "2026/08/26 15:35", note: "モバイル版のみ: 現在の実JST 15:35 を取得し、公開用 cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。№182-14 の学習状態実装内容は変更せず、公開配信メタデータだけを最新JSTで更新。" },
     { version: "2026/08/26 14:39", note: "モバイル版のみ: F5 初期化時に Auth UID 確定後に loadState() を再実行していなかったため、未学習の 599 語初期stateが保存済みの学習済み wordLearningState を置き換えていた。Auth 復帰時に state を再読込し、未学習 entry は lastStudiedAt=0 のまま保持するよう修正。バージョン表示と cache token も同じ実JST 14:39 に更新。" },

@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260826-1907";
+        const defaultToken = "20260826-1937";
         const queryToken = new URLSearchParams(window.location.search).get("v") || "";
         const cacheToken = queryToken || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -324,7 +324,6 @@
           <button id="vocabularySampleBackBtn" class="back-btn" type="button">← Speaking</button>
           <div class="vocabulary-sample-header-actions">
             <button id="vocabularySampleHistoryBtn" class="secondary-btn vocabulary-sample-history-btn" type="button">今日の履歴</button>
-            <button id="vocabularySamplePastHistoryBtn" class="secondary-btn vocabulary-sample-history-btn" type="button">過去の履歴</button>
           </div>
         </header>
 
@@ -420,7 +419,6 @@
       <section id="vocabularyPastHistoryScreen" class="screen">
         <header class="screen-topbar">
           <button id="vocabularyPastHistoryBackBtn" class="back-btn" type="button">← Vocabulary</button>
-          <button id="vocabularyTeacherCheckPastHistoryBtn" class="secondary-btn vocabulary-sample-history-btn" type="button">【 先生チェック 】</button>
         </header>
 
         <main class="stack-layout">
@@ -765,9 +763,6 @@
         <main class="stack-layout">
           <section class="panel admin-learning-history-shell">
             <h2>管理者用 学習履歴</h2>
-            <div class="admin-learning-history-admin-actions">
-              <button id="openWordLearningStateAdminBtn" class="secondary-btn large-btn" type="button">単語状態確認</button>
-            </div>
             <p id="mobileAdminLearningHistoryStatusText" class="status-text hidden"></p>
             <div id="mobileAdminLearningHistoryPanel" class="admin-learning-history-panel hidden"></div>
           </section>
