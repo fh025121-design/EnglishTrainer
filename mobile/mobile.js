@@ -5708,14 +5708,9 @@
         if (questionCount <= 0) return false;
         const pronunciationStatus = normalizeWordLearningStatus(entry.pronunciationStatus, "－");
         const meaningStatus = normalizeWordLearningStatus(entry.meaningStatus, "－");
-        const selfResultIsOk = String(entry.lastSelfResult || "").trim() === "ok";
-        const bothSelfResultsAreOk = selfResultIsOk && selfResultIsOk;
-        const bothLiveStatusesAreOk = pronunciationStatus === "○" && meaningStatus === "○";
         const teacherCheckIsComplete = String(getWordLearningStateTeacherCheckStatus(entry, "pronunciation") || "none").trim() === "◎" || String(getWordLearningStateTeacherCheckStatus(entry, "meaning") || "none").trim() === "◎";
-        if (pronunciationStatus === "－" || meaningStatus === "－") return false;
-        if (pronunciationStatus === "◎" || meaningStatus === "◎") return false;
+        if (pronunciationStatus !== "○" || meaningStatus !== "○") return false;
         if (teacherCheckIsComplete) return false;
-        if (!bothSelfResultsAreOk && !bothLiveStatusesAreOk) return false;
         return true;
       })
       .map((entry) => {

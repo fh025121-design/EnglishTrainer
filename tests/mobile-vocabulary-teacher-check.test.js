@@ -95,6 +95,7 @@ function makeTeacherCheckSandbox() {
     Audio: function () { return { play() { return Promise.resolve(); } }; },
     window: {
       state,
+      MOBILE_VOCABULARY_REAL_WORD_BANK: realBank,
       localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
       document: documentStub,
       location: { search: "" },
@@ -186,6 +187,23 @@ for (const check of checks) {
 
 const reproductionSandbox = makeTeacherCheckSandbox();
 const staleCompletedIds = ["w1", "w2", "w3", "w4"];
+const freshWordLearningState = Object.fromEntries(
+  reproductionSandbox.window.MOBILE_VOCABULARY_REAL_WORD_BANK.map((entry) => [
+    entry.id,
+    {
+      wordId: entry.id,
+      pronunciationStatus: "○",
+      meaningStatus: "○",
+      lastSelfResult: "ok",
+      lastStudiedAt: 1000,
+      questionCount: 1,
+      perfectPairCount: 0,
+      isMastered: false,
+      learningStateStatus: "learning"
+    }
+  ])
+);
+reproductionSandbox.window.state.wordLearningState = freshWordLearningState;
 const possibleCandidates = reproductionSandbox.window.getVocabularyTeacherCheckCandidates();
 assert.strictEqual(possibleCandidates.length, 5, "the canonical wordLearningState source contains five teacher-check candidates");
 
