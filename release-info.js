@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/27 02:51", note: "モバイル版のみ: 実際の JST 02:51 を取得し、№182-18-14 の wordLearningState union/merge 同期修正を公開。cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
     { version: "2026/08/27 02:08", note: "モバイル版のみ: 実際の JST 02:08 を取得し、№182-18-9 / №182-18-10 の wordLearningState 同期初期化修正を公開。cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
     { version: "2026/08/27 00:03", note: "モバイル版のみ: 実際の JST 00:03 を取得し、先生チェック新仕様（3分類・おまかせ優先・1問ずつ次へ）を公開。cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
     { version: "2026/08/26 23:33", note: "モバイル版のみ: 実際の JST 23:33 を取得し、先生チェック警告修正版の公開用メタデータを最新の実JSTで統一。既存のロジックとテストは変更せず、cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ揃えて GitHub Pages 公開用に反映。" },
