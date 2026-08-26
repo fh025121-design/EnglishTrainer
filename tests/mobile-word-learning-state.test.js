@@ -131,6 +131,7 @@ function makeSandbox() {
   assert.ok(typeof sandbox.window.saveWordLearningStateForSync === "function", "local save helper should exist");
   assert.ok(typeof sandbox.window.mergeWordLearningStateByLatest === "function", "wordId merge helper should exist");
   assert.ok(typeof sandbox.window.buildWordLearningStateAdminSummary === "function", "admin summary helper should exist");
+  assert.ok(typeof sandbox.window.buildWordLearningStateDebugSnapshot === "function", "single-word debug snapshot helper should exist");
 
   const empty = sandbox.window.createWordLearningStateEntry("w1");
   assert.strictEqual(empty.pronunciationStatus, "－", "new entries start unjudged");
@@ -185,6 +186,16 @@ function makeSandbox() {
   assert.strictEqual(adminSummary.learnedCount, 1, "learned count reflects questionCount > 0");
   assert.strictEqual(adminSummary.unlearnedCount, 2, "unlearned count counts zero-question words");
   assert.strictEqual(adminSummary.rows.some((row) => row.wordId === "w1" && row.word === "apple"), true, "admin summary rows map to real vocabulary words");
+
+  const debugSnapshot = sandbox.window.buildWordLearningStateDebugSnapshot(
+    { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "△", lastStudiedAt: 12345, questionCount: 2 } },
+    { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "△", lastStudiedAt: 12345, questionCount: 2 } }
+  );
+  assert.strictEqual(debugSnapshot.wordId, "w1", "debug snapshot keeps the tracked wordId");
+  assert.strictEqual(debugSnapshot.wordLabel, "apple", "debug snapshot resolves the real English word");
+  assert.strictEqual(debugSnapshot.currentPronunciationStatus, "○", "debug snapshot reports the current pronunciation status");
+  assert.strictEqual(debugSnapshot.savedMeaningStatus, "△", "debug snapshot reports saved meaning status");
+  assert.strictEqual(debugSnapshot.wordIdMatches, true, "debug snapshot checks same wordId source equality");
 
   console.log("mobile word learning state checks passed");
 })();

@@ -3493,6 +3493,8 @@
   window.getWordLearningStateManagementRows = getWordLearningStateManagementRows;
   window.formatWordLearningStateAdminTime = formatWordLearningStateAdminTime;
   window.buildWordLearningStateAdminSummary = buildWordLearningStateAdminSummary;
+  window.buildWordLearningStateDebugSnapshot = buildWordLearningStateDebugSnapshot;
+  window.renderWordLearningStateDebugPanel = renderWordLearningStateDebugPanel;
 
   function createVocabularyTeacherCheckState(overrides = {}) {
     return {
@@ -11442,26 +11444,52 @@
     }
   }
 
-  function buildWordLearningStateDebugSnapshot() {
+  function buildWordLearningStateDebugSnapshot(currentMapOverride = state.wordLearningState || {}, savedMapOverride = null) {
     const uid = String(getCurrentMobileFirebaseUser()?.uid || "").trim();
     const key = getWordLearningStateStorageKey(uid || "");
-    const currentMap = sanitizeWordLearningStateMap(state.wordLearningState || {});
+    const currentMap = sanitizeWordLearningStateMap(currentMapOverride || {});
+    let savedMap = {};
     let storedCount = 0;
-    try {
-      const raw = window.localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const savedMap = parsed && typeof parsed === "object" ? parsed : {};
-        storedCount = Object.keys(sanitizeWordLearningStateMap(savedMap)).length;
+    if (savedMapOverride && typeof savedMapOverride === "object") {
+      savedMap = sanitizeWordLearningStateMap(savedMapOverride || {});
+    } else {
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          savedMap = sanitizeWordLearningStateMap(parsed && typeof parsed === "object" ? parsed : {});
+        }
+      } catch (_error) {
+        savedMap = {};
       }
-    } catch (_error) {
-      storedCount = 0;
     }
+    storedCount = Object.keys(savedMap).length;
+
+    const candidateEntries = Object.values(currentMap).filter((entry) => Number(entry?.lastStudiedAt) > 0);
+    const latestCurrentEntry = candidateEntries.sort((left, right) => (Number(right.lastStudiedAt) || 0) - (Number(left.lastStudiedAt) || 0))[0] || null;
+    const trackedWordId = latestCurrentEntry ? String(latestCurrentEntry.wordId || "").trim() : "";
+    const currentEntry = trackedWordId ? currentMap[trackedWordId] || null : null;
+    const savedEntry = trackedWordId ? savedMap[trackedWordId] || null : null;
+    const bankEntry = trackedWordId ? getVocabularyRealWordBank().find((candidate) => String(candidate?.id || candidate?.word || "").trim() === trackedWordId) || null : null;
+    const wordLabel = bankEntry?.word || trackedWordId || "未選択";
+    const wordIdMatches = Boolean(trackedWordId && currentEntry && savedEntry && String(currentEntry.wordId || "") === String(savedEntry.wordId || "") && String(currentEntry.wordId || "") === String(trackedWordId));
+
     return {
       uid: uid || "未ログイン",
       key: uid ? key : "未ログイン（UIDなし）",
       savedCount: storedCount,
-      currentCount: Object.keys(currentMap).length
+      currentCount: Object.keys(currentMap).length,
+      wordId: trackedWordId || "なし",
+      wordLabel,
+      wordIdMatches,
+      currentPronunciationStatus: currentEntry?.pronunciationStatus || "－",
+      currentMeaningStatus: currentEntry?.meaningStatus || "－",
+      currentQuestionCount: Number(currentEntry?.questionCount) || 0,
+      currentLastStudiedAt: Number(currentEntry?.lastStudiedAt) || 0,
+      savedPronunciationStatus: savedEntry?.pronunciationStatus || "－",
+      savedMeaningStatus: savedEntry?.meaningStatus || "－",
+      savedQuestionCount: Number(savedEntry?.questionCount) || 0,
+      savedLastStudiedAt: Number(savedEntry?.lastStudiedAt) || 0
     };
   }
 
@@ -11473,7 +11501,10 @@
     const snapshot = buildWordLearningStateDebugSnapshot();
     const uidText = snapshot.uid || "未ログイン";
     const keyText = snapshot.key || "未ログイン（UIDなし）";
-    label.textContent = `UID: ${uidText} / key: ${keyText} / 保存件数: ${snapshot.savedCount} / 現在state件数: ${snapshot.currentCount}`;
+    const trackedWordLabel = snapshot.wordId === "なし" ? "なし" : `${snapshot.wordId} / ${snapshot.wordLabel}`;
+    const currentStateText = `${snapshot.currentPronunciationStatus}/${snapshot.currentMeaningStatus} / q=${snapshot.currentQuestionCount} / last=${snapshot.currentLastStudiedAt || "0"}`;
+    const savedStateText = `${snapshot.savedPronunciationStatus}/${snapshot.savedMeaningStatus} / q=${snapshot.savedQuestionCount} / last=${snapshot.savedLastStudiedAt || "0"}`;
+    label.textContent = `UID: ${uidText} / key: ${keyText} / 保存件数: ${snapshot.savedCount} / 現在state件数: ${snapshot.currentCount} / 直近更新単語: ${trackedWordLabel} / state:${currentStateText} / localStorage:${savedStateText} / wordId一致:${snapshot.wordIdMatches ? "YES" : "NO"}`;
 
     if (snapshot.uid === "未ログイン") {
       panel.classList.add("hidden");
