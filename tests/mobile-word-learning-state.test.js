@@ -133,7 +133,6 @@ function makeSandbox() {
   assert.ok(typeof sandbox.window.saveWordLearningStateForSync === "function", "local save helper should exist");
   assert.ok(typeof sandbox.window.mergeWordLearningStateByLatest === "function", "wordId merge helper should exist");
   assert.ok(typeof sandbox.window.buildWordLearningStateAdminSummary === "function", "admin summary helper should exist");
-  assert.ok(typeof sandbox.window.buildWordLearningStateDebugSnapshot === "function", "single-word debug snapshot helper should exist");
 
   const empty = sandbox.window.createWordLearningStateEntry("w1");
   assert.strictEqual(empty.pronunciationStatus, "－", "new entries start unjudged");
@@ -271,15 +270,6 @@ function makeSandbox() {
   assert.strictEqual(reloadedEntry.meaningStatus, "○", "auth-triggered load keeps learned meaning status");
   assert.strictEqual(reloadedEntry.questionCount, 1, "auth-triggered load keeps learned questionCount");
   assert.strictEqual(reloadedEntry.lastStudiedAt, 1234567890, "auth-triggered load preserves saved lastStudiedAt");
-
-  const debugSnapshot = sandbox.window.buildWordLearningStateDebugSnapshot(
-    { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "△", lastStudiedAt: 12345, questionCount: 2 } },
-    { w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "△", lastStudiedAt: 12345, questionCount: 2 } }
-  );
-  assert.strictEqual(debugSnapshot.wordId, "w1", "debug snapshot keeps the tracked wordId");
-  assert.strictEqual(debugSnapshot.wordLabel, "apple", "debug snapshot resolves the real English word");
-  assert.strictEqual(debugSnapshot.currentPronunciationStatus, "○", "debug snapshot reports the current pronunciation status");
-  assert.strictEqual(debugSnapshot.savedMeaningStatus, "△", "debug snapshot reports saved meaning status");
 
   sandbox.state.wordLearningState = {
     w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 2000, questionCount: 1, perfectPairCount: 1, isMastered: false, learningStateStatus: "learning" },

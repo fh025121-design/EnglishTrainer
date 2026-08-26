@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260826-1937";
+        const defaultToken = "20260826-1943";
         const queryToken = new URLSearchParams(window.location.search).get("v") || "";
         const cacheToken = queryToken || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -50,11 +50,6 @@
         </header>
 
         <main class="stack-layout">
-          <div id="mobileWordLearningStateDebugPanel" class="mobile-vocabulary-debug-panel hidden">
-            <p class="mobile-vocabulary-debug-title">wordLearningState 確認</p>
-            <p id="mobileWordLearningStateDebugText" class="mobile-vocabulary-debug-text">UID: - / key: - / 保存件数: 0 / 現在state件数: 0</p>
-          </div>
-
           <section id="todayLearningSummaryCard" class="panel home-today-learning-card">
             <div class="home-today-learning-header">
               <p class="home-today-learning-title">今日の学習</p>
