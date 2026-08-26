@@ -9110,7 +9110,7 @@
     if (sameUidCanonical && incomingStudy && Array.isArray(incomingStudy.entries)) {
       state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(incomingStudy, getVocabularyRealWordBank());
       state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(
-        mergeVocabularyStudyStateByLatest(localBaseline, state.vocabularyStudy),
+        mergeVocabularyStudyStateByLatest(currentLocal, incomingStudy),
         getVocabularyRealWordBank()
       );
       saveState();
@@ -9121,10 +9121,10 @@
       return;
     }
 
-    const mergedStudy = mergeVocabularyStudyStateByLatest(localBaseline, incomingStudy || localBaseline);
+    const mergedStudy = mergeVocabularyStudyStateByLatest(currentLocal, incomingStudy || currentLocal);
     state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(mergedStudy, getVocabularyRealWordBank());
-    if (!sanitizeVocabularyStudyState(state.vocabularyStudy) && sanitizeVocabularyStudyState(localBaseline)) {
-      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(localBaseline, getVocabularyRealWordBank());
+    if (!sanitizeVocabularyStudyState(state.vocabularyStudy) && sanitizeVocabularyStudyState(currentLocal)) {
+      state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(currentLocal, getVocabularyRealWordBank());
     }
     saveState();
     saveMobileVocabularyStateForSync(state.vocabularyStudy, uid);
