@@ -127,57 +127,59 @@ const checks = [
     ok: /vocabularyTeacherCheckScreen/.test(html) && /teacherCheck/.test(source)
   },
   {
-    name: "teacher check candidate logic requires both self results to be OK and does not cap the candidate group at 50",
-    ok: /getVocabularyTeacherCheckCandidates\s*\(/.test(source)
-      && /lastSelfResult.*ok/.test(source)
-      && /teacherCheck.*◎/.test(source)
-      && !/slice\(0,\s*50\)/.test(source)
+    name: "teacher check uses the exclusive three-category model and the auto priority order",
+    ok: /getVocabularyTeacherCheckSummaryCounts\s*\(/.test(source)
+      && /unconfirmed.*delta.*checked/.test(source)
+      && /\[\s*おまかせ\s*\]/.test(source)
+      && !/全単語から/.test(source)
   },
   {
-    name: "teacher check no-candidate state is explicit and screen is list-based rather than single-item navigation",
+    name: "teacher check no-candidate state is explicit and screen is single-item review rather than count-based paging",
     ok: /先生チェック対象の単語はありません/.test(source)
-      && /vocabulary-teacher-check-list/.test(source)
-      && !/teacherCheck.*currentIndex/.test(source)
+      && /pageSize\s*=\s*1/.test(source)
+      && !/次の10問/.test(source)
+      && !/チェック語数/.test(source)
   },
   {
-    name: "teacher check decisions are draft-only until complete and do not mutate level or currentState",
+    name: "teacher check decisions remain draft-only until the single-item flow advances",
     ok: /teacherCheckSession/.test(source)
-      && /teacherCheckState/.test(source)
-      && /level\s*>=\s*5|currentState.*review|nextReviewAt.*Date\.now/.test(source)
+      && /session\.decisions/.test(source)
+      && /pageIndex/.test(source)
+      && /次へ/.test(source)
   },
   {
-    name: "teacher check screen supports a single vertical scroll render with audio and dual selection buttons",
+    name: "teacher check screen supports audio, dual selection buttons, and meaning toggle state",
     ok: /🔊/.test(source)
       && /発音[\s\S]*◎[\s\S]*△/.test(source)
       && /意味[\s\S]*◎[\s\S]*△/.test(source)
-      && /vocabulary-teacher-check-list/.test(source)
-  },
-  {
-    name: "teacher check uses stable per-candidate IDs and independent meaning preview state",
-    ok: /data-teacher-check-id/.test(source)
-      && /意味を見る/.test(source)
       && /showMeaningIds/.test(source)
-      && /session\.decisions/.test(source)
   },
   {
-    name: "teacher check completion persists the finalized state to localStorage and Firestore sync",
-    ok: /vocabularyTeacherCheckCompleteBtn/.test(source)
-      && /saveState\(\)/.test(source)
+    name: "teacher check uses stable per-candidate IDs and keeps the selection list exclusive by bucket",
+    ok: /data-teacher-check-id/.test(source)
+      && /meaning-toggle/.test(source)
+      && /bucket\s*===\s*"unconfirmed"/.test(source)
+      && /bucket\s*===\s*"delta"/.test(source)
+  },
+  {
+    name: "teacher check completion still persists the finalized state and syncs it",
+    ok: /saveState\(\)/.test(source)
       && /saveMobileVocabularyStateForSync\(state\.vocabularyStudy/.test(source)
       && /scheduleMobileVocabularySync\(\)/.test(source)
   },
   {
-    name: "teacher check summary keeps 10-question pagination and prev/next draft navigation",
-    ok: /pageSize\s*=\s*10/.test(source)
-      && /次の10問/.test(source)
-      && /前の10問/.test(source)
-      && /pageIndex/.test(source)
+    name: "teacher check no longer exposes count-based setup controls at all",
+    ok: !/10語/.test(source)
+      && !/20語/.test(source)
+      && !/全件/.test(source)
+      && !/チェック語数/.test(source)
   },
   {
-    name: "teacher check merge compares dedicated teacher-check timestamps to keep the newest status",
+    name: "teacher check keeps the newest status update and the manual review sequence",
     ok: /teacherCheckUpdatedAt/.test(source)
       && /pronunciationTeacherCheckUpdatedAt/.test(source)
       && /meaningTeacherCheckUpdatedAt/.test(source)
+      && /次へ/.test(source)
   }
 ];
 
@@ -241,4 +243,22 @@ sixtyFiveSandbox.window.state.teacherCheckSession = { candidates: [], decisions:
 sixtyFiveSandbox.window.state.teacherCheckSession.candidates = sixtyFiveSandbox.window.buildVocabularyTeacherCheckCandidates(sixtyFiveSandbox.window.state.teacherCheckSession);
 assert.strictEqual(sixtyFiveSandbox.window.state.teacherCheckSession.candidates.length, 55, "session candidates also include the full matching set without a 50-word cap");
 
-console.log(`mobile vocabulary teacher check checks passed (${checks.length})`);
+const categorySandbox = makeTeacherCheckSandbox();
+categorySandbox.window.state.wordLearningState = {
+  w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastSelfResult: "ok", lastStudiedAt: 1000, questionCount: 1, perfectPairCount: 0, isMastered: false, learningStateStatus: "learning" },
+  w2: { wordId: "w2", pronunciationStatus: "○", meaningStatus: "△", lastSelfResult: "ok", lastStudiedAt: 1000, questionCount: 1, perfectPairCount: 0, isMastered: false, learningStateStatus: "learning" },
+  w3: { wordId: "w3", pronunciationStatus: "△", meaningStatus: "○", lastSelfResult: "ok", lastStudiedAt: 1000, questionCount: 1, perfectPairCount: 0, isMastered: false, learningStateStatus: "learning" },
+  w4: { wordId: "w4", pronunciationStatus: "◎", meaningStatus: "△", lastSelfResult: "ok", lastStudiedAt: 1000, questionCount: 1, perfectPairCount: 0, isMastered: false, learningStateStatus: "learning" },
+  w5: { wordId: "w5", pronunciationStatus: "△", meaningStatus: "◎", lastSelfResult: "ok", lastStudiedAt: 1000, questionCount: 1, perfectPairCount: 0, isMastered: false, learningStateStatus: "learning" },
+  w6: { wordId: "w6", pronunciationStatus: "◎", meaningStatus: "◎", lastSelfResult: "ok", lastStudiedAt: 1000, questionCount: 1, perfectPairCount: 0, isMastered: false, learningStateStatus: "learning" },
+  w7: { wordId: "w7", pronunciationStatus: "◎", meaningStatus: "○", lastSelfResult: "ok", lastStudiedAt: 1000, questionCount: 1, perfectPairCount: 0, isMastered: false, learningStateStatus: "learning" }
+};
+const categoryCounts = categorySandbox.window.getVocabularyTeacherCheckSummaryCounts();
+assert.deepStrictEqual({ ...categoryCounts }, { unconfirmed: 2, delta: 4, checked: 1 }, "three exclusive teacher-check categories should be counted from the canonical state");
+assert.deepStrictEqual(categorySandbox.window.getVocabularyTeacherCheckCandidates("unconfirmed").map((entry) => entry.id), ["w1", "w7"], "unconfirmed mode should only include the ○-only bucket without overlap");
+assert.deepStrictEqual(categorySandbox.window.getVocabularyTeacherCheckCandidates("delta").map((entry) => entry.id), ["w2", "w3", "w4", "w5"], "delta mode should only include the △ bucket without overlap");
+assert.deepStrictEqual(categorySandbox.window.getVocabularyTeacherCheckCandidates("checked").map((entry) => entry.id), ["w6"], "checked mode should only include ◎◎");
+assert.ok(/次へ/.test(source), "the teacher-check flow should use a single-question next action");
+assert.ok(!/次の10問/.test(source), "the old count-based next label should be removed");
+assert.ok(!/全単語から/.test(source), "the old all-words start option should be removed from the setup screen");
+console.log(`mobile vocabulary teacher check checks passed (${checks.length + 6})`);
