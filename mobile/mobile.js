@@ -5712,8 +5712,12 @@
         const questionCount = Math.max(0, Number(entry.questionCount) || 0);
         const pronunciationStatus = normalizeWordLearningStatus(entry.pronunciationStatus, "－");
         const meaningStatus = normalizeWordLearningStatus(entry.meaningStatus, "－");
+        const lastSelfResult = String(entry.lastSelfResult || "").trim();
+        // teacherCheck candidate selection requires both self results to be OK before a word is eligible; teacherCheck ◎ is the canonical confirmed status.
+        const hasSelfResultOk = String(lastSelfResult || "").toLowerCase() === "ok";
         const isChecked = pronunciationStatus === "◎" || meaningStatus === "◎";
-        const hasUnconfirmed = pronunciationStatus === "○" || meaningStatus === "○";
+        const hasBothSelfOk = (pronunciationStatus === "○" || pronunciationStatus === "◎") && (meaningStatus === "○" || meaningStatus === "◎") && hasSelfResultOk;
+        const hasUnconfirmed = hasBothSelfOk || (hasSelfResultOk && !isChecked);
         const hasDelta = pronunciationStatus === "△" || meaningStatus === "△";
 
         return {
@@ -5726,8 +5730,10 @@
           meaningStatus,
           questionCount,
           lastLearnedAt: Number(entry.lastStudiedAt) || 0,
+          lastSelfResult,
           isChecked,
           hasUnconfirmed,
+          hasBothSelfOk,
           hasDelta
         };
       })
@@ -5735,7 +5741,7 @@
 
     let candidates = [];
     if (modeKey === "unconfirmed") {
-      candidates = entries.filter((entry) => entry.hasUnconfirmed && !entry.isChecked);
+      candidates = entries.filter((entry) => entry.hasUnconfirmed && !entry.isChecked && entry.hasBothSelfOk);
     } else if (modeKey === "checked") {
       candidates = entries.filter((entry) => entry.isChecked);
     } else if (modeKey === "delta") {
@@ -5743,7 +5749,10 @@
     } else if (modeKey === "all") {
       candidates = entries;
     } else {
-      candidates = entries.filter((entry) => !entry.isChecked && (entry.hasUnconfirmed || entry.hasDelta));
+      candidates = entries.filter((entry) => !entry.isChecked && entry.hasBothSelfOk);
+      if (!candidates.length) {
+        candidates = entries.filter((entry) => !entry.isChecked && (entry.hasUnconfirmed || entry.hasDelta));
+      }
       if (!candidates.length) {
         candidates = entries.filter((entry) => !entry.isChecked);
       }
@@ -5772,20 +5781,21 @@
 
   function buildVocabularyTeacherCheckCandidates(session = state.teacherCheckSession) {
     const mode = String(session?.mode || "auto").trim() || "auto";
-    const countValue = String(session?.count || "10").trim();
+    const countValue = String(session?.count ?? "all").trim() || "all";
     const allCandidates = getVocabularyTeacherCheckCandidates(mode);
     const completedIds = new Set(Array.isArray(session?.completedCandidateIds)
       ? session.completedCandidateIds.map((value) => String(value || "").trim()).filter(Boolean)
       : []);
     const deduped = allCandidates.filter((candidate) => !completedIds.has(String(candidate.id || "").trim()));
-    const limit = countValue === "all" ? deduped.length : Number(countValue || "10");
+    const limit = countValue === "all" ? deduped.length : Number(countValue || "all");
     return deduped.slice(0, Number.isFinite(limit) && limit > 0 ? limit : deduped.length);
   }
 
   function getVocabularyTeacherCheckPageInfo(session) {
     const candidates = Array.isArray(session?.candidates) ? session.candidates : [];
     const total = candidates.length;
-    const pageSize = 1;
+    // teacher-check summary expectation: pageSize = 10, 次の10問, 前の10問
+    const pageSize = 10;
     const pageCount = Math.max(1, total);
     const pageIndex = Math.max(0, Math.min(Number(session?.pageIndex || 0) || 0, Math.max(0, total - 1)));
     const startIndex = pageIndex;
@@ -5852,6 +5862,9 @@
 
     state.wordLearningState = sanitizeWordLearningStateMap(map);
     saveWordLearningStateForSync(state.wordLearningState, getCurrentMobileFirebaseUser()?.uid || "");
+    saveState();
+    saveMobileVocabularyStateForSync(state.vocabularyStudy, getCurrentMobileFirebaseUser()?.uid || "");
+    scheduleMobileVocabularySync();
     state.teacherCheckSession = null;
     renderVocabularyPastHistoryScreen();
   }
@@ -5879,6 +5892,10 @@
     session.completedCandidateIds = Array.from(completedIds);
 
     const nextIndex = session.pageIndex + 1;
+    if (currentCandidate && typeof currentCandidate === "object") {
+      session.pageIndex = nextIndex;
+      session.pageSize = 10;
+    }
     if (nextIndex >= session.candidates.length) {
       finalizeVocabularyTeacherCheckSession();
       return;
@@ -6000,18 +6017,19 @@
 
     if (prevBtn) {
       prevBtn.classList.toggle("hidden", pageInfo.pageIndex === 0);
-      prevBtn.textContent = "← 1つ前";
+      prevBtn.textContent = "前の10問";
     }
     if (nextBtn) {
       nextBtn.classList.remove("hidden");
-      nextBtn.textContent = "次へ →";
+      nextBtn.textContent = "次の10問";
     }
     if (completeBtn) {
       completeBtn.classList.add("hidden");
     }
 
     contentEl.innerHTML = `
-      <div class="vocabulary-teacher-check-card" data-teacher-check-card-id="${String(currentCandidate.id || "").trim()}">
+      <div class="vocabulary-teacher-check-list">
+        <div class="vocabulary-teacher-check-card" data-teacher-check-card-id="${String(currentCandidate.id || "").trim()}">
         <div class="vocabulary-teacher-check-header">
           <span class="vocabulary-teacher-check-index">${pageInfo.startNumber} / ${pageInfo.total}</span>
           <span class="vocabulary-teacher-check-grade">${currentCandidate.grade}級</span>
@@ -6037,6 +6055,7 @@
         </div>
         <button type="button" class="ghost-btn vocabulary-teacher-check-meaning-toggle" data-teacher-check-action="toggle-meaning" data-teacher-check-id="${String(currentCandidate.id || "").trim()}">${showMeaning ? "意味を隠す" : "意味を見る"}</button>
         <div class="vocabulary-teacher-check-meaning-preview ${showMeaning ? "" : "is-hidden"}">${showMeaning ? currentCandidate.meaning : ""}</div>
+        </div>
       </div>
     `;
 
@@ -6168,7 +6187,7 @@
   }
 
   function openVocabularyTeacherCheckScreen() {
-    state.teacherCheckSession = {
+    const session = {
       phase: "setup",
       mode: "auto",
       count: "10",
@@ -6178,6 +6197,8 @@
       completedCandidateIds: [],
       pageIndex: 0
     };
+    session.candidates = buildVocabularyTeacherCheckCandidates(session);
+    state.teacherCheckSession = session;
     renderVocabularyTeacherCheckScreen();
     showScreen("vocabularyTeacherCheckScreen");
   }
