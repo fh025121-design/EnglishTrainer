@@ -366,6 +366,13 @@ function makeSandbox() {
     return { ok: true, saved: true, wordLearningState: map };
   };
   sandbox.state.wordLearningState = {};
+  sandbox.mobileAuthLastStatus = "logged-out";
+  sandbox.mobileAuthLastUid = "";
+  sandbox.window.MobileFirebaseAuthState = { status: "logged-in", user: { uid: "uid-1" } };
+  sandbox.window.getMobileFirebaseCurrentUser = () => ({ uid: "uid-1" });
+  sandbox.window.bindMobileAuthState();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.strictEqual(sandbox.state.wordLearningState.remoteW1.questionCount, 4, "auth bootstrap should load and apply remote wordLearningState data for logged-in users");
   await sandbox.window.initializeWordLearningStateSyncForCurrentUser({ force: true });
   assert.strictEqual(sandbox.state.wordLearningState.remoteW1.questionCount, 4, "remote Firestore state should win when loading a logged-in user");
   assert.strictEqual(sandbox.window.localStorage.getItem("english-trainer-mobile-word-learning-state-v1:uid-1").includes("remoteW1"), true, "remote state should be written back to localStorage during load");

@@ -12446,6 +12446,7 @@
           flushMobilePendingLearningHistoryEntries().catch(() => 0);
           initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
           initializeWordOrderStatsSyncForCurrentUser({ force: true }).catch(() => false);
+          initializeWordLearningStateSyncForCurrentUser({ force: true }).catch(() => false);
           initializeMobileVocabularySyncForCurrentUser({ force: true }).catch(() => false);
           refreshMobileHomeTodayLearningSummaryFromFirestore().catch(() => false);
         });
@@ -12509,6 +12510,7 @@
           flushMobilePendingLearningHistoryEntries().catch(() => 0);
           initializeMobilePointSyncForCurrentUser({ force: true }).catch(() => false);
           initializeWordOrderStatsSyncForCurrentUser({ force: true }).catch(() => false);
+          initializeWordLearningStateSyncForCurrentUser({ force: true }).catch(() => false);
           initializeMobileVocabularySyncForCurrentUser({ force: true }).catch(() => false);
           refreshMobileHomeTodayLearningSummaryFromFirestore().catch(() => false);
         });
