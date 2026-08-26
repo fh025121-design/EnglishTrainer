@@ -1,6 +1,7 @@
 window.ENGLISH_TRAINER_RELEASE_INFO = Object.freeze({
   adminPassword: "12345",
   releaseHistory: [
+    { version: "2026/08/26 22:30", note: "モバイル版のみ: 実際の JST 22:30 を取得し、級別集計を現在の wordLearningState から一意な wordId 集合で再計算する最小修正を公開。学習中総数と 5級/4級/3級 の合計が一致し、重複のない grade 集計で一覧と進捗の整合性を維持。公開用 cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
     { version: "2026/08/26 21:01", note: "モバイル版のみ: 実際の JST 21:01 を取得し、先生チェック候補生成を現在の wordLearningState から毎回再構築する最小修正を公開。過去の stale completedCandidateIds を新規開始時に再利用しないようにし、単語一覧の ○○ 数と先生チェック候補数が一致するように整備。公開用 cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
     { version: "2026/08/26 19:43", note: "モバイル版のみ: 実際の JST 19:43 を取得し、wordLearningState の一時デバッグ表示と専用UI/コードを完全に撤去。ホームからデバッグ用の UID / 保存key / 保存件数 / 現在state件数 / 直近更新単語 / wordId一致 / 調査表示が消え、単語一覧・学習中/定着/未学習・○△状態・F5保存と復元・先生チェック・Firebase同期には影響を与えない。公開用 cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
     { version: "2026/08/26 19:37", note: "モバイル版のみ: 実際の JST 19:37 を取得し、旧管理者用『単語状態確認』のボタンと専用UIを削除し、単語一覧3入口へ統一。wordLearningState・学習中/定着/未学習の集計・F5保持・先生チェック・Firebase同期には触れず、公開用 cache token / release-info.js / モバイル版バージョン表示を同じ時刻へ統一して GitHub Pages 公開用に反映。" },
