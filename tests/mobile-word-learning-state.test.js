@@ -385,5 +385,55 @@ function makeSandbox() {
   assert.strictEqual(Boolean(sandbox.window.__lastSavedWordState), true, "saveState should persist wordLearningState to Firestore for logged-in users");
   assert.strictEqual(sandbox.window.__lastSavedWordState.localOnly.questionCount, 2, "saveState should persist the sanitized local wordLearningState snapshot");
 
+  const local13 = {
+    a: { wordId: "a", pronunciationStatus: "○", meaningStatus: "△", lastSelfResult: "ok", lastStudiedAt: 200, questionCount: 7, perfectPairCount: 1, isMastered: false, learningStateStatus: "learning" },
+    b: { wordId: "b", pronunciationStatus: "○", meaningStatus: "○", lastSelfResult: "ok", lastStudiedAt: 300, questionCount: 6, perfectPairCount: 2, isMastered: false, learningStateStatus: "learning" },
+    c: { wordId: "c", pronunciationStatus: "－", meaningStatus: "－", lastSelfResult: null, lastStudiedAt: 0, questionCount: 0, perfectPairCount: 0, isMastered: false, learningStateStatus: "unlearned" },
+    d: { wordId: "d", pronunciationStatus: "○", meaningStatus: "○", lastSelfResult: "ok", lastStudiedAt: 400, questionCount: 10, perfectPairCount: 5, isMastered: true, learningStateStatus: "mastered" }
+  };
+  const remote3 = {
+    a: { wordId: "a", pronunciationStatus: "○", meaningStatus: "○", lastSelfResult: "ok", lastStudiedAt: 100, questionCount: 5, perfectPairCount: 1, isMastered: false, learningStateStatus: "learning" },
+    y: { wordId: "y", pronunciationStatus: "△", meaningStatus: "○", lastSelfResult: "ng", lastStudiedAt: 500, questionCount: 3, perfectPairCount: 0, isMastered: false, learningStateStatus: "learning" },
+    z: { wordId: "z", pronunciationStatus: "◎", meaningStatus: "◎", lastSelfResult: "ok", lastStudiedAt: 600, questionCount: 2, perfectPairCount: 2, isMastered: false, learningStateStatus: "learning" }
+  };
+
+  const merged13 = sandbox.window.mergeWordLearningStateByLatest(local13, remote3);
+  assert.strictEqual(Object.keys(merged13).length, 6, "union merge should retain local-only and remote-only entries without deleting learned words");
+  assert.strictEqual(merged13.a.questionCount, 7, "questionCount should use the max of local and remote values");
+  assert.strictEqual(merged13.a.meaningStatus, "△", "newer local status should win for current state fields");
+  assert.strictEqual(merged13.a.lastStudiedAt, 200, "lastStudiedAt should stay on the newest learned record, which is the local record here");
+  assert.strictEqual(merged13.y.questionCount, 3, "remote-only learned word should be preserved");
+  assert.strictEqual(merged13.z.questionCount, 2, "remote-only word should survive the union merge");
+  assert.strictEqual(merged13.c.questionCount, 0, "unlearned local entries should remain unlearned");
+  assert.strictEqual(merged13.d.isMastered, true, "mastered local state must survive merge");
+
+  const localOnlyWord = { x: { wordId: "x", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 900, questionCount: 2, perfectPairCount: 1, isMastered: false, learningStateStatus: "learning" } };
+  const remoteOnlyWord = { y: { wordId: "y", pronunciationStatus: "△", meaningStatus: "○", lastStudiedAt: 100, questionCount: 1, perfectPairCount: 0, isMastered: false, learningStateStatus: "learning" } };
+  const unionResult = sandbox.window.mergeWordLearningStateByLatest(localOnlyWord, remoteOnlyWord);
+  assert.strictEqual(Object.keys(unionResult).length, 2, "local-only and remote-only wordIds should both survive union");
+  assert.strictEqual(unionResult.x.questionCount, 2, "local-only progress is preserved");
+  assert.strictEqual(unionResult.y.questionCount, 1, "remote-only progress is preserved");
+
+  const localNewer = {
+    n: { wordId: "n", pronunciationStatus: "○", meaningStatus: "△", lastSelfResult: "ok", lastStudiedAt: 200, questionCount: 7, perfectPairCount: 3, isMastered: false, learningStateStatus: "learning" }
+  };
+  const remoteNewer = {
+    n: { wordId: "n", pronunciationStatus: "△", meaningStatus: "○", lastSelfResult: "ng", lastStudiedAt: 300, questionCount: 5, perfectPairCount: 2, isMastered: false, learningStateStatus: "learning" }
+  };
+  const newerLocalMerge = sandbox.window.mergeWordLearningStateByLatest(localNewer, remoteNewer);
+  assert.strictEqual(newerLocalMerge.n.questionCount, 7, "questionCount should use the max across both entries even when remote is newer");
+  assert.strictEqual(newerLocalMerge.n.pronunciationStatus, "△", "newer remote status should win when the remote record is newer");
+  assert.strictEqual(newerLocalMerge.n.meaningStatus, "○", "newer remote meaning status should win");
+
+  const localZeroReset = {
+    zeroWord: { wordId: "zeroWord", pronunciationStatus: "○", meaningStatus: "○", lastSelfResult: "ok", lastStudiedAt: 100, questionCount: 1, perfectPairCount: 1, isMastered: false, learningStateStatus: "learning" }
+  };
+  const remoteZeroReset = {
+    zeroWord: { wordId: "zeroWord", pronunciationStatus: "－", meaningStatus: "－", lastSelfResult: "", lastStudiedAt: 200, questionCount: 0, perfectPairCount: 0, isMastered: false, learningStateStatus: "unlearned" }
+  };
+  const zeroResetMerge = sandbox.window.mergeWordLearningStateByLatest(localZeroReset, remoteZeroReset);
+  assert.strictEqual(zeroResetMerge.zeroWord.questionCount, 1, "zero-question reset should not erase the learned value");
+  assert.strictEqual(zeroResetMerge.zeroWord.pronunciationStatus, "○", "learned current status should survive a later unlearned reset");
+
   console.log("mobile word learning state checks passed");
 })();
