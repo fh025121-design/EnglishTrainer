@@ -7,6 +7,7 @@ const source = fs.readFileSync(path.join(__dirname, "..", "mobile", "mobile.js")
 
 function makeSandbox() {
   const store = {};
+  const sharedState = { wordLearningState: {}, vocabularyStudy: null, vocabularyTodayHistoryMap: {} };
   const realBank = [
     { id: "w1", word: "apple", partOfSpeech: "名詞", meaning: "りんご", level: "5" },
     { id: "w2", word: "banana", partOfSpeech: "名詞", meaning: "バナナ", level: "5" },
@@ -72,6 +73,7 @@ function makeSandbox() {
     removeEventListener() {},
     location: { search: "", href: "https://example.com/mobile/index.html" },
     document,
+    state: sharedState,
     MOBILE_VOCABULARY_REAL_WORD_BANK: realBank,
     ENGLISH_TRAINER_RELEASE_INFO: { releaseHistory: [{ version: "test" }] },
     navigator: { userAgent: "node" }
@@ -96,7 +98,7 @@ function makeSandbox() {
     Audio: function () { return { preload() {}, play() { return Promise.resolve(); } }; },
     window: windowObj,
     document,
-    state: { wordLearningState: {}, vocabularyStudy: null, vocabularyTodayHistoryMap: {} },
+    state: sharedState,
     getCurrentMobileFirebaseUser: () => ({ uid: "uid-1" }),
     getVocabularyRealWordBank: () => realBank,
     buildVocabularyRealStudyState: () => ({

@@ -3127,7 +3127,7 @@
     return vocabularySyncLastOperationAtMs > 0 && now - vocabularySyncLastOperationAtMs < MOBILE_VOCABULARY_SYNC_DEDUPE_MS;
   }
 
-  const state = {
+  var state = (typeof window !== "undefined" && window.state && typeof window.state === "object") ? window.state : {
     settings: {
       rangeMode: "auto",
       startDay: MOBILE_DAY_MIN,
@@ -3199,6 +3199,12 @@
     pointRewardScreenState: null,
     micTestRecognition: null
   };
+
+  window.state = state;
+
+  if (typeof window !== "undefined") {
+    window.state = state;
+  }
 
   const elements = {};
 
@@ -3586,6 +3592,7 @@
     };
   }
 
+  window.state = state;
   window.createWordLearningStateEntry = createWordLearningStateEntry;
   window.normalizeWordLearningStatus = normalizeWordLearningStatus;
   window.getWordLearningStateStatusFromEntry = getWordLearningStateStatusFromEntry;
