@@ -201,6 +201,54 @@ function makeSandbox() {
   assert.strictEqual(adminSummary.unlearnedCount, 2, "unlearned count counts zero-question words");
   assert.strictEqual(adminSummary.rows.some((row) => row.wordId === "w1" && row.word === "apple"), true, "admin summary rows map to real vocabulary words");
 
+  assert.ok(typeof sandbox.window.buildWordLearningStateProgressSummary === "function", "wordLearningState progress summary should exist");
+  const progressSummary = sandbox.window.buildWordLearningStateProgressSummary({
+    w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 100, questionCount: 4, perfectPairCount: 4, isMastered: false },
+    w2: { wordId: "w2", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 200, questionCount: 5, perfectPairCount: 5, isMastered: true },
+    w3: { wordId: "w3", pronunciationStatus: "－", meaningStatus: "－", lastStudiedAt: 0, questionCount: 0, perfectPairCount: 0, isMastered: false }
+  });
+  assert.strictEqual(progressSummary.totalWords, 3, "progress summary counts total available words");
+  assert.strictEqual(progressSummary.learningCount, 1, "learning count should ignore unlearned words and count only active words");
+  assert.strictEqual(progressSummary.masteredCount, 1, "mastered count should use isMastered and wordLearningState only");
+  assert.strictEqual(progressSummary.masteredWordIds.includes("w2"), true, "mastered word should be tracked in the progress summary");
+
+  sandbox.window.saveWordLearningStateForSync({}, "uid-1");
+  let masteredEntry = null;
+  for (let index = 0; index < 4; index += 1) {
+    masteredEntry = sandbox.window.finalizeWordLearningStateForCompletion("w1", "○", "○");
+  }
+  assert.strictEqual(masteredEntry.perfectPairCount, 4, "first four perfect completions accumulate");
+  assert.strictEqual(masteredEntry.isMastered, false, "four perfect completions are not yet mastered");
+  masteredEntry = sandbox.window.finalizeWordLearningStateForCompletion("w1", "○", "○");
+  assert.strictEqual(masteredEntry.perfectPairCount, 5, "fifth perfect completion crosses the required threshold");
+  assert.strictEqual(masteredEntry.isMastered, true, "fifth perfect completion marks the word as mastered");
+  masteredEntry = sandbox.window.finalizeWordLearningStateForCompletion("w1", "○", "△");
+  assert.strictEqual(masteredEntry.isMastered, false, "a later delta clears mastery");
+  assert.strictEqual(masteredEntry.learningStateStatus, "learning", "later delta moves the word back to learning state");
+  masteredEntry = sandbox.window.finalizeWordLearningStateForCompletion("w1", "○", "○");
+  assert.strictEqual(masteredEntry.isMastered, true, "next perfect completion remasters the word");
+
+  const continuousMap = {};
+  for (let index = 0; index < 20; index += 1) {
+    const wordId = `word-${index}`;
+    const isMasteredWord = index < 5;
+    continuousMap[wordId] = {
+      wordId,
+      pronunciationStatus: isMasteredWord ? "○" : (index % 2 === 0 ? "○" : "△"),
+      meaningStatus: isMasteredWord ? "○" : (index % 3 === 0 ? "○" : "△"),
+      lastStudiedAt: 1000 + index * 10,
+      questionCount: isMasteredWord ? 5 : 1,
+      perfectPairCount: isMasteredWord ? 5 : (index % 2 === 0 ? 1 : 0),
+      isMastered: isMasteredWord,
+      learningStateStatus: isMasteredWord ? "mastered" : "learning"
+    };
+  }
+  const continuousSummary = sandbox.window.buildWordLearningStateProgressSummary(continuousMap);
+  assert.strictEqual(continuousSummary.totalWords, 20, "continuous summary counts all 20 tracked words");
+  assert.strictEqual(continuousSummary.masteredCount, 5, "five mastered words remain counted exactly once each");
+  assert.strictEqual(continuousSummary.learningCount, 15, "learning count excludes unlearned entries and counts unique active words");
+  assert.strictEqual(continuousSummary.learningWordIds.length, 15, "repeated study of the same word does not create extra learning entries");
+
   const persistedF5Map = {
     "vocab-3-although-item-484": {
       wordId: "vocab-3-although-item-484",

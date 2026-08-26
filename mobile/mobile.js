@@ -3251,19 +3251,37 @@
     return raw === "－" || raw === "-" || raw === "ー" ? "－" : raw;
   }
 
+  function getWordLearningStateStatusFromEntry(entry) {
+    const explicitStatus = String(entry?.learningStateStatus || entry?.status || "").trim().toLowerCase();
+    if (["mastered", "learning", "unlearned"].includes(explicitStatus)) {
+      return explicitStatus;
+    }
+    const questionCount = Math.max(0, Number(entry?.questionCount) || 0);
+    const perfectPairCount = Math.max(0, Number(entry?.perfectPairCount) || 0);
+    if (questionCount <= 0) return "unlearned";
+    if (Boolean(entry?.isMastered) || perfectPairCount >= 5) return "mastered";
+    return "learning";
+  }
+
   function createWordLearningStateEntry(wordId, overrides = {}) {
     const normalizedId = String(wordId || overrides?.wordId || "").trim();
     if (!normalizedId) return null;
     const source = overrides && typeof overrides === "object" ? overrides : {};
     const questionCount = Math.max(0, Number(source.questionCount || 0) || 0);
+    const perfectPairCount = Math.max(0, Number(source.perfectPairCount || 0) || 0);
     const hasProgress = questionCount > 0;
     const lastStudiedAt = hasProgress ? (Number(source.lastStudiedAt) || Date.now()) : 0;
+    const derivedStatus = getWordLearningStateStatusFromEntry({ ...source, questionCount, perfectPairCount });
+    const isMastered = Boolean(source.isMastered) || derivedStatus === "mastered";
     return {
       wordId: normalizedId,
       pronunciationStatus: hasProgress ? normalizeWordLearningStatus(source.pronunciationStatus ?? source.pronunciation ?? "－", "－") : "－",
       meaningStatus: hasProgress ? normalizeWordLearningStatus(source.meaningStatus ?? source.meaning ?? "－", "－") : "－",
       lastStudiedAt,
-      questionCount
+      questionCount,
+      perfectPairCount,
+      isMastered,
+      learningStateStatus: isMastered ? "mastered" : (questionCount > 0 ? "learning" : "unlearned")
     };
   }
 
@@ -3278,7 +3296,10 @@
         pronunciationStatus: normalizeWordLearningStatus(entry.pronunciationStatus, "－"),
         meaningStatus: normalizeWordLearningStatus(entry.meaningStatus, "－"),
         lastStudiedAt: Number(entry.lastStudiedAt) || 0,
-        questionCount: Math.max(0, Number(entry.questionCount) || 0)
+        questionCount: Math.max(0, Number(entry.questionCount) || 0),
+        perfectPairCount: Math.max(0, Number(entry.perfectPairCount) || 0),
+        isMastered: Boolean(entry.isMastered),
+        learningStateStatus: getWordLearningStateStatusFromEntry(entry)
       };
     });
     return nextMap;
@@ -3368,16 +3389,38 @@
       pronunciationStatus: "－",
       meaningStatus: "－",
       lastStudiedAt: 0,
-      questionCount: 0
+      questionCount: 0,
+      perfectPairCount: 0,
+      isMastered: false,
+      learningStateStatus: "unlearned"
     });
     const timestamp = Number(now) || Date.now();
+    const nextQuestionCount = Math.max(0, Number(current.questionCount) || 0) + 1;
+    const nextPronunciationStatus = normalizeWordLearningStatus(pronunciationStatus ?? current.pronunciationStatus ?? "－", "－");
+    const nextMeaningStatus = normalizeWordLearningStatus(meaningStatus ?? current.meaningStatus ?? "－", "－");
+    const isPerfectPair = nextPronunciationStatus === "○" && nextMeaningStatus === "○";
+    const previousPerfectPairCount = Math.max(0, Number(current.perfectPairCount) || 0);
+    const nextPerfectPairCount = isPerfectPair ? previousPerfectPairCount + 1 : previousPerfectPairCount;
+    const wasMastered = Boolean(current.isMastered) || getWordLearningStateStatusFromEntry(current) === "mastered";
+    const nextIsMastered = (() => {
+      if (wasMastered && !isPerfectPair) {
+        return false;
+      }
+      if (isPerfectPair) {
+        return nextPerfectPairCount >= 5 || wasMastered;
+      }
+      return false;
+    })();
     const nextEntry = {
       ...current,
       wordId: normalizedId,
-      pronunciationStatus: normalizeWordLearningStatus(pronunciationStatus ?? current.pronunciationStatus ?? "－", "－"),
-      meaningStatus: normalizeWordLearningStatus(meaningStatus ?? current.meaningStatus ?? "－", "－"),
+      pronunciationStatus: nextPronunciationStatus,
+      meaningStatus: nextMeaningStatus,
       lastStudiedAt: timestamp,
-      questionCount: Math.max(0, Number(current.questionCount) || 0) + 1
+      questionCount: nextQuestionCount,
+      perfectPairCount: nextPerfectPairCount,
+      isMastered: nextIsMastered,
+      learningStateStatus: nextIsMastered ? "mastered" : (nextQuestionCount > 0 ? "learning" : "unlearned")
     };
     state.wordLearningState = { ...map, [normalizedId]: nextEntry };
     return nextEntry;
@@ -3458,23 +3501,31 @@
   function buildWordLearningStateAdminSummary(map = state.wordLearningState) {
     const bank = Array.isArray(getVocabularyRealWordBank()) ? getVocabularyRealWordBank() : [];
     const normalizedMap = sanitizeWordLearningStateMap(map || {});
-    const rows = bank.map((entry) => {
-      const wordId = String(entry?.id || entry?.word || "").trim();
+    const candidateWordIds = Object.keys(normalizedMap).length ? Object.keys(normalizedMap) : bank.map((entry) => String(entry?.id || entry?.word || "").trim()).filter(Boolean);
+    const rows = candidateWordIds.map((wordId) => {
+      const bankEntry = bank.find((entry) => String(entry?.id || entry?.word || "").trim() === wordId) || null;
       const record = normalizedMap[wordId] || createWordLearningStateEntry(wordId, {
         wordId,
         pronunciationStatus: "－",
         meaningStatus: "－",
         lastStudiedAt: 0,
-        questionCount: 0
+        questionCount: 0,
+        perfectPairCount: 0,
+        isMastered: false,
+        learningStateStatus: "unlearned"
       });
       const questionCount = Math.max(0, Number(record?.questionCount) || 0);
+      const isMastered = Boolean(record?.isMastered) || getWordLearningStateStatusFromEntry(record) === "mastered";
       return {
         wordId,
-        word: String(entry?.word || wordId || "").trim(),
+        word: String(bankEntry?.word || wordId || "").trim(),
         pronunciationStatus: normalizeWordLearningStatus(record?.pronunciationStatus, "－"),
         meaningStatus: normalizeWordLearningStatus(record?.meaningStatus, "－"),
         lastStudiedAt: Number(record?.lastStudiedAt) || 0,
         questionCount,
+        perfectPairCount: Math.max(0, Number(record?.perfectPairCount) || 0),
+        isMastered,
+        learningStateStatus: isMastered ? "mastered" : (questionCount > 0 ? "learning" : "unlearned"),
         isLearned: questionCount > 0
       };
     });
@@ -3483,6 +3534,53 @@
       totalWords: rows.length,
       learnedCount,
       unlearnedCount: Math.max(0, rows.length - learnedCount),
+      rows
+    };
+  }
+
+  function buildWordLearningStateProgressSummary(map = state.wordLearningState) {
+    const bank = Array.isArray(getVocabularyRealWordBank()) ? getVocabularyRealWordBank() : [];
+    const normalizedMap = sanitizeWordLearningStateMap(map || {});
+    const candidateWordIds = Object.keys(normalizedMap).length ? Object.keys(normalizedMap) : bank.map((entry) => String(entry?.id || entry?.word || "").trim()).filter(Boolean);
+    const rows = candidateWordIds.map((wordId) => {
+      const bankEntry = bank.find((entry) => String(entry?.id || entry?.word || "").trim() === wordId) || null;
+      const record = normalizedMap[wordId] || createWordLearningStateEntry(wordId, {
+        wordId,
+        pronunciationStatus: "－",
+        meaningStatus: "－",
+        lastStudiedAt: 0,
+        questionCount: 0,
+        perfectPairCount: 0,
+        isMastered: false,
+        learningStateStatus: "unlearned"
+      });
+      const questionCount = Math.max(0, Number(record?.questionCount) || 0);
+      const perfectPairCount = Math.max(0, Number(record?.perfectPairCount) || 0);
+      const isMastered = Boolean(record?.isMastered) || getWordLearningStateStatusFromEntry(record) === "mastered";
+      const learningStateStatus = isMastered ? "mastered" : (questionCount > 0 ? "learning" : "unlearned");
+      return {
+        wordId,
+        word: String(bankEntry?.word || wordId || "").trim(),
+        pronunciationStatus: normalizeWordLearningStatus(record?.pronunciationStatus, "－"),
+        meaningStatus: normalizeWordLearningStatus(record?.meaningStatus, "－"),
+        lastStudiedAt: Number(record?.lastStudiedAt) || 0,
+        questionCount,
+        perfectPairCount,
+        isMastered,
+        learningStateStatus
+      };
+    });
+    const masteredRows = rows.filter((row) => row.isMastered);
+    const learningRows = rows.filter((row) => row.questionCount > 0 && !row.isMastered);
+    const unlearnedRows = rows.filter((row) => row.questionCount <= 0 && !row.isMastered);
+    return {
+      totalWords: rows.length,
+      masteredCount: masteredRows.length,
+      learningCount: learningRows.length,
+      unlearnedCount: unlearnedRows.length,
+      masteredWordIds: masteredRows.map((row) => row.wordId),
+      learningWordIds: learningRows.map((row) => row.wordId),
+      unlearnedWordIds: unlearnedRows.map((row) => row.wordId),
       rows
     };
   }
@@ -3499,6 +3597,7 @@
   window.getWordLearningStateManagementRows = getWordLearningStateManagementRows;
   window.formatWordLearningStateAdminTime = formatWordLearningStateAdminTime;
   window.buildWordLearningStateAdminSummary = buildWordLearningStateAdminSummary;
+  window.buildWordLearningStateProgressSummary = buildWordLearningStateProgressSummary;
   window.buildWordLearningStateDebugSnapshot = buildWordLearningStateDebugSnapshot;
   window.renderWordLearningStateDebugPanel = renderWordLearningStateDebugPanel;
   window.applyMobileAuthState = applyMobileAuthState;
@@ -12666,15 +12765,13 @@
   }
 
   function getVocabularyPracticeEntrySummary() {
-    const studyEntries = Array.isArray(state.vocabularyStudy?.entries) && state.vocabularyStudy.entries.length
-      ? state.vocabularyStudy.entries
-      : getVocabularyRealWordBank().map((entry, index) => normalizeVocabularyWordRecord(entry, index)).filter(Boolean);
-    const totalWords = Array.isArray(studyEntries) ? studyEntries.length : 0;
+    const wordLearningProgress = buildWordLearningStateProgressSummary(state.wordLearningState || {});
+    const totalWords = wordLearningProgress.totalWords || 0;
     const summary = {
       totalWords,
-      mastered: 0,
-      learning: 0,
-      unlearned: 0,
+      mastered: wordLearningProgress.masteredCount || 0,
+      learning: wordLearningProgress.learningCount || 0,
+      unlearned: wordLearningProgress.unlearnedCount || 0,
       gradeSummary: {
         5: { total: 0, mastered: 0 },
         4: { total: 0, mastered: 0 },
@@ -12686,28 +12783,6 @@
     if (!totalWords) {
       return summary;
     }
-
-    studyEntries.forEach((entry) => {
-      const gradeKey = getVocabularyGradeValue(entry);
-      const safeGradeKey = ["5", "4", "3"].includes(gradeKey) ? gradeKey : "5";
-      const gradeBucket = summary.gradeSummary[safeGradeKey] || { total: 0, mastered: 0 };
-      gradeBucket.total += 1;
-      summary.gradeSummary[safeGradeKey] = gradeBucket;
-
-      const status = getVocabularyEntryDisplayStatus(entry);
-      if (status === "mastered") {
-        summary.mastered += 1;
-        gradeBucket.mastered += 1;
-        return;
-      }
-
-      if (status === "learning") {
-        summary.learning += 1;
-        return;
-      }
-
-      summary.unlearned += 1;
-    });
 
     summary.percent = Math.round((summary.mastered / Math.max(1, totalWords)) * 100);
     return summary;
