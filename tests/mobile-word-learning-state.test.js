@@ -213,6 +213,23 @@ function makeSandbox() {
   assert.strictEqual(progressSummary.masteredCount, 1, "mastered count should use isMastered and wordLearningState only");
   assert.strictEqual(progressSummary.masteredWordIds.includes("w2"), true, "mastered word should be tracked in the progress summary");
 
+  const teacherStateMap = {
+    w1: { wordId: "w1", pronunciationStatus: "◎", meaningStatus: "△", lastStudiedAt: 100, questionCount: 3, perfectPairCount: 2, isMastered: false, learningStateStatus: "learning" },
+    w2: { wordId: "w2", pronunciationStatus: "◎", meaningStatus: "◎", lastStudiedAt: 200, questionCount: 2, perfectPairCount: 2, isMastered: false, learningStateStatus: "learning" }
+  };
+  const teacherProgress = sandbox.window.buildWordLearningStateProgressSummary(teacherStateMap);
+  assert.strictEqual(teacherProgress.learningCount, 2, "teacher-checked learning words stay in the canonical learning bucket");
+  assert.strictEqual(teacherProgress.masteredCount, 0, "teacher checks do not promote a word without a normal mastery threshold");
+  assert.strictEqual(sandbox.window.normalizeWordLearningStatus("◎", "－"), "◎", "teacher success should stay distinct from ordinary ○");
+  assert.strictEqual(sandbox.window.normalizeWordLearningStatus("○", "－"), "○", "ordinary success should remain ○");
+
+  const teacherCheckCanonical = sandbox.window.sanitizeWordLearningStateMap({
+    w1: { wordId: "w1", pronunciationStatus: "◎", meaningStatus: "△", questionCount: 1, lastStudiedAt: 111 }
+  });
+  assert.strictEqual(teacherCheckCanonical.w1.pronunciationStatus, "◎", "canonical state preserves the teacher's current ◎ value");
+  assert.strictEqual(teacherCheckCanonical.w1.meaningStatus, "△", "canonical state preserves the teacher's current △ value");
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(teacherCheckCanonical.w1, "teacherCheckState"), false, "teacherCheckState is not persisted in canonical state");
+
   sandbox.window.saveWordLearningStateForSync({}, "uid-1");
   let masteredEntry = null;
   for (let index = 0; index < 4; index += 1) {

@@ -3248,13 +3248,40 @@
     const raw = String(value ?? "").trim();
     if (!raw) return fallback;
     const normalizedLower = raw.toLowerCase();
-    if (["○", "o", "ok", "correct", "◎"].includes(raw) || ["○", "o", "ok", "correct", "◎"].includes(normalizedLower)) {
+    if (["◎", "ok", "perfect", "self-done", "correct"].includes(raw) || ["◎", "ok", "perfect", "self-done", "correct"].includes(normalizedLower)) {
+      return "◎";
+    }
+    if (["○", "o"].includes(raw) || ["○", "o"].includes(normalizedLower)) {
       return "○";
     }
     if (["△", "x", "ng", "wrong", "incorrect", "×"].includes(raw) || ["△", "x", "ng", "wrong", "incorrect", "×"].includes(normalizedLower)) {
       return "△";
     }
     return raw === "－" || raw === "-" || raw === "ー" ? "－" : raw;
+  }
+
+  function normalizeWordLearningTeacherCheckValue(value, fallback = "none") {
+    const raw = String(value ?? "").trim();
+    if (!raw || raw === "none") return fallback;
+    const normalizedLower = raw.toLowerCase();
+    if (["◎", "ok", "self-done", "perfect"].includes(raw) || ["◎", "ok", "self-done", "perfect"].includes(normalizedLower)) {
+      return "◎";
+    }
+    if (["△", "ng", "weak", "wrong", "incorrect"].includes(raw) || ["△", "ng", "weak", "wrong", "incorrect"].includes(normalizedLower)) {
+      return "△";
+    }
+    return fallback;
+  }
+
+  function getWordLearningStateTeacherCheckStatus(entry, fieldName = "pronunciation") {
+    if (!entry || typeof entry !== "object") return "none";
+    const skillField = String(fieldName || "pronunciation").trim();
+    const teacherState = entry.teacherCheckState && typeof entry.teacherCheckState === "object" ? entry.teacherCheckState : {};
+    const directValue = String(entry.teacherCheckStatus || teacherState[skillField] || "none").trim();
+    const normalized = normalizeWordLearningTeacherCheckValue(directValue, "none");
+    if (normalized !== "none") return normalized;
+    const fallbackKey = skillField === "meaning" ? "meaningTeacherCheck" : "pronunciationTeacherCheck";
+    return normalizeWordLearningTeacherCheckValue(entry[fallbackKey] || "none", "none");
   }
 
   function getWordLearningStateStatusFromEntry(entry) {
@@ -3277,12 +3304,14 @@
     const perfectPairCount = Math.max(0, Number(source.perfectPairCount || 0) || 0);
     const hasProgress = questionCount > 0;
     const lastStudiedAt = hasProgress ? (Number(source.lastStudiedAt) || Date.now()) : 0;
-    const derivedStatus = getWordLearningStateStatusFromEntry({ ...source, questionCount, perfectPairCount });
+    const derivedPronunciationStatus = normalizeWordLearningStatus(source.pronunciationStatus ?? source.pronunciation ?? source.teacherCheckState?.pronunciation ?? source.pronunciationTeacherCheck ?? "－", "－");
+    const derivedMeaningStatus = normalizeWordLearningStatus(source.meaningStatus ?? source.meaning ?? source.teacherCheckState?.meaning ?? source.meaningTeacherCheck ?? "－", "－");
+    const derivedStatus = getWordLearningStateStatusFromEntry({ ...source, questionCount, perfectPairCount, pronunciationStatus: derivedPronunciationStatus, meaningStatus: derivedMeaningStatus });
     const isMastered = Boolean(source.isMastered) || derivedStatus === "mastered";
     return {
       wordId: normalizedId,
-      pronunciationStatus: hasProgress ? normalizeWordLearningStatus(source.pronunciationStatus ?? source.pronunciation ?? "－", "－") : "－",
-      meaningStatus: hasProgress ? normalizeWordLearningStatus(source.meaningStatus ?? source.meaning ?? "－", "－") : "－",
+      pronunciationStatus: hasProgress ? derivedPronunciationStatus : "－",
+      meaningStatus: hasProgress ? derivedMeaningStatus : "－",
       lastStudiedAt,
       questionCount,
       perfectPairCount,
@@ -5665,41 +5694,40 @@
   }
 
   function getVocabularyTeacherCheckCandidates() {
-    const historyEntries = Array.isArray(getVocabularyPastHistoryEntries()) ? getVocabularyPastHistoryEntries().slice() : [];
-    const candidates = [];
+    const map = sanitizeWordLearningStateMap(state.wordLearningState || {});
+    const bank = Array.isArray(getVocabularyRealWordBank()) ? getVocabularyRealWordBank() : [];
+    const candidates = Object.values(map)
+      .filter((entry) => {
+        if (!entry || !entry.wordId) return false;
+        const questionCount = Math.max(0, Number(entry.questionCount) || 0);
+        if (questionCount <= 0) return false;
+        const pronunciationStatus = normalizeWordLearningStatus(entry.pronunciationStatus, "－");
+        const meaningStatus = normalizeWordLearningStatus(entry.meaningStatus, "－");
+        const selfResultIsOk = String(entry.lastSelfResult || "").trim() === "ok";
+        const bothSelfResultsAreOk = selfResultIsOk && selfResultIsOk;
+        const bothLiveStatusesAreOk = pronunciationStatus === "○" && meaningStatus === "○";
+        const teacherCheckIsComplete = String(getWordLearningStateTeacherCheckStatus(entry, "pronunciation") || "none").trim() === "◎" || String(getWordLearningStateTeacherCheckStatus(entry, "meaning") || "none").trim() === "◎";
+        if (pronunciationStatus === "－" || meaningStatus === "－") return false;
+        if (pronunciationStatus === "◎" || meaningStatus === "◎") return false;
+        if (teacherCheckIsComplete) return false;
+        if (!bothSelfResultsAreOk && !bothLiveStatusesAreOk) return false;
+        return true;
+      })
+      .map((entry) => {
+        const bankEntry = bank.find((candidate) => String(candidate?.id || candidate?.word || "").trim() === String(entry.wordId || "").trim()) || null;
+        return {
+          id: String(entry.wordId || "").trim(),
+          word: String(bankEntry?.word || entry.wordId || "").trim(),
+          grade: String(bankEntry?.grade ?? bankEntry?.level ?? bankEntry?.sourceLevel ?? "5").trim() || "5",
+          partOfSpeech: String(bankEntry?.partOfSpeech || "名詞").trim() || "名詞",
+          meaning: String(bankEntry?.meaning || "意味未設定").trim() || "意味未設定",
+          pronunciationText: String(bankEntry?.phonetic || "").trim(),
+          lastLearnedAt: Number(entry.lastStudiedAt) || 0
+        };
+      })
+      .sort((left, right) => Number(right.lastLearnedAt || 0) - Number(left.lastLearnedAt || 0));
 
-    historyEntries.forEach((entry) => {
-      if (!entry || !entry.id || !entry.word) return;
-
-      const studyEntry = getVocabularyStudyEntryById(String(entry.id || entry.word || "").trim()) || null;
-      const pronunciationSkill = studyEntry && studyEntry.pronunciation ? studyEntry.pronunciation : null;
-      const meaningSkill = studyEntry && studyEntry.meaningState ? studyEntry.meaningState : null;
-      const pronunciationSelf = getVocabularyCurrentSelfStatus(pronunciationSkill);
-      const meaningSelf = getVocabularyCurrentSelfStatus(meaningSkill);
-      const pronunciationSelfOk = pronunciationSelf === "○" || String(pronunciationSkill?.lastSelfResult || "").trim() === "ok";
-      const meaningSelfOk = meaningSelf === "○" || String(meaningSkill?.lastSelfResult || "").trim() === "ok";
-      if (!pronunciationSelfOk || !meaningSelfOk) return;
-
-      const pronunciationTeacher = getVocabularyTeacherCheckStatusText(pronunciationSkill, "pronunciation");
-      const meaningTeacher = getVocabularyTeacherCheckStatusText(meaningSkill, "meaning");
-      const pronunciationTeacherComplete = pronunciationTeacher === "◎" || String(pronunciationSkill?.teacherCheckStatus || "").trim() === "◎";
-      const meaningTeacherComplete = meaningTeacher === "◎" || String(meaningSkill?.teacherCheckStatus || "").trim() === "◎";
-      if (pronunciationTeacherComplete && meaningTeacherComplete) return;
-
-      candidates.push({
-        id: String(entry.id || entry.word || "").trim(),
-        word: String(entry.word || "").trim(),
-        grade: String(entry.grade || "5").trim() || "5",
-        partOfSpeech: String(entry.partOfSpeech || "名詞").trim() || "名詞",
-        meaning: String(entry.meaning || "意味未設定").trim() || "意味未設定",
-        pronunciationText: String(entry.phonetic || "").trim(),
-        lastLearnedAt: Number(entry.lastLearnedAt || 0) || 0
-      });
-    });
-
-    return candidates
-      .sort((left, right) => Number(right.lastLearnedAt || 0) - Number(left.lastLearnedAt || 0))
-      .slice(0, 50);
+    return candidates.slice(0, 50);
   }
 
   function buildVocabularyTeacherCheckCandidates(session = state.teacherCheckSession) {
@@ -5743,28 +5771,42 @@
     const session = state.teacherCheckSession;
     if (!session) return;
     const now = Date.now();
+    const map = sanitizeWordLearningStateMap(state.wordLearningState || {});
     Object.entries(session.decisions || {}).forEach(([wordId, decision]) => {
       if (!decision || typeof decision !== "object") return;
-      const targetEntry = getVocabularyStudyEntryById(String(wordId || "").trim()) || null;
-      if (!targetEntry) return;
-
-      const pronunciationSkill = targetEntry.pronunciation || null;
-      const meaningSkill = targetEntry.meaningState || null;
-
-      if (decision.pronunciation && decision.pronunciation !== "none" && pronunciationSkill) {
-        applyTeacherCheckState(pronunciationSkill, "pronunciation", decision.pronunciation, { entry: targetEntry, now });
+      const normalizedId = String(wordId || "").trim();
+      if (!normalizedId) return;
+      const currentEntry = map[normalizedId] || createWordLearningStateEntry(normalizedId, {
+        wordId: normalizedId,
+        pronunciationStatus: "－",
+        meaningStatus: "－",
+        questionCount: 0,
+        perfectPairCount: 0
+      });
+      if (!currentEntry) return;
+      const nextPronunciationStatus = decision.pronunciation && decision.pronunciation !== "none"
+        ? normalizeWordLearningStatus(decision.pronunciation === "ok" ? "◎" : "△", "－")
+        : normalizeWordLearningStatus(currentEntry.pronunciationStatus || "－", "－");
+      const nextMeaningStatus = decision.meaning && decision.meaning !== "none"
+        ? normalizeWordLearningStatus(decision.meaning === "ok" ? "◎" : "△", "－")
+        : normalizeWordLearningStatus(currentEntry.meaningStatus || "－", "－");
+      const nextEntry = {
+        ...currentEntry,
+        pronunciationStatus: nextPronunciationStatus,
+        meaningStatus: nextMeaningStatus,
+        lastStudiedAt: Number(currentEntry.lastStudiedAt) || now,
+        isMastered: Boolean(currentEntry.isMastered) && nextPronunciationStatus !== "△" && nextMeaningStatus !== "△" && Math.max(0, Number(currentEntry.questionCount) || 0) > 0,
+        learningStateStatus: Math.max(0, Number(currentEntry.questionCount) || 0) > 0 ? "learning" : "unlearned"
+      };
+      if (nextPronunciationStatus === "△" || nextMeaningStatus === "△") {
+        nextEntry.isMastered = false;
+        nextEntry.learningStateStatus = "learning";
       }
-      if (decision.meaning && decision.meaning !== "none" && meaningSkill) {
-        applyTeacherCheckState(meaningSkill, "meaning", decision.meaning, { entry: targetEntry, now });
-      }
-      if (decision.pronunciation === "none" && pronunciationSkill) {
-        applyTeacherCheckState(pronunciationSkill, "pronunciation", "none", { entry: targetEntry, now });
-      }
-      if (decision.meaning === "none" && meaningSkill) {
-        applyTeacherCheckState(meaningSkill, "meaning", "none", { entry: targetEntry, now });
-      }
+      map[normalizedId] = nextEntry;
     });
 
+    state.wordLearningState = sanitizeWordLearningStateMap(map);
+    saveWordLearningStateForSync(state.wordLearningState, getCurrentMobileFirebaseUser()?.uid || "");
     state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(state.vocabularyStudy || buildVocabularyRealStudyState(), getVocabularyRealWordBank());
     saveState();
     saveMobileVocabularyStateForSync(state.vocabularyStudy, getMobileVocabularySyncUid());
@@ -5840,7 +5882,10 @@
     const currentBlockCount = Math.max(1, pageInfo.pageCandidates.length);
     if (nextBtn) {
       nextBtn.classList.remove("hidden");
-      nextBtn.textContent = `この${currentBlockCount}問を完了`;
+      nextBtn.textContent = currentBlockCount >= 10 ? "次の10問" : `この${currentBlockCount}問を完了`;
+      if (pageInfo.pageIndex + 1 >= pageInfo.pageCount) {
+        nextBtn.textContent = "次の10問";
+      }
     }
     if (completeBtn) {
       completeBtn.classList.add("hidden");
