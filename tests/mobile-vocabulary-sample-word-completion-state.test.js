@@ -6,6 +6,7 @@ const vm = require("vm");
 const source = fs.readFileSync(path.join(__dirname, "..", "mobile", "mobile.js"), "utf8");
 const handleMatch = source.match(/async function handleVocabularySampleChoice\(kind, value\) \{[\s\S]*?\n  \}/);
 assert.ok(handleMatch, "should extract the real vocabulary sample completion handler");
+const sharedStore = {};
 
 function createSample(words) {
   return {
@@ -54,14 +55,36 @@ function buildSandbox() {
     state: sharedState,
     window: {
       localStorage: {
-        getItem() { return null; },
-        setItem() {},
-        removeItem() {}
+        getItem(key) {
+          return Object.prototype.hasOwnProperty.call(sharedStore, key) ? sharedStore[key] : null;
+        },
+        setItem(key, value) {
+          sharedStore[key] = String(value);
+        },
+        removeItem(key) {
+          delete sharedStore[key];
+        }
       },
       addEventListener() {},
-      location: { search: "" }
+      location: { search: "" },
+      getWordLearningStateStorageKey(uid = "") {
+        const safeUid = String(uid || "").trim();
+        return safeUid ? `english-trainer-mobile-word-learning-state-v1:${safeUid}` : "english-trainer-mobile-word-learning-state-v1";
+      },
+      loadWordLearningStateForSync(uid = sandbox.getCurrentMobileFirebaseUser()?.uid || "") {
+        const currentUid = String(uid || sandbox.getCurrentMobileFirebaseUser()?.uid || "").trim();
+        const key = this.getWordLearningStateStorageKey(currentUid);
+        const raw = sharedStore[key];
+        if (!raw) return {};
+        try {
+          const parsed = JSON.parse(raw);
+          return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (_error) {
+          return {};
+        }
+      }
     },
-    getCurrentMobileFirebaseUser: () => ({ uid: "" }),
+    getCurrentMobileFirebaseUser: () => ({ uid: "uid-1" }),
     finalizeWordLearningStateForCompletion: (wordId, pronunciationStatus, meaningStatus) => {
       const safeWordId = String(wordId || "").trim();
       if (!safeWordId) return null;
@@ -83,8 +106,16 @@ function buildSandbox() {
       sharedState.wordLearningState[safeWordId] = nextEntry;
       return nextEntry;
     },
-    saveWordLearningStateForSync: (map) => {
-      sharedState.wordLearningState = map && typeof map === "object" ? map : {};
+    saveWordLearningStateForSync: (map, uid = sandbox.getCurrentMobileFirebaseUser()?.uid || "") => {
+      const sanitizedMap = map && typeof map === "object" ? map : {};
+      const targetUid = String(uid || sandbox.getCurrentMobileFirebaseUser()?.uid || "").trim();
+      sharedState.wordLearningState = sanitizedMap;
+      const key = sandbox.window.getWordLearningStateStorageKey(targetUid || sandbox.getCurrentMobileFirebaseUser()?.uid || "");
+      if (Object.keys(sanitizedMap).length) {
+        sharedStore[key] = JSON.stringify(sanitizedMap);
+      } else {
+        delete sharedStore[key];
+      }
       return sharedState.wordLearningState;
     },
     getVocabularyRealWordBank: () => [{
@@ -197,6 +228,7 @@ function buildSandbox() {
 }
 
 (async () => {
+  const sharedStore = {};
   const { sandbox, getContinueCount, getChimeCount, resetContinueCount, resetChimeCount } = buildSandbox();
 
   const words = [
@@ -330,6 +362,92 @@ function buildSandbox() {
   assert.strictEqual(syncFailureSandbox.sandbox.state.vocabularySample.completedWordCount, 5, "sync failures must not stop completion progression");
   assert.strictEqual(syncFailureSandbox.sandbox.getVocabularyTodayHistoryEntries().length, 5, "sync failures must not remove today-history entries");
   assert.strictEqual(syncFailureSandbox.sandbox.state.vocabularySample.index, 5, "the five-word run must reach the end without stalling");
+
+  const buildWordList = (startIndex, count) => Array.from({ length: count }, (_, index) => ({
+    id: `w${startIndex + index}`,
+    word: `word-${startIndex + index}`,
+    partOfSpeech: "名詞",
+    meaning: `意味-${startIndex + index}`
+  }));
+
+  const runCompletionSequence = async (sandboxInstance, wordList, sequence = []) => {
+    sandboxInstance.state.vocabularySample = createSample(wordList);
+    sandboxInstance.state.vocabularyStudy = sandboxInstance.buildVocabularyRealStudyState();
+    sandboxInstance.state.vocabularyTodayHistoryMap = {};
+    const actions = sequence.length ? sequence : wordList.flatMap((word) => [["pronunciation", "ok"], ["meaning", "ok"]]);
+    for (const [kind, value] of actions) {
+      await sandboxInstance.handleVocabularySampleChoice(kind, value);
+    }
+    return sandboxInstance;
+  };
+
+  const tenWordSandbox = buildSandbox();
+  const tenWordList = buildWordList(1, 10);
+  await runCompletionSequence(tenWordSandbox.sandbox, tenWordList);
+  assert.strictEqual(Object.keys(tenWordSandbox.sandbox.state.wordLearningState).length, 10, "ten-word completion should persist all ten entries");
+  tenWordList.forEach((word) => {
+    assert.strictEqual(tenWordSandbox.sandbox.state.wordLearningState[word.id]?.questionCount, 1, `${word.id} should have questionCount 1 after one completion`);
+  });
+
+  const twentyWordSandbox = buildSandbox();
+  const twentyWordList = buildWordList(1, 20);
+  await runCompletionSequence(twentyWordSandbox.sandbox, twentyWordList);
+  assert.strictEqual(Object.keys(twentyWordSandbox.sandbox.state.wordLearningState).length, 20, "twenty-word completion should persist all twenty entries without gaps");
+  twentyWordList.forEach((word) => {
+    assert.strictEqual(twentyWordSandbox.sandbox.state.wordLearningState[word.id]?.questionCount, 1, `${word.id} should still be present and counted once`);
+  });
+
+  const repeatedWordSandbox = buildSandbox();
+  const repeatedWordList = [{ id: "repeat", word: "repeat-word", partOfSpeech: "名詞", meaning: "繰り返し" }];
+  repeatedWordSandbox.sandbox.state.vocabularyStudy = repeatedWordSandbox.sandbox.buildVocabularyRealStudyState();
+  repeatedWordSandbox.sandbox.state.vocabularyTodayHistoryMap = {};
+
+  repeatedWordSandbox.sandbox.state.vocabularySample = createSample(repeatedWordList);
+  await repeatedWordSandbox.sandbox.handleVocabularySampleChoice("pronunciation", "ok");
+  await repeatedWordSandbox.sandbox.handleVocabularySampleChoice("meaning", "ok");
+
+  repeatedWordSandbox.sandbox.state.vocabularySample = createSample(repeatedWordList);
+  await repeatedWordSandbox.sandbox.handleVocabularySampleChoice("pronunciation", "ng");
+  await repeatedWordSandbox.sandbox.handleVocabularySampleChoice("meaning", "ok");
+
+  assert.strictEqual(Object.keys(repeatedWordSandbox.sandbox.state.wordLearningState).length, 1, "same wordId should still use one stored entry across repeated sessions");
+  assert.strictEqual(repeatedWordSandbox.sandbox.state.wordLearningState.repeat?.questionCount, 2, "same wordId should increment questionCount without creating a new record");
+  assert.strictEqual(repeatedWordSandbox.sandbox.state.wordLearningState.repeat?.pronunciationStatus, "△", "latest pronunciation status should be stored");
+  assert.strictEqual(repeatedWordSandbox.sandbox.state.wordLearningState.repeat?.meaningStatus, "○", "latest meaning status should be stored");
+
+  const reloadSandbox = buildSandbox();
+  const reloadWordList = buildWordList(1, 5);
+  await runCompletionSequence(reloadSandbox.sandbox, reloadWordList);
+  const reloadKey = reloadSandbox.sandbox.window.getWordLearningStateStorageKey("uid-1");
+  const storedBeforeReload = JSON.parse(reloadSandbox.sandbox.window.localStorage.getItem(reloadKey) || "{}");
+  assert.strictEqual(Object.keys(storedBeforeReload).length, 5, "F5-equivalent save should keep all five entries before reload");
+
+  const reloadedState = reloadSandbox.sandbox.window.loadWordLearningStateForSync("uid-1");
+  const restoredState = { ...reloadedState };
+  reloadSandbox.sandbox.state.wordLearningState = restoredState;
+  assert.strictEqual(Object.keys(reloadedState).length, 5, "reload should preserve all five entries without zeroing the map");
+  assert.strictEqual(Object.keys(reloadSandbox.sandbox.state.wordLearningState).length, 5, "rehydrated state should keep the same five entries after reload");
+  reloadWordList.forEach((word) => {
+    assert.ok(reloadedState[word.id], `${word.id} should survive a reload`);
+    assert.ok(reloadSandbox.sandbox.state.wordLearningState[word.id], `${word.id} should be present in rehydrated state`);
+    assert.strictEqual(reloadedState[word.id].questionCount, 1, `${word.id} questionCount should remain 1 after reload`);
+    assert.strictEqual(reloadSandbox.sandbox.state.wordLearningState[word.id].questionCount, 1, `${word.id} rehydrated questionCount should remain 1`);
+    assert.strictEqual(reloadedState[word.id].pronunciationStatus, "○", `${word.id} pronunciation status should stay ○ after reload`);
+    assert.strictEqual(reloadedState[word.id].meaningStatus, "○", `${word.id} meaning status should stay ○ after reload`);
+  });
+
+  const totalThirtySandbox = buildSandbox();
+  const firstTwenty = buildWordList(1, 20);
+  const nextTen = buildWordList(21, 10);
+  await runCompletionSequence(totalThirtySandbox.sandbox, firstTwenty);
+  await runCompletionSequence(totalThirtySandbox.sandbox, nextTen);
+  const totalEntries = Object.keys(totalThirtySandbox.sandbox.state.wordLearningState);
+  assert.strictEqual(totalEntries.length, 30, "20-word run plus another 10-word run should leave thirty entries in total");
+  firstTwenty.concat(nextTen).forEach((word) => {
+    assert.strictEqual(totalThirtySandbox.sandbox.state.wordLearningState[word.id]?.questionCount, 1, `${word.id} should remain intact after a later 10-word session`);
+  });
+
+  console.log("mobile wordLearningState verification suite passed: 10-word, 20-word, repeated-word, reload, and 20+10 accumulation checks");
 
   const historyScript = [
     source.match(/function createVocabularyTeacherCheckState\(overrides = \{\}\) \{[\s\S]*?\n  \}/)?.[0],
