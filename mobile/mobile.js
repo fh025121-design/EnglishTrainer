@@ -5879,9 +5879,8 @@
     }
 
     const decision = session.decisions?.[currentCandidate.id] || { pronunciation: "none", meaning: "none" };
+    // 教師チェックは 1 語ずつ判定するため、旧ブロック単位の未判定警告を使わない。
     if (String(decision.pronunciation || "none").trim() === "none" || String(decision.meaning || "none").trim() === "none") {
-      const metaEl = elements.vocabularyTeacherCheckMeta;
-      if (metaEl) metaEl.textContent = "未判定が残っています";
       return;
     }
 
@@ -15492,16 +15491,10 @@
       elements.vocabularyTeacherCheckNextBtn.addEventListener("click", () => {
         if (!state.teacherCheckSession) return;
         const session = state.teacherCheckSession;
-        const pageInfo = getVocabularyTeacherCheckPageInfo(session);
-        const pageCandidates = pageInfo.pageCandidates;
-        const hasUnfinished = pageCandidates.some((candidate) => {
-          const decision = session.decisions?.[candidate.id] || { pronunciation: "none", meaning: "none" };
-          return String(decision.pronunciation || "none").trim() === "none" || String(decision.meaning || "none").trim() === "none";
-        });
-        if (hasUnfinished) {
-          const metaEl = elements.vocabularyTeacherCheckMeta;
-          if (metaEl) metaEl.textContent = "未判定が残っています";
-          window.alert("現在のブロックに未判定があります。発音と意味の両方を判定してください。");
+        const currentCandidate = Array.isArray(session.candidates) ? session.candidates[session.pageIndex] : null;
+        if (!currentCandidate) return;
+        const decision = session.decisions?.[currentCandidate.id] || { pronunciation: "none", meaning: "none" };
+        if (String(decision.pronunciation || "none").trim() === "none" || String(decision.meaning || "none").trim() === "none") {
           return;
         }
         completeVocabularyTeacherCheckCurrentBlock();
