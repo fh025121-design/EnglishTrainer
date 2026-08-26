@@ -6,7 +6,7 @@
     <title>English Trainer Mobile</title>
     <script>
       (function () {
-        const defaultToken = "20260826-1535";
+        const defaultToken = "20260826-1907";
         const queryToken = new URLSearchParams(window.location.search).get("v") || "";
         const cacheToken = queryToken || defaultToken;
         window.MOBILE_CACHE_TOKEN = cacheToken;
@@ -129,7 +129,7 @@
 
           <section class="panel speaking-feature-panel">
             <button id="openVocabularySampleBtn" class="secondary-btn large-btn" type="button">10分学習を始める</button>
-            <button id="openVocabularyPastHistoryBtn" class="secondary-btn large-btn" type="button">過去の履歴</button>
+            <button id="openVocabularyPastHistoryBtn" class="secondary-btn large-btn" type="button">単語一覧</button>
             <div id="vocabularyPracticeProgressCard" class="vocabulary-practice-progress-card hidden" aria-live="polite">
               <div class="vocabulary-practice-progress-top">
                 <div class="vocabulary-practice-title-block">
@@ -465,6 +465,11 @@
         <main class="stack-layout">
           <section class="panel vocabulary-progress-list-panel">
             <h2 id="vocabularyProgressListTitle">単語一覧</h2>
+            <div id="vocabularyProgressListFilters" class="vocabulary-history-filter-row" role="tablist" aria-label="単語一覧絞り込み">
+              <button type="button" class="vocabulary-history-filter-btn is-active" data-vocabulary-status="learning" aria-pressed="true">学習中</button>
+              <button type="button" class="vocabulary-history-filter-btn" data-vocabulary-status="mastered" aria-pressed="false">定着</button>
+              <button type="button" class="vocabulary-history-filter-btn" data-vocabulary-status="unlearned" aria-pressed="false">未学習</button>
+            </div>
             <p id="vocabularyProgressListMeta" class="status-text">0語</p>
             <div id="vocabularyProgressList" class="vocabulary-progress-list"></div>
           </section>

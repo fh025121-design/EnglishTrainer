@@ -12885,17 +12885,26 @@
     const titleEl = document.getElementById("vocabularyProgressListTitle");
     const metaEl = document.getElementById("vocabularyProgressListMeta");
     const listEl = document.getElementById("vocabularyProgressList");
+    const filterWrap = document.getElementById("vocabularyProgressListFilters");
     if (!titleEl || !metaEl || !listEl) return;
 
     const entries = getVocabularyProgressListEntries(filterType, filterValue);
     const isGradeFilter = filterType === "grade";
-    const filterLabel = isGradeFilter ? `${String(filterValue || "5")}級` : {
-      mastered: "定着",
-      learning: "学習中",
-      unlearned: "未学習"
-    }[String(filterValue || "learning")] || "学習中";
+    const statusFilterValue = isGradeFilter ? "learning" : String(filterValue || "learning");
 
-    titleEl.textContent = isGradeFilter ? `${filterLabel}一覧` : `${filterLabel}一覧`;
+    if (titleEl) {
+      titleEl.textContent = isGradeFilter ? `${String(filterValue || "5")}級一覧` : "単語一覧";
+    }
+
+    if (filterWrap) {
+      const buttons = filterWrap.querySelectorAll(".vocabulary-history-filter-btn");
+      buttons.forEach((button) => {
+        const isActive = String(button.dataset.vocabularyStatus || "learning") === statusFilterValue;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+    }
+
     const summary = isGradeFilter
       ? getVocabularyGradeProgressDisplay(filterValue)
       : { count: entries.length };
@@ -15280,7 +15289,9 @@
     document.getElementById("openVocabularySampleBtn").addEventListener("click", startVocabularySample);
     const openVocabularyPastHistoryBtn = document.getElementById("openVocabularyPastHistoryBtn");
     if (openVocabularyPastHistoryBtn) {
-      openVocabularyPastHistoryBtn.addEventListener("click", openVocabularyPastHistoryScreen);
+      openVocabularyPastHistoryBtn.addEventListener("click", () => {
+        openVocabularyProgressList("status", "learning");
+      });
     }
     const vocabularyPracticeHistoryBtn = document.getElementById("vocabularyPracticeHistoryBtn");
     if (vocabularyPracticeHistoryBtn) {
@@ -15295,6 +15306,15 @@
     const vocabularyProgressListBackBtn = document.getElementById("vocabularyProgressListBackBtn");
     if (vocabularyProgressListBackBtn) {
       vocabularyProgressListBackBtn.addEventListener("click", renderSpeakingHome);
+    }
+    const vocabularyProgressListFilters = document.getElementById("vocabularyProgressListFilters");
+    if (vocabularyProgressListFilters) {
+      vocabularyProgressListFilters.querySelectorAll(".vocabulary-history-filter-btn").forEach((button) => {
+        button.addEventListener("click", () => {
+          const status = String(button.dataset.vocabularyStatus || "learning");
+          openVocabularyProgressList("status", status);
+        });
+      });
     }
     elements.vocabularySampleBackBtn.addEventListener("click", () => {
       stopVocabularySampleTimer();
