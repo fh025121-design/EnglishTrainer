@@ -3515,7 +3515,8 @@
         learningStateStatus: "unlearned"
       });
       const questionCount = Math.max(0, Number(record?.questionCount) || 0);
-      const isMastered = Boolean(record?.isMastered) || getWordLearningStateStatusFromEntry(record) === "mastered";
+      const learningStateStatus = getWordLearningStateDisplayStatus(record);
+      const isMastered = learningStateStatus === "mastered";
       return {
         wordId,
         word: String(bankEntry?.word || wordId || "").trim(),
@@ -3525,7 +3526,7 @@
         questionCount,
         perfectPairCount: Math.max(0, Number(record?.perfectPairCount) || 0),
         isMastered,
-        learningStateStatus: isMastered ? "mastered" : (questionCount > 0 ? "learning" : "unlearned"),
+        learningStateStatus,
         isLearned: questionCount > 0
       };
     });
@@ -3556,8 +3557,8 @@
       });
       const questionCount = Math.max(0, Number(record?.questionCount) || 0);
       const perfectPairCount = Math.max(0, Number(record?.perfectPairCount) || 0);
-      const isMastered = Boolean(record?.isMastered) || getWordLearningStateStatusFromEntry(record) === "mastered";
-      const learningStateStatus = isMastered ? "mastered" : (questionCount > 0 ? "learning" : "unlearned");
+      const learningStateStatus = getWordLearningStateDisplayStatus(record);
+      const isMastered = learningStateStatus === "mastered";
       return {
         wordId,
         word: String(bankEntry?.word || wordId || "").trim(),
@@ -3587,6 +3588,8 @@
 
   window.createWordLearningStateEntry = createWordLearningStateEntry;
   window.normalizeWordLearningStatus = normalizeWordLearningStatus;
+  window.getWordLearningStateStatusFromEntry = getWordLearningStateStatusFromEntry;
+  window.getWordLearningStateDisplayStatus = getWordLearningStateDisplayStatus;
   window.sanitizeWordLearningStateMap = sanitizeWordLearningStateMap;
   window.buildWordLearningStateMap = buildWordLearningStateMap;
   window.mergeWordLearningStateByLatest = mergeWordLearningStateByLatest;
@@ -3595,6 +3598,8 @@
   window.loadWordLearningStateForSync = loadWordLearningStateForSync;
   window.saveWordLearningStateForSync = saveWordLearningStateForSync;
   window.getWordLearningStateManagementRows = getWordLearningStateManagementRows;
+  window.getWordLearningStateProgressEntries = getWordLearningStateProgressEntries;
+  window.getVocabularyProgressListEntries = getVocabularyProgressListEntries;
   window.formatWordLearningStateAdminTime = formatWordLearningStateAdminTime;
   window.buildWordLearningStateAdminSummary = buildWordLearningStateAdminSummary;
   window.buildWordLearningStateProgressSummary = buildWordLearningStateProgressSummary;
@@ -7290,7 +7295,8 @@
   function renderWordLearningStateAdminSummary() {
     if (!elements.mobileAdminLearningHistoryPanel) return;
     const summary = buildWordLearningStateAdminSummary(state.wordLearningState || {});
-    const rowsMarkup = summary.rows.map((row) => {
+    const visibleRows = summary.rows.filter((row) => row.questionCount > 0);
+    const rowsMarkup = visibleRows.map((row) => {
       const lastStudiedText = row.lastStudiedAt ? formatWordLearningStateAdminTime(row.lastStudiedAt) : "未学習";
       return `
         <tr>
@@ -12788,6 +12794,60 @@
     return summary;
   }
 
+  function getWordLearningStateDisplayStatus(entry) {
+    if (!entry || typeof entry !== "object") return "unlearned";
+
+    const explicitStatus = String(entry?.learningStateStatus || entry?.status || "").trim().toLowerCase();
+    if (["mastered", "learning", "unlearned"].includes(explicitStatus)) {
+      return explicitStatus;
+    }
+
+    const questionCount = Math.max(0, Number(entry?.questionCount) || 0);
+    const isMastered = Boolean(entry?.isMastered) || getWordLearningStateStatusFromEntry(entry) === "mastered";
+    if (isMastered) return "mastered";
+    if (questionCount > 0) return "learning";
+    return "unlearned";
+  }
+
+  function getWordLearningStateProgressEntries(filterValue = "learning") {
+    const bank = Array.isArray(getVocabularyRealWordBank()) ? getVocabularyRealWordBank() : [];
+    const normalizedMap = sanitizeWordLearningStateMap(state.wordLearningState || {});
+    const status = ["mastered", "learning", "unlearned"].includes(String(filterValue || "")) ? String(filterValue) : "learning";
+
+    return Object.values(normalizedMap)
+      .map((entry) => {
+        const wordId = String(entry?.wordId || "").trim();
+        const bankEntry = bank.find((candidate) => String(candidate?.id || candidate?.word || "").trim() === wordId) || null;
+        const questionCount = Math.max(0, Number(entry?.questionCount) || 0);
+        const displayStatus = getWordLearningStateDisplayStatus(entry);
+        const isMastered = displayStatus === "mastered";
+        return {
+          wordId,
+          word: String(bankEntry?.word || wordId || "").trim(),
+          pronunciationStatus: normalizeWordLearningStatus(entry?.pronunciationStatus, "－"),
+          meaningStatus: normalizeWordLearningStatus(entry?.meaningStatus, "－"),
+          lastStudiedAt: Number(entry?.lastStudiedAt) || 0,
+          questionCount,
+          isMastered,
+          displayStatus,
+          partOfSpeech: String(bankEntry?.partOfSpeech || "名詞"),
+          meaning: String(bankEntry?.meaning || "")
+        };
+      })
+      .filter((entry) => {
+        if (status === "learning") return entry.displayStatus === "learning";
+        if (status === "mastered") return entry.displayStatus === "mastered";
+        if (status === "unlearned") return entry.displayStatus === "unlearned";
+        return false;
+      })
+      .sort((left, right) => {
+        const leftTime = Number(left.lastStudiedAt) || 0;
+        const rightTime = Number(right.lastStudiedAt) || 0;
+        if (leftTime !== rightTime) return rightTime - leftTime;
+        return String(left.word || left.wordId).localeCompare(String(right.word || right.wordId), "ja");
+      });
+  }
+
   function getVocabularyProgressListEntries(filterType, filterValue) {
     const studyEntries = Array.isArray(state.vocabularyStudy?.entries) && state.vocabularyStudy.entries.length
       ? state.vocabularyStudy.entries
@@ -12798,6 +12858,10 @@
       return studyEntries
         .filter((entry) => getVocabularyGradeValue(entry) === grade)
         .sort((a, b) => a.word.localeCompare(b.word, "ja"));
+    }
+
+    if (filterType === "status") {
+      return getWordLearningStateProgressEntries(filterValue);
     }
 
     const status = ["mastered", "learning", "unlearned"].includes(String(filterValue || "")) ? String(filterValue) : "learning";
@@ -12832,11 +12896,15 @@
 
     listEl.innerHTML = entries.length
       ? entries.map((entry) => {
-          const status = getVocabularyEntryDisplayStatus(entry);
+          const status = isGradeFilter ? getVocabularyEntryDisplayStatus(entry) : (entry.displayStatus || getVocabularyEntryDisplayStatus(entry));
           const statusLabelMap = { mastered: "定着", learning: "学習中", unlearned: "未学習" };
           const statusText = statusLabelMap[status] || "未学習";
           const partOfSpeech = String(entry?.partOfSpeech || "名詞");
           const meaning = String(entry?.meaning || "");
+          const questionCount = Number(entry?.questionCount) || 0;
+          const lastStudiedAt = Number(entry?.lastStudiedAt) || 0;
+          const pronunciationStatus = entry?.pronunciationStatus || normalizeWordLearningStatus(entry?.pronunciation?.level >= 5 ? "○" : "－", "－");
+          const meaningStatus = entry?.meaningStatus || normalizeWordLearningStatus(entry?.meaningState?.level >= 5 ? "○" : "－", "－");
           return `
             <div class="vocabulary-progress-list-item">
               <div class="vocabulary-progress-list-meta-row">
@@ -12846,6 +12914,14 @@
               <div class="vocabulary-progress-list-word-row">
                 <strong>${String(entry?.word || "-")}</strong>
                 <span>${partOfSpeech}</span>
+              </div>
+              <div class="vocabulary-progress-list-meta-row">
+                <span>発音: ${pronunciationStatus}</span>
+                <span>意味: ${meaningStatus}</span>
+                <span>出題: ${questionCount}回</span>
+              </div>
+              <div class="vocabulary-progress-list-meta-row">
+                <span>最終: ${lastStudiedAt ? formatWordLearningStateAdminTime(lastStudiedAt) : "未学習"}</span>
               </div>
               <p class="vocabulary-progress-list-meaning">${meaning || "意味未設定"}</p>
             </div>

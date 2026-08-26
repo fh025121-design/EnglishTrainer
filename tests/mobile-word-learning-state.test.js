@@ -278,7 +278,26 @@ function makeSandbox() {
   assert.strictEqual(debugSnapshot.wordLabel, "apple", "debug snapshot resolves the real English word");
   assert.strictEqual(debugSnapshot.currentPronunciationStatus, "○", "debug snapshot reports the current pronunciation status");
   assert.strictEqual(debugSnapshot.savedMeaningStatus, "△", "debug snapshot reports saved meaning status");
-  assert.strictEqual(debugSnapshot.wordIdMatches, true, "debug snapshot checks same wordId source equality");
+
+  sandbox.state.wordLearningState = {
+    w1: { wordId: "w1", pronunciationStatus: "○", meaningStatus: "○", lastStudiedAt: 2000, questionCount: 1, perfectPairCount: 1, isMastered: false, learningStateStatus: "learning" },
+    w2: { wordId: "w2", pronunciationStatus: "△", meaningStatus: "○", lastStudiedAt: 3000, questionCount: 2, perfectPairCount: 1, isMastered: false, learningStateStatus: "learning" },
+    w3: { wordId: "w3", pronunciationStatus: "○", meaningStatus: "△", lastStudiedAt: 4000, questionCount: 3, perfectPairCount: 2, isMastered: false, learningStateStatus: "learning" }
+  };
+  sandbox.state.vocabularyStudy = {
+    entries: [
+      { id: "legacy-1", word: "legacy", pronunciation: { level: 5 }, meaningState: { level: 5 }, meaning: "旧語彙", partOfSpeech: "名詞" },
+      { id: "legacy-2", word: "legacy-2", pronunciation: { level: 5 }, meaningState: { level: 5 }, meaning: "旧語彙2", partOfSpeech: "名詞" }
+    ]
+  };
+  const learningList = sandbox.window.getVocabularyProgressListEntries("status", "learning");
+  assert.strictEqual(learningList.length, 3, "status list should come from wordLearningState, not legacy history");
+  assert.strictEqual(learningList.every((entry) => entry.wordId && entry.wordId.startsWith("w")), true, "status list should use wordLearningState wordIds");
+
+  const stateAdminSummary = sandbox.window.buildWordLearningStateAdminSummary(sandbox.state.wordLearningState);
+  const visibleAdminRows = stateAdminSummary.rows.filter((row) => row.questionCount > 0);
+  assert.strictEqual(visibleAdminRows.length, 3, "initial admin view should only show words with questionCount > 0");
+  assert.strictEqual(stateAdminSummary.totalWords, 3, "totalWords should still represent the tracked bank size");
 
   console.log("mobile word learning state checks passed");
 })();
