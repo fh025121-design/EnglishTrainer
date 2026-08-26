@@ -5700,61 +5700,97 @@
     renderVocabularyTodayHistoryScreen();
   }
 
-  function getVocabularyTeacherCheckCandidates() {
+  function getVocabularyTeacherCheckCandidates(mode = "auto") {
     const map = sanitizeWordLearningStateMap(state.wordLearningState || {});
     const bank = Array.isArray(getVocabularyRealWordBank()) ? getVocabularyRealWordBank() : [];
-    const candidates = Object.values(map)
-      .filter((entry) => {
-        if (!entry || !entry.wordId) return false;
-        const questionCount = Math.max(0, Number(entry.questionCount) || 0);
-        if (questionCount <= 0) return false;
-        const pronunciationStatus = normalizeWordLearningStatus(entry.pronunciationStatus, "－");
-        const meaningStatus = normalizeWordLearningStatus(entry.meaningStatus, "－");
-        const teacherCheckIsComplete = String(getWordLearningStateTeacherCheckStatus(entry, "pronunciation") || "none").trim() === "◎" || String(getWordLearningStateTeacherCheckStatus(entry, "meaning") || "none").trim() === "◎";
-        if (pronunciationStatus !== "○" || meaningStatus !== "○") return false;
-        if (teacherCheckIsComplete) return false;
-        return true;
-      })
+    const modeKey = ["auto", "unconfirmed", "checked", "delta", "all"].includes(String(mode || "auto")) ? String(mode || "auto") : "auto";
+
+    const entries = Object.values(map)
+      .filter((entry) => entry && entry.wordId)
       .map((entry) => {
         const bankEntry = bank.find((candidate) => String(candidate?.id || candidate?.word || "").trim() === String(entry.wordId || "").trim()) || null;
+        const questionCount = Math.max(0, Number(entry.questionCount) || 0);
+        const pronunciationStatus = normalizeWordLearningStatus(entry.pronunciationStatus, "－");
+        const meaningStatus = normalizeWordLearningStatus(entry.meaningStatus, "－");
+        const isChecked = pronunciationStatus === "◎" || meaningStatus === "◎";
+        const hasUnconfirmed = pronunciationStatus === "○" || meaningStatus === "○";
+        const hasDelta = pronunciationStatus === "△" || meaningStatus === "△";
+
         return {
           id: String(entry.wordId || "").trim(),
           word: String(bankEntry?.word || entry.wordId || "").trim(),
           grade: String(bankEntry?.grade ?? bankEntry?.level ?? bankEntry?.sourceLevel ?? "5").trim() || "5",
           partOfSpeech: String(bankEntry?.partOfSpeech || "名詞").trim() || "名詞",
           meaning: String(bankEntry?.meaning || "意味未設定").trim() || "意味未設定",
-          pronunciationText: String(bankEntry?.phonetic || "").trim(),
-          lastLearnedAt: Number(entry.lastStudiedAt) || 0
+          pronunciationStatus,
+          meaningStatus,
+          questionCount,
+          lastLearnedAt: Number(entry.lastStudiedAt) || 0,
+          isChecked,
+          hasUnconfirmed,
+          hasDelta
         };
       })
-      .sort((left, right) => Number(right.lastLearnedAt || 0) - Number(left.lastLearnedAt || 0));
+      .filter((entry) => entry.questionCount > 0);
 
-    return candidates;
+    let candidates = [];
+    if (modeKey === "unconfirmed") {
+      candidates = entries.filter((entry) => entry.hasUnconfirmed && !entry.isChecked);
+    } else if (modeKey === "checked") {
+      candidates = entries.filter((entry) => entry.isChecked);
+    } else if (modeKey === "delta") {
+      candidates = entries.filter((entry) => entry.hasDelta);
+    } else if (modeKey === "all") {
+      candidates = entries;
+    } else {
+      candidates = entries.filter((entry) => !entry.isChecked && (entry.hasUnconfirmed || entry.hasDelta));
+      if (!candidates.length) {
+        candidates = entries.filter((entry) => !entry.isChecked);
+      }
+    }
+
+    return candidates
+      .sort((left, right) => {
+        const byQuestion = Number(right.questionCount) - Number(left.questionCount);
+        if (byQuestion !== 0) return byQuestion;
+        const byTime = Number(right.lastLearnedAt) - Number(left.lastLearnedAt);
+        if (byTime !== 0) return byTime;
+        return String(left.word || left.id).localeCompare(String(right.word || right.id), "ja");
+      })
+      .map((entry) => ({
+        id: String(entry.id || "").trim(),
+        word: String(entry.word || "").trim(),
+        grade: String(entry.grade || "5").trim(),
+        partOfSpeech: String(entry.partOfSpeech || "名詞").trim(),
+        meaning: String(entry.meaning || "意味未設定").trim(),
+        pronunciationStatus: entry.pronunciationStatus,
+        meaningStatus: entry.meaningStatus,
+        questionCount: Number(entry.questionCount) || 0,
+        lastLearnedAt: Number(entry.lastLearnedAt) || 0
+      }));
   }
 
   function buildVocabularyTeacherCheckCandidates(session = state.teacherCheckSession) {
-    const allCandidates = getVocabularyTeacherCheckCandidates();
+    const mode = String(session?.mode || "auto").trim() || "auto";
+    const countValue = String(session?.count || "10").trim();
+    const allCandidates = getVocabularyTeacherCheckCandidates(mode);
     const completedIds = new Set(Array.isArray(session?.completedCandidateIds)
       ? session.completedCandidateIds.map((value) => String(value || "").trim()).filter(Boolean)
       : []);
-    return allCandidates.filter((candidate) => !completedIds.has(String(candidate.id || "").trim()));
+    const deduped = allCandidates.filter((candidate) => !completedIds.has(String(candidate.id || "").trim()));
+    const limit = countValue === "all" ? deduped.length : Number(countValue || "10");
+    return deduped.slice(0, Number.isFinite(limit) && limit > 0 ? limit : deduped.length);
   }
 
   function getVocabularyTeacherCheckPageInfo(session) {
     const candidates = Array.isArray(session?.candidates) ? session.candidates : [];
-    const pageSize = 10;
     const total = candidates.length;
-    const pageCount = Math.max(1, Math.ceil(total / pageSize));
-    const pageIndex = Math.max(0, Math.min(Number(session?.pageIndex || 0) || 0, pageCount - 1));
-    const startIndex = pageIndex * pageSize;
+    const pageSize = 1;
+    const pageCount = Math.max(1, total);
+    const pageIndex = Math.max(0, Math.min(Number(session?.pageIndex || 0) || 0, Math.max(0, total - 1)));
+    const startIndex = pageIndex;
     const endIndex = Math.min(total, startIndex + pageSize);
-    const pageCandidates = candidates.slice(startIndex, endIndex);
-    const startNumber = total ? startIndex + 1 : 0;
-    const endNumber = total ? endIndex : 0;
-    const isCurrentPageComplete = pageCandidates.every((candidate) => {
-      const decision = session?.decisions?.[candidate.id] || { pronunciation: "none", meaning: "none" };
-      return String(decision.pronunciation || "none").trim() !== "none" && String(decision.meaning || "none").trim() !== "none";
-    });
+    const pageCandidates = total ? candidates.slice(startIndex, endIndex) : [];
     return {
       pageSize,
       total,
@@ -5762,10 +5798,10 @@
       pageIndex,
       startIndex,
       endIndex,
-      startNumber,
-      endNumber,
+      startNumber: total ? pageIndex + 1 : 0,
+      endNumber: total ? pageIndex + 1 : 0,
       pageCandidates,
-      isCurrentPageComplete
+      isCurrentPageComplete: true
     };
   }
 
@@ -5774,6 +5810,7 @@
     if (!session) return;
     const now = Date.now();
     const map = sanitizeWordLearningStateMap(state.wordLearningState || {});
+
     Object.entries(session.decisions || {}).forEach(([wordId, decision]) => {
       if (!decision || typeof decision !== "object") return;
       const normalizedId = String(wordId || "").trim();
@@ -5786,78 +5823,157 @@
         perfectPairCount: 0
       });
       if (!currentEntry) return;
+
       const nextPronunciationStatus = decision.pronunciation && decision.pronunciation !== "none"
         ? normalizeWordLearningStatus(decision.pronunciation === "ok" ? "◎" : "△", "－")
         : normalizeWordLearningStatus(currentEntry.pronunciationStatus || "－", "－");
       const nextMeaningStatus = decision.meaning && decision.meaning !== "none"
         ? normalizeWordLearningStatus(decision.meaning === "ok" ? "◎" : "△", "－")
         : normalizeWordLearningStatus(currentEntry.meaningStatus || "－", "－");
+
       const nextEntry = {
         ...currentEntry,
         pronunciationStatus: nextPronunciationStatus,
         meaningStatus: nextMeaningStatus,
         lastStudiedAt: Number(currentEntry.lastStudiedAt) || now,
-        isMastered: Boolean(currentEntry.isMastered) && nextPronunciationStatus !== "△" && nextMeaningStatus !== "△" && Math.max(0, Number(currentEntry.questionCount) || 0) > 0,
-        learningStateStatus: Math.max(0, Number(currentEntry.questionCount) || 0) > 0 ? "learning" : "unlearned"
+        learningStateStatus: "learning",
+        isMastered: false
       };
+      if (nextPronunciationStatus === "◎" && nextMeaningStatus === "◎") {
+        nextEntry.learningStateStatus = "mastered";
+        nextEntry.isMastered = true;
+      }
       if (nextPronunciationStatus === "△" || nextMeaningStatus === "△") {
-        nextEntry.isMastered = false;
         nextEntry.learningStateStatus = "learning";
+        nextEntry.isMastered = false;
       }
       map[normalizedId] = nextEntry;
     });
 
     state.wordLearningState = sanitizeWordLearningStateMap(map);
     saveWordLearningStateForSync(state.wordLearningState, getCurrentMobileFirebaseUser()?.uid || "");
-    state.vocabularyStudy = mergeVocabularyStudyStateWithCurrentBank(state.vocabularyStudy || buildVocabularyRealStudyState(), getVocabularyRealWordBank());
-    saveState();
-    saveMobileVocabularyStateForSync(state.vocabularyStudy, getMobileVocabularySyncUid());
-    scheduleMobileVocabularySync();
     state.teacherCheckSession = null;
     renderVocabularyPastHistoryScreen();
   }
 
   function completeVocabularyTeacherCheckCurrentBlock() {
-    if (!state.teacherCheckSession) return;
+    if (!state.teacherCheckSession || state.teacherCheckSession.phase !== "active") return;
     const session = state.teacherCheckSession;
-    const pageInfo = getVocabularyTeacherCheckPageInfo(session);
-    const currentIds = pageInfo.pageCandidates.map((candidate) => String(candidate.id || "").trim()).filter(Boolean);
-    if (!currentIds.length) return;
-
-    const completed = new Set(Array.isArray(session.completedCandidateIds)
-      ? session.completedCandidateIds.map((value) => String(value || "").trim()).filter(Boolean)
-      : []);
-    currentIds.forEach((id) => completed.add(id));
-    session.completedCandidateIds = Array.from(completed);
-    session.candidates = buildVocabularyTeacherCheckCandidates(session);
-    session.pageIndex = 0;
-
-    if (!session.candidates.length) {
+    const currentCandidate = Array.isArray(session.candidates) ? session.candidates[session.pageIndex] : null;
+    if (!currentCandidate) {
       finalizeVocabularyTeacherCheckSession();
       return;
     }
 
+    const decision = session.decisions?.[currentCandidate.id] || { pronunciation: "none", meaning: "none" };
+    if (String(decision.pronunciation || "none").trim() === "none" || String(decision.meaning || "none").trim() === "none") {
+      const metaEl = elements.vocabularyTeacherCheckMeta;
+      if (metaEl) metaEl.textContent = "未判定が残っています";
+      return;
+    }
+
+    const completedIds = new Set(Array.isArray(session.completedCandidateIds)
+      ? session.completedCandidateIds.map((value) => String(value || "").trim()).filter(Boolean)
+      : []);
+    completedIds.add(String(currentCandidate.id || "").trim());
+    session.completedCandidateIds = Array.from(completedIds);
+
+    const nextIndex = session.pageIndex + 1;
+    if (nextIndex >= session.candidates.length) {
+      finalizeVocabularyTeacherCheckSession();
+      return;
+    }
+
+    session.pageIndex = nextIndex;
     renderVocabularyTeacherCheckScreen();
   }
 
-  function renderVocabularyTeacherCheckScreen() {
-    if (!state.teacherCheckSession) {
-      state.teacherCheckSession = {
-        candidates: buildVocabularyTeacherCheckCandidates(),
-        decisions: {},
-        showMeaningIds: [],
-        pageIndex: 0
-      };
-    }
-
-    const session = state.teacherCheckSession;
-    const candidates = Array.isArray(session.candidates) ? session.candidates : [];
+  function renderVocabularyTeacherCheckSetupScreen() {
     const contentEl = elements.vocabularyTeacherCheckContent;
     const metaEl = elements.vocabularyTeacherCheckMeta;
     const prevBtn = elements.vocabularyTeacherCheckPrevBtn;
     const nextBtn = elements.vocabularyTeacherCheckNextBtn;
     const completeBtn = elements.vocabularyTeacherCheckCompleteBtn;
     if (!contentEl || !metaEl) return;
+
+    const session = state.teacherCheckSession || {};
+    const selectedMode = String(session.mode || "auto").trim() || "auto";
+    const selectedCount = String(session.count || "10").trim() || "10";
+    const modeLabels = {
+      auto: "おまかせ",
+      unconfirmed: "未確認の○を優先",
+      checked: "◎確認済みを再チェック",
+      delta: "△がある語を集中チェック",
+      all: "全単語から"
+    };
+
+    if (prevBtn) prevBtn.classList.add("hidden");
+    if (nextBtn) nextBtn.classList.add("hidden");
+    if (completeBtn) completeBtn.classList.add("hidden");
+    metaEl.textContent = `${selectedCount === "all" ? "全件" : `${selectedCount}語`}`;
+
+    contentEl.innerHTML = `
+      <div class="vocabulary-teacher-check-setup">
+        <div class="vocabulary-teacher-check-setup-group">
+          <p>チェックする単語</p>
+          ${["auto", "unconfirmed", "checked", "delta", "all"].map((modeValue) => `
+            <button type="button" class="secondary-btn ${selectedMode === modeValue ? "is-selected" : ""}" data-teacher-check-action="mode" data-teacher-check-mode="${modeValue}">${modeLabels[modeValue]}</button>
+          `).join("")}
+        </div>
+        <div class="vocabulary-teacher-check-setup-group">
+          <p>チェック語数</p>
+          ${["10", "20", "all"].map((countValue) => `
+            <button type="button" class="secondary-btn ${selectedCount === countValue ? "is-selected" : ""}" data-teacher-check-action="count" data-teacher-check-count="${countValue}">${countValue === "all" ? "全件" : `${countValue}語`}</button>
+          `).join("")}
+        </div>
+        <button type="button" class="primary-btn" data-teacher-check-action="start">開始</button>
+      </div>
+    `;
+
+    contentEl.onpointerup = (event) => {
+      const button = event.target && event.target.closest ? event.target.closest("[data-teacher-check-action]") : null;
+      if (!button) return;
+      handleVocabularyTeacherCheckAction(button, event);
+    };
+    contentEl.onclick = (event) => {
+      const button = event.target && event.target.closest ? event.target.closest("[data-teacher-check-action]") : null;
+      if (!button) return;
+      if (button.dataset.teacherCheckTapHandled === "1") {
+        delete button.dataset.teacherCheckTapHandled;
+        return;
+      }
+      handleVocabularyTeacherCheckAction(button, event);
+    };
+  }
+
+  function renderVocabularyTeacherCheckScreen() {
+    if (!state.teacherCheckSession) {
+      state.teacherCheckSession = {
+        phase: "setup",
+        mode: "auto",
+        count: "10",
+        candidates: [],
+        decisions: {},
+        showMeaningIds: [],
+        completedCandidateIds: [],
+        pageIndex: 0
+      };
+    }
+
+    const session = state.teacherCheckSession;
+    const contentEl = elements.vocabularyTeacherCheckContent;
+    const metaEl = elements.vocabularyTeacherCheckMeta;
+    const prevBtn = elements.vocabularyTeacherCheckPrevBtn;
+    const nextBtn = elements.vocabularyTeacherCheckNextBtn;
+    const completeBtn = elements.vocabularyTeacherCheckCompleteBtn;
+    if (!contentEl || !metaEl) return;
+
+    if (session.phase !== "active") {
+      renderVocabularyTeacherCheckSetupScreen();
+      return;
+    }
+
+    const candidates = Array.isArray(session.candidates) ? session.candidates : [];
     if (!candidates.length) {
       metaEl.textContent = "0 / 0";
       if (prevBtn) prevBtn.classList.add("hidden");
@@ -5872,67 +5988,55 @@
     }
 
     const pageInfo = getVocabularyTeacherCheckPageInfo(session);
-    session.pageIndex = pageInfo.pageIndex;
-    const decisions = session.decisions && typeof session.decisions === "object" ? session.decisions : {};
-    const showMeaningIds = new Set(session.showMeaningIds.map((value) => String(value || "").trim()).filter(Boolean));
-    metaEl.textContent = `${pageInfo.startNumber}～${pageInfo.endNumber} / ${pageInfo.total}`;
+    const currentCandidate = pageInfo.pageCandidates[0];
+    if (!currentCandidate) {
+      metaEl.textContent = "0 / 0";
+      return;
+    }
+
+    const decision = session.decisions?.[currentCandidate.id] || { pronunciation: "none", meaning: "none" };
+    const showMeaning = Array.isArray(session.showMeaningIds) && session.showMeaningIds.includes(currentCandidate.id);
+    metaEl.textContent = `${pageInfo.startNumber} / ${pageInfo.total}`;
 
     if (prevBtn) {
       prevBtn.classList.toggle("hidden", pageInfo.pageIndex === 0);
-      prevBtn.textContent = "前の10問";
+      prevBtn.textContent = "← 1つ前";
     }
-    const currentBlockCount = Math.max(1, pageInfo.pageCandidates.length);
     if (nextBtn) {
       nextBtn.classList.remove("hidden");
-      nextBtn.textContent = currentBlockCount >= 10 ? "次の10問" : `この${currentBlockCount}問を完了`;
-      if (pageInfo.pageIndex + 1 >= pageInfo.pageCount) {
-        nextBtn.textContent = "次の10問";
-      }
+      nextBtn.textContent = "次へ →";
     }
     if (completeBtn) {
       completeBtn.classList.add("hidden");
     }
 
     contentEl.innerHTML = `
-      <div class="vocabulary-teacher-check-list">
-        ${pageInfo.pageCandidates.map((candidate, index) => {
-          const decision = decisions[candidate.id] || { pronunciation: "none", meaning: "none" };
-          const showMeaning = showMeaningIds.has(candidate.id);
-          const pageOffset = pageInfo.startIndex + index + 1;
-          return `
-            <div class="vocabulary-teacher-check-card" data-teacher-check-card-id="${String(candidate.id || "").trim()}">
-              <div class="vocabulary-teacher-check-header">
-                <span class="vocabulary-teacher-check-index">${pageOffset}.</span>
-                <span class="vocabulary-teacher-check-grade">${candidate.grade}級</span>
-                <span class="vocabulary-teacher-check-part-of-speech">${candidate.partOfSpeech}</span>
-                <button type="button" class="secondary-btn vocabulary-teacher-check-audio-btn" data-teacher-check-action="audio" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-audio="${String(candidate.word || "").trim()}">
-                  🔊
-                </button>
-              </div>
-              <div class="vocabulary-teacher-check-word-row">
-                <p class="vocabulary-teacher-check-word">${candidate.word}</p>
-              </div>
-              <div class="vocabulary-teacher-check-row">
-                <span class="vocabulary-teacher-check-label">発音</span>
-                <div class="vocabulary-teacher-check-choice-row">
-                  <button type="button" class="secondary-btn ${decision.pronunciation === "ok" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-field="pronunciation" data-teacher-check-value="ok">◎</button>
-                  <button type="button" class="secondary-btn ${decision.pronunciation === "ng" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-field="pronunciation" data-teacher-check-value="ng">△</button>
-                </div>
-              </div>
-              <div class="vocabulary-teacher-check-row">
-                <span class="vocabulary-teacher-check-label">意味</span>
-                <div class="vocabulary-teacher-check-choice-row">
-                  <button type="button" class="secondary-btn ${decision.meaning === "ok" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-field="meaning" data-teacher-check-value="ok">◎</button>
-                  <button type="button" class="secondary-btn ${decision.meaning === "ng" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(candidate.id || "").trim()}" data-teacher-check-field="meaning" data-teacher-check-value="ng">△</button>
-                </div>
-              </div>
-              <button type="button" class="ghost-btn vocabulary-teacher-check-meaning-toggle" data-teacher-check-action="toggle-meaning" data-teacher-check-id="${String(candidate.id || "").trim()}">
-                ${showMeaning ? "意味を隠す" : "意味を見る"}
-              </button>
-              <div class="vocabulary-teacher-check-meaning-preview ${showMeaning ? "" : "is-hidden"}">${showMeaning ? candidate.meaning : ""}</div>
-            </div>
-          `;
-        }).join("")}
+      <div class="vocabulary-teacher-check-card" data-teacher-check-card-id="${String(currentCandidate.id || "").trim()}">
+        <div class="vocabulary-teacher-check-header">
+          <span class="vocabulary-teacher-check-index">${pageInfo.startNumber} / ${pageInfo.total}</span>
+          <span class="vocabulary-teacher-check-grade">${currentCandidate.grade}級</span>
+          <span class="vocabulary-teacher-check-part-of-speech">${currentCandidate.partOfSpeech}</span>
+          <button type="button" class="secondary-btn vocabulary-teacher-check-audio-btn" data-teacher-check-action="audio" data-teacher-check-id="${String(currentCandidate.id || "").trim()}" data-teacher-check-audio="${String(currentCandidate.word || "").trim()}">🔊</button>
+        </div>
+        <div class="vocabulary-teacher-check-word-row">
+          <p class="vocabulary-teacher-check-word">${currentCandidate.word}</p>
+        </div>
+        <div class="vocabulary-teacher-check-row">
+          <span class="vocabulary-teacher-check-label">発音</span>
+          <div class="vocabulary-teacher-check-choice-row">
+            <button type="button" class="secondary-btn ${decision.pronunciation === "ok" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(currentCandidate.id || "").trim()}" data-teacher-check-field="pronunciation" data-teacher-check-value="ok">◎</button>
+            <button type="button" class="secondary-btn ${decision.pronunciation === "ng" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(currentCandidate.id || "").trim()}" data-teacher-check-field="pronunciation" data-teacher-check-value="ng">△</button>
+          </div>
+        </div>
+        <div class="vocabulary-teacher-check-row">
+          <span class="vocabulary-teacher-check-label">意味</span>
+          <div class="vocabulary-teacher-check-choice-row">
+            <button type="button" class="secondary-btn ${decision.meaning === "ok" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(currentCandidate.id || "").trim()}" data-teacher-check-field="meaning" data-teacher-check-value="ok">◎</button>
+            <button type="button" class="secondary-btn ${decision.meaning === "ng" ? "is-selected" : ""}" data-teacher-check-action="decision" data-teacher-check-id="${String(currentCandidate.id || "").trim()}" data-teacher-check-field="meaning" data-teacher-check-value="ng">△</button>
+          </div>
+        </div>
+        <button type="button" class="ghost-btn vocabulary-teacher-check-meaning-toggle" data-teacher-check-action="toggle-meaning" data-teacher-check-id="${String(currentCandidate.id || "").trim()}">${showMeaning ? "意味を隠す" : "意味を見る"}</button>
+        <div class="vocabulary-teacher-check-meaning-preview ${showMeaning ? "" : "is-hidden"}">${showMeaning ? currentCandidate.meaning : ""}</div>
       </div>
     `;
 
@@ -5959,8 +6063,7 @@
     const card = contentEl.querySelector(`[data-teacher-check-card-id="${CSS.escape(String(cardId))}"]`);
     if (!card) return;
     const decision = session.decisions && session.decisions[cardId] ? session.decisions[cardId] : { pronunciation: "none", meaning: "none" };
-    const fieldGroups = ["pronunciation", "meaning"];
-    fieldGroups.forEach((fieldName) => {
+    ["pronunciation", "meaning"].forEach((fieldName) => {
       const buttons = card.querySelectorAll(`[data-teacher-check-field="${fieldName}"]`);
       buttons.forEach((button) => {
         const isSelected = String(button.dataset.teacherCheckValue || "") === String(decision[fieldName] || "none");
@@ -5978,11 +6081,11 @@
     const showMeaning = Array.isArray(session.showMeaningIds) && session.showMeaningIds.includes(cardId);
     const toggleButton = card.querySelector(".vocabulary-teacher-check-meaning-toggle");
     const preview = card.querySelector(".vocabulary-teacher-check-meaning-preview");
-    const candidate = (Array.isArray(session.candidates) ? session.candidates : []).find((entry) => String(entry.id || "") === String(cardId));
     if (toggleButton) {
       toggleButton.textContent = showMeaning ? "意味を隠す" : "意味を見る";
     }
     if (preview) {
+      const candidate = Array.isArray(session.candidates) ? session.candidates.find((entry) => String(entry.id || "") === String(cardId)) : null;
       preview.classList.toggle("is-hidden", !showMeaning);
       preview.textContent = showMeaning && candidate ? candidate.meaning : "";
     }
@@ -5992,11 +6095,31 @@
     if (!button || !event || !state.teacherCheckSession) return;
     const action = String(button.dataset.teacherCheckAction || "").trim();
     const candidateId = String(button.dataset.teacherCheckId || candidateIdFromButton(button) || "").trim();
-    if (!candidateId) return;
 
     if (event.type === "pointerup" || event.type === "touchend") {
       button.dataset.teacherCheckTapHandled = "1";
     }
+
+    if (["mode", "count", "start"].includes(action)) {
+      const session = state.teacherCheckSession;
+      if (action === "mode") {
+        session.mode = String(button.dataset.teacherCheckMode || "auto").trim() || "auto";
+      } else if (action === "count") {
+        const rawCount = String(button.dataset.teacherCheckCount || "10").trim();
+        session.count = ["10", "20", "all"].includes(rawCount) ? rawCount : "10";
+      } else if (action === "start") {
+        session.phase = "active";
+        session.completedCandidateIds = [];
+        session.decisions = {};
+        session.showMeaningIds = [];
+        session.pageIndex = 0;
+        session.candidates = buildVocabularyTeacherCheckCandidates(session);
+      }
+      renderVocabularyTeacherCheckScreen();
+      return;
+    }
+
+    if (!candidateId) return;
 
     if (action === "audio") {
       const text = String(button.dataset.teacherCheckAudio || "").trim();
@@ -6046,14 +6169,15 @@
 
   function openVocabularyTeacherCheckScreen() {
     state.teacherCheckSession = {
+      phase: "setup",
+      mode: "auto",
+      count: "10",
       candidates: [],
       decisions: {},
       showMeaningIds: [],
       completedCandidateIds: [],
       pageIndex: 0
     };
-    state.teacherCheckSession.candidates = buildVocabularyTeacherCheckCandidates(state.teacherCheckSession);
-    state.teacherCheckSession.pageIndex = 0;
     renderVocabularyTeacherCheckScreen();
     showScreen("vocabularyTeacherCheckScreen");
   }
