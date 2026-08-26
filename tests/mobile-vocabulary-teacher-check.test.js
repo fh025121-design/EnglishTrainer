@@ -258,6 +258,41 @@ assert.deepStrictEqual({ ...categoryCounts }, { unconfirmed: 2, delta: 4, checke
 assert.deepStrictEqual(categorySandbox.window.getVocabularyTeacherCheckCandidates("unconfirmed").map((entry) => entry.id), ["w1", "w7"], "unconfirmed mode should only include the ○-only bucket without overlap");
 assert.deepStrictEqual(categorySandbox.window.getVocabularyTeacherCheckCandidates("delta").map((entry) => entry.id), ["w2", "w3", "w4", "w5"], "delta mode should only include the △ bucket without overlap");
 assert.deepStrictEqual(categorySandbox.window.getVocabularyTeacherCheckCandidates("checked").map((entry) => entry.id), ["w6"], "checked mode should only include ◎◎");
+
+const perItemProgressSandbox = makeTeacherCheckSandbox();
+const teacherCheckWordCount = 27;
+perItemProgressSandbox.window.state.wordLearningState = Object.fromEntries(
+  Array.from({ length: teacherCheckWordCount }, (_, index) => {
+    const wordId = `w${index + 1}`;
+    return [wordId, {
+      wordId,
+      pronunciationStatus: "○",
+      meaningStatus: "○",
+      lastSelfResult: "ok",
+      lastStudiedAt: 1000 + index,
+      questionCount: 1,
+      perfectPairCount: 0,
+      isMastered: false,
+      learningStateStatus: "learning"
+    }];
+  })
+);
+perItemProgressSandbox.window.state.teacherCheckSession = {
+  phase: "active",
+  mode: "auto",
+  candidates: Array.from({ length: teacherCheckWordCount }, (_, index) => ({ id: `w${index + 1}`, word: `word${index + 1}` })),
+  decisions: {
+    w1: { pronunciation: "ok", meaning: "ok" }
+  },
+  showMeaningIds: [],
+  completedCandidateIds: [],
+  pageIndex: 0
+};
+perItemProgressSandbox.window.completeVocabularyTeacherCheckCurrentBlock();
+assert.strictEqual(perItemProgressSandbox.window.state.wordLearningState.w1.pronunciationStatus, "◎", "single-item teacher check should save when moving to the next word");
+assert.strictEqual(perItemProgressSandbox.window.state.wordLearningState.w1.meaningStatus, "◎", "single-item teacher check should save both fields immediately");
+assert.strictEqual(perItemProgressSandbox.window.getVocabularyTeacherCheckSummaryCounts().unconfirmed, 26, "after one teacher-check completion, the remaining unconfirmed count drops from 27 to 26");
+assert.deepStrictEqual(perItemProgressSandbox.window.state.teacherCheckSession.completedCandidateIds, ["w1"], "completed candidate IDs should be tracked per item without waiting for the full batch");
 assert.ok(/次へ/.test(source), "the teacher-check flow should use a single-question next action");
 assert.ok(!/次の10問/.test(source), "the old count-based next label should be removed");
 assert.ok(!/全単語から/.test(source), "the old all-words start option should be removed from the setup screen");

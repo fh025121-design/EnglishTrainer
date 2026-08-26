@@ -5865,56 +5865,59 @@
     };
   }
 
-  function finalizeVocabularyTeacherCheckSession() {
-    const session = state.teacherCheckSession;
-    if (!session) return;
+  function persistVocabularyTeacherCheckDecision(wordId, decision = {}) {
+    const normalizedId = String(wordId || "").trim();
+    if (!normalizedId) return null;
     const now = Date.now();
     const map = sanitizeWordLearningStateMap(state.wordLearningState || {});
-
-    Object.entries(session.decisions || {}).forEach(([wordId, decision]) => {
-      if (!decision || typeof decision !== "object") return;
-      const normalizedId = String(wordId || "").trim();
-      if (!normalizedId) return;
-      const currentEntry = map[normalizedId] || createWordLearningStateEntry(normalizedId, {
-        wordId: normalizedId,
-        pronunciationStatus: "－",
-        meaningStatus: "－",
-        questionCount: 0,
-        perfectPairCount: 0
-      });
-      if (!currentEntry) return;
-
-      const nextPronunciationStatus = decision.pronunciation && decision.pronunciation !== "none"
-        ? normalizeWordLearningStatus(decision.pronunciation === "ok" ? "◎" : "△", "－")
-        : normalizeWordLearningStatus(currentEntry.pronunciationStatus || "－", "－");
-      const nextMeaningStatus = decision.meaning && decision.meaning !== "none"
-        ? normalizeWordLearningStatus(decision.meaning === "ok" ? "◎" : "△", "－")
-        : normalizeWordLearningStatus(currentEntry.meaningStatus || "－", "－");
-
-      const nextEntry = {
-        ...currentEntry,
-        pronunciationStatus: nextPronunciationStatus,
-        meaningStatus: nextMeaningStatus,
-        lastStudiedAt: Number(currentEntry.lastStudiedAt) || now,
-        learningStateStatus: "learning",
-        isMastered: false
-      };
-      if (nextPronunciationStatus === "◎" && nextMeaningStatus === "◎") {
-        nextEntry.learningStateStatus = "mastered";
-        nextEntry.isMastered = true;
-      }
-      if (nextPronunciationStatus === "△" || nextMeaningStatus === "△") {
-        nextEntry.learningStateStatus = "learning";
-        nextEntry.isMastered = false;
-      }
-      map[normalizedId] = nextEntry;
+    const currentEntry = map[normalizedId] || createWordLearningStateEntry(normalizedId, {
+      wordId: normalizedId,
+      pronunciationStatus: "－",
+      meaningStatus: "－",
+      questionCount: 0,
+      perfectPairCount: 0
     });
+    if (!currentEntry) return null;
+
+    const nextPronunciationStatus = decision.pronunciation && decision.pronunciation !== "none"
+      ? normalizeWordLearningStatus(decision.pronunciation === "ok" ? "◎" : "△", "－")
+      : normalizeWordLearningStatus(currentEntry.pronunciationStatus || "－", "－");
+    const nextMeaningStatus = decision.meaning && decision.meaning !== "none"
+      ? normalizeWordLearningStatus(decision.meaning === "ok" ? "◎" : "△", "－")
+      : normalizeWordLearningStatus(currentEntry.meaningStatus || "－", "－");
+
+    const nextEntry = {
+      ...currentEntry,
+      pronunciationStatus: nextPronunciationStatus,
+      meaningStatus: nextMeaningStatus,
+      lastStudiedAt: Number(currentEntry.lastStudiedAt) || now,
+      learningStateStatus: String(currentEntry.learningStateStatus || getWordLearningStateStatusFromEntry(currentEntry) || "learning").trim() || "learning",
+      isMastered: Boolean(currentEntry.isMastered)
+    };
+    if (nextPronunciationStatus === "△" || nextMeaningStatus === "△") {
+      nextEntry.learningStateStatus = "learning";
+      nextEntry.isMastered = false;
+    }
+    map[normalizedId] = nextEntry;
 
     state.wordLearningState = sanitizeWordLearningStateMap(map);
     saveWordLearningStateForSync(state.wordLearningState, getCurrentMobileFirebaseUser()?.uid || "");
     saveState();
     saveMobileVocabularyStateForSync(state.vocabularyStudy, getCurrentMobileFirebaseUser()?.uid || "");
     scheduleMobileVocabularySync();
+    return nextEntry;
+  }
+
+  function finalizeVocabularyTeacherCheckSession() {
+    const session = state.teacherCheckSession;
+    if (!session) return;
+    Object.entries(session.decisions || {}).forEach(([wordId, decision]) => {
+      if (!decision || typeof decision !== "object") return;
+      const normalizedId = String(wordId || "").trim();
+      if (!normalizedId) return;
+      persistVocabularyTeacherCheckDecision(normalizedId, decision);
+    });
+
     state.teacherCheckSession = null;
     renderVocabularyPastHistoryScreen();
   }
@@ -5929,10 +5932,11 @@
     }
 
     const decision = session.decisions?.[currentCandidate.id] || { pronunciation: "none", meaning: "none" };
-    // 教師チェックは 1 語ずつ判定するため、旧ブロック単位の未判定警告を使わない。
     if (String(decision.pronunciation || "none").trim() === "none" || String(decision.meaning || "none").trim() === "none") {
       return;
     }
+
+    persistVocabularyTeacherCheckDecision(currentCandidate.id, decision);
 
     const completedIds = new Set(Array.isArray(session.completedCandidateIds)
       ? session.completedCandidateIds.map((value) => String(value || "").trim()).filter(Boolean)
@@ -5952,6 +5956,28 @@
 
     session.pageIndex = nextIndex;
     renderVocabularyTeacherCheckScreen();
+  }
+
+  function finalizeCurrentTeacherCheckItemAndReturnHome() {
+    if (!state.teacherCheckSession || state.teacherCheckSession.phase !== "active") {
+      renderSpeakingHome();
+      return;
+    }
+    const session = state.teacherCheckSession;
+    const currentCandidate = Array.isArray(session.candidates) ? session.candidates[session.pageIndex] : null;
+    if (currentCandidate) {
+      const decision = session.decisions?.[currentCandidate.id] || { pronunciation: "none", meaning: "none" };
+      if (String(decision.pronunciation || "none").trim() !== "none" && String(decision.meaning || "none").trim() !== "none") {
+        persistVocabularyTeacherCheckDecision(currentCandidate.id, decision);
+        const completedIds = new Set(Array.isArray(session.completedCandidateIds)
+          ? session.completedCandidateIds.map((value) => String(value || "").trim()).filter(Boolean)
+          : []);
+        completedIds.add(String(currentCandidate.id || "").trim());
+        session.completedCandidateIds = Array.from(completedIds);
+      }
+    }
+    state.teacherCheckSession = null;
+    renderSpeakingHome();
   }
 
   function renderVocabularyTeacherCheckSetupScreen() {
@@ -6057,6 +6083,7 @@
 
     const decision = session.decisions?.[currentCandidate.id] || { pronunciation: "none", meaning: "none" };
     const showMeaning = Array.isArray(session.showMeaningIds) && session.showMeaningIds.includes(currentCandidate.id);
+    const bothSelected = String(decision.pronunciation || "none").trim() !== "none" && String(decision.meaning || "none").trim() !== "none";
     metaEl.textContent = `${pageInfo.startNumber} / ${pageInfo.total}`;
 
     if (prevBtn) {
@@ -6064,11 +6091,12 @@
       prevBtn.textContent = "前へ";
     }
     if (nextBtn) {
-      nextBtn.classList.remove("hidden");
-      nextBtn.textContent = "次へ";
+      nextBtn.classList.toggle("hidden", !bothSelected);
+      nextBtn.textContent = "次の1語";
     }
     if (completeBtn) {
-      completeBtn.classList.add("hidden");
+      completeBtn.classList.toggle("hidden", !bothSelected);
+      completeBtn.textContent = "完了してホームへ";
     }
 
     contentEl.innerHTML = `
@@ -6247,6 +6275,9 @@
   window.getVocabularyTeacherCheckCandidates = getVocabularyTeacherCheckCandidates;
   window.buildVocabularyTeacherCheckCandidates = buildVocabularyTeacherCheckCandidates;
   window.getVocabularyTeacherCheckPageInfo = getVocabularyTeacherCheckPageInfo;
+  window.persistVocabularyTeacherCheckDecision = persistVocabularyTeacherCheckDecision;
+  window.finalizeVocabularyTeacherCheckSession = finalizeVocabularyTeacherCheckSession;
+  window.completeVocabularyTeacherCheckCurrentBlock = completeVocabularyTeacherCheckCurrentBlock;
   window.openVocabularyTeacherCheckScreen = openVocabularyTeacherCheckScreen;
   window.renderVocabularyTeacherCheckScreen = renderVocabularyTeacherCheckScreen;
 
@@ -15711,25 +15742,7 @@
     }
     if (elements.vocabularyTeacherCheckCompleteBtn) {
       elements.vocabularyTeacherCheckCompleteBtn.addEventListener("click", () => {
-        if (!state.teacherCheckSession) return;
-        const session = state.teacherCheckSession;
-        const candidates = Array.isArray(session.candidates) ? session.candidates : [];
-        const unmatched = candidates.filter((candidate) => {
-          const decision = session.decisions?.[candidate.id] || { pronunciation: "none", meaning: "none" };
-          return decision.pronunciation === "none" || decision.meaning === "none";
-        });
-
-        if (unmatched.length) {
-          const first = unmatched[0];
-          const metaEl = elements.vocabularyTeacherCheckMeta;
-          if (metaEl) {
-            metaEl.textContent = `未判定: ${first.word}`;
-          }
-          window.alert("未判定の単語があります。発音と意味の両方を判定してください。");
-          return;
-        }
-
-        finalizeVocabularyTeacherCheckSession();
+        finalizeCurrentTeacherCheckItemAndReturnHome();
       });
     }
     elements.vocabularySampleNextBtn.addEventListener("click", continueVocabularySample);
