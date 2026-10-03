@@ -5699,6 +5699,9 @@ function buildPrepositionLearningHistoryEntry(sessionLike, reason) {
   const correctCount = Math.max(0, Number(sessionLike?.correctCount) || 0);
   const accuracy = answerCount ? Math.round((correctCount / answerCount) * 100) : 0;
   const pointSummary = computeSessionEarnedPoints(sessionLike);
+  const answerDetails = buildLearningHistoryAnswerDetails(sessionLike, {
+    answerHistoryStartIndex: 0
+  });
   return {
     learnedAt: formatTimestampToJstDisplay(endedAt),
     startedAt,
@@ -5716,6 +5719,7 @@ function buildPrepositionLearningHistoryEntry(sessionLike, reason) {
     deviceType: "pc",
     deviceId: getPcBrowserDeviceId(),
     deviceName: getPcBrowserDeviceNameRaw(),
+    answerDetails,
     ticket: computeLearningHistoryTicketDelta(
       sanitizeLearningHistoryTicketSnapshot(sessionLike?.ticketSnapshot),
       captureLearningHistoryTicketSnapshot()
@@ -11509,12 +11513,41 @@ function buildPrepositionQuestionSet(scope, options = {}) {
     uniquePool.push(question);
   });
 
+  const coverageStore = loadTrainingCoverageStore(getCurrentPcFirebaseUid());
+  const seenQuestionIds = new Set(
+    Array.isArray(coverageStore?.byMode?.preposition)
+      ? coverageStore.byMode.preposition.map((id) => String(id || "").trim()).filter(Boolean)
+      : []
+  );
+  const unseenPool = uniquePool.filter((question) => !seenQuestionIds.has(String(question.id)));
   const targetCount = Math.min(PREPOSITION_TRAINING_QUESTION_LIMIT, uniquePool.length);
-  return weightedSampleWithoutReplacementByWeight(
-    uniquePool,
-    targetCount,
+
+  if (unseenPool.length >= targetCount) {
+    return weightedSampleWithoutReplacementByWeight(
+      unseenPool,
+      targetCount,
+      (question) => getTrainingQuestionWeight("preposition", question?.id)
+    );
+  }
+
+  const selected = weightedSampleWithoutReplacementByWeight(
+    unseenPool,
+    unseenPool.length,
     (question) => getTrainingQuestionWeight("preposition", question?.id)
   );
+  const selectedIds = new Set(selected.map((question) => String(question.id)));
+  const remainingSlots = Math.max(0, targetCount - selected.length);
+  const remainingPool = uniquePool.filter((question) => !selectedIds.has(String(question.id)));
+
+  if (remainingSlots > 0) {
+    selected.push(...weightedSampleWithoutReplacementByWeight(
+      remainingPool,
+      remainingSlots,
+      (question) => getTrainingQuestionWeight("preposition", question?.id)
+    ));
+  }
+
+  return selected;
 }
 
 function startPrepositionTraining(scope, options = {}) {
@@ -11775,7 +11808,7 @@ function submitPrepositionAnswer() {
   const normalized = trimmed.toLowerCase();
   const isCorrect = normalized === String(currentQuestion.answer || "").toLowerCase();
   const answeredAt = Date.now();
-  session.answerHistory.push({ at: answeredAt, isCorrect });
+  session.answerHistory.push({ at: answeredAt, isCorrect, questionId: currentQuestion.id });
   session.answerCount += 1;
   session.answered = true;
   if (isCorrect) {
@@ -13868,6 +13901,13 @@ function getPhraseSpiralPool(count = PHRASE_SPIRAL_TARGET_COUNT) {
   const phraseItems = state.items.filter((item) => item.type === "phrase");
   if (!phraseItems.length) return [];
 
+  const coverageStore = loadTrainingCoverageStore(getCurrentPcFirebaseUid());
+  const seenPhraseIds = new Set(
+    Array.isArray(coverageStore?.byMode?.phrase)
+      ? coverageStore.byMode.phrase.map((id) => String(id || "").trim()).filter(Boolean)
+      : []
+  );
+
   const buckets = {
     1: phraseItems.filter((item) => getEffectiveLevelForItem(item) === 1),
     2: phraseItems.filter((item) => getEffectiveLevelForItem(item) === 2),
@@ -13875,19 +13915,39 @@ function getPhraseSpiralPool(count = PHRASE_SPIRAL_TARGET_COUNT) {
     4: phraseItems.filter((item) => getEffectiveLevelForItem(item) === 4)
   };
 
+  const allUnseen = phraseItems.filter((item) => !seenPhraseIds.has(String(item.id)));
+  const targetCount = Math.max(0, Math.min(count, phraseItems.length));
+
+  const buildPriorityPool = (sourcePool) => {
+    const pool = Array.isArray(sourcePool) ? sourcePool : [];
+    if (!pool.length) return [];
+    return weightedSampleWithoutReplacementByWeight(
+      pool.filter((item) => !seenPhraseIds.has(String(item.id))),
+      Math.min(targetCount, pool.filter((item) => !seenPhraseIds.has(String(item.id))).length),
+      (item) => getTrainingQuestionWeight("phrase", item?.id)
+    );
+  };
+
   const selected = [];
   const selectedIds = new Set();
-  const targetCount = Math.max(0, Math.min(count, phraseItems.length));
+
+  if (allUnseen.length >= targetCount) {
+    return weightedSampleWithoutReplacementByWeight(
+      allUnseen,
+      targetCount,
+      (item) => getTrainingQuestionWeight("phrase", item?.id)
+    );
+  }
 
   const takeFromPriority = (startLevel, requiredCount) => {
     let needed = requiredCount;
     for (let level = startLevel; level <= 4 && needed > 0; level += 1) {
-      const available = (buckets[level] || []).filter((item) => !selectedIds.has(String(item.id)));
+      const available = (buckets[level] || []).filter((item) => !selectedIds.has(String(item.id)) && !seenPhraseIds.has(String(item.id)));
       const takeCount = Math.min(needed, available.length);
       const pickedItems = weightedSampleWithoutReplacementByWeight(
         available,
         takeCount,
-        (item) => getTrainingQuestionWeight("idiom", item?.id)
+        (item) => getTrainingQuestionWeight("phrase", item?.id)
       );
       for (let index = 0; index < pickedItems.length; index += 1) {
         const picked = pickedItems[index];
@@ -13908,7 +13968,7 @@ function getPhraseSpiralPool(count = PHRASE_SPIRAL_TARGET_COUNT) {
     selected.push(...weightedSampleWithoutReplacementByWeight(
       fallback,
       remaining,
-      (item) => getTrainingQuestionWeight("idiom", item?.id)
+      (item) => getTrainingQuestionWeight("phrase", item?.id)
     ));
   }
 
