@@ -14719,7 +14719,7 @@ function renderQuestionSession() {
     return;
   }
   if (question?.id) {
-    markTrainingQuestionShown("word", question.id);
+    markTrainingQuestionShown(question.type === "phrase" ? "phrase" : "word", question.id);
   }
 
   const questionCard = document.getElementById("questionCard");
@@ -14834,7 +14834,7 @@ function renderReviewSession() {
     return;
   }
   if (question?.id) {
-    markTrainingQuestionShown("phrase", question.id);
+    markTrainingQuestionShown(question.type === "phrase" ? "phrase" : "word", question.id);
   }
 
   const reviewCard = document.getElementById("reviewCard");
