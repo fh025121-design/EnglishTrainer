@@ -607,16 +607,20 @@
               <span id="instantCompositionQuestionCounter" class="instant-composition-question-counter">1 / 20</span>
             </div>
             <p id="instantCompositionPrompt" class="instant-composition-prompt">問題を読み込み中です。</p>
-            <label class="instant-composition-answer-label" for="instantCompositionAnswerInput">英語の解答</label>
-            <input id="instantCompositionAnswerInput" class="answer-input instant-composition-answer-input" type="text" autocomplete="off" spellcheck="false" placeholder="英語を入力" />
-            <div class="instant-composition-actions">
-              <button id="instantCompositionRevealBtn" class="primary-btn instant-composition-reveal-btn" type="button">答えを確認</button>
-            </div>
+
+            <form id="instantCompositionAnswerForm" class="instant-composition-answer-form" novalidate>
+              <label class="instant-composition-answer-label" for="instantCompositionAnswerInput">英語の解答</label>
+              <input id="instantCompositionAnswerInput" class="answer-input instant-composition-answer-input" type="text" autocomplete="off" spellcheck="false" placeholder="英語を入力" />
+              <div class="instant-composition-answer-actions">
+                <button id="instantCompositionSubmitBtn" class="primary-btn instant-composition-submit-btn" type="submit">解答する</button>
+                <button id="instantCompositionPronunciationBtn" class="ghost-btn instant-composition-pronunciation-btn" type="button">🔊 発音</button>
+              </div>
+            </form>
+
+            <div id="instantCompositionFeedbackBadge" class="instant-composition-feedback-badge hidden" aria-live="polite">〇</div>
+            <div id="instantCompositionAnswerDiff" class="instant-composition-answer-diff hidden" aria-live="polite"></div>
             <div id="instantCompositionModelAnswer" class="instant-composition-model-answer hidden"></div>
-            <div id="instantCompositionGradeButtons" class="instant-composition-grade-buttons hidden">
-              <button id="instantCompositionCorrectBtn" class="primary-btn instant-composition-grade-btn instant-composition-correct-btn" type="button">〇 正解</button>
-              <button id="instantCompositionIncorrectBtn" class="ghost-btn instant-composition-grade-btn instant-composition-incorrect-btn" type="button">× 不正解</button>
-            </div>
+            <button id="instantCompositionNextBtn" class="primary-btn instant-composition-next-btn hidden" type="button">次の問題</button>
             <div id="instantCompositionSessionSummary" class="instant-composition-session-summary hidden"></div>
             <button id="instantCompositionFinishBackBtn" class="ghost-btn instant-composition-finish-back-btn hidden" type="button">単元選択画面へ戻る</button>
           </div>

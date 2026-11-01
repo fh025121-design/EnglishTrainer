@@ -236,7 +236,8 @@ function bindTrainingMenuCardHandlers() {
     if (!button) return;
     button.onclick = null;
     button.addEventListener("click", () => {
-      if (item.id === "trainingInstantCompositionBtn") {
+      const isInstantCompositionCard = item.id === "trainingInstantCompositionBtn" || item.mode === "instant-composition";
+      if (isInstantCompositionCard) {
         openInstantCompositionMenuScreen();
         return;
       }
@@ -408,6 +409,233 @@ function getInstantCompositionCurrentSession() {
   return null;
 }
 
+const INSTANT_COMPOSITION_CONTRACTION_EXPANSIONS = Object.freeze({
+  "i'm": ["i am"],
+  "you're": ["you are"],
+  "he's": ["he is", "he has"],
+  "she's": ["she is", "she has"],
+  "it's": ["it is", "it has"],
+  "we're": ["we are"],
+  "they're": ["they are"],
+  "i've": ["i have"],
+  "you've": ["you have"],
+  "we've": ["we have"],
+  "they've": ["they have"],
+  "i'll": ["i will"],
+  "you'll": ["you will"],
+  "we'll": ["we will"],
+  "they'll": ["they will"],
+  "don't": ["do not"],
+  "doesn't": ["does not"],
+  "didn't": ["did not"],
+  "isn't": ["is not"],
+  "aren't": ["are not"],
+  "wasn't": ["was not"],
+  "weren't": ["were not"],
+  "can't": ["cannot", "can not"],
+  "won't": ["will not"],
+  "couldn't": ["could not"],
+  "wouldn't": ["would not"],
+  "shouldn't": ["should not"],
+  "i'd": ["i would", "i had"],
+  "you'd": ["you would", "you had"],
+  "he'd": ["he would", "he had"],
+  "she'd": ["she would", "she had"],
+  "we'd": ["we would", "we had"],
+  "they'd": ["they would", "they had"],
+  "it's": ["it is", "it has"],
+  "that'll": ["that will"],
+  "there's": ["there is"],
+  "there'll": ["there will"]
+});
+
+function normalizeInstantCompositionAnswer(value) {
+  return String(value || "")
+    .replace(/\u00A0/g, " ")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function tokenizeInstantCompositionAnswer(value) {
+  return String(value || "")
+    .replace(/\u00A0/g, " ")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function expandInstantCompositionAnswerVariants(rawValue) {
+  let variants = new Set([normalizeInstantCompositionAnswer(rawValue)]);
+  const entries = Object.entries(INSTANT_COMPOSITION_CONTRACTION_EXPANSIONS).sort((left, right) => right[0].length - left[0].length);
+
+  for (const [contraction, expansions] of entries) {
+    const next = new Set();
+    const pattern = new RegExp(`\\b${escapeRegExp(contraction)}\\b`, "gi");
+    for (const current of variants) {
+      if (!pattern.test(current)) {
+        next.add(current);
+        continue;
+      }
+      pattern.lastIndex = 0;
+      const expandedList = Array.from(new Set((Array.isArray(expansions) ? expansions : [expansions]).map((expansion) => normalizeInstantCompositionAnswer(expansion)))).filter(Boolean);
+      if (!expandedList.length) {
+        next.add(current);
+        continue;
+      }
+      for (const expansion of expandedList) {
+        next.add(current.replace(pattern, expansion));
+      }
+    }
+    variants = next;
+  }
+
+  return Array.from(variants).filter(Boolean);
+}
+
+function isInstantCompositionAnswerCorrect(expectedAnswer, actualAnswer) {
+  const expectedText = normalizeInstantCompositionAnswer(expectedAnswer);
+  const actualText = normalizeInstantCompositionAnswer(actualAnswer);
+  if (!expectedText || !actualText) {
+    return false;
+  }
+
+  if (expectedText === actualText) {
+    return true;
+  }
+
+  const expectedVariants = new Set(expandInstantCompositionAnswerVariants(expectedText));
+  const actualVariants = new Set(expandInstantCompositionAnswerVariants(actualText));
+  return Array.from(actualVariants).some((variant) => expectedVariants.has(variant));
+}
+
+function buildInstantCompositionDiffParts(expectedText, actualText) {
+  const expectedTokens = tokenizeInstantCompositionAnswer(expectedText);
+  const actualTokens = tokenizeInstantCompositionAnswer(actualText);
+
+  if (!expectedTokens.length && !actualTokens.length) {
+    return [];
+  }
+
+  const dp = Array.from({ length: expectedTokens.length + 1 }, () => Array(actualTokens.length + 1).fill(0));
+
+  for (let expectedIndex = 1; expectedIndex <= expectedTokens.length; expectedIndex += 1) {
+    for (let actualIndex = 1; actualIndex <= actualTokens.length; actualIndex += 1) {
+      const expectedToken = normalizeInstantCompositionAnswer(expectedTokens[expectedIndex - 1]);
+      const actualToken = normalizeInstantCompositionAnswer(actualTokens[actualIndex - 1]);
+      if (expectedToken === actualToken) {
+        dp[expectedIndex][actualIndex] = dp[expectedIndex - 1][actualIndex - 1] + 1;
+      } else {
+        dp[expectedIndex][actualIndex] = Math.max(dp[expectedIndex - 1][actualIndex], dp[expectedIndex][actualIndex - 1]);
+      }
+    }
+  }
+
+  const operations = [];
+  let expectedIndex = expectedTokens.length;
+  let actualIndex = actualTokens.length;
+
+  while (expectedIndex > 0 && actualIndex > 0) {
+    const expectedToken = normalizeInstantCompositionAnswer(expectedTokens[expectedIndex - 1]);
+    const actualToken = normalizeInstantCompositionAnswer(actualTokens[actualIndex - 1]);
+
+    if (expectedToken === actualToken) {
+      operations.push({ kind: "match", actual: actualTokens[actualIndex - 1] });
+      expectedIndex -= 1;
+      actualIndex -= 1;
+    } else if (dp[expectedIndex - 1][actualIndex] >= dp[expectedIndex][actualIndex - 1]) {
+      operations.push({ kind: "missing", expected: expectedTokens[expectedIndex - 1] });
+      expectedIndex -= 1;
+    } else {
+      operations.push({ kind: "extra", actual: actualTokens[actualIndex - 1] });
+      actualIndex -= 1;
+    }
+  }
+
+  while (expectedIndex > 0) {
+    operations.push({ kind: "missing", expected: expectedTokens[expectedIndex - 1] });
+    expectedIndex -= 1;
+  }
+
+  while (actualIndex > 0) {
+    operations.push({ kind: "extra", actual: actualTokens[actualIndex - 1] });
+    actualIndex -= 1;
+  }
+
+  return operations.reverse();
+}
+
+function renderInstantCompositionAnswerDiff(expectedText, actualText) {
+  const diffContainer = document.getElementById("instantCompositionAnswerDiff");
+  if (!diffContainer) return;
+
+  const parts = buildInstantCompositionDiffParts(expectedText, actualText);
+  if (!parts.length) {
+    diffContainer.classList.add("hidden");
+    diffContainer.innerHTML = "";
+    return;
+  }
+
+  const rendered = parts.map((part) => {
+    if (part.kind === "match") {
+      return `<span class="instant-composition-diff-token instant-composition-diff-match">${escapeHtml(part.actual || "")}</span>`;
+    }
+    if (part.kind === "missing") {
+      return `<span class="instant-composition-diff-token instant-composition-diff-wrong">［不足：${escapeHtml(part.expected || "") }］</span>`;
+    }
+    return `<span class="instant-composition-diff-token instant-composition-diff-wrong">${escapeHtml(part.actual || "")}</span>`;
+  }).join(" ");
+
+  diffContainer.innerHTML = rendered;
+  diffContainer.classList.remove("hidden");
+}
+
+function setInstantCompositionResultBadge(isCorrect) {
+  const badge = document.getElementById("instantCompositionFeedbackBadge");
+  if (!badge) return;
+  badge.textContent = isCorrect ? "〇" : "×";
+  badge.classList.toggle("is-correct", isCorrect);
+  badge.classList.toggle("is-incorrect", !isCorrect);
+  badge.classList.remove("hidden");
+}
+
+function clearInstantCompositionResultBadge() {
+  const badge = document.getElementById("instantCompositionFeedbackBadge");
+  if (badge) {
+    badge.textContent = "";
+    badge.classList.add("hidden");
+    badge.classList.remove("is-correct", "is-incorrect");
+  }
+}
+
+function speakInstantCompositionAnswer(text) {
+  const source = String(text || "").trim();
+  if (!source || typeof window === "undefined" || !window.speechSynthesis) {
+    return false;
+  }
+
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(source);
+    utterance.lang = "en-US";
+    utterance.rate = 0.96;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch (error) {
+    console.warn("Instant composition speech failed", error);
+    return false;
+  }
+}
+
 function renderInstantCompositionQuestionScreen() {
   const session = getInstantCompositionCurrentSession();
   if (!session || !Array.isArray(session.questions) || !session.questions.length) {
@@ -442,6 +670,7 @@ function renderInstantCompositionQuestionScreen() {
   const answerInput = document.getElementById("instantCompositionAnswerInput");
   if (answerInput) {
     answerInput.value = "";
+    answerInput.disabled = false;
     answerInput.focus();
   }
 
@@ -450,6 +679,14 @@ function renderInstantCompositionQuestionScreen() {
     answerBox.textContent = "";
     answerBox.classList.add("hidden");
   }
+
+  const answerDiff = document.getElementById("instantCompositionAnswerDiff");
+  if (answerDiff) {
+    answerDiff.innerHTML = "";
+    answerDiff.classList.add("hidden");
+  }
+
+  clearInstantCompositionResultBadge();
 
   const gradeButtons = document.getElementById("instantCompositionGradeButtons");
   if (gradeButtons) {
@@ -461,34 +698,42 @@ function renderInstantCompositionQuestionScreen() {
     finishBackBtn.classList.add("hidden");
   }
 
-  const revealBtn = document.getElementById("instantCompositionRevealBtn");
-  if (revealBtn) {
-    revealBtn.disabled = false;
-    revealBtn.onclick = () => {
-      const modelAnswer = document.getElementById("instantCompositionModelAnswer");
-      if (modelAnswer) {
-        const answerText = currentQuestion.answer || "";
-        modelAnswer.textContent = `模範解答: ${answerText}`;
-        modelAnswer.classList.remove("hidden");
+  const nextBtn = document.getElementById("instantCompositionNextBtn");
+  if (nextBtn) {
+    nextBtn.classList.add("hidden");
+    nextBtn.disabled = true;
+    nextBtn.textContent = "次の問題";
+    nextBtn.onclick = () => {
+      const currentSession = getInstantCompositionCurrentSession();
+      if (!currentSession || !Array.isArray(currentSession.questions)) return;
+      const nextIndex = currentSession.index + 1;
+      if (nextIndex >= currentSession.questions.length) {
+        finishInstantCompositionSession();
+        return;
       }
-      const gradeButtonsEl = document.getElementById("instantCompositionGradeButtons");
-      if (gradeButtonsEl) {
-        gradeButtonsEl.classList.remove("hidden");
-      }
+      currentSession.index = nextIndex;
+      renderInstantCompositionQuestionScreen();
     };
   }
 
-  const correctBtn = document.getElementById("instantCompositionCorrectBtn");
-  if (correctBtn) {
-    correctBtn.onclick = () => {
-      gradeInstantCompositionCurrentQuestion("correct");
+  const answerForm = document.getElementById("instantCompositionAnswerForm");
+  if (answerForm) {
+    answerForm.onsubmit = (event) => {
+      event.preventDefault();
+      const input = document.getElementById("instantCompositionAnswerInput");
+      if (!input || input.disabled) {
+        return;
+      }
+      submitInstantCompositionAnswer();
     };
   }
 
-  const incorrectBtn = document.getElementById("instantCompositionIncorrectBtn");
-  if (incorrectBtn) {
-    incorrectBtn.onclick = () => {
-      gradeInstantCompositionCurrentQuestion("incorrect");
+  const pronunciationBtn = document.getElementById("instantCompositionPronunciationBtn");
+  if (pronunciationBtn) {
+    pronunciationBtn.disabled = false;
+    pronunciationBtn.onclick = () => {
+      const answerText = currentQuestion.answer || "";
+      speakInstantCompositionAnswer(answerText);
     };
   }
 
@@ -508,19 +753,38 @@ function saveInstantCompositionHistoryEntry(entry) {
   }
 }
 
-function gradeInstantCompositionCurrentQuestion(judgement) {
+function submitInstantCompositionAnswer() {
   const session = getInstantCompositionCurrentSession();
   if (!session || !Array.isArray(session.questions)) {
     return;
   }
+
   const currentQuestion = session.questions[session.index];
   if (!currentQuestion) {
     return;
   }
 
-  const answerInput = document.getElementById("instantCompositionAnswerInput");
-  const typedAnswer = answerInput ? String(answerInput.value || "").trim() : "";
-  const result = {
+  const input = document.getElementById("instantCompositionAnswerInput");
+  const typedAnswer = input ? String(input.value || "").trim() : "";
+  if (!typedAnswer) {
+    input?.focus();
+    return;
+  }
+
+  const submitBtn = document.getElementById("instantCompositionSubmitBtn");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+  }
+
+  const isCorrect = isInstantCompositionAnswerCorrect(currentQuestion.answer, typedAnswer);
+  const answerBox = document.getElementById("instantCompositionModelAnswer");
+  const diffBox = document.getElementById("instantCompositionAnswerDiff");
+  const nextBtn = document.getElementById("instantCompositionNextBtn");
+  const pronunciationBtn = document.getElementById("instantCompositionPronunciationBtn");
+  const sessionBadge = document.getElementById("instantCompositionFeedbackBadge");
+
+  const record = {
+    sessionId: session.sessionId || `${session.mode || "unit"}-${Date.now()}`,
     questionId: currentQuestion.id,
     unitName: currentQuestion.unit || session.unitName || "名詞・代名詞",
     learningMode: "単元別学習",
@@ -528,23 +792,174 @@ function gradeInstantCompositionCurrentQuestion(judgement) {
     prompt: currentQuestion.japanese,
     answer: typedAnswer,
     expectedAnswer: currentQuestion.answer,
-    judgement: judgement === "correct" ? "correct" : "incorrect",
-    createdAt: new Date().toISOString()
+    firstAttemptAnswer: session?.questionRecords?.[currentQuestion.id]?.firstAttemptAnswer || typedAnswer,
+    attemptCount: Number(session?.questionRecords?.[currentQuestion.id]?.attemptCount || 0) + 1,
+    finalJudgement: isCorrect ? "correct" : "incorrect",
+    finalAnswer: typedAnswer,
+    judgement: isCorrect ? "correct" : "incorrect",
+    createdAt: new Date().toISOString(),
+    isSaved: false
   };
 
-  session.results.push(result);
+  if (!session.questionRecords) {
+    session.questionRecords = {};
+  }
+  if (!session.questionRecords[currentQuestion.id]) {
+    session.questionRecords[currentQuestion.id] = {
+      questionId: currentQuestion.id,
+      firstAttemptAnswer: typedAnswer,
+      attemptCount: 1,
+      firstJudgement: isCorrect ? "correct" : "incorrect",
+      finalJudgement: isCorrect ? "correct" : "incorrect",
+      finalAnswer: typedAnswer,
+      lastUpdatedAt: Date.now()
+    };
+  } else {
+    const existing = session.questionRecords[currentQuestion.id];
+    existing.attemptCount = Number(existing.attemptCount || 0) + 1;
+    existing.finalAnswer = typedAnswer;
+    existing.finalJudgement = existing.finalJudgement || (isCorrect ? "correct" : "incorrect");
+    existing.lastUpdatedAt = Date.now();
+    if (!existing.firstAttemptAnswer) {
+      existing.firstAttemptAnswer = typedAnswer;
+    }
+    if (!existing.firstJudgement) {
+      existing.firstJudgement = isCorrect ? "correct" : "incorrect";
+    }
+  }
+
+  const finalJudgement = session.questionRecords[currentQuestion.id].finalJudgement;
+  if (!session.questionResults) {
+    session.questionResults = {};
+  }
+  if (!session.questionResults[currentQuestion.id]) {
+    session.questionResults[currentQuestion.id] = {
+      ...record,
+      recordCreatedAt: new Date().toISOString(),
+      isStored: true
+    };
+  }
+
+  session.results = Array.isArray(session.results) ? session.results : [];
+  const existingResultIndex = session.results.findIndex((entry) => entry.questionId === currentQuestion.id);
+  if (existingResultIndex >= 0) {
+    session.results[existingResultIndex] = {
+      ...session.results[existingResultIndex],
+      answer: typedAnswer,
+      expectedAnswer: currentQuestion.answer,
+      judgement: finalJudgement === "correct" ? "correct" : "incorrect",
+      createdAt: session.results[existingResultIndex].createdAt || new Date().toISOString()
+    };
+  } else {
+    session.results.push({
+      questionId: currentQuestion.id,
+      unitName: currentQuestion.unit || session.unitName || "名詞・代名詞",
+      learningMode: "単元別学習",
+      mode: session.mode,
+      prompt: currentQuestion.japanese,
+      answer: typedAnswer,
+      expectedAnswer: currentQuestion.answer,
+      judgement: finalJudgement === "correct" ? "correct" : "incorrect",
+      createdAt: new Date().toISOString()
+    });
+  }
+
   session.correctCount = session.results.filter((entry) => entry.judgement === "correct").length;
   session.incorrectCount = session.results.filter((entry) => entry.judgement === "incorrect").length;
-  saveInstantCompositionHistoryEntry(result);
 
-  const nextIndex = session.index + 1;
-  if (nextIndex >= session.questions.length) {
-    finishInstantCompositionSession();
+  if (isCorrect) {
+    setInstantCompositionResultBadge(true);
+    playTrainingCorrectChime();
+    speakInstantCompositionAnswer(currentQuestion.answer || "");
+
+    if (answerBox) {
+      answerBox.textContent = `模範解答: ${currentQuestion.answer || ""}`;
+      answerBox.classList.add("hidden");
+    }
+    if (diffBox) {
+      diffBox.classList.add("hidden");
+      diffBox.innerHTML = "";
+    }
+
+    const currentResult = session.questionResults[currentQuestion.id];
+    if (currentResult) {
+      currentResult.isStored = true;
+      currentResult.judgement = "correct";
+      currentResult.answer = typedAnswer;
+      currentResult.expectedAnswer = currentQuestion.answer;
+      currentResult.createdAt = new Date().toISOString();
+      saveInstantCompositionHistoryEntry(currentResult);
+    }
+
+    if (nextBtn) {
+      nextBtn.disabled = false;
+      nextBtn.classList.remove("hidden");
+    }
+    if (pronunciationBtn) {
+      pronunciationBtn.disabled = false;
+    }
+    if (sessionBadge) {
+      sessionBadge.classList.remove("hidden");
+    }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
     return;
   }
 
-  session.index = nextIndex;
-  renderInstantCompositionQuestionScreen();
+  setInstantCompositionResultBadge(false);
+  if (answerBox) {
+    answerBox.textContent = `模範解答: ${currentQuestion.answer || ""}`;
+    answerBox.classList.remove("hidden");
+  }
+  if (diffBox) {
+    renderInstantCompositionAnswerDiff(currentQuestion.answer, typedAnswer);
+  }
+  if (nextBtn) {
+    nextBtn.disabled = true;
+    nextBtn.classList.add("hidden");
+  }
+  if (pronunciationBtn) {
+    pronunciationBtn.disabled = false;
+  }
+
+  const wrongEntry = {
+    questionId: currentQuestion.id,
+    unitName: currentQuestion.unit || session.unitName || "名詞・代名詞",
+    learningMode: "単元別学習",
+    mode: session.mode,
+    prompt: currentQuestion.japanese,
+    answer: typedAnswer,
+    expectedAnswer: currentQuestion.answer,
+    judgement: "incorrect",
+    createdAt: new Date().toISOString(),
+    firstAttemptAnswer: session.questionRecords[currentQuestion.id]?.firstAttemptAnswer || typedAnswer,
+    attemptCount: Number(session.questionRecords[currentQuestion.id]?.attemptCount || 0)
+  };
+  if (session.questionRecords[currentQuestion.id]) {
+    session.questionRecords[currentQuestion.id].finalJudgement = "incorrect";
+    session.questionRecords[currentQuestion.id].finalAnswer = typedAnswer;
+    session.questionRecords[currentQuestion.id].lastUpdatedAt = Date.now();
+  }
+  if (!session.questionResults[currentQuestion.id]) {
+    session.questionResults[currentQuestion.id] = { ...wrongEntry };
+  }
+  session.questionResults[currentQuestion.id].judgement = "incorrect";
+  session.questionResults[currentQuestion.id].answer = typedAnswer;
+  session.questionResults[currentQuestion.id].expectedAnswer = currentQuestion.answer;
+  saveInstantCompositionHistoryEntry({
+    ...wrongEntry,
+    isFailureSaved: true
+  });
+
+  const answerInput = document.getElementById("instantCompositionAnswerInput");
+  if (answerInput) {
+    answerInput.focus();
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = false;
+  }
 }
 
 function finishInstantCompositionSession() {
@@ -572,6 +987,11 @@ function finishInstantCompositionSession() {
   const revealBtn = document.getElementById("instantCompositionRevealBtn");
   if (revealBtn) {
     revealBtn.disabled = true;
+  }
+
+  const submitBtn = document.getElementById("instantCompositionSubmitBtn");
+  if (submitBtn) {
+    submitBtn.disabled = true;
   }
 
   const gradeButtons = document.getElementById("instantCompositionGradeButtons");
@@ -6649,7 +7069,7 @@ function recordCommonStudySeconds(dayKey, seconds, options = {}) {
 }
 
 function showTrainingComingSoonNotice() {
-  alert("準備中です");
+  alert("この特訓はまだ準備中です。");
 }
 
 function createDefaultTrainingProfiles() {
