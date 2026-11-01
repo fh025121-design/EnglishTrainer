@@ -115,6 +115,69 @@ const INSTANT_COMPOSITION_UNIT_CATALOG = Object.freeze([
   "文型（SVOO・SVOC）"
 ]);
 
+const INSTANT_COMPOSITION_SAMPLE_BANK = Object.freeze([
+  { id: "PL001", unit: "名詞・代名詞", japanese: "私は２人の兄がいます。", answer: "I have two brothers." },
+  { id: "PL002", unit: "名詞・代名詞", japanese: "あなたは３匹の犬を飼っています。", answer: "You have three dogs." },
+  { id: "PL003", unit: "名詞・代名詞", japanese: "あなたは何本の鉛筆をもっていますか。", answer: "How many pencils do you have?" },
+  { id: "PL004", unit: "名詞・代名詞", japanese: "何人かの少年が公園にいます。", answer: "Some boys are in the park." },
+  { id: "PL005", unit: "名詞・代名詞", japanese: "私は２台のカメラをもっています。", answer: "I have two cameras." },
+  { id: "PL006", unit: "名詞・代名詞", japanese: "あなたは何冊のノートが必要ですか。", answer: "How many notebooks do you need?" },
+  { id: "PL007", unit: "名詞・代名詞", japanese: "私は箱の中に10個のボールをもっています。", answer: "I have ten balls in the box." },
+  { id: "PL008", unit: "名詞・代名詞", japanese: "私はいくつかのオレンジを食べます。", answer: "I eat some oranges." },
+  { id: "PL009", unit: "名詞・代名詞", japanese: "ケンジとタケシは私の友だちです。", answer: "Kenji and Takeshi are my friends." },
+  { id: "PL010", unit: "名詞・代名詞", japanese: "あなたには２人の妹がいます。", answer: "You have two sisters." },
+  { id: "PL011", unit: "名詞・代名詞", japanese: "あなたは何枚のCDがほしいですか。", answer: "How many CDs do you want?" },
+  { id: "PL012", unit: "名詞・代名詞", japanese: "私はたくさんの友だちがいます。", answer: "I have many friends." },
+  { id: "PL013", unit: "名詞・代名詞", japanese: "私は１本もペンをもっていません。", answer: "I don’t have any pens." },
+  { id: "PL014", unit: "名詞・代名詞", japanese: "あなたは何個のリンゴを食べますか。", answer: "How many apples do you eat?" },
+  { id: "PL015", unit: "名詞・代名詞", japanese: "私はカバンの中に３冊の英語の本をもっています。", answer: "I have three English books in my bag." },
+  { id: "PL016", unit: "名詞・代名詞", japanese: "あなたは２台のコンピューターを使います。", answer: "You use two computers." },
+  { id: "PL017", unit: "名詞・代名詞", japanese: "あなたは何冊の本を読みますか。", answer: "How many books do you read?" },
+  { id: "PL018", unit: "名詞・代名詞", japanese: "私は車を２台洗います。", answer: "I wash two cars." },
+  { id: "PL019", unit: "名詞・代名詞", japanese: "私は辞書を何冊かもっています。", answer: "I have some dictionaries." },
+  { id: "PL020", unit: "名詞・代名詞", japanese: "あなたはいくつの箱を開けますか。", answer: "How many boxes do you open?" }
+]);
+
+function getInstantCompositionSampleBank() {
+  const source = Array.isArray(window?.instantCompositionQuestionBank) ? window.instantCompositionQuestionBank : [];
+  const mergedById = new Map();
+
+  [...source, ...INSTANT_COMPOSITION_SAMPLE_BANK].forEach((row) => {
+    if (!row || typeof row !== "object") return;
+    const id = String(row.id || "").trim();
+    if (!id) return;
+    const normalized = {
+      id,
+      unit: String(row.unit || "名詞・代名詞").trim(),
+      japanese: String(row.japanese || "").trim(),
+      answer: String(row.answer || "").trim()
+    };
+    if (!normalized.unit || !normalized.japanese || !normalized.answer) return;
+    mergedById.set(id, normalized);
+  });
+
+  return Array.from(mergedById.values());
+}
+
+function getInstantCompositionQuestionsByUnit(unitName) {
+  const target = String(unitName || "").trim();
+  const bank = getInstantCompositionSampleBank();
+  if (!target) return bank;
+  return bank.filter((question) => question.unit === target);
+}
+
+function getInstantCompositionRandomQuestions(questionCount = 20) {
+  const bank = getInstantCompositionSampleBank();
+  const size = Math.max(0, Number(questionCount) || 20);
+  const pool = [...bank];
+  const chosen = [];
+  while (chosen.length < Math.min(size, pool.length)) {
+    const index = Math.floor(Math.random() * pool.length);
+    chosen.push(pool.splice(index, 1)[0]);
+  }
+  return chosen;
+}
+
 function getTrainingMenuCardsForUi() {
   const menuConfig = typeof window !== "undefined" ? window.TrainingMenuConfig : null;
   const pointSummaryMap = getTrainingMenuPointSummaryMap();
@@ -223,14 +286,19 @@ function renderInstantCompositionUnitList() {
     button.addEventListener("click", () => {
       const unitName = String(button.getAttribute("data-instant-composition-unit") || "").trim();
       if (!unitName) return;
+      const questions = getInstantCompositionQuestionsByUnit(unitName);
       const selection = {
         mode: "unit",
         unitName,
-        questionCount: null,
+        questionIds: questions.map((question) => question.id),
+        questionCount: questions.length,
         selectedAt: Date.now()
       };
       if (typeof state !== "undefined") {
         state.instantCompositionSelection = selection;
+      }
+      if (typeof window !== "undefined") {
+        window.instantCompositionSelection = selection;
       }
       const titleEl = document.getElementById("instantCompositionSelectionTitle");
       if (titleEl) {
@@ -239,6 +307,10 @@ function renderInstantCompositionUnitList() {
       const summaryEl = document.getElementById("instantCompositionSelectionText");
       if (summaryEl) {
         summaryEl.textContent = `選択中: ${unitName}`;
+      }
+      const badgeEl = document.getElementById("instantCompositionSelectionBadge");
+      if (badgeEl) {
+        badgeEl.textContent = unitName;
       }
       showScreen("instantCompositionSelectionScreen");
     });
@@ -16001,14 +16073,19 @@ function bindEvents() {
   const instantCompositionRandomBtn = document.getElementById("instantCompositionRandomBtn");
   if (instantCompositionRandomBtn) {
     instantCompositionRandomBtn.addEventListener("click", () => {
+      const questions = getInstantCompositionRandomQuestions(20);
       const selection = {
         mode: "random",
         unitName: null,
-        questionCount: 20,
+        questionIds: questions.map((question) => question.id),
+        questionCount: questions.length,
         selectedAt: Date.now()
       };
       if (typeof state !== "undefined") {
         state.instantCompositionSelection = selection;
+      }
+      if (typeof window !== "undefined") {
+        window.instantCompositionSelection = selection;
       }
       const badgeEl = document.getElementById("instantCompositionSelectionBadge");
       if (badgeEl) {
@@ -16944,6 +17021,8 @@ if (typeof globalThis !== "undefined") {
 }
 if (typeof window !== "undefined" && window !== globalThis) {
   window.state = state;
+  window.instantCompositionQuestionBank = getInstantCompositionSampleBank();
+  window.instantCompositionSelection = null;
 }
 
 function init() {
