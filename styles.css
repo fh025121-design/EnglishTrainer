@@ -2109,6 +2109,54 @@ p {
   color: var(--text-color);
 }
 
+#instantCompositionMenuScreen .training-menu-grid {
+  grid-template-columns: 1fr;
+}
+
+.instant-composition-selector-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.instant-composition-random-btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 54px;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.instant-composition-section-title {
+  margin: 4px 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-color);
+}
+
+.instant-composition-selection-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.instant-composition-selection-badge {
+  display: inline-flex;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(75, 160, 255, 0.16);
+  border: 1px solid rgba(117, 185, 255, 0.4);
+  color: var(--text-color);
+  font-weight: 800;
+}
+
+.instant-composition-selection-text {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.5;
+  color: var(--text-color);
+}
+
 .day-range-form {
   display: grid;
   grid-template-columns: 1fr 1fr auto;

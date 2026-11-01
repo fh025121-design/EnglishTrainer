@@ -95,7 +95,24 @@ const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingResponseBtn", mode: "response-training", isReady: true },
   { id: "trainingIrregularVerbBtn", mode: "irregular-verb-training", isReady: true },
   { id: "trainingGrammarBtn", mode: "grammar", isReady: true },
-  { id: "trainingInstantCompositionBtn", mode: null, isReady: false }
+  { id: "trainingInstantCompositionBtn", mode: "instant-composition", isReady: false }
+]);
+
+const INSTANT_COMPOSITION_UNIT_CATALOG = Object.freeze([
+  "名詞・代名詞",
+  "一般動詞（三単現）",
+  "疑問詞",
+  "命令文",
+  "助動詞",
+  "過去形",
+  "進行形",
+  "未来形",
+  "There is / are",
+  "不定詞",
+  "動名詞",
+  "感嘆文",
+  "接続詞",
+  "文型（SVOO・SVOC）"
 ]);
 
 function getTrainingMenuCardsForUi() {
@@ -156,6 +173,10 @@ function bindTrainingMenuCardHandlers() {
     if (!button) return;
     button.onclick = null;
     button.addEventListener("click", () => {
+      if (item.id === "trainingInstantCompositionBtn") {
+        openInstantCompositionMenuScreen();
+        return;
+      }
       if (item.isReady && item.mode) {
         if (item.mode === "preposition-training") {
           openPrepositionTrainingSelector();
@@ -177,6 +198,50 @@ function bindTrainingMenuCardHandlers() {
         return;
       }
       showTrainingComingSoonNotice();
+    });
+  });
+}
+
+function openInstantCompositionMenuScreen() {
+  renderInstantCompositionUnitList();
+  showScreen("instantCompositionMenuScreen");
+}
+
+function renderInstantCompositionUnitList() {
+  const container = document.getElementById("instantCompositionUnitList");
+  if (!container) return;
+  container.innerHTML = INSTANT_COMPOSITION_UNIT_CATALOG.map((unitName) => `
+    <button class="secondary-btn training-menu-card-btn" type="button" data-instant-composition-unit="${escapeHtml(unitName)}">
+      <span class="training-menu-card-top">
+        <span class="training-menu-card-title"><span class="training-menu-card-icon">⚡</span>${escapeHtml(unitName)}</span>
+        <span class="training-menu-card-chevron">›</span>
+      </span>
+      <span class="training-menu-card-point">準備中</span>
+    </button>
+  `).join("");
+
+  container.querySelectorAll("[data-instant-composition-unit]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const unitName = String(button.getAttribute("data-instant-composition-unit") || "").trim();
+      if (!unitName) return;
+      const selection = {
+        mode: "unit",
+        unitName,
+        questionCount: null,
+        selectedAt: Date.now()
+      };
+      if (typeof state !== "undefined") {
+        state.instantCompositionSelection = selection;
+      }
+      const titleEl = document.getElementById("instantCompositionSelectionTitle");
+      if (titleEl) {
+        titleEl.textContent = unitName;
+      }
+      const summaryEl = document.getElementById("instantCompositionSelectionText");
+      if (summaryEl) {
+        summaryEl.textContent = `選択中: ${unitName}`;
+      }
+      showScreen("instantCompositionSelectionScreen");
     });
   });
 }
@@ -15933,6 +15998,41 @@ function bindEvents() {
   }
 
   renderGameTicketSettingsUi();
+
+  const instantCompositionRandomBtn = document.getElementById("instantCompositionRandomBtn");
+  if (instantCompositionRandomBtn) {
+    instantCompositionRandomBtn.addEventListener("click", () => {
+      const selection = {
+        mode: "random",
+        unitName: null,
+        questionCount: 20,
+        selectedAt: Date.now()
+      };
+      if (typeof state !== "undefined") {
+        state.instantCompositionSelection = selection;
+      }
+      const badgeEl = document.getElementById("instantCompositionSelectionBadge");
+      if (badgeEl) {
+        badgeEl.textContent = "ランダム20問";
+      }
+      const titleEl = document.getElementById("instantCompositionSelectionTitle");
+      if (titleEl) {
+        titleEl.textContent = "英作文特訓";
+      }
+      const summaryEl = document.getElementById("instantCompositionSelectionText");
+      if (summaryEl) {
+        summaryEl.textContent = "選択中: ランダム20問";
+      }
+      showScreen("instantCompositionSelectionScreen");
+    });
+  }
+
+  const instantCompositionSelectionBackBtn = document.getElementById("instantCompositionSelectionBackBtn");
+  if (instantCompositionSelectionBackBtn) {
+    instantCompositionSelectionBackBtn.addEventListener("click", () => {
+      showScreen("instantCompositionMenuScreen");
+    });
+  }
 
   if (typingControls.every((control) => Boolean(control))) {
     const delayValues = Array.from({ length: 11 }, (_, index) => (index / 10).toFixed(1));
