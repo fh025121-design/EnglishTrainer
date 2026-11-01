@@ -110,8 +110,8 @@
         key: "instant-composition",
         title: "英作文特訓",
         icon: "⚡",
-        mode: null,
-        isReady: false,
+        mode: "instant-composition",
+        isReady: true,
         pointLabel: "準備中"
       }
     ];

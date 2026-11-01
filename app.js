@@ -95,7 +95,7 @@ const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingResponseBtn", mode: "response-training", isReady: true },
   { id: "trainingIrregularVerbBtn", mode: "irregular-verb-training", isReady: true },
   { id: "trainingGrammarBtn", mode: "grammar", isReady: true },
-  { id: "trainingInstantCompositionBtn", mode: "instant-composition", isReady: false }
+  { id: "trainingInstantCompositionBtn", mode: "instant-composition", isReady: true }
 ]);
 
 const INSTANT_COMPOSITION_UNIT_CATALOG = Object.freeze([
@@ -127,7 +127,7 @@ function getTrainingMenuCardsForUi() {
     icon: item.id === "trainingIdiomBtn" ? "📖" : item.id === "trainingChallengeBtn" ? "🎯" : item.id === "trainingPrepositionBtn" ? "🧭" : item.id === "trainingResponseBtn" ? "🗣️" : item.id === "trainingIrregularVerbBtn" ? "🔄" : item.id === "trainingGrammarBtn" ? "📘" : "⚡",
     mode: item.mode,
     isReady: item.isReady,
-    pointLabel: item.isReady ? "ポイントなし" : "準備中"
+    pointLabel: item.id === "trainingInstantCompositionBtn" ? "準備中" : (item.isReady ? "ポイントなし" : "準備中")
   }));
 }
 
