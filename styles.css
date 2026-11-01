@@ -2110,7 +2110,55 @@ p {
 }
 
 #instantCompositionMenuScreen .training-menu-grid {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+
+#instantCompositionMenuScreen .training-menu-card-btn {
+  min-height: 52px;
+  padding: 10px 12px;
+  gap: 0;
+  justify-content: center;
+}
+
+#instantCompositionMenuScreen .training-menu-card-top {
+  width: 100%;
+  min-width: 0;
+  gap: 6px;
+}
+
+#instantCompositionMenuScreen .training-menu-card-title {
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+#instantCompositionMenuScreen .training-menu-card-chevron {
+  font-size: 1rem;
+  margin-left: 0;
+  flex-shrink: 0;
+}
+
+.instant-composition-unit-btn {
+  min-width: 0;
+}
+
+.instant-composition-unit-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.instant-composition-unit-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .instant-composition-selector-panel {
@@ -2121,8 +2169,8 @@ p {
 .instant-composition-random-btn {
   width: 100%;
   justify-content: center;
-  min-height: 54px;
-  font-size: 1.3rem;
+  min-height: 46px;
+  font-size: 1.15rem;
   font-weight: 800;
 }
 
@@ -2155,6 +2203,12 @@ p {
   font-size: 1.15rem;
   line-height: 1.5;
   color: var(--text-color);
+}
+
+@media (max-width: 480px) {
+  #instantCompositionMenuScreen .training-menu-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .day-range-form {

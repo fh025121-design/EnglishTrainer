@@ -211,12 +211,11 @@ function renderInstantCompositionUnitList() {
   const container = document.getElementById("instantCompositionUnitList");
   if (!container) return;
   container.innerHTML = INSTANT_COMPOSITION_UNIT_CATALOG.map((unitName) => `
-    <button class="secondary-btn training-menu-card-btn" type="button" data-instant-composition-unit="${escapeHtml(unitName)}">
-      <span class="training-menu-card-top">
-        <span class="training-menu-card-title"><span class="training-menu-card-icon">⚡</span>${escapeHtml(unitName)}</span>
+    <button class="secondary-btn training-menu-card-btn instant-composition-unit-btn" type="button" data-instant-composition-unit="${escapeHtml(unitName)}">
+      <span class="training-menu-card-top instant-composition-unit-row">
+        <span class="training-menu-card-title instant-composition-unit-title">${escapeHtml(unitName)}</span>
         <span class="training-menu-card-chevron">›</span>
       </span>
-      <span class="training-menu-card-point">準備中</span>
     </button>
   `).join("");
 
