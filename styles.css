@@ -2170,8 +2170,9 @@ p {
   width: 100%;
   justify-content: center;
   min-height: 46px;
-  font-size: 1.15rem;
+  font-size: 1.5rem;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .instant-composition-section-title {
