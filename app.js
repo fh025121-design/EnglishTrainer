@@ -190,7 +190,7 @@ function getTrainingMenuCardsForUi() {
     icon: item.id === "trainingIdiomBtn" ? "📖" : item.id === "trainingChallengeBtn" ? "🎯" : item.id === "trainingPrepositionBtn" ? "🧭" : item.id === "trainingResponseBtn" ? "🗣️" : item.id === "trainingIrregularVerbBtn" ? "🔄" : item.id === "trainingGrammarBtn" ? "📘" : "⚡",
     mode: item.mode,
     isReady: item.isReady,
-    pointLabel: item.id === "trainingInstantCompositionBtn" ? "ポイントなし" : (item.isReady ? "ポイントなし" : "準備中")
+    pointLabel: "ポイントなし"
   }));
 }
 
@@ -267,6 +267,7 @@ function bindTrainingMenuCardHandlers() {
 
 function openInstantCompositionMenuScreen() {
   renderInstantCompositionUnitList();
+  bindInstantCompositionSelectionHandlers();
   showScreen("instantCompositionMenuScreen");
 }
 
@@ -300,6 +301,9 @@ function renderInstantCompositionUnitList() {
       if (typeof window !== "undefined") {
         window.instantCompositionSelection = selection;
       }
+      if (typeof saveState === "function") {
+        saveState();
+      }
       const titleEl = document.getElementById("instantCompositionSelectionTitle");
       if (titleEl) {
         titleEl.textContent = unitName;
@@ -315,6 +319,329 @@ function renderInstantCompositionUnitList() {
       showScreen("instantCompositionSelectionScreen");
     });
   });
+}
+
+function getInstantCompositionSelection() {
+  if (typeof state !== "undefined" && state.instantCompositionSelection) {
+    return state.instantCompositionSelection;
+  }
+  if (typeof window !== "undefined" && window.instantCompositionSelection) {
+    return window.instantCompositionSelection;
+  }
+  return null;
+}
+
+function setInstantCompositionSelection(selection) {
+  if (typeof state !== "undefined") {
+    state.instantCompositionSelection = selection;
+  }
+  if (typeof window !== "undefined") {
+    window.instantCompositionSelection = selection;
+  }
+  if (typeof saveState === "function") {
+    saveState();
+  }
+}
+
+function shuffleInstantCompositionQuestions(sourceQuestions) {
+  const cloned = Array.isArray(sourceQuestions) ? [...sourceQuestions] : [];
+  for (let index = cloned.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const temp = cloned[index];
+    cloned[index] = cloned[swapIndex];
+    cloned[swapIndex] = temp;
+  }
+  return cloned;
+}
+
+function buildInstantCompositionQuestionSet(selection = getInstantCompositionSelection()) {
+  if (!selection) return [];
+  const mode = String(selection.mode || "").trim();
+  if (mode === "random") {
+    return getInstantCompositionRandomQuestions(Math.max(1, Math.min(20, Number(selection.questionCount) || 20)));
+  }
+  const unitName = String(selection.unitName || "").trim();
+  if (!unitName) return [];
+  const pool = getInstantCompositionQuestionsByUnit(unitName);
+  return shuffleInstantCompositionQuestions(pool).slice(0, Math.min(20, pool.length));
+}
+
+function startInstantCompositionSession(selection = getInstantCompositionSelection()) {
+  const preparedQuestions = buildInstantCompositionQuestionSet(selection);
+  if (!preparedQuestions.length) {
+    const summaryEl = document.getElementById("instantCompositionSelectionText");
+    if (summaryEl) {
+      summaryEl.textContent = "この単元には問題がまだ登録されていません。";
+    }
+    showScreen("instantCompositionSelectionScreen");
+    return;
+  }
+  const session = {
+    mode: String(selection?.mode || "unit"),
+    unitName: String(selection?.unitName || ""),
+    questions: preparedQuestions,
+    index: 0,
+    results: [],
+    correctCount: 0,
+    incorrectCount: 0
+  };
+  if (typeof state !== "undefined") {
+    state.instantCompositionSession = session;
+  }
+  if (typeof window !== "undefined") {
+    window.instantCompositionSession = session;
+  }
+  if (typeof saveState === "function") {
+    saveState();
+  }
+  renderInstantCompositionQuestionScreen();
+  showScreen("instantCompositionQuestionScreen");
+}
+
+function getInstantCompositionCurrentSession() {
+  if (typeof state !== "undefined" && state.instantCompositionSession) {
+    return state.instantCompositionSession;
+  }
+  if (typeof window !== "undefined" && window.instantCompositionSession) {
+    return window.instantCompositionSession;
+  }
+  return null;
+}
+
+function renderInstantCompositionQuestionScreen() {
+  const session = getInstantCompositionCurrentSession();
+  if (!session || !Array.isArray(session.questions) || !session.questions.length) {
+    return;
+  }
+
+  const currentQuestion = session.questions[session.index];
+  if (!currentQuestion) {
+    return;
+  }
+
+  const questionTitle = document.getElementById("instantCompositionQuestionTitle");
+  if (questionTitle) {
+    questionTitle.textContent = session.unitName || "英作文特訓";
+  }
+
+  const questionMode = document.getElementById("instantCompositionQuestionMode");
+  if (questionMode) {
+    questionMode.textContent = session.mode === "random" ? "ランダム20問" : (session.unitName || "単元別学習");
+  }
+
+  const counter = document.getElementById("instantCompositionQuestionCounter");
+  if (counter) {
+    counter.textContent = `${Math.min(session.index + 1, session.questions.length)} / ${session.questions.length}`;
+  }
+
+  const prompt = document.getElementById("instantCompositionPrompt");
+  if (prompt) {
+    prompt.textContent = currentQuestion.japanese || "問題を読み込み中です。";
+  }
+
+  const answerInput = document.getElementById("instantCompositionAnswerInput");
+  if (answerInput) {
+    answerInput.value = "";
+    answerInput.focus();
+  }
+
+  const answerBox = document.getElementById("instantCompositionModelAnswer");
+  if (answerBox) {
+    answerBox.textContent = "";
+    answerBox.classList.add("hidden");
+  }
+
+  const gradeButtons = document.getElementById("instantCompositionGradeButtons");
+  if (gradeButtons) {
+    gradeButtons.classList.add("hidden");
+  }
+
+  const finishBackBtn = document.getElementById("instantCompositionFinishBackBtn");
+  if (finishBackBtn) {
+    finishBackBtn.classList.add("hidden");
+  }
+
+  const revealBtn = document.getElementById("instantCompositionRevealBtn");
+  if (revealBtn) {
+    revealBtn.disabled = false;
+    revealBtn.onclick = () => {
+      const modelAnswer = document.getElementById("instantCompositionModelAnswer");
+      if (modelAnswer) {
+        const answerText = currentQuestion.answer || "";
+        modelAnswer.textContent = `模範解答: ${answerText}`;
+        modelAnswer.classList.remove("hidden");
+      }
+      const gradeButtonsEl = document.getElementById("instantCompositionGradeButtons");
+      if (gradeButtonsEl) {
+        gradeButtonsEl.classList.remove("hidden");
+      }
+    };
+  }
+
+  const correctBtn = document.getElementById("instantCompositionCorrectBtn");
+  if (correctBtn) {
+    correctBtn.onclick = () => {
+      gradeInstantCompositionCurrentQuestion("correct");
+    };
+  }
+
+  const incorrectBtn = document.getElementById("instantCompositionIncorrectBtn");
+  if (incorrectBtn) {
+    incorrectBtn.onclick = () => {
+      gradeInstantCompositionCurrentQuestion("incorrect");
+    };
+  }
+
+  const summaryBox = document.getElementById("instantCompositionSessionSummary");
+  if (summaryBox) {
+    summaryBox.classList.add("hidden");
+    summaryBox.innerHTML = "";
+  }
+}
+
+function saveInstantCompositionHistoryEntry(entry) {
+  if (typeof state === "undefined") return;
+  state.instantCompositionHistory = Array.isArray(state.instantCompositionHistory) ? state.instantCompositionHistory : [];
+  state.instantCompositionHistory.push(entry);
+  if (typeof saveState === "function") {
+    saveState();
+  }
+}
+
+function gradeInstantCompositionCurrentQuestion(judgement) {
+  const session = getInstantCompositionCurrentSession();
+  if (!session || !Array.isArray(session.questions)) {
+    return;
+  }
+  const currentQuestion = session.questions[session.index];
+  if (!currentQuestion) {
+    return;
+  }
+
+  const answerInput = document.getElementById("instantCompositionAnswerInput");
+  const typedAnswer = answerInput ? String(answerInput.value || "").trim() : "";
+  const result = {
+    questionId: currentQuestion.id,
+    unitName: currentQuestion.unit || session.unitName || "名詞・代名詞",
+    learningMode: "単元別学習",
+    mode: session.mode,
+    prompt: currentQuestion.japanese,
+    answer: typedAnswer,
+    expectedAnswer: currentQuestion.answer,
+    judgement: judgement === "correct" ? "correct" : "incorrect",
+    createdAt: new Date().toISOString()
+  };
+
+  session.results.push(result);
+  session.correctCount = session.results.filter((entry) => entry.judgement === "correct").length;
+  session.incorrectCount = session.results.filter((entry) => entry.judgement === "incorrect").length;
+  saveInstantCompositionHistoryEntry(result);
+
+  const nextIndex = session.index + 1;
+  if (nextIndex >= session.questions.length) {
+    finishInstantCompositionSession();
+    return;
+  }
+
+  session.index = nextIndex;
+  renderInstantCompositionQuestionScreen();
+}
+
+function finishInstantCompositionSession() {
+  const session = getInstantCompositionCurrentSession();
+  if (!session) {
+    return;
+  }
+
+  const correctCount = session.results.filter((entry) => entry.judgement === "correct").length;
+  const incorrectCount = session.results.filter((entry) => entry.judgement === "incorrect").length;
+  const scoreRate = session.results.length ? Math.round((correctCount / session.results.length) * 100) : 0;
+  const summaryBox = document.getElementById("instantCompositionSessionSummary");
+  if (summaryBox) {
+    summaryBox.innerHTML = `
+      <div class="instant-composition-summary-title">20問終了</div>
+      <div class="instant-composition-summary-grid">
+        <div><span>正解数</span><strong>${correctCount}</strong></div>
+        <div><span>不正解数</span><strong>${incorrectCount}</strong></div>
+        <div><span>正答率</span><strong>${scoreRate}%</strong></div>
+      </div>
+    `;
+    summaryBox.classList.remove("hidden");
+  }
+
+  const revealBtn = document.getElementById("instantCompositionRevealBtn");
+  if (revealBtn) {
+    revealBtn.disabled = true;
+  }
+
+  const gradeButtons = document.getElementById("instantCompositionGradeButtons");
+  if (gradeButtons) {
+    gradeButtons.classList.add("hidden");
+  }
+
+  const answerInput = document.getElementById("instantCompositionAnswerInput");
+  if (answerInput) {
+    answerInput.value = "";
+    answerInput.disabled = true;
+  }
+
+  const finishBackBtn = document.getElementById("instantCompositionFinishBackBtn");
+  if (finishBackBtn) {
+    finishBackBtn.classList.remove("hidden");
+    finishBackBtn.onclick = () => {
+      if (typeof state !== "undefined") {
+        delete state.instantCompositionSession;
+      }
+      if (typeof window !== "undefined") {
+        delete window.instantCompositionSession;
+      }
+      if (typeof saveState === "function") {
+        saveState();
+      }
+      openInstantCompositionMenuScreen();
+    };
+  }
+
+  const questionPrompt = document.getElementById("instantCompositionPrompt");
+  if (questionPrompt) {
+    questionPrompt.textContent = "今回の学習は終了しました。結果を確認してください。";
+  }
+
+  const counter = document.getElementById("instantCompositionQuestionCounter");
+  if (counter) {
+    counter.textContent = `${session.questions.length} / ${session.questions.length}`;
+  }
+}
+
+function bindInstantCompositionSelectionHandlers() {
+  const startBtn = document.getElementById("instantCompositionSelectionStartBtn");
+  if (startBtn) {
+    startBtn.onclick = () => {
+      const selection = getInstantCompositionSelection();
+      if (!selection) {
+        return;
+      }
+      startInstantCompositionSession(selection);
+    };
+  }
+
+  const selectionBackBtn = document.getElementById("instantCompositionSelectionBackBtn");
+  if (selectionBackBtn) {
+    selectionBackBtn.onclick = () => {
+      const selection = getInstantCompositionSelection();
+      if (selection && selection.mode === "random") {
+        const summaryEl = document.getElementById("instantCompositionSelectionText");
+        if (summaryEl) {
+          summaryEl.textContent = "選択中: ランダム20問";
+        }
+        const badgeEl = document.getElementById("instantCompositionSelectionBadge");
+        if (badgeEl) {
+          badgeEl.textContent = "ランダム20問";
+        }
+      }
+      showScreen("instantCompositionMenuScreen");
+    };
+  }
 }
 
 function renderTrainingMenuCards() {
@@ -16081,12 +16408,7 @@ function bindEvents() {
         questionCount: questions.length,
         selectedAt: Date.now()
       };
-      if (typeof state !== "undefined") {
-        state.instantCompositionSelection = selection;
-      }
-      if (typeof window !== "undefined") {
-        window.instantCompositionSelection = selection;
-      }
+      setInstantCompositionSelection(selection);
       const badgeEl = document.getElementById("instantCompositionSelectionBadge");
       if (badgeEl) {
         badgeEl.textContent = "ランダム20問";
@@ -16099,14 +16421,8 @@ function bindEvents() {
       if (summaryEl) {
         summaryEl.textContent = "選択中: ランダム20問";
       }
+      bindInstantCompositionSelectionHandlers();
       showScreen("instantCompositionSelectionScreen");
-    });
-  }
-
-  const instantCompositionSelectionBackBtn = document.getElementById("instantCompositionSelectionBackBtn");
-  if (instantCompositionSelectionBackBtn) {
-    instantCompositionSelectionBackBtn.addEventListener("click", () => {
-      showScreen("instantCompositionMenuScreen");
     });
   }
 

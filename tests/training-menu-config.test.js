@@ -49,7 +49,7 @@ assert.strictEqual(challengeCard.pointDetail, undefined);
 assert.strictEqual(irregularCard.pointLabel, "本日 8P / 100P");
 assert.strictEqual(prepositionCard.pointLabel, "本日 12P / 30P");
 assert.strictEqual(idiomCard.pointLabel, "本日 0P / 30P");
-assert.strictEqual(instantCard.pointLabel, "準備中");
+assert.strictEqual(instantCard.pointLabel, "ポイントなし");
 assert.strictEqual(formatPointSummary("response", pointConfig, { response: { earned: 25, cap: 40 } }), "本日 25P / 40P");
 assert.strictEqual(formatPointSummary("challenge", pointConfig, { challenge: { earned: 28, cap: 300 } }), "本日 28P / 300P");
 assert.strictEqual(formatPointSummary("irregular-verb-training", pointConfig, { "irregular-verb": { earned: 100, cap: 100 } }), "本日 100P / 100P ✓ 上限");
