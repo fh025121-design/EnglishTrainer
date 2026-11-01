@@ -108,7 +108,7 @@
       {
         id: "trainingInstantCompositionBtn",
         key: "instant-composition",
-        title: "瞬間英作文",
+        title: "英作文特訓",
         icon: "⚡",
         mode: null,
         isReady: false,
