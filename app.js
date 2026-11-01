@@ -127,7 +127,7 @@ function getTrainingMenuCardsForUi() {
     icon: item.id === "trainingIdiomBtn" ? "📖" : item.id === "trainingChallengeBtn" ? "🎯" : item.id === "trainingPrepositionBtn" ? "🧭" : item.id === "trainingResponseBtn" ? "🗣️" : item.id === "trainingIrregularVerbBtn" ? "🔄" : item.id === "trainingGrammarBtn" ? "📘" : "⚡",
     mode: item.mode,
     isReady: item.isReady,
-    pointLabel: item.id === "trainingInstantCompositionBtn" ? "準備中" : (item.isReady ? "ポイントなし" : "準備中")
+    pointLabel: item.id === "trainingInstantCompositionBtn" ? "ポイントなし" : (item.isReady ? "ポイントなし" : "準備中")
   }));
 }
 

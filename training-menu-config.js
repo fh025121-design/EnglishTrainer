@@ -112,7 +112,7 @@
         icon: "⚡",
         mode: "instant-composition",
         isReady: true,
-        pointLabel: "準備中"
+        pointLabel: "ポイントなし"
       }
     ];
   }
