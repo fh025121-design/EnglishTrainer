@@ -531,9 +531,61 @@ function isInstantCompositionAnswerCorrect(expectedAnswer, actualAnswer) {
   return Array.from(actualVariants).some((variant) => expectedVariants.has(variant));
 }
 
+function splitInstantCompositionDiffToken(rawToken) {
+  const source = String(rawToken || "")
+    .normalize("NFKC")
+    .replace(/\u00A0/g, " ")
+    .replace(/\u3000/g, " ")
+    .replace(/[\u2018\u2019\uFF07\u02BC]/g, "'")
+    .replace(/[\u201C\u201D\uFF02]/g, '"')
+    .trim();
+
+  if (!source) {
+    return [];
+  }
+
+  if (/^[.!?！。！？]$/.test(source)) {
+    return [{ type: "punctuation", value: source }];
+  }
+
+  const trailingPunctuationMatch = source.match(/^(.+?)([.!?！。！？])$/u);
+  if (trailingPunctuationMatch) {
+    const wordPart = trailingPunctuationMatch[1].trim();
+    const punctPart = trailingPunctuationMatch[2];
+    const tokens = [];
+    if (wordPart) {
+      tokens.push({ type: "word", value: wordPart });
+    }
+    tokens.push({ type: "punctuation", value: punctPart });
+    return tokens;
+  }
+
+  return [{ type: "word", value: source }];
+}
+
+function tokenizeInstantCompositionDiffTokens(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/\u00A0/g, " ")
+    .replace(/\u3000/g, " ")
+    .replace(/[\u2018\u2019\uFF07\u02BC]/g, "'")
+    .replace(/[\u201C\u201D\uFF02]/g, '"')
+    .split(/\s+/)
+    .flatMap((segment) => splitInstantCompositionDiffToken(segment))
+    .filter((token) => token && token.value && String(token.value).trim());
+}
+
+function getInstantCompositionPunctuationDisplayText(value) {
+  const normalized = String(value || "").normalize("NFKC").trim();
+  if (normalized === "." || normalized === "．") return ".（ピリオド）";
+  if (normalized === "?" || normalized === "？") return "?（クエッションマーク）";
+  if (normalized === "!" || normalized === "！") return "!（エクスクラメーションマーク）";
+  return `${normalized || value}（記号）`;
+}
+
 function buildInstantCompositionDiffParts(expectedText, actualText) {
-  const expectedTokens = tokenizeInstantCompositionAnswer(expectedText);
-  const actualTokens = tokenizeInstantCompositionAnswer(actualText);
+  const expectedTokens = tokenizeInstantCompositionDiffTokens(expectedText);
+  const actualTokens = tokenizeInstantCompositionDiffTokens(actualText);
 
   if (!expectedTokens.length && !actualTokens.length) {
     return [];
@@ -543,9 +595,9 @@ function buildInstantCompositionDiffParts(expectedText, actualText) {
 
   for (let expectedIndex = 1; expectedIndex <= expectedTokens.length; expectedIndex += 1) {
     for (let actualIndex = 1; actualIndex <= actualTokens.length; actualIndex += 1) {
-      const expectedToken = normalizeInstantCompositionAnswer(expectedTokens[expectedIndex - 1]);
-      const actualToken = normalizeInstantCompositionAnswer(actualTokens[actualIndex - 1]);
-      if (expectedToken === actualToken) {
+      const expectedToken = normalizeInstantCompositionAnswer(expectedTokens[expectedIndex - 1].value);
+      const actualToken = normalizeInstantCompositionAnswer(actualTokens[actualIndex - 1].value);
+      if (expectedToken === actualToken && expectedTokens[expectedIndex - 1].type === actualTokens[actualIndex - 1].type) {
         dp[expectedIndex][actualIndex] = dp[expectedIndex - 1][actualIndex - 1] + 1;
       } else {
         dp[expectedIndex][actualIndex] = Math.max(dp[expectedIndex - 1][actualIndex], dp[expectedIndex][actualIndex - 1]);
@@ -558,29 +610,33 @@ function buildInstantCompositionDiffParts(expectedText, actualText) {
   let actualIndex = actualTokens.length;
 
   while (expectedIndex > 0 && actualIndex > 0) {
-    const expectedToken = normalizeInstantCompositionAnswer(expectedTokens[expectedIndex - 1]);
-    const actualToken = normalizeInstantCompositionAnswer(actualTokens[actualIndex - 1]);
+    const expectedToken = expectedTokens[expectedIndex - 1];
+    const actualToken = actualTokens[actualIndex - 1];
+    const expectedNormalized = normalizeInstantCompositionAnswer(expectedToken.value);
+    const actualNormalized = normalizeInstantCompositionAnswer(actualToken.value);
 
-    if (expectedToken === actualToken) {
-      operations.push({ kind: "match", actual: actualTokens[actualIndex - 1] });
+    if (expectedNormalized === actualNormalized && expectedToken.type === actualToken.type) {
+      operations.push({ kind: "match", value: actualToken.value, type: actualToken.type });
       expectedIndex -= 1;
       actualIndex -= 1;
     } else if (dp[expectedIndex - 1][actualIndex] >= dp[expectedIndex][actualIndex - 1]) {
-      operations.push({ kind: "missing", expected: expectedTokens[expectedIndex - 1] });
+      operations.push({ kind: "missing", value: expectedToken.value, type: expectedToken.type });
       expectedIndex -= 1;
     } else {
-      operations.push({ kind: "extra", actual: actualTokens[actualIndex - 1] });
+      operations.push({ kind: "extra", value: actualToken.value, type: actualToken.type });
       actualIndex -= 1;
     }
   }
 
   while (expectedIndex > 0) {
-    operations.push({ kind: "missing", expected: expectedTokens[expectedIndex - 1] });
+    const expectedToken = expectedTokens[expectedIndex - 1];
+    operations.push({ kind: "missing", value: expectedToken.value, type: expectedToken.type });
     expectedIndex -= 1;
   }
 
   while (actualIndex > 0) {
-    operations.push({ kind: "extra", actual: actualTokens[actualIndex - 1] });
+    const actualToken = actualTokens[actualIndex - 1];
+    operations.push({ kind: "extra", value: actualToken.value, type: actualToken.type });
     actualIndex -= 1;
   }
 
@@ -600,12 +656,19 @@ function renderInstantCompositionAnswerDiff(expectedText, actualText) {
 
   const rendered = parts.map((part) => {
     if (part.kind === "match") {
-      return `<span class="instant-composition-diff-token instant-composition-diff-match">${escapeHtml(part.actual || "")}</span>`;
+      const displayValue = part.type === "punctuation" ? part.value : (part.value || "");
+      return `<span class="instant-composition-diff-token instant-composition-diff-match">${escapeHtml(displayValue)}</span>`;
     }
     if (part.kind === "missing") {
-      return `<span class="instant-composition-diff-token instant-composition-diff-wrong">［不足：${escapeHtml(part.expected || "") }］</span>`;
+      if (part.type === "punctuation") {
+        return `<span class="instant-composition-diff-token instant-composition-diff-wrong">［不足：${escapeHtml(getInstantCompositionPunctuationDisplayText(part.value))}］</span>`;
+      }
+      return `<span class="instant-composition-diff-token instant-composition-diff-wrong">［不足：${escapeHtml(part.value || "")}］</span>`;
     }
-    return `<span class="instant-composition-diff-token instant-composition-diff-wrong">${escapeHtml(part.actual || "")}</span>`;
+    if (part.type === "punctuation") {
+      return `<span class="instant-composition-diff-token instant-composition-diff-wrong">${escapeHtml(getInstantCompositionPunctuationDisplayText(part.value))}</span>`;
+    }
+    return `<span class="instant-composition-diff-token instant-composition-diff-wrong">${escapeHtml(part.value || "")}</span>`;
   }).join(" ");
 
   diffContainer.innerHTML = rendered;
