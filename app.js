@@ -451,9 +451,11 @@ const INSTANT_COMPOSITION_CONTRACTION_EXPANSIONS = Object.freeze({
 
 function normalizeInstantCompositionAnswer(value) {
   return String(value || "")
+    .normalize("NFKC")
     .replace(/\u00A0/g, " ")
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u3000/g, " ")
+    .replace(/[\u2018\u2019\uFF07\u02BC]/g, "'")
+    .replace(/[\u201C\u201D\uFF02]/g, '"')
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
@@ -461,9 +463,11 @@ function normalizeInstantCompositionAnswer(value) {
 
 function tokenizeInstantCompositionAnswer(value) {
   return String(value || "")
+    .normalize("NFKC")
     .replace(/\u00A0/g, " ")
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u3000/g, " ")
+    .replace(/[\u2018\u2019\uFF07\u02BC]/g, "'")
+    .replace(/[\u201C\u201D\uFF02]/g, '"')
     .split(/\s+/)
     .map((token) => token.trim())
     .filter(Boolean);
