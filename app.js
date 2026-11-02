@@ -384,6 +384,98 @@ function getInstantCompositionQuestionsByIds(questionIds) {
     .filter(Boolean);
 }
 
+function getInstantCompositionHistoryEntries() {
+  if (typeof state !== "undefined" && Array.isArray(state.instantCompositionHistory)) {
+    return state.instantCompositionHistory;
+  }
+  if (typeof window !== "undefined" && Array.isArray(window.instantCompositionHistory)) {
+    return window.instantCompositionHistory;
+  }
+  return [];
+}
+
+function getInstantCompositionProgressSummary() {
+  const bank = getInstantCompositionSampleBank();
+  const questionMap = new Map(bank.map((question) => [String(question.id || "").trim(), question]));
+  const validIds = new Set(questionMap.keys());
+  const totalByUnit = {};
+  const studiedByUnit = {};
+  const correctCountsByQuestion = {};
+
+  bank.forEach((question) => {
+    const unitName = String(question.unit || "名詞・代名詞").trim();
+    totalByUnit[unitName] = (totalByUnit[unitName] || 0) + 1;
+    studiedByUnit[unitName] = studiedByUnit[unitName] || new Set();
+  });
+
+  const historyEntries = getInstantCompositionHistoryEntries();
+  historyEntries.forEach((entry) => {
+    const questionId = String(entry?.questionId || "").trim();
+    if (!questionId || !validIds.has(questionId)) {
+      return;
+    }
+    const question = questionMap.get(questionId);
+    const unitName = String(question?.unit || "名詞・代名詞").trim();
+    studiedByUnit[unitName] = studiedByUnit[unitName] || new Set();
+    studiedByUnit[unitName].add(questionId);
+
+    const mode = String(entry?.mode || entry?.learningMode || "").trim();
+    const firstJudgement = String(entry?.firstJudgement || entry?.judgement || "").trim();
+    if (mode !== "weak" && mode !== "苦手特訓" && firstJudgement === "correct") {
+      correctCountsByQuestion[questionId] = (correctCountsByQuestion[questionId] || 0) + 1;
+    }
+  });
+
+  const globalStudiedCount = bank.filter((question) => {
+    const questionId = String(question.id || "").trim();
+    return Array.from(Object.values(studiedByUnit)).some((set) => set.has(questionId));
+  }).length;
+
+  const unitSummaries = {};
+  INSTANT_COMPOSITION_UNIT_CATALOG.forEach((unitName) => {
+    const totalCount = Number(totalByUnit[unitName] || 0);
+    const studiedSet = studiedByUnit[unitName] || new Set();
+    const studiedCount = studiedSet.size;
+    const threeCorrectCount = bank.filter((question) => {
+      if (String(question.unit || "").trim() !== unitName) {
+        return false;
+      }
+      const questionId = String(question.id || "").trim();
+      return Number(correctCountsByQuestion[questionId] || 0) >= 3;
+    }).length;
+
+    unitSummaries[unitName] = {
+      totalCount,
+      studiedCount,
+      threeCorrectCount
+    };
+  });
+
+  const totalQuestionCount = bank.length;
+  const threeCorrectQuestionCount = Array.from(new Set(
+    bank
+      .map((question) => String(question.id || "").trim())
+      .filter((questionId) => Number(correctCountsByQuestion[questionId] || 0) >= 3)
+  )).length;
+
+  return {
+    totalQuestionCount,
+    studiedCount: globalStudiedCount,
+    threeCorrectCount: threeCorrectQuestionCount,
+    unitSummaries
+  };
+}
+
+function getInstantCompositionProgressForUnit(unitName) {
+  const target = String(unitName || "").trim();
+  const summary = getInstantCompositionProgressSummary();
+  return summary.unitSummaries[target] || {
+    totalCount: 0,
+    studiedCount: 0,
+    threeCorrectCount: 0
+  };
+}
+
 function getTrainingMenuCardsForUi() {
   const menuConfig = typeof window !== "undefined" ? window.TrainingMenuConfig : null;
   const pointSummaryMap = getTrainingMenuPointSummaryMap();
@@ -492,14 +584,20 @@ function openInstantCompositionMenuScreen() {
 function renderInstantCompositionUnitList() {
   const container = document.getElementById("instantCompositionUnitList");
   if (!container) return;
-  container.innerHTML = INSTANT_COMPOSITION_UNIT_CATALOG.map((unitName) => `
-    <button class="secondary-btn training-menu-card-btn instant-composition-unit-btn" type="button" data-instant-composition-unit="${escapeHtml(unitName)}">
-      <span class="training-menu-card-top instant-composition-unit-row">
-        <span class="training-menu-card-title instant-composition-unit-title">${escapeHtml(unitName)}</span>
-        <span class="training-menu-card-chevron">›</span>
-      </span>
-    </button>
-  `).join("");
+
+  container.innerHTML = INSTANT_COMPOSITION_UNIT_CATALOG.map((unitName) => {
+    const progress = getInstantCompositionProgressForUnit(unitName);
+    const progressText = `学習済み ${progress.studiedCount}/${progress.totalCount}問 ｜ 3回正解 ${progress.threeCorrectCount}問`;
+    return `
+      <button class="secondary-btn training-menu-card-btn instant-composition-unit-btn" type="button" data-instant-composition-unit="${escapeHtml(unitName)}">
+        <span class="training-menu-card-top instant-composition-unit-row">
+          <span class="training-menu-card-title instant-composition-unit-title">${escapeHtml(unitName)}</span>
+          <span class="training-menu-card-chevron">›</span>
+        </span>
+        <span class="training-menu-card-detail instant-composition-unit-progress">${escapeHtml(progressText)}</span>
+      </button>
+    `;
+  }).join("");
 
   container.querySelectorAll("[data-instant-composition-unit]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -3029,6 +3127,16 @@ function getTrainingCoverageSummaryRows() {
 
 function renderTrainingCoverageSummaryCard() {
   const rows = getTrainingCoverageSummaryRows();
+  const instantCoverage = getInstantCompositionProgressSummary();
+  const instantCoverageRow = {
+    label: "英作文特訓",
+    registeredTotal: instantCoverage.totalQuestionCount,
+    targetCount: instantCoverage.totalQuestionCount,
+    seenCount: instantCoverage.studiedCount,
+    unseenCount: Math.max(0, instantCoverage.totalQuestionCount - instantCoverage.studiedCount),
+    coverageRate: instantCoverage.totalQuestionCount ? (instantCoverage.studiedCount / instantCoverage.totalQuestionCount) * 100 : 0
+  };
+
   return `
     <section class="admin-history-today-section">
       <div class="admin-history-section-header">
@@ -3036,6 +3144,12 @@ function renderTrainingCoverageSummaryCard() {
       </div>
       <div class="admin-history-selected-summary">
         <div class="admin-history-mode-summary-list">
+          <div class="admin-history-mode-summary-item">
+            <div class="admin-history-detail-row admin-history-detail-row-main">
+              <span class="admin-history-detail-mode">${escapeHtml(instantCoverageRow.label)}</span>
+              <span class="admin-history-detail-meta">出題カバレッジ ${instantCoverageRow.seenCount}/${instantCoverageRow.totalQuestionCount || instantCoverageRow.registeredTotal}問</span>
+            </div>
+          </div>
           ${rows.map((row) => `
             <div class="admin-history-mode-summary-item">
               <div class="admin-history-detail-row admin-history-detail-row-main">
