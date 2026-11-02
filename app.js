@@ -178,6 +178,212 @@ function getInstantCompositionRandomQuestions(questionCount = 20) {
   return chosen;
 }
 
+function sanitizeInstantCompositionWeakState(source = {}) {
+  const raw = source && typeof source === "object" ? source : {};
+  const enrolled = Array.isArray(raw.enrolled) ? raw.enrolled : [];
+  const graduated = Array.isArray(raw.graduated) ? raw.graduated : [];
+  const firstCorrectCount = raw.firstCorrectCount && typeof raw.firstCorrectCount === "object" ? raw.firstCorrectCount : {};
+  const selectedCount = raw.selectedCount && typeof raw.selectedCount === "object" ? raw.selectedCount : {};
+  const normalizeIdList = (list) => Array.from(new Set((Array.isArray(list) ? list : []).map((value) => String(value || "").trim()).filter(Boolean)));
+  const normalizedEnrolled = normalizeIdList(enrolled).filter((id) => !normalizeIdList(graduated).includes(id));
+  const normalizedGraduated = normalizeIdList(graduated);
+  const normalizedCorrectCounts = {};
+  Object.entries(firstCorrectCount).forEach(([questionId, count]) => {
+    const cleanedId = String(questionId || "").trim();
+    if (!cleanedId) return;
+    const numericValue = Number(count);
+    if (!Number.isFinite(numericValue)) return;
+    normalizedCorrectCounts[cleanedId] = Math.max(0, numericValue);
+  });
+  const normalizedSelectedCounts = {};
+  Object.entries(selectedCount).forEach(([questionId, count]) => {
+    const cleanedId = String(questionId || "").trim();
+    if (!cleanedId) return;
+    const numericValue = Number(count);
+    if (!Number.isFinite(numericValue)) return;
+    normalizedSelectedCounts[cleanedId] = Math.max(0, numericValue);
+  });
+  return {
+    enrolled: normalizedEnrolled,
+    graduated: normalizedGraduated,
+    firstCorrectCount: normalizedCorrectCounts,
+    selectedCount: normalizedSelectedCounts
+  };
+}
+
+function getInstantCompositionWeakState() {
+  const stateSource = typeof state !== "undefined" ? state : null;
+  const stats = stateSource && stateSource.stats && typeof stateSource.stats === "object" ? stateSource.stats : {};
+  const persisted = stats.instantCompositionWeakState || (typeof window !== "undefined" ? window.instantCompositionWeakState : null) || {};
+  return sanitizeInstantCompositionWeakState(persisted);
+}
+
+function setInstantCompositionWeakState(nextState) {
+  const sanitized = sanitizeInstantCompositionWeakState(nextState);
+  if (typeof state !== "undefined") {
+    state.stats = state.stats && typeof state.stats === "object" ? state.stats : {};
+    state.stats.instantCompositionWeakState = sanitized;
+  }
+  if (typeof window !== "undefined") {
+    window.instantCompositionWeakState = sanitized;
+  }
+  if (typeof saveState === "function") {
+    saveState();
+  }
+  return sanitized;
+}
+
+function getInstantCompositionWeakQuestionIds() {
+  const weakState = getInstantCompositionWeakState();
+  return [...new Set(weakState.enrolled || [])];
+}
+
+function getInstantCompositionWeakQuestionCount() {
+  return getInstantCompositionWeakQuestionIds().length;
+}
+
+function registerInstantCompositionWeakQuestionId(questionId) {
+  const value = String(questionId || "").trim();
+  if (!value) return false;
+  const weakState = getInstantCompositionWeakState();
+  const enrolled = Array.from(new Set([...(weakState.enrolled || []), value].filter((id) => !((weakState.graduated || []).includes(id)))));
+  const nextState = {
+    ...weakState,
+    enrolled,
+    graduated: (weakState.graduated || []).filter((id) => id !== value),
+    firstCorrectCount: {
+      ...(weakState.firstCorrectCount || {}),
+      [value]: Number(weakState.firstCorrectCount?.[value] || 0)
+    }
+  };
+  setInstantCompositionWeakState(nextState);
+  return true;
+}
+
+function graduateInstantCompositionWeakQuestionId(questionId) {
+  const value = String(questionId || "").trim();
+  if (!value) return false;
+  const weakState = getInstantCompositionWeakState();
+  const nextState = {
+    ...weakState,
+    enrolled: (weakState.enrolled || []).filter((id) => id !== value),
+    graduated: Array.from(new Set([...(weakState.graduated || []), value]))
+  };
+  setInstantCompositionWeakState(nextState);
+  return true;
+}
+
+function incrementInstantCompositionWeakCorrectCount(questionId) {
+  const value = String(questionId || "").trim();
+  if (!value) return 0;
+  const weakState = getInstantCompositionWeakState();
+  const count = Number(weakState.firstCorrectCount?.[value] || 0);
+  const nextCount = count + 1;
+  const nextState = {
+    ...weakState,
+    firstCorrectCount: {
+      ...(weakState.firstCorrectCount || {}),
+      [value]: nextCount
+    }
+  };
+  setInstantCompositionWeakState(nextState);
+  if (nextCount >= 3) {
+    graduateInstantCompositionWeakQuestionId(value);
+  }
+  return nextCount;
+}
+
+function incrementInstantCompositionWeakSelectedCount(questionId) {
+  const value = String(questionId || "").trim();
+  if (!value) return 0;
+  const weakState = getInstantCompositionWeakState();
+  const nextCount = Number(weakState.selectedCount?.[value] || 0) + 1;
+  const nextState = {
+    ...weakState,
+    selectedCount: {
+      ...(weakState.selectedCount || {}),
+      [value]: nextCount
+    }
+  };
+  setInstantCompositionWeakState(nextState);
+  return nextCount;
+}
+
+function applyInstantCompositionWeakTracking({ mode, questionId, isCorrect, isFirstAttempt }) {
+  const value = String(questionId || "").trim();
+  if (!value) return;
+  const weakState = getInstantCompositionWeakState();
+
+  if (mode === "random" && !isCorrect && isFirstAttempt) {
+    if (weakState.graduated.includes(value)) {
+      const reentryState = {
+        ...weakState,
+        enrolled: Array.from(new Set([...(weakState.enrolled || []), value])),
+        graduated: (weakState.graduated || []).filter((id) => id !== value),
+        firstCorrectCount: {
+          ...(weakState.firstCorrectCount || {}),
+          [value]: 0
+        }
+      };
+      setInstantCompositionWeakState(reentryState);
+      return;
+    }
+    if (!(weakState.enrolled || []).includes(value)) {
+      registerInstantCompositionWeakQuestionId(value);
+    }
+    return;
+  }
+
+  if (mode === "weak" && isCorrect && isFirstAttempt) {
+    const updatedState = {
+      ...weakState,
+      enrolled: Array.from(new Set([...(weakState.enrolled || []), value])),
+      firstCorrectCount: {
+        ...(weakState.firstCorrectCount || {}),
+        [value]: Number(weakState.firstCorrectCount?.[value] || 0) + 1
+      }
+    };
+    setInstantCompositionWeakState(updatedState);
+    const nextCount = Number(getInstantCompositionWeakState().firstCorrectCount?.[value] || 0);
+    if (nextCount >= 3) {
+      graduateInstantCompositionWeakQuestionId(value);
+    }
+  }
+}
+
+function getInstantCompositionWeakQuestionQueue(limit = 20) {
+  const weakState = getInstantCompositionWeakState();
+  const ids = [...new Set((weakState.enrolled || []).filter((id) => !weakState.graduated.includes(id)))];
+  const prioritized = ids
+    .map((id) => ({
+      id,
+      selectedCount: Number(weakState.selectedCount?.[id] || 0),
+      correctCount: Number(weakState.firstCorrectCount?.[id] || 0)
+    }))
+    .sort((left, right) => {
+      if (left.selectedCount !== right.selectedCount) {
+        return left.selectedCount - right.selectedCount;
+      }
+      if (left.correctCount !== right.correctCount) {
+        return left.correctCount - right.correctCount;
+      }
+      return Math.random() - 0.5;
+    })
+    .slice(0, Math.max(0, Number(limit) || 0))
+    .map((entry) => entry.id);
+  return prioritized;
+}
+
+function getInstantCompositionQuestionsByIds(questionIds) {
+  const bank = getInstantCompositionSampleBank();
+  const lookup = new Map(bank.map((question) => [String(question.id || ""), question]));
+  return (Array.isArray(questionIds) ? questionIds : [])
+    .map((questionId) => String(questionId || "").trim())
+    .filter(Boolean)
+    .map((questionId) => lookup.get(questionId))
+    .filter(Boolean);
+}
+
 function getTrainingMenuCardsForUi() {
   const menuConfig = typeof window !== "undefined" ? window.TrainingMenuConfig : null;
   const pointSummaryMap = getTrainingMenuPointSummaryMap();
@@ -278,6 +484,7 @@ function bindTrainingMenuCardHandlers() {
 
 function openInstantCompositionMenuScreen() {
   renderInstantCompositionUnitList();
+  renderInstantCompositionWeakButtonState();
   bindInstantCompositionSelectionHandlers();
   showScreen("instantCompositionMenuScreen");
 }
@@ -371,10 +578,21 @@ function buildInstantCompositionQuestionSet(selection = getInstantCompositionSel
   if (mode === "random") {
     return getInstantCompositionRandomQuestions(Math.max(1, Math.min(20, Number(selection.questionCount) || 20)));
   }
+  if (mode === "weak") {
+    const weakIds = Array.isArray(selection.questionIds) ? selection.questionIds : getInstantCompositionWeakQuestionQueue(Math.max(1, Math.min(20, Number(selection.questionCount) || 20)));
+    return getInstantCompositionQuestionsByIds(weakIds).slice(0, Math.min(20, weakIds.length));
+  }
   const unitName = String(selection.unitName || "").trim();
   if (!unitName) return [];
   const pool = getInstantCompositionQuestionsByUnit(unitName);
   return shuffleInstantCompositionQuestions(pool).slice(0, Math.min(20, pool.length));
+}
+
+function renderInstantCompositionWeakButtonState() {
+  const countEl = document.getElementById("instantCompositionWeakCount");
+  if (!countEl) return;
+  const count = getInstantCompositionWeakQuestionCount();
+  countEl.textContent = `苦手問題 ${count}問`;
 }
 
 function startInstantCompositionSession(selection = getInstantCompositionSelection()) {
@@ -399,6 +617,13 @@ function startInstantCompositionSession(selection = getInstantCompositionSelecti
     questionResults: {},
     questionStates: {}
   };
+  if (session.mode === "weak" && Array.isArray(session.questions)) {
+    session.questions.forEach((question) => {
+      if (question && question.id) {
+        incrementInstantCompositionWeakSelectedCount(String(question.id));
+      }
+    });
+  }
   if (typeof state !== "undefined") {
     state.instantCompositionSession = session;
   }
@@ -729,12 +954,18 @@ function renderInstantCompositionQuestionScreen() {
 
   const questionTitle = document.getElementById("instantCompositionQuestionTitle");
   if (questionTitle) {
-    questionTitle.textContent = session.unitName || "英作文特訓";
+    questionTitle.textContent = session.mode === "weak" ? "苦手特訓" : (session.unitName || "英作文特訓");
   }
 
   const questionMode = document.getElementById("instantCompositionQuestionMode");
   if (questionMode) {
-    questionMode.textContent = session.mode === "random" ? "ランダム20問" : (session.unitName || "単元別学習");
+    if (session.mode === "random") {
+      questionMode.textContent = "ランダム20問";
+    } else if (session.mode === "weak") {
+      questionMode.textContent = "苦手特訓";
+    } else {
+      questionMode.textContent = session.unitName || "単元別学習";
+    }
   }
 
   const counter = document.getElementById("instantCompositionQuestionCounter");
@@ -932,6 +1163,14 @@ function submitInstantCompositionAnswer() {
   }
 
   const effectiveJudgement = session.questionRecords[currentQuestion.id].firstJudgement || session.questionRecords[currentQuestion.id].finalJudgement || (isCorrect ? "correct" : "incorrect");
+
+  applyInstantCompositionWeakTracking({
+    mode: session.mode,
+    questionId: currentQuestion.id,
+    isCorrect,
+    isFirstAttempt: firstAttemptCount === 0
+  });
+  renderInstantCompositionWeakButtonState();
 
   const answerBox = document.getElementById("instantCompositionModelAnswer");
   const diffBox = document.getElementById("instantCompositionAnswerDiff");
@@ -16970,6 +17209,47 @@ function bindEvents() {
       showScreen("instantCompositionSelectionScreen");
     });
   }
+
+  const instantCompositionWeakBtn = document.getElementById("instantCompositionWeakBtn");
+  if (instantCompositionWeakBtn) {
+    instantCompositionWeakBtn.addEventListener("click", () => {
+      const weakIds = getInstantCompositionWeakQuestionQueue(20);
+      if (!weakIds.length) {
+        const badgeEl = document.getElementById("instantCompositionSelectionBadge");
+        if (badgeEl) badgeEl.textContent = "苦手特訓";
+        const titleEl = document.getElementById("instantCompositionSelectionTitle");
+        if (titleEl) titleEl.textContent = "英作文特訓";
+        const summaryEl = document.getElementById("instantCompositionSelectionText");
+        if (summaryEl) summaryEl.textContent = "現在、苦手問題はありません";
+        showScreen("instantCompositionSelectionScreen");
+        return;
+      }
+      const selection = {
+        mode: "weak",
+        unitName: null,
+        questionIds: weakIds,
+        questionCount: weakIds.length,
+        selectedAt: Date.now()
+      };
+      setInstantCompositionSelection(selection);
+      const badgeEl = document.getElementById("instantCompositionSelectionBadge");
+      if (badgeEl) {
+        badgeEl.textContent = "苦手特訓";
+      }
+      const titleEl = document.getElementById("instantCompositionSelectionTitle");
+      if (titleEl) {
+        titleEl.textContent = "英作文特訓";
+      }
+      const summaryEl = document.getElementById("instantCompositionSelectionText");
+      if (summaryEl) {
+        summaryEl.textContent = `選択中: 苦手特訓 (${weakIds.length}問)`;
+      }
+      bindInstantCompositionSelectionHandlers();
+      showScreen("instantCompositionSelectionScreen");
+    });
+  }
+
+  renderInstantCompositionWeakButtonState();
 
   if (typingControls.every((control) => Boolean(control))) {
     const delayValues = Array.from({ length: 11 }, (_, index) => (index / 10).toFixed(1));
