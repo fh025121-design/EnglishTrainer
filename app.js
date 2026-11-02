@@ -181,17 +181,27 @@ function getInstantCompositionRandomQuestions(questionCount = 20) {
 function getTrainingMenuCardsForUi() {
   const menuConfig = typeof window !== "undefined" ? window.TrainingMenuConfig : null;
   const pointSummaryMap = getTrainingMenuPointSummaryMap();
-  if (menuConfig && typeof menuConfig.getTrainingMenuCards === "function") {
-    return menuConfig.getTrainingMenuCards(POINT_SYSTEM_CONFIG, pointSummaryMap);
-  }
-  return TRAINING_MENU_ITEMS.map((item) => ({
+  const fallbackCards = TRAINING_MENU_ITEMS.map((item) => ({
     ...item,
     title: item.id === "trainingIdiomBtn" ? "熟語特訓" : item.id === "trainingChallengeBtn" ? "過去の間違いに挑戦" : item.id === "trainingPrepositionBtn" ? "前置詞特訓" : item.id === "trainingResponseBtn" ? "応答文特訓" : item.id === "trainingIrregularVerbBtn" ? "不規則動詞特訓" : item.id === "trainingGrammarBtn" ? "文法" : "英作文特訓",
     icon: item.id === "trainingIdiomBtn" ? "📖" : item.id === "trainingChallengeBtn" ? "🎯" : item.id === "trainingPrepositionBtn" ? "🧭" : item.id === "trainingResponseBtn" ? "🗣️" : item.id === "trainingIrregularVerbBtn" ? "🔄" : item.id === "trainingGrammarBtn" ? "📘" : "⚡",
     mode: item.mode,
-    isReady: item.isReady,
+    isReady: item.id === "trainingInstantCompositionBtn" || item.mode === "instant-composition" ? true : item.isReady,
     pointLabel: "ポイントなし"
   }));
+
+  if (menuConfig && typeof menuConfig.getTrainingMenuCards === "function") {
+    const menuCards = menuConfig.getTrainingMenuCards(POINT_SYSTEM_CONFIG, pointSummaryMap).map((item) => ({
+      ...item,
+      isReady: item.id === "trainingInstantCompositionBtn" || item.mode === "instant-composition" ? true : Boolean(item.isReady)
+    }));
+    const hasInstantComposition = menuCards.some((item) => item.id === "trainingInstantCompositionBtn" || item.mode === "instant-composition");
+    if (hasInstantComposition) {
+      return menuCards;
+    }
+  }
+
+  return fallbackCards;
 }
 
 function shouldAwardTrainingPointForAnswerAttempt(options = {}) {
@@ -236,7 +246,7 @@ function bindTrainingMenuCardHandlers() {
     if (!button) return;
     button.onclick = null;
     button.addEventListener("click", () => {
-      const isInstantCompositionCard = item.id === "trainingInstantCompositionBtn" || item.mode === "instant-composition";
+      const isInstantCompositionCard = item.id === "trainingInstantCompositionBtn" || item.mode === "instant-composition" || item.key === "instant-composition" || item.title === "英作文特訓";
       if (isInstantCompositionCard) {
         openInstantCompositionMenuScreen();
         return;
