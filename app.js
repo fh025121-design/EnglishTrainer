@@ -394,7 +394,10 @@ function startInstantCompositionSession(selection = getInstantCompositionSelecti
     index: 0,
     results: [],
     correctCount: 0,
-    incorrectCount: 0
+    incorrectCount: 0,
+    questionRecords: {},
+    questionResults: {},
+    questionStates: {}
   };
   if (typeof state !== "undefined") {
     state.instantCompositionSession = session;
@@ -751,6 +754,15 @@ function renderInstantCompositionQuestionScreen() {
     answerInput.focus();
   }
 
+  if (session.questionStates) {
+    session.questionStates[currentQuestion.id] = {
+      isSubmitting: false,
+      hasAnswered: false,
+      isCorrect: false,
+      isFinalized: false
+    };
+  }
+
   const answerBox = document.getElementById("instantCompositionModelAnswer");
   if (answerBox) {
     answerBox.textContent = "";
@@ -773,6 +785,12 @@ function renderInstantCompositionQuestionScreen() {
   const finishBackBtn = document.getElementById("instantCompositionFinishBackBtn");
   if (finishBackBtn) {
     finishBackBtn.classList.add("hidden");
+  }
+
+  const submitBtn = document.getElementById("instantCompositionSubmitBtn");
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.classList.remove("is-disabled");
   }
 
   const nextBtn = document.getElementById("instantCompositionNextBtn");
@@ -798,7 +816,17 @@ function renderInstantCompositionQuestionScreen() {
     answerForm.onsubmit = (event) => {
       event.preventDefault();
       const input = document.getElementById("instantCompositionAnswerInput");
-      if (!input || input.disabled) {
+      if (!input || input.disabled || (submitBtn && submitBtn.disabled)) {
+        return;
+      }
+      submitInstantCompositionAnswer();
+    };
+  }
+
+  if (submitBtn) {
+    submitBtn.onclick = (event) => {
+      event.preventDefault();
+      if (submitBtn.disabled) {
         return;
       }
       submitInstantCompositionAnswer();
@@ -841,6 +869,20 @@ function submitInstantCompositionAnswer() {
     return;
   }
 
+  if (!session.questionStates) {
+    session.questionStates = {};
+  }
+  const questionState = session.questionStates[currentQuestion.id] || {
+    isSubmitting: false,
+    hasAnswered: false,
+    isCorrect: false,
+    isFinalized: false
+  };
+  session.questionStates[currentQuestion.id] = questionState;
+  if (questionState.isSubmitting) {
+    return;
+  }
+
   const input = document.getElementById("instantCompositionAnswerInput");
   const typedAnswer = input ? String(input.value || "").trim() : "";
   if (!typedAnswer) {
@@ -852,36 +894,17 @@ function submitInstantCompositionAnswer() {
   if (submitBtn) {
     submitBtn.disabled = true;
   }
-
-  const isCorrect = isInstantCompositionAnswerCorrect(currentQuestion.answer, typedAnswer);
-  const answerBox = document.getElementById("instantCompositionModelAnswer");
-  const diffBox = document.getElementById("instantCompositionAnswerDiff");
-  const nextBtn = document.getElementById("instantCompositionNextBtn");
-  const pronunciationBtn = document.getElementById("instantCompositionPronunciationBtn");
-  const sessionBadge = document.getElementById("instantCompositionFeedbackBadge");
-
-  const record = {
-    sessionId: session.sessionId || `${session.mode || "unit"}-${Date.now()}`,
-    questionId: currentQuestion.id,
-    unitName: currentQuestion.unit || session.unitName || "名詞・代名詞",
-    learningMode: "単元別学習",
-    mode: session.mode,
-    prompt: currentQuestion.japanese,
-    answer: typedAnswer,
-    expectedAnswer: currentQuestion.answer,
-    firstAttemptAnswer: session?.questionRecords?.[currentQuestion.id]?.firstAttemptAnswer || typedAnswer,
-    attemptCount: Number(session?.questionRecords?.[currentQuestion.id]?.attemptCount || 0) + 1,
-    finalJudgement: isCorrect ? "correct" : "incorrect",
-    finalAnswer: typedAnswer,
-    judgement: isCorrect ? "correct" : "incorrect",
-    createdAt: new Date().toISOString(),
-    isSaved: false
-  };
+  questionState.isSubmitting = true;
 
   if (!session.questionRecords) {
     session.questionRecords = {};
   }
-  if (!session.questionRecords[currentQuestion.id]) {
+  const existingRecord = session.questionRecords[currentQuestion.id];
+  const firstAttemptCount = Number(existingRecord?.attemptCount || 0);
+  const isFirstAttempt = firstAttemptCount === 0;
+  const isCorrect = isInstantCompositionAnswerCorrect(currentQuestion.answer, typedAnswer);
+
+  if (!existingRecord) {
     session.questionRecords[currentQuestion.id] = {
       questionId: currentQuestion.id,
       firstAttemptAnswer: typedAnswer,
@@ -892,40 +915,44 @@ function submitInstantCompositionAnswer() {
       lastUpdatedAt: Date.now()
     };
   } else {
-    const existing = session.questionRecords[currentQuestion.id];
-    existing.attemptCount = Number(existing.attemptCount || 0) + 1;
-    existing.finalAnswer = typedAnswer;
-    existing.finalJudgement = existing.finalJudgement || (isCorrect ? "correct" : "incorrect");
-    existing.lastUpdatedAt = Date.now();
-    if (!existing.firstAttemptAnswer) {
-      existing.firstAttemptAnswer = typedAnswer;
+    existingRecord.attemptCount = Number(existingRecord.attemptCount || 0) + 1;
+    existingRecord.finalAnswer = typedAnswer;
+    existingRecord.lastUpdatedAt = Date.now();
+    if (!existingRecord.firstAttemptAnswer) {
+      existingRecord.firstAttemptAnswer = typedAnswer;
     }
-    if (!existing.firstJudgement) {
-      existing.firstJudgement = isCorrect ? "correct" : "incorrect";
+    if (!existingRecord.firstJudgement) {
+      existingRecord.firstJudgement = isCorrect ? "correct" : "incorrect";
+    }
+    if (existingRecord.firstJudgement === "correct") {
+      existingRecord.finalJudgement = "correct";
+    } else {
+      existingRecord.finalJudgement = "incorrect";
     }
   }
 
-  const finalJudgement = session.questionRecords[currentQuestion.id].finalJudgement;
-  if (!session.questionResults) {
-    session.questionResults = {};
-  }
-  if (!session.questionResults[currentQuestion.id]) {
-    session.questionResults[currentQuestion.id] = {
-      ...record,
-      recordCreatedAt: new Date().toISOString(),
-      isStored: true
-    };
-  }
+  const effectiveJudgement = session.questionRecords[currentQuestion.id].firstJudgement || session.questionRecords[currentQuestion.id].finalJudgement || (isCorrect ? "correct" : "incorrect");
+
+  const answerBox = document.getElementById("instantCompositionModelAnswer");
+  const diffBox = document.getElementById("instantCompositionAnswerDiff");
+  const nextBtn = document.getElementById("instantCompositionNextBtn");
+  const pronunciationBtn = document.getElementById("instantCompositionPronunciationBtn");
+  const sessionBadge = document.getElementById("instantCompositionFeedbackBadge");
 
   session.results = Array.isArray(session.results) ? session.results : [];
-  const existingResultIndex = session.results.findIndex((entry) => entry.questionId === currentQuestion.id);
-  if (existingResultIndex >= 0) {
-    session.results[existingResultIndex] = {
-      ...session.results[existingResultIndex],
+  const resultIndex = session.results.findIndex((entry) => entry.questionId === currentQuestion.id);
+  if (resultIndex >= 0) {
+    session.results[resultIndex] = {
+      ...session.results[resultIndex],
+      questionId: currentQuestion.id,
+      unitName: currentQuestion.unit || session.unitName || "名詞・代名詞",
+      learningMode: "単元別学習",
+      mode: session.mode,
+      prompt: currentQuestion.japanese,
       answer: typedAnswer,
       expectedAnswer: currentQuestion.answer,
-      judgement: finalJudgement === "correct" ? "correct" : "incorrect",
-      createdAt: session.results[existingResultIndex].createdAt || new Date().toISOString()
+      judgement: effectiveJudgement,
+      createdAt: session.results[resultIndex].createdAt || new Date().toISOString()
     };
   } else {
     session.results.push({
@@ -936,7 +963,7 @@ function submitInstantCompositionAnswer() {
       prompt: currentQuestion.japanese,
       answer: typedAnswer,
       expectedAnswer: currentQuestion.answer,
-      judgement: finalJudgement === "correct" ? "correct" : "incorrect",
+      judgement: effectiveJudgement,
       createdAt: new Date().toISOString()
     });
   }
@@ -944,9 +971,43 @@ function submitInstantCompositionAnswer() {
   session.correctCount = session.results.filter((entry) => entry.judgement === "correct").length;
   session.incorrectCount = session.results.filter((entry) => entry.judgement === "incorrect").length;
 
+  if (!session.questionResults) {
+    session.questionResults = {};
+  }
+  if (!session.questionResults[currentQuestion.id]) {
+    session.questionResults[currentQuestion.id] = {
+      questionId: currentQuestion.id,
+      unitName: currentQuestion.unit || session.unitName || "名詞・代名詞",
+      learningMode: "単元別学習",
+      mode: session.mode,
+      prompt: currentQuestion.japanese,
+      answer: typedAnswer,
+      expectedAnswer: currentQuestion.answer,
+      firstAttemptAnswer: session.questionRecords[currentQuestion.id].firstAttemptAnswer,
+      attemptCount: session.questionRecords[currentQuestion.id].attemptCount,
+      firstJudgement: session.questionRecords[currentQuestion.id].firstJudgement,
+      finalJudgement: session.questionRecords[currentQuestion.id].finalJudgement,
+      judgement: effectiveJudgement,
+      createdAt: new Date().toISOString(),
+      historySaved: false
+    };
+  }
+
+  const currentResult = session.questionResults[currentQuestion.id];
+  currentResult.answer = typedAnswer;
+  currentResult.expectedAnswer = currentQuestion.answer;
+  currentResult.firstAttemptAnswer = session.questionRecords[currentQuestion.id].firstAttemptAnswer;
+  currentResult.attemptCount = session.questionRecords[currentQuestion.id].attemptCount;
+  currentResult.firstJudgement = session.questionRecords[currentQuestion.id].firstJudgement;
+  currentResult.finalJudgement = session.questionRecords[currentQuestion.id].finalJudgement;
+  currentResult.judgement = effectiveJudgement;
+  currentResult.createdAt = new Date().toISOString();
+
   if (isCorrect) {
     setInstantCompositionResultBadge(true);
-    playTrainingCorrectChime();
+    if (isFirstAttempt) {
+      playTrainingCorrectChime();
+    }
     speakInstantCompositionAnswer(currentQuestion.answer || "");
 
     if (answerBox) {
@@ -958,14 +1019,12 @@ function submitInstantCompositionAnswer() {
       diffBox.innerHTML = "";
     }
 
-    const currentResult = session.questionResults[currentQuestion.id];
-    if (currentResult) {
-      currentResult.isStored = true;
-      currentResult.judgement = "correct";
-      currentResult.answer = typedAnswer;
-      currentResult.expectedAnswer = currentQuestion.answer;
-      currentResult.createdAt = new Date().toISOString();
-      saveInstantCompositionHistoryEntry(currentResult);
+    if (!currentResult.historySaved) {
+      saveInstantCompositionHistoryEntry({
+        ...currentResult,
+        isSaved: true
+      });
+      currentResult.historySaved = true;
     }
 
     if (nextBtn) {
@@ -981,6 +1040,10 @@ function submitInstantCompositionAnswer() {
     if (submitBtn) {
       submitBtn.disabled = true;
     }
+    questionState.hasAnswered = true;
+    questionState.isCorrect = true;
+    questionState.isFinalized = true;
+    questionState.isSubmitting = false;
     return;
   }
 
@@ -1000,34 +1063,15 @@ function submitInstantCompositionAnswer() {
     pronunciationBtn.disabled = false;
   }
 
-  const wrongEntry = {
-    questionId: currentQuestion.id,
-    unitName: currentQuestion.unit || session.unitName || "名詞・代名詞",
-    learningMode: "単元別学習",
-    mode: session.mode,
-    prompt: currentQuestion.japanese,
-    answer: typedAnswer,
-    expectedAnswer: currentQuestion.answer,
-    judgement: "incorrect",
-    createdAt: new Date().toISOString(),
-    firstAttemptAnswer: session.questionRecords[currentQuestion.id]?.firstAttemptAnswer || typedAnswer,
-    attemptCount: Number(session.questionRecords[currentQuestion.id]?.attemptCount || 0)
-  };
-  if (session.questionRecords[currentQuestion.id]) {
-    session.questionRecords[currentQuestion.id].finalJudgement = "incorrect";
-    session.questionRecords[currentQuestion.id].finalAnswer = typedAnswer;
-    session.questionRecords[currentQuestion.id].lastUpdatedAt = Date.now();
+  if (!currentResult.historySaved) {
+    saveInstantCompositionHistoryEntry({
+      ...currentResult,
+      judgement: "incorrect",
+      isFailureSaved: true,
+      isSaved: true
+    });
+    currentResult.historySaved = true;
   }
-  if (!session.questionResults[currentQuestion.id]) {
-    session.questionResults[currentQuestion.id] = { ...wrongEntry };
-  }
-  session.questionResults[currentQuestion.id].judgement = "incorrect";
-  session.questionResults[currentQuestion.id].answer = typedAnswer;
-  session.questionResults[currentQuestion.id].expectedAnswer = currentQuestion.answer;
-  saveInstantCompositionHistoryEntry({
-    ...wrongEntry,
-    isFailureSaved: true
-  });
 
   const answerInput = document.getElementById("instantCompositionAnswerInput");
   if (answerInput) {
@@ -1037,6 +1081,10 @@ function submitInstantCompositionAnswer() {
   if (submitBtn) {
     submitBtn.disabled = false;
   }
+  questionState.hasAnswered = true;
+  questionState.isCorrect = false;
+  questionState.isFinalized = false;
+  questionState.isSubmitting = false;
 }
 
 function finishInstantCompositionSession() {
