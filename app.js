@@ -115,6 +115,13 @@ const INSTANT_COMPOSITION_UNIT_CATALOG = Object.freeze([
   "文型（SVOO・SVOC）"
 ]);
 
+const INSTANT_COMPOSITION_UNIT_NAME_CANONICAL_MAP = new Map(
+  INSTANT_COMPOSITION_UNIT_CATALOG.map((canonicalUnit) => [
+    normalizeInstantCompositionUnitName(canonicalUnit),
+    canonicalUnit
+  ])
+);
+
 const INSTANT_COMPOSITION_SAMPLE_BANK = Object.freeze([
   { id: "PL001", unit: "名詞・代名詞", japanese: "私は２人の兄がいます。", answer: "I have two brothers." },
   { id: "PL002", unit: "名詞・代名詞", japanese: "あなたは３匹の犬を飼っています。", answer: "You have three dogs." },
@@ -147,13 +154,31 @@ function normalizeInstantCompositionImportedText(value) {
     .trim();
 }
 
+function normalizeInstantCompositionUnitName(value) {
+  const normalized = normalizeInstantCompositionImportedText(value)
+    .replace(/[（）]/g, (character) => (character === "（" ? "(" : ")"))
+    .replace(/\s*([()])\s*/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized;
+}
+
+function resolveInstantCompositionCanonicalUnitName(value) {
+  const normalized = normalizeInstantCompositionUnitName(value);
+  if (!normalized) {
+    return "";
+  }
+  return INSTANT_COMPOSITION_UNIT_NAME_CANONICAL_MAP.get(normalized) || "";
+}
+
 function sanitizeInstantCompositionQuestionBank(rows) {
   const byId = new Map();
   (Array.isArray(rows) ? rows : []).forEach((row) => {
     if (!row || typeof row !== "object") return;
     const id = String(row.id || row.問題ID || "").trim();
     if (!id) return;
-    const unit = normalizeInstantCompositionImportedText(row.unit || row.単元 || "");
+    const rawUnit = row.unit || row.単元 || "";
+    const unit = resolveInstantCompositionCanonicalUnitName(rawUnit);
     const japanese = normalizeInstantCompositionImportedText(row.japanese || row["日本語の問題"] || "");
     const answer = normalizeInstantCompositionImportedText(row.answer || row.模範解答 || "");
     if (!unit || !japanese || !answer) return;
@@ -309,9 +334,10 @@ async function importInstantCompositionQuestionMaster(file) {
     }
 
     const normalizedId = String(rawId).replace(/[\uFEFF\s]+/g, "").trim();
-    const normalizedUnit = normalizeInstantCompositionImportedText(rawUnit);
     const normalizedJapanese = normalizeInstantCompositionImportedText(rawJapanese).replace(/\s{2,}/g, " ");
     const normalizedAnswer = normalizeInstantCompositionImportedText(rawAnswer).replace(/\s{2,}/g, " ");
+    const normalizedUnit = normalizeInstantCompositionUnitName(rawUnit);
+    const canonicalUnit = resolveInstantCompositionCanonicalUnitName(rawUnit);
 
     if (!normalizedId || !normalizedUnit || !normalizedJapanese || !normalizedAnswer) {
       throw new Error(`必須項目が空欄です。${rowNumber}行目`);
@@ -319,14 +345,14 @@ async function importInstantCompositionQuestionMaster(file) {
     if (seenIds.has(normalizedId)) {
       throw new Error(`問題IDの重複です。問題ID: ${normalizedId}（${rowNumber}行目）`);
     }
-    if (!INSTANT_COMPOSITION_UNIT_CATALOG.includes(normalizedUnit)) {
+    if (!canonicalUnit) {
       throw new Error(`既存14単元に存在しない単元名です。問題ID: ${normalizedId}（${rowNumber}行目: ${normalizedUnit}）`);
     }
 
     seenIds.add(normalizedId);
     nextBank.push({
       id: normalizedId,
-      unit: normalizedUnit,
+      unit: canonicalUnit,
       japanese: normalizedJapanese,
       answer: normalizedAnswer
     });
