@@ -156,6 +156,7 @@ function normalizeInstantCompositionImportedText(value) {
 
 function normalizeInstantCompositionUnitName(value) {
   const normalized = normalizeInstantCompositionImportedText(value)
+    .replace(/单/g, "単")
     .replace(/[（）]/g, (character) => (character === "（" ? "(" : ")"))
     .replace(/\s*([()])\s*/g, "$1")
     .replace(/\s+/g, " ")
@@ -169,6 +170,10 @@ function resolveInstantCompositionCanonicalUnitName(value) {
     return "";
   }
   return INSTANT_COMPOSITION_UNIT_NAME_CANONICAL_MAP.get(normalized) || "";
+}
+
+function getInstantCompositionCanonicalUnitName(value) {
+  return resolveInstantCompositionCanonicalUnitName(value) || normalizeInstantCompositionUnitName(value);
 }
 
 function sanitizeInstantCompositionQuestionBank(rows) {
@@ -202,7 +207,7 @@ function calculateInstantCompositionImportSummary(nextBank, previousBank = []) {
   const previousBankList = Array.isArray(previousBank) ? previousBank : [];
   const unitCounts = {};
   nextBankList.forEach((question) => {
-    const unitName = normalizeInstantCompositionImportedText(question?.unit || "");
+    const unitName = getInstantCompositionCanonicalUnitName(question?.unit || "");
     if (!unitName) return;
     unitCounts[unitName] = (unitCounts[unitName] || 0) + 1;
   });
@@ -436,9 +441,10 @@ function getInstantCompositionSampleBank() {
     if (!row || typeof row !== "object") return;
     const id = String(row.id || "").trim();
     if (!id) return;
+    const canonicalUnit = getInstantCompositionCanonicalUnitName(row.unit || "名詞・代名詞");
     const normalized = {
       id,
-      unit: normalizeInstantCompositionImportedText(row.unit || "名詞・代名詞"),
+      unit: canonicalUnit || normalizeInstantCompositionUnitName(row.unit || "名詞・代名詞"),
       japanese: normalizeInstantCompositionImportedText(row.japanese || ""),
       answer: normalizeInstantCompositionImportedText(row.answer || "")
     };
@@ -450,10 +456,10 @@ function getInstantCompositionSampleBank() {
 }
 
 function getInstantCompositionQuestionsByUnit(unitName) {
-  const target = String(unitName || "").trim();
+  const target = getInstantCompositionCanonicalUnitName(unitName);
   const bank = getInstantCompositionSampleBank();
   if (!target) return bank;
-  return bank.filter((question) => question.unit === target);
+  return bank.filter((question) => getInstantCompositionCanonicalUnitName(question.unit || "") === target);
 }
 
 function getInstantCompositionRandomQuestions(questionCount = 20) {
@@ -693,7 +699,7 @@ function getInstantCompositionProgressSummary() {
   const correctCountsByQuestion = {};
 
   bank.forEach((question) => {
-    const unitName = String(question.unit || "名詞・代名詞").trim();
+    const unitName = getInstantCompositionCanonicalUnitName(question.unit || "名詞・代名詞");
     totalByUnit[unitName] = (totalByUnit[unitName] || 0) + 1;
     studiedByUnit[unitName] = studiedByUnit[unitName] || new Set();
   });
@@ -705,7 +711,7 @@ function getInstantCompositionProgressSummary() {
       return;
     }
     const question = questionMap.get(questionId);
-    const unitName = String(question?.unit || "名詞・代名詞").trim();
+    const unitName = getInstantCompositionCanonicalUnitName(question?.unit || "名詞・代名詞");
     studiedByUnit[unitName] = studiedByUnit[unitName] || new Set();
     studiedByUnit[unitName].add(questionId);
 
@@ -727,7 +733,7 @@ function getInstantCompositionProgressSummary() {
     const studiedSet = studiedByUnit[unitName] || new Set();
     const studiedCount = studiedSet.size;
     const threeCorrectCount = bank.filter((question) => {
-      if (String(question.unit || "").trim() !== unitName) {
+      if (getInstantCompositionCanonicalUnitName(question.unit || "") !== unitName) {
         return false;
       }
       const questionId = String(question.id || "").trim();
@@ -757,7 +763,7 @@ function getInstantCompositionProgressSummary() {
 }
 
 function getInstantCompositionProgressForUnit(unitName) {
-  const target = String(unitName || "").trim();
+  const target = getInstantCompositionCanonicalUnitName(unitName);
   const summary = getInstantCompositionProgressSummary();
   return summary.unitSummaries[target] || {
     totalCount: 0,
