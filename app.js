@@ -1581,7 +1581,7 @@ function submitInstantCompositionAnswer() {
   }
   session.questionShownAt = Date.now();
 
-  if (isFirstAttempt) {
+  if (isFirstAttempt && isCorrect) {
     const earnedNow = awardPointsForTrainingMode("instant-composition");
     session.earnedPoints = Math.max(0, Number(session.earnedPoints) || 0) + Math.max(0, Number(earnedNow) || 0);
   }
@@ -3332,7 +3332,7 @@ const POINT_SYSTEM_CONFIG = Object.freeze({
     response: 1,
     "irregular-verb": 2,
     idiom: 1,
-    "instant-composition": 2
+    "instant-composition": 4
   }),
   dailyCapByTrainingMode: Object.freeze({
     preposition: 30,
