@@ -3430,14 +3430,17 @@ function getTrainingCoverageSummaryRows() {
 function renderTrainingCoverageSummaryCard() {
   const rows = getTrainingCoverageSummaryRows();
   const instantCoverage = getInstantCompositionProgressSummary();
+  const instantTargetCount = Number(instantCoverage.totalQuestionCount) || 0;
+  const instantSeenCount = Math.min(Math.max(Number(instantCoverage.studiedCount) || 0, 0), instantTargetCount);
   const instantCoverageRow = {
     label: "英作文特訓",
-    registeredTotal: instantCoverage.totalQuestionCount,
-    targetCount: instantCoverage.totalQuestionCount,
-    seenCount: instantCoverage.studiedCount,
-    unseenCount: Math.max(0, instantCoverage.totalQuestionCount - instantCoverage.studiedCount),
-    coverageRate: instantCoverage.totalQuestionCount ? (instantCoverage.studiedCount / instantCoverage.totalQuestionCount) * 100 : 0
+    registeredTotal: instantTargetCount,
+    targetCount: instantTargetCount,
+    seenCount: instantSeenCount,
+    unseenCount: Math.max(0, instantTargetCount - instantSeenCount),
+    coverageRate: instantTargetCount ? (instantSeenCount / instantTargetCount) * 100 : 0
   };
+  const allRows = [instantCoverageRow, ...rows];
 
   return `
     <section class="admin-history-today-section">
@@ -3446,13 +3449,7 @@ function renderTrainingCoverageSummaryCard() {
       </div>
       <div class="admin-history-selected-summary">
         <div class="admin-history-mode-summary-list">
-          <div class="admin-history-mode-summary-item">
-            <div class="admin-history-detail-row admin-history-detail-row-main">
-              <span class="admin-history-detail-mode">${escapeHtml(instantCoverageRow.label)}</span>
-              <span class="admin-history-detail-meta">出題カバレッジ ${instantCoverageRow.seenCount}/${instantCoverageRow.totalQuestionCount || instantCoverageRow.registeredTotal}問</span>
-            </div>
-          </div>
-          ${rows.map((row) => `
+          ${allRows.map((row) => `
             <div class="admin-history-mode-summary-item">
               <div class="admin-history-detail-row admin-history-detail-row-main">
                 <span class="admin-history-detail-mode">${escapeHtml(row.label)}</span>
