@@ -6,6 +6,7 @@
     <title>English Typing Trainer for PC</title>
     <!-- 更新時は全ファイルの ?v=YYYYMMDD-HHMM を現在日時に変更する -->
     <link rel="stylesheet" href="styles.css?v=20260825-0149" />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   </head>
   <body class="auth-pending">
     <div id="loginScreen" class="login-shell" aria-live="polite">
@@ -211,6 +212,12 @@
               </div>
             </div>
             <div id="adminHistoryPanel" class="settings-update-history hidden"></div>
+            <div class="settings-backup-wrap" aria-label="英作文問題マスターの取り込み">
+              <h3 class="settings-section-title">英作文問題マスター</h3>
+              <p class="settings-studycore-note">Excelの問題を取り込みます。重複や空欄があれば取り込みを中止します。</p>
+              <button id="importInstantCompositionMasterBtn" class="secondary-btn settings-backup-btn" type="button">📥 Excelから問題を取り込む</button>
+              <input id="instantCompositionMasterFileInput" class="hidden" type="file" accept=".xlsx,.xls,.csv" />
+            </div>
             <div class="settings-typing-wrap" aria-label="PC端末設定">
               <h3 class="settings-section-title">PC端末設定</h3>
               <div class="settings-typing-grid">

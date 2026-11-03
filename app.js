@@ -138,19 +138,283 @@ const INSTANT_COMPOSITION_SAMPLE_BANK = Object.freeze([
   { id: "PL020", unit: "名詞・代名詞", japanese: "あなたはいくつの箱を開けますか。", answer: "How many boxes do you open?" }
 ]);
 
+function normalizeInstantCompositionImportedText(value) {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .replace(/\u00A0/g, " ")
+    .replace(/\u3000/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function sanitizeInstantCompositionQuestionBank(rows) {
+  const byId = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    if (!row || typeof row !== "object") return;
+    const id = String(row.id || row.問題ID || "").trim();
+    if (!id) return;
+    const unit = normalizeInstantCompositionImportedText(row.unit || row.単元 || "");
+    const japanese = normalizeInstantCompositionImportedText(row.japanese || row["日本語の問題"] || "");
+    const answer = normalizeInstantCompositionImportedText(row.answer || row.模範解答 || "");
+    if (!unit || !japanese || !answer) return;
+    const normalized = {
+      id,
+      unit,
+      japanese,
+      answer
+    };
+    if (!byId.has(id)) {
+      byId.set(id, normalized);
+    }
+  });
+  return Array.from(byId.values());
+}
+
+function calculateInstantCompositionImportSummary(nextBank, previousBank = []) {
+  const previousMap = new Map((Array.isArray(previousBank) ? previousBank : []).map((question) => [String(question.id || "").trim(), question]));
+  const nextMap = new Map((Array.isArray(nextBank) ? nextBank : []).map((question) => [String(question.id || "").trim(), question]));
+  const nextBankList = Array.isArray(nextBank) ? nextBank : [];
+  const previousBankList = Array.isArray(previousBank) ? previousBank : [];
+  const unitCounts = {};
+  nextBankList.forEach((question) => {
+    const unitName = normalizeInstantCompositionImportedText(question?.unit || "");
+    if (!unitName) return;
+    unitCounts[unitName] = (unitCounts[unitName] || 0) + 1;
+  });
+
+  const newRegistrationCount = nextBankList.filter((question) => !previousMap.has(String(question.id || "").trim())).length;
+  const updatedExistingCount = nextBankList.filter((question) => {
+    const questionId = String(question.id || "").trim();
+    if (!previousMap.has(questionId)) return false;
+    const previous = previousMap.get(questionId);
+    if (!previous) return false;
+    return (
+      normalizeInstantCompositionImportedText(previous.unit || "") !== normalizeInstantCompositionImportedText(question.unit || "")
+      || normalizeInstantCompositionImportedText(previous.japanese || "") !== normalizeInstantCompositionImportedText(question.japanese || "")
+      || normalizeInstantCompositionImportedText(previous.answer || "") !== normalizeInstantCompositionImportedText(question.answer || "")
+    );
+  }).length;
+  const excludedCount = previousBankList.filter((question) => !nextMap.has(String(question.id || "").trim())).length;
+
+  return {
+    totalQuestionCount: nextBankList.length,
+    unitCounts,
+    newRegistrationCount,
+    updatedExistingCount,
+    excludedCount
+  };
+}
+
+function formatInstantCompositionImportSummary(summary) {
+  const totalCount = Number(summary?.totalQuestionCount || 0);
+  const unitCounts = summary?.unitCounts && typeof summary.unitCounts === "object" ? summary.unitCounts : {};
+  const unitLines = Object.keys(unitCounts)
+    .sort((left, right) => left.localeCompare(right, "ja"))
+    .map((unitName) => `${unitName}: ${unitCounts[unitName]}問`)
+    .join("\n");
+
+  return [
+    "英作文問題マスターの取り込みが完了しました。",
+    `総問題数: ${totalCount}問`,
+    unitLines ? `単元別問題数:\n${unitLines}` : "単元別問題数: 0問",
+    `新規登録数: ${Number(summary?.newRegistrationCount || 0)}問`,
+    `既存IDの更新数: ${Number(summary?.updatedExistingCount || 0)}問`,
+    `出題対象から外れた問題数: ${Number(summary?.excludedCount || 0)}問`
+  ].join("\n");
+}
+
+async function importInstantCompositionQuestionMaster(file) {
+  if (!file) {
+    throw new Error("取り込むExcelファイルを選択してください。");
+  }
+  if (typeof window === "undefined" || !window.XLSX || typeof window.XLSX.read !== "function") {
+    throw new Error("Excelファイルの読込ライブラリが利用できません。再度お試しください。");
+  }
+
+  const fileName = String(file.name || "").trim();
+  const extension = fileName.includes(".") ? fileName.split(".").pop().toLowerCase() : "";
+  if (!["xlsx", "xls", "csv"].includes(extension)) {
+    throw new Error("Excelファイル（.xlsx / .xls / .csv）を選択してください。");
+  }
+
+  const workbook = window.XLSX.read(await file.arrayBuffer(), { type: "array", raw: false, cellDates: true });
+  if (!Array.isArray(workbook.SheetNames) || workbook.SheetNames.length !== 1) {
+    throw new Error("Excelファイルは1シートのみ対応しています。別シートを含むファイルは取り込みできません。");
+  }
+
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!sheet) {
+    throw new Error("Excelシートを読み取れませんでした。");
+  }
+
+  const rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, blankrows: false });
+  if (!Array.isArray(rows) || rows.length < 2) {
+    throw new Error("Excelファイルに問題データが見つかりませんでした。");
+  }
+
+  const headerCells = Array.isArray(rows[0]) ? rows[0] : [];
+  const normalizeHeaderText = (value) => String(value ?? "").replace(/\s+/g, "").replace(/[（）]/g, "").trim();
+  const normalizedHeaders = headerCells.map(normalizeHeaderText);
+  const requiredHeaderMap = {
+    id: "問題ID",
+    unit: "単元",
+    japanese: "日本語の問題",
+    answer: "模範解答"
+  };
+  const headerIndexByKey = {};
+  Object.entries(requiredHeaderMap).forEach(([key, expectedValue]) => {
+    const expected = normalizeHeaderText(expectedValue);
+    const index = normalizedHeaders.findIndex((header) => header === expected);
+    if (index === -1) {
+      throw new Error(`Excel形式または必須列の不一致です。必須列「${expectedValue}」が見つかりません。`);
+    }
+    headerIndexByKey[key] = index;
+  });
+  if (headerCells.length !== 4) {
+    throw new Error("Excel形式または必須列の不一致です。4列の問題マスターを選択してください。");
+  }
+
+  const seenIds = new Set();
+  const nextBank = [];
+  const previousBank = sanitizeInstantCompositionQuestionBank(
+    Array.isArray(state?.instantCompositionQuestionBank)
+      ? state.instantCompositionQuestionBank
+      : Array.isArray(window?.instantCompositionQuestionBank)
+        ? window.instantCompositionQuestionBank
+        : []
+  );
+
+  rows.slice(1).forEach((row, offset) => {
+    if (!Array.isArray(row) || row.every((cell) => String(cell ?? "").trim() === "")) {
+      return;
+    }
+
+    const rowNumber = offset + 2;
+    const rawId = String(row[headerIndexByKey.id] ?? "").trim();
+    const rawUnit = String(row[headerIndexByKey.unit] ?? "").trim();
+    const rawJapanese = String(row[headerIndexByKey.japanese] ?? "").trim();
+    const rawAnswer = String(row[headerIndexByKey.answer] ?? "").trim();
+
+    if (!rawId) {
+      throw new Error(`問題IDが空欄です。${rowNumber}行目`);
+    }
+    if (!rawUnit) {
+      throw new Error(`単元が空欄です。${rowNumber}行目`);
+    }
+    if (!rawJapanese) {
+      throw new Error(`日本語の問題が空欄です。${rowNumber}行目`);
+    }
+    if (!rawAnswer) {
+      throw new Error(`模範解答が空欄です。${rowNumber}行目`);
+    }
+
+    const normalizedId = String(rawId).replace(/[\uFEFF\s]+/g, "").trim();
+    const normalizedUnit = normalizeInstantCompositionImportedText(rawUnit);
+    const normalizedJapanese = normalizeInstantCompositionImportedText(rawJapanese).replace(/\s{2,}/g, " ");
+    const normalizedAnswer = normalizeInstantCompositionImportedText(rawAnswer).replace(/\s{2,}/g, " ");
+
+    if (!normalizedId || !normalizedUnit || !normalizedJapanese || !normalizedAnswer) {
+      throw new Error(`必須項目が空欄です。${rowNumber}行目`);
+    }
+    if (seenIds.has(normalizedId)) {
+      throw new Error(`問題IDの重複です。問題ID: ${normalizedId}（${rowNumber}行目）`);
+    }
+    if (!INSTANT_COMPOSITION_UNIT_CATALOG.includes(normalizedUnit)) {
+      throw new Error(`既存14単元に存在しない単元名です。問題ID: ${normalizedId}（${rowNumber}行目: ${normalizedUnit}）`);
+    }
+
+    seenIds.add(normalizedId);
+    nextBank.push({
+      id: normalizedId,
+      unit: normalizedUnit,
+      japanese: normalizedJapanese,
+      answer: normalizedAnswer
+    });
+  });
+
+  const summary = calculateInstantCompositionImportSummary(nextBank, previousBank);
+  const sanitizedNextBank = sanitizeInstantCompositionQuestionBank(nextBank);
+  syncInstantCompositionQuestionBankState(sanitizedNextBank);
+  if (typeof state !== "undefined") {
+    state.instantCompositionImportMeta = {
+      fileName,
+      importedAt: Date.now(),
+      summary
+    };
+  }
+  if (typeof saveState === "function") {
+    saveState();
+  }
+
+  return { bank: sanitizedNextBank, summary, fileName };
+}
+
+async function handleInstantCompositionExcelImport(file) {
+  try {
+    const result = await importInstantCompositionQuestionMaster(file);
+    renderInstantCompositionUnitList();
+    renderInstantCompositionWeakButtonState();
+    bindInstantCompositionSelectionHandlers();
+    if (typeof alert === "function") {
+      alert(formatInstantCompositionImportSummary(result.summary));
+    }
+  } catch (error) {
+    const message = error && error.message ? error.message : "英作文問題マスターの取り込みに失敗しました。";
+    if (typeof alert === "function") {
+      alert(message);
+    }
+  }
+}
+
+function bindInstantCompositionImportHandlers() {
+  const importBtn = document.getElementById("importInstantCompositionMasterBtn");
+  const importInput = document.getElementById("instantCompositionMasterFileInput");
+  if (!importBtn || !importInput) {
+    return;
+  }
+
+  importBtn.addEventListener("click", () => {
+    importInput.click();
+  });
+
+  importInput.addEventListener("change", async (event) => {
+    const input = event.target;
+    const file = input && input.files && input.files[0] ? input.files[0] : null;
+    if (!file) return;
+    await handleInstantCompositionExcelImport(file);
+    input.value = "";
+  });
+}
+
+function syncInstantCompositionQuestionBankState(nextBank = []) {
+  const sanitizedBank = sanitizeInstantCompositionQuestionBank(nextBank);
+  if (typeof state !== "undefined") {
+    state.instantCompositionQuestionBank = sanitizedBank;
+  }
+  if (typeof window !== "undefined") {
+    window.instantCompositionQuestionBank = sanitizedBank;
+  }
+  return sanitizedBank;
+}
+
 function getInstantCompositionSampleBank() {
-  const source = Array.isArray(window?.instantCompositionQuestionBank) ? window.instantCompositionQuestionBank : [];
+  const source = Array.isArray(state?.instantCompositionQuestionBank)
+    ? state.instantCompositionQuestionBank
+    : Array.isArray(window?.instantCompositionQuestionBank)
+      ? window.instantCompositionQuestionBank
+      : [];
   const mergedById = new Map();
 
-  [...source, ...INSTANT_COMPOSITION_SAMPLE_BANK].forEach((row) => {
+  const importedBank = syncInstantCompositionQuestionBankState(source);
+  [...INSTANT_COMPOSITION_SAMPLE_BANK, ...importedBank].forEach((row) => {
     if (!row || typeof row !== "object") return;
     const id = String(row.id || "").trim();
     if (!id) return;
     const normalized = {
       id,
-      unit: String(row.unit || "名詞・代名詞").trim(),
-      japanese: String(row.japanese || "").trim(),
-      answer: String(row.answer || "").trim()
+      unit: normalizeInstantCompositionImportedText(row.unit || "名詞・代名詞"),
+      japanese: normalizeInstantCompositionImportedText(row.japanese || ""),
+      answer: normalizeInstantCompositionImportedText(row.answer || "")
     };
     if (!normalized.unit || !normalized.japanese || !normalized.answer) return;
     mergedById.set(id, normalized);
@@ -13404,6 +13668,12 @@ function loadState() {
       };
     });
     mergedState.review.records = migrateStoredReviewData(parsed.review, mergedState.items);
+    const savedInstantCompositionBank = Array.isArray(parsed.instantCompositionQuestionBank)
+      ? parsed.instantCompositionQuestionBank
+      : Array.isArray(parsed.state?.instantCompositionQuestionBank)
+        ? parsed.state.instantCompositionQuestionBank
+        : [];
+    mergedState.instantCompositionQuestionBank = sanitizeInstantCompositionQuestionBank(savedInstantCompositionBank);
     mergedState.session = null;
     return mergedState;
   } catch (error) {
@@ -17363,6 +17633,7 @@ function bindEvents() {
     });
   }
 
+  bindInstantCompositionImportHandlers();
   renderInstantCompositionWeakButtonState();
 
   if (typingControls.every((control) => Boolean(control))) {
