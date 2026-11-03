@@ -2390,11 +2390,23 @@ p {
   color: var(--text-color);
 }
 
-.instant-composition-answer-input {
+.instant-composition-answer-form .instant-composition-answer-input {
+  flex: 0 0 auto;
   width: min(100%, 760px);
   min-height: 52px;
+  height: auto;
   font-size: clamp(1.15rem, 1vw + 0.9rem, 1.6rem);
   padding: 12px 14px;
+  display: block;
+  text-align: left;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: none;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .instant-composition-answer-actions {
@@ -2505,7 +2517,7 @@ p {
     font-size: 1.2rem;
   }
 
-  .instant-composition-answer-input {
+  .instant-composition-answer-form .instant-composition-answer-input {
     font-size: 1.1rem;
     min-height: 48px;
   }

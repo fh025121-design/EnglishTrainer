@@ -1191,18 +1191,18 @@ const INSTANT_COMPOSITION_CONTRACTION_EXPANSIONS = Object.freeze({
 
 function stripInstantCompositionResponseSeparator(value) {
   return String(value || "")
-    // 文末記号(?!.。！？)直後の区切りハイフンを除去(例: "like it? - No" → "like it? No")
-    .replace(/([.!?！？。])\s*[-–—]+\s*/g, "$1 ")
+    // 文末記号(?!.。！？)直後の区切りハイフン・ダッシュ類を除去(例: "like it? - No" → "like it? No")
+    .replace(/([.!?！？。])\s*[-–—―−－]+\s*/g, "$1 ")
     // 空白で囲まれた単独ハイフンを除去(単語内ハイフン twenty-one は対象外)
-    .replace(/\s+[-–—]+\s+/g, " ");
+    .replace(/\s+[-–—―−－]+\s+/g, " ");
 }
 
 function splitInstantCompositionAnswerDisplayLines(value) {
   const text = String(value || "").trim();
   if (!text) return [];
   return text
-    .replace(/([.!?！？。])\s*[-–—]+\s+/g, "$1\n")
-    .replace(/\s+[-–—]+\s+/g, "\n")
+    .replace(/([.!?！？。])\s*[-–—―−－]+\s*/g, "$1\n")
+    .replace(/\s+[-–—―−－]+\s+/g, "\n")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
@@ -1473,6 +1473,30 @@ function speakInstantCompositionAnswer(text) {
   }
 }
 
+function adjustInstantCompositionAnswerInputHeight(input) {
+  if (!input) return;
+  input.style.height = "auto";
+  input.style.height = `${Math.max(Number(input.scrollHeight) || 0, 52)}px`;
+}
+
+function applyInstantCompositionAnswerAutoWrap(input) {
+  if (!input) return;
+  const original = String(input.value || "");
+  // 文末記号(.?!)+半角スペース+次の文字 → スペースを改行に置換(文字数不変でカーソル位置維持)
+  const converted = original.replace(/([.!?]) (?=\S)/g, "$1\n");
+  if (converted !== original) {
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
+    input.value = converted;
+    try {
+      input.setSelectionRange(selectionStart, selectionEnd);
+    } catch (_error) {
+      // カーソル復元不可時は末尾のまま
+    }
+  }
+  adjustInstantCompositionAnswerInputHeight(input);
+}
+
 function renderInstantCompositionQuestionScreen() {
   const session = getInstantCompositionCurrentSession();
   if (!session || !Array.isArray(session.questions) || !session.questions.length) {
@@ -1516,6 +1540,19 @@ function renderInstantCompositionQuestionScreen() {
   if (answerInput) {
     answerInput.value = "";
     answerInput.disabled = false;
+    answerInput.oninput = () => applyInstantCompositionAnswerAutoWrap(answerInput);
+    answerInput.onkeydown = (event) => {
+      if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
+        return;
+      }
+      event.preventDefault();
+      const submitButton = document.getElementById("instantCompositionSubmitBtn");
+      if (answerInput.disabled || (submitButton && submitButton.disabled)) {
+        return;
+      }
+      submitInstantCompositionAnswer();
+    };
+    adjustInstantCompositionAnswerInputHeight(answerInput);
     answerInput.focus();
   }
 
@@ -1649,7 +1686,8 @@ function submitInstantCompositionAnswer() {
   }
 
   const input = document.getElementById("instantCompositionAnswerInput");
-  const typedAnswer = input ? String(input.value || "").trim() : "";
+  // 自動改行(表示上の処理)を空白に戻して採点・保存する(改行の有無で正誤判定を変えない)
+  const typedAnswer = input ? String(input.value || "").replace(/\s+/g, " ").trim() : "";
   if (!typedAnswer) {
     input?.focus();
     return;
@@ -1954,6 +1992,7 @@ function finishInstantCompositionSession() {
   if (answerInput) {
     answerInput.value = "";
     answerInput.disabled = true;
+    adjustInstantCompositionAnswerInputHeight(answerInput);
   }
 
   const finishBackBtn = document.getElementById("instantCompositionFinishBackBtn");
