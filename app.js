@@ -829,6 +829,10 @@ function getTrainingMenuPointSummaryMap() {
     idiom: {
       earned: Math.max(0, Number(modeRow.idiom) || 0),
       cap: Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode.idiom) || 0)
+    },
+    "instant-composition": {
+      earned: Math.max(0, Number(modeRow["instant-composition"]) || 0),
+      cap: Math.max(0, Number(POINT_SYSTEM_CONFIG.dailyCapByTrainingMode["instant-composition"]) || 0)
     }
   };
 }
@@ -1015,7 +1019,12 @@ function startInstantCompositionSession(selection = getInstantCompositionSelecti
     incorrectCount: 0,
     questionRecords: {},
     questionResults: {},
-    questionStates: {}
+    questionStates: {},
+    startedAt: Date.now(),
+    questionShownAt: 0,
+    activeStudySeconds: 0,
+    earnedPoints: 0,
+    historyRecorded: false
   };
   if (session.mode === "weak" && Array.isArray(session.questions)) {
     session.questions.forEach((question) => {
@@ -1352,6 +1361,8 @@ function renderInstantCompositionQuestionScreen() {
     return;
   }
 
+  session.questionShownAt = Date.now();
+
   const questionTitle = document.getElementById("instantCompositionQuestionTitle");
   if (questionTitle) {
     questionTitle.textContent = session.mode === "weak" ? "苦手特訓" : (session.unitName || "英作文特訓");
@@ -1564,6 +1575,17 @@ function submitInstantCompositionAnswer() {
 
   const effectiveJudgement = session.questionRecords[currentQuestion.id].firstJudgement || session.questionRecords[currentQuestion.id].finalJudgement || (isCorrect ? "correct" : "incorrect");
 
+  const questionShownAt = Number(session.questionShownAt);
+  if (Number.isFinite(questionShownAt) && questionShownAt > 0 && Date.now() > questionShownAt) {
+    session.activeStudySeconds = Math.max(0, Number(session.activeStudySeconds) || 0) + Math.max(1, Math.ceil((Date.now() - questionShownAt) / 1000));
+  }
+  session.questionShownAt = Date.now();
+
+  if (isFirstAttempt) {
+    const earnedNow = awardPointsForTrainingMode("instant-composition");
+    session.earnedPoints = Math.max(0, Number(session.earnedPoints) || 0) + Math.max(0, Number(earnedNow) || 0);
+  }
+
   applyInstantCompositionWeakTracking({
     mode: session.mode,
     questionId: currentQuestion.id,
@@ -1726,11 +1748,53 @@ function submitInstantCompositionAnswer() {
   questionState.isSubmitting = false;
 }
 
+function buildInstantCompositionLearningHistoryEntry(sessionLike, reason) {
+  const endedAt = Date.now();
+  const startedAtRaw = Number(sessionLike?.startedAt);
+  const startedAt = Number.isFinite(startedAtRaw) && startedAtRaw > 0 ? startedAtRaw : endedAt;
+  const records = sessionLike?.questionRecords && typeof sessionLike.questionRecords === "object"
+    ? Object.values(sessionLike.questionRecords)
+    : [];
+  const answeredRecords = records.filter((record) => Number(record?.attemptCount || 0) > 0);
+  const answerCount = answeredRecords.length;
+  const correctCount = answeredRecords.filter((record) => String(record?.firstJudgement || "") === "correct").length;
+  const activeStudySeconds = Math.max(0, Number(sessionLike?.activeStudySeconds) || 0);
+  return {
+    learnedAt: formatTimestampToJstDisplay(endedAt),
+    startedAt,
+    endedAt,
+    startedAtDisplay: formatTimestampToJstDisplay(startedAt),
+    endedAtDisplay: formatTimestampToJstDisplay(endedAt),
+    activeStudySeconds: answerCount > 0 ? Math.max(1, activeStudySeconds) : activeStudySeconds,
+    mode: LEARNING_MODE.INSTANT_COMPOSITION,
+    dayNumber: "",
+    questionCount: answerCount,
+    correctCount,
+    earnedPoints: Math.max(0, Number(sessionLike?.earnedPoints) || 0),
+    accuracy: answerCount ? Math.round((correctCount / answerCount) * 100) : 0,
+    completedReason: String(reason || "completed"),
+    deviceType: "pc",
+    deviceId: getPcBrowserDeviceId(),
+    deviceName: getPcBrowserDeviceNameRaw()
+  };
+}
+
+function recordInstantCompositionLearningHistory(sessionLike, reason) {
+  if (!sessionLike || typeof sessionLike !== "object") return;
+  if (sessionLike.historyRecorded) return;
+  const entry = buildInstantCompositionLearningHistoryEntry(sessionLike, reason);
+  if (entry.questionCount <= 0) return;
+  sessionLike.historyRecorded = true;
+  appendLearningHistoryEntry(entry);
+}
+
 function finishInstantCompositionSession() {
   const session = getInstantCompositionCurrentSession();
   if (!session) {
     return;
   }
+
+  recordInstantCompositionLearningHistory(session, "completed");
 
   const correctCount = session.results.filter((entry) => entry.judgement === "correct").length;
   const incorrectCount = session.results.filter((entry) => entry.judgement === "incorrect").length;
@@ -3267,14 +3331,16 @@ const POINT_SYSTEM_CONFIG = Object.freeze({
     preposition: 1,
     response: 1,
     "irregular-verb": 2,
-    idiom: 1
+    idiom: 1,
+    "instant-composition": 2
   }),
   dailyCapByTrainingMode: Object.freeze({
     preposition: 30,
     response: 40,
     challenge: 300,
     "irregular-verb": 100,
-    idiom: 30
+    idiom: 30,
+    "instant-composition": 400
   }),
   reservedBonuses: Object.freeze({
     weaknessClear: 0,
@@ -5675,7 +5741,8 @@ const LEARNING_MODE = Object.freeze({
   REVIEW: "過去の間違い",
   PREPOSITION: "前置詞特訓",
   RESPONSE: "応答文特訓",
-  IRREGULAR_VERB: "不規則動詞特訓"
+  IRREGULAR_VERB: "不規則動詞特訓",
+  INSTANT_COMPOSITION: "英作文特訓"
 });
 
 const VALID_LEARNING_MODE_SET = new Set(Object.values(LEARNING_MODE));
@@ -5697,6 +5764,8 @@ function normalizeLearningMode(mode) {
     normalizedMode = LEARNING_MODE.RESPONSE;
   } else if (rawMode === "irregular-verb" || rawMode === "irregular-verb-training" || rawMode === LEARNING_MODE.IRREGULAR_VERB) {
     normalizedMode = LEARNING_MODE.IRREGULAR_VERB;
+  } else if (rawMode === "instant-composition" || rawMode === "instant-composition-training" || rawMode === LEARNING_MODE.INSTANT_COMPOSITION) {
+    normalizedMode = LEARNING_MODE.INSTANT_COMPOSITION;
   }
 
   if (!VALID_LEARNING_MODE_SET.has(normalizedMode)) {
@@ -10361,6 +10430,7 @@ function createDefaultPointDayModeRow() {
     preposition: 0,
     response: 0,
     "irregular-verb": 0,
+    "instant-composition": 0,
     challenge: 0
   };
 }
@@ -10378,6 +10448,7 @@ function getTrainingDailyPointModeRow(pointState, todayKey) {
     preposition: Math.max(0, Number(sourceRow.preposition) || 0),
     response: Math.max(0, Number(sourceRow.response) || 0),
     "irregular-verb": Math.max(0, Number(sourceRow["irregular-verb"]) || 0),
+    "instant-composition": Math.max(0, Number(sourceRow["instant-composition"]) || 0),
     challenge: Math.max(0, Number(sourceRow.challenge) || 0)
   };
 }
@@ -10390,6 +10461,7 @@ function getTrainingDailyPointBreakdownEntries(todayModeRow) {
     ["前置詞", todayModeRow.preposition],
     ["応答文", todayModeRow.response],
     ["不規則動詞", todayModeRow["irregular-verb"]],
+    ["英作文", todayModeRow["instant-composition"]],
     ["過去の間違い", todayModeRow.challenge]
   ];
 }
@@ -10997,6 +11069,7 @@ function sanitizePointState(value) {
           response: Math.max(0, Math.floor(Number(safeRow.response) || 0)),
           challenge: Math.max(0, Math.floor(Number(safeRow.challenge) || 0)),
           "irregular-verb": Math.max(0, Math.floor(Number(safeRow["irregular-verb"]) || 0)),
+          "instant-composition": Math.max(0, Math.floor(Number(safeRow["instant-composition"]) || 0)),
           idiom: Math.max(0, Math.floor(Number(safeRow.idiom) || 0))
         }];
       })
@@ -11341,6 +11414,9 @@ function inferPointModeFromLearningHistoryEntry(mode) {
   }
   if (normalized === "irregular-verb" || normalized === "irregular-verb-training" || normalized === "不規則動詞特訓") {
     return "irregular-verb";
+  }
+  if (normalized === "instant-composition" || normalized === "instant-composition-training" || normalized === "英作文特訓") {
+    return "instant-composition";
   }
   if (normalized === "challenge" || normalized === "review" || normalized === "過去の間違い") {
     return "challenge";
@@ -18432,6 +18508,15 @@ function bindEvents() {
           showTicketAfter: true
         });
         return;
+      }
+      if (currentScreenId === "instantCompositionQuestionScreen") {
+        const instantCompositionSessionForHistory = getInstantCompositionCurrentSession();
+        if (instantCompositionSessionForHistory) {
+          recordInstantCompositionLearningHistory(instantCompositionSessionForHistory, "interrupted");
+          if (typeof saveState === "function") {
+            saveState();
+          }
+        }
       }
       if (currentScreenId === "resultScreen") {
         returnHomeFromInterruptedResult();

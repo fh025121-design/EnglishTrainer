@@ -112,7 +112,7 @@
         icon: "⚡",
         mode: "instant-composition",
         isReady: true,
-        pointLabel: "ポイントなし"
+        pointLabel: formatPointSummary("instant-composition", pointConfig, pointSummaryMap)
       }
     ];
   }
