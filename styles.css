@@ -2320,6 +2320,13 @@ p {
   gap: 14px;
 }
 
+.instant-composition-today-points {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--text-color);
+}
+
 .instant-composition-section-title {
   margin: 4px 0 0;
   font-size: 1.25rem;

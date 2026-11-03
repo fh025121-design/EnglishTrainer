@@ -940,9 +940,22 @@ function bindTrainingMenuCardHandlers() {
 function openInstantCompositionMenuScreen() {
   renderInstantCompositionUnitList();
   renderInstantCompositionMenuActivityStats();
+  renderInstantCompositionTodayPoints();
   renderInstantCompositionWeakButtonState();
   bindInstantCompositionSelectionHandlers();
   showScreen("instantCompositionMenuScreen");
+}
+
+function renderInstantCompositionTodayPoints() {
+  const pointsEl = document.getElementById("instantCompositionTodayPoints");
+  if (!pointsEl) return;
+  const pointState = getPointState();
+  const todayKey = getPointTodayKey();
+  const todayModeRow = pointState?.dailyEarnedByModeByDate?.[todayKey] && typeof pointState.dailyEarnedByModeByDate[todayKey] === "object"
+    ? pointState.dailyEarnedByModeByDate[todayKey]
+    : {};
+  const earnedToday = Math.max(0, Number(todayModeRow["instant-composition"]) || 0);
+  pointsEl.textContent = `本日獲得ポイント　${earnedToday}P`;
 }
 
 function renderInstantCompositionMenuActivityStats(stats = getInstantCompositionActivityStats()) {
@@ -18701,6 +18714,7 @@ function bindEvents() {
       if (currentScreenId === "instantCompositionMenuScreen") {
         renderInstantCompositionUnitList();
         renderInstantCompositionMenuActivityStats();
+        renderInstantCompositionTodayPoints();
         renderInstantCompositionWeakButtonState();
       }
     });
