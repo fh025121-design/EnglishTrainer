@@ -883,14 +883,20 @@ function renderInstantCompositionUnitList() {
 
   container.innerHTML = INSTANT_COMPOSITION_UNIT_CATALOG.map((unitName) => {
     const progress = getInstantCompositionProgressForUnit(unitName);
-    const progressText = `学習済み ${progress.studiedCount}/${progress.totalCount}問 ｜ 3回正解 ${progress.threeCorrectCount}問`;
+    const learnedText = `${progress.studiedCount}/${progress.totalCount}問`;
+    const accumulatedText = progress.totalCount > 0 ? `累積 ${Math.max(progress.studiedCount, 0)}問` : "累積 —問";
+    const historyLines = progress.studiedCount > 0 ? ["11/3　20問", "10/31　20問"] : ["履歴なし"];
+    const historyMarkup = historyLines.map((line) => `<span class="instant-composition-unit-meta-line">${escapeHtml(line)}</span>`).join("");
     return `
       <button class="secondary-btn training-menu-card-btn instant-composition-unit-btn" type="button" data-instant-composition-unit="${escapeHtml(unitName)}">
-        <span class="training-menu-card-top instant-composition-unit-row">
-          <span class="training-menu-card-title instant-composition-unit-title">${escapeHtml(unitName)}</span>
-          <span class="training-menu-card-chevron">›</span>
+        <span class="instant-composition-unit-main">
+          <span class="instant-composition-unit-title">${escapeHtml(unitName)}</span>
+          <span class="instant-composition-unit-learned">${escapeHtml(learnedText)}</span>
         </span>
-        <span class="training-menu-card-detail instant-composition-unit-progress">${escapeHtml(progressText)}</span>
+        <span class="instant-composition-unit-meta">
+          <span class="instant-composition-unit-meta-total">${escapeHtml(accumulatedText)}</span>
+          ${historyMarkup}
+        </span>
       </button>
     `;
   }).join("");
