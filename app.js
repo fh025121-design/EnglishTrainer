@@ -690,6 +690,69 @@ function getInstantCompositionHistoryEntries() {
   return [];
 }
 
+function getInstantCompositionEntryJstDayKey(entry) {
+  const timestamp = Date.parse(String(entry?.createdAt || ""));
+  if (!Number.isFinite(timestamp)) return "";
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).format(new Date(timestamp));
+  } catch (_error) {
+    return "";
+  }
+}
+
+function getInstantCompositionActivityStats() {
+  const createBucket = () => ({ total: 0, byDay: {} });
+  const stats = { random: createBucket(), weak: createBucket(), unitStats: {} };
+  const bank = getInstantCompositionSampleBank();
+  const unitByQuestionId = new Map(bank.map((question) => [
+    String(question.id || "").trim(),
+    getInstantCompositionCanonicalUnitName(question.unit || "名詞・代名詞")
+  ]));
+
+  getInstantCompositionHistoryEntries().forEach((entry) => {
+    const dayKey = getInstantCompositionEntryJstDayKey(entry);
+    const addTo = (bucket) => {
+      bucket.total += 1;
+      if (dayKey) {
+        bucket.byDay[dayKey] = (bucket.byDay[dayKey] || 0) + 1;
+      }
+    };
+    const mode = String(entry?.mode || "").trim();
+    if (mode === "random") {
+      addTo(stats.random);
+    } else if (mode === "weak") {
+      addTo(stats.weak);
+    }
+    const questionId = String(entry?.questionId || "").trim();
+    const rawUnitName = String(entry?.unitName || "").trim() || unitByQuestionId.get(questionId) || "";
+    const unitName = rawUnitName ? getInstantCompositionCanonicalUnitName(rawUnitName) : "";
+    if (unitName) {
+      stats.unitStats[unitName] = stats.unitStats[unitName] || createBucket();
+      addTo(stats.unitStats[unitName]);
+    }
+  });
+  return stats;
+}
+
+function buildInstantCompositionRecentDayLines(bucket) {
+  const byDay = bucket && typeof bucket.byDay === "object" ? bucket.byDay : {};
+  return Object.keys(byDay)
+    .sort()
+    .reverse()
+    .slice(0, 2)
+    .map((dayKey) => {
+      const parts = dayKey.split("-");
+      const month = Number(parts[1]) || 0;
+      const day = Number(parts[2]) || 0;
+      return `${month}/${day}　${byDay[dayKey]}問`;
+    });
+}
+
 function getInstantCompositionProgressSummary() {
   const bank = getInstantCompositionSampleBank();
   const questionMap = new Map(bank.map((question) => [String(question.id || "").trim(), question]));
@@ -876,20 +939,50 @@ function bindTrainingMenuCardHandlers() {
 
 function openInstantCompositionMenuScreen() {
   renderInstantCompositionUnitList();
+  renderInstantCompositionMenuActivityStats();
   renderInstantCompositionWeakButtonState();
   bindInstantCompositionSelectionHandlers();
   showScreen("instantCompositionMenuScreen");
+}
+
+function renderInstantCompositionMenuActivityStats(stats = getInstantCompositionActivityStats()) {
+  const applyToCard = (bucket, totalElementId, historyElementIds) => {
+    const totalEl = document.getElementById(totalElementId);
+    if (totalEl) {
+      totalEl.textContent = `${Math.max(0, Number(bucket?.total) || 0)}問`;
+    }
+    const lines = buildInstantCompositionRecentDayLines(bucket);
+    historyElementIds.forEach((elementId, index) => {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      if (lines[index]) {
+        el.textContent = lines[index];
+        el.classList.remove("hidden");
+      } else if (index === 0) {
+        el.textContent = "履歴なし";
+        el.classList.remove("hidden");
+      } else {
+        el.textContent = "";
+        el.classList.add("hidden");
+      }
+    });
+  };
+  applyToCard(stats.random, "instantCompositionRandomTotal", ["instantCompositionRandomHistory1", "instantCompositionRandomHistory2"]);
+  applyToCard(stats.weak, "instantCompositionWeakTotal", ["instantCompositionWeakHistory1", "instantCompositionWeakHistory2"]);
 }
 
 function renderInstantCompositionUnitList() {
   const container = document.getElementById("instantCompositionUnitList");
   if (!container) return;
 
+  const activityStats = getInstantCompositionActivityStats();
   container.innerHTML = INSTANT_COMPOSITION_UNIT_CATALOG.map((unitName) => {
     const progress = getInstantCompositionProgressForUnit(unitName);
     const learnedText = `${progress.studiedCount}/${progress.totalCount}問`;
-    const accumulatedText = progress.totalCount > 0 ? `累積 ${Math.max(progress.studiedCount, 0)}問` : "累積 —問";
-    const historyLines = progress.studiedCount > 0 ? ["11/3　20問", "10/31　20問"] : ["履歴なし"];
+    const unitBucket = activityStats.unitStats[getInstantCompositionCanonicalUnitName(unitName)] || { total: 0, byDay: {} };
+    const accumulatedText = `累積 ${Math.max(0, Number(unitBucket.total) || 0)}問`;
+    const recentLines = buildInstantCompositionRecentDayLines(unitBucket);
+    const historyLines = recentLines.length ? recentLines : ["履歴なし"];
     const historyMarkup = historyLines.map((line) => `<span class="instant-composition-unit-meta-line">${escapeHtml(line)}</span>`).join("");
     return `
       <button class="secondary-btn training-menu-card-btn instant-composition-unit-btn" type="button" data-instant-composition-unit="${escapeHtml(unitName)}">
@@ -13785,6 +13878,12 @@ function loadState() {
         ? parsed.state.instantCompositionQuestionBank
         : [];
     mergedState.instantCompositionQuestionBank = sanitizeInstantCompositionQuestionBank(savedInstantCompositionBank);
+    const savedInstantCompositionHistory = Array.isArray(parsed.instantCompositionHistory)
+      ? parsed.instantCompositionHistory
+      : Array.isArray(parsed.state?.instantCompositionHistory)
+        ? parsed.state.instantCompositionHistory
+        : [];
+    mergedState.instantCompositionHistory = savedInstantCompositionHistory.filter((entry) => entry && typeof entry === "object");
     mergedState.session = null;
     return mergedState;
   } catch (error) {
@@ -18529,6 +18628,11 @@ function bindEvents() {
       goBackScreen();
       if (currentScreenId === "homeScreen") {
         renderHome();
+      }
+      if (currentScreenId === "instantCompositionMenuScreen") {
+        renderInstantCompositionUnitList();
+        renderInstantCompositionMenuActivityStats();
+        renderInstantCompositionWeakButtonState();
       }
     });
   });
