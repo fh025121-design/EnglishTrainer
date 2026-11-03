@@ -1189,13 +1189,41 @@ const INSTANT_COMPOSITION_CONTRACTION_EXPANSIONS = Object.freeze({
   "there'll": ["there will"]
 });
 
-function normalizeInstantCompositionAnswer(value) {
+function stripInstantCompositionResponseSeparator(value) {
   return String(value || "")
-    .normalize("NFKC")
-    .replace(/\u00A0/g, " ")
-    .replace(/\u3000/g, " ")
-    .replace(/[\u2018\u2019\uFF07\u02BC]/g, "'")
-    .replace(/[\u201C\u201D\uFF02]/g, '"')
+    // 文末記号(?!.。！？)直後の区切りハイフンを除去(例: "like it? - No" → "like it? No")
+    .replace(/([.!?！？。])\s*[-–—]+\s*/g, "$1 ")
+    // 空白で囲まれた単独ハイフンを除去(単語内ハイフン twenty-one は対象外)
+    .replace(/\s+[-–—]+\s+/g, " ");
+}
+
+function splitInstantCompositionAnswerDisplayLines(value) {
+  const text = String(value || "").trim();
+  if (!text) return [];
+  return text
+    .replace(/([.!?！？。])\s*[-–—]+\s+/g, "$1\n")
+    .replace(/\s+[-–—]+\s+/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function setInstantCompositionMultilineText(element, prefix, value) {
+  if (!element) return;
+  const lines = splitInstantCompositionAnswerDisplayLines(value);
+  const safeLines = lines.length ? lines : [String(value || "")];
+  element.innerHTML = `${escapeHtml(prefix || "")}${safeLines.map((line) => escapeHtml(line)).join("<br>")}`;
+}
+
+function normalizeInstantCompositionAnswer(value) {
+  return stripInstantCompositionResponseSeparator(
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\u00A0/g, " ")
+      .replace(/\u3000/g, " ")
+      .replace(/[\u2018\u2019\uFF07\u02BC]/g, "'")
+      .replace(/[\u201C\u201D\uFF02]/g, '"')
+  )
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
@@ -1294,12 +1322,14 @@ function splitInstantCompositionDiffToken(rawToken) {
 }
 
 function tokenizeInstantCompositionDiffTokens(value) {
-  return String(value || "")
-    .normalize("NFKC")
-    .replace(/\u00A0/g, " ")
-    .replace(/\u3000/g, " ")
-    .replace(/[\u2018\u2019\uFF07\u02BC]/g, "'")
-    .replace(/[\u201C\u201D\uFF02]/g, '"')
+  return stripInstantCompositionResponseSeparator(
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\u00A0/g, " ")
+      .replace(/\u3000/g, " ")
+      .replace(/[\u2018\u2019\uFF07\u02BC]/g, "'")
+      .replace(/[\u201C\u201D\uFF02]/g, '"')
+  )
     .split(/\s+/)
     .flatMap((segment) => splitInstantCompositionDiffToken(segment))
     .filter((token) => token && token.value && String(token.value).trim());
@@ -1479,7 +1509,7 @@ function renderInstantCompositionQuestionScreen() {
 
   const prompt = document.getElementById("instantCompositionPrompt");
   if (prompt) {
-    prompt.textContent = currentQuestion.japanese || "問題を読み込み中です。";
+    setInstantCompositionMultilineText(prompt, "", currentQuestion.japanese || "問題を読み込み中です。");
   }
 
   const answerInput = document.getElementById("instantCompositionAnswerInput");
@@ -1765,7 +1795,7 @@ function submitInstantCompositionAnswer() {
     speakInstantCompositionAnswer(currentQuestion.answer || "");
 
     if (answerBox) {
-      answerBox.textContent = `模範解答: ${currentQuestion.answer || ""}`;
+      setInstantCompositionMultilineText(answerBox, "模範解答: ", currentQuestion.answer || "");
       answerBox.classList.add("hidden");
     }
     if (diffBox) {
@@ -1803,7 +1833,7 @@ function submitInstantCompositionAnswer() {
 
   setInstantCompositionResultBadge(false);
   if (answerBox) {
-    answerBox.textContent = `模範解答: ${currentQuestion.answer || ""}`;
+    setInstantCompositionMultilineText(answerBox, "模範解答: ", currentQuestion.answer || "");
     answerBox.classList.remove("hidden");
   }
   if (diffBox) {
