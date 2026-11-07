@@ -418,6 +418,162 @@ function bindInstantCompositionImportHandlers() {
   });
 }
 
+function sanitizeSchoolTestVocabQuestionBank(rows) {
+  const byId = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    if (!row || typeof row !== "object") return;
+    const id = String(row.id || "").trim();
+    const unit = String(row.unit || "").trim();
+    const japanese = normalizeInstantCompositionImportedText(row.japanese || "");
+    const answer = normalizeInstantCompositionImportedText(row.answer || "");
+    if (!id || !unit || !japanese || !answer) return;
+    byId.set(id, { id, unit, japanese, answer });
+  });
+  return Array.from(byId.values());
+}
+
+function getSchoolTestVocabQuestionBank() {
+  const rawBank = typeof state !== "undefined" && Array.isArray(state.schoolTestVocabQuestionBank)
+    ? state.schoolTestVocabQuestionBank
+    : [];
+  const sanitized = sanitizeSchoolTestVocabQuestionBank(rawBank);
+  // Unitの数値昇順(Unit4→Unit5→Unit6)、同一Unit内は登録順を維持
+  return sanitized
+    .map((question, index) => ({ question, index }))
+    .sort((left, right) => {
+      const leftUnit = Number((String(left.question.unit).match(/\d+/) || [Number.MAX_SAFE_INTEGER])[0]);
+      const rightUnit = Number((String(right.question.unit).match(/\d+/) || [Number.MAX_SAFE_INTEGER])[0]);
+      if (leftUnit !== rightUnit) return leftUnit - rightUnit;
+      return left.index - right.index;
+    })
+    .map((entry) => entry.question);
+}
+
+function countSchoolTestAnswerWords(answer) {
+  return String(answer || "")
+    .normalize("NFKC")
+    .replace(/[\u2018\u2019\uFF07\u02BC]/g, "'")
+    .replace(/[.,!?;:"“”()]/g, " ")
+    .split(/\s+/)
+    .filter((token) => /[A-Za-z0-9']/.test(token))
+    .length;
+}
+
+async function importSchoolTestVocabQuestionMaster(file) {
+  if (!file) {
+    throw new Error("Excelファイルを選択してください。");
+  }
+  if (!window.XLSX) {
+    throw new Error("Excel読み込みライブラリを利用できません。");
+  }
+  const fileName = String(file.name || "");
+
+  const workbook = window.XLSX.read(await file.arrayBuffer(), { type: "array", raw: false, cellDates: true });
+  if (!Array.isArray(workbook.SheetNames) || workbook.SheetNames.length !== 1) {
+    throw new Error("Excelファイルは1シートのみ対応しています。別シートを含むファイルは取り込みできません。");
+  }
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!sheet) {
+    throw new Error("Excelシートを読み取れませんでした。");
+  }
+  const rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, blankrows: false });
+  if (!Array.isArray(rows) || rows.length < 1) {
+    throw new Error("Excelファイルに問題データが見つかりませんでした。");
+  }
+
+  // 1行目がヘッダー(A列が「問題ID」)ならスキップし、A〜D列固定で読み取る
+  const firstCell = String((Array.isArray(rows[0]) ? rows[0][0] : "") ?? "").replace(/\s+/g, "").trim();
+  const dataRows = firstCell === "問題ID" ? rows.slice(1) : rows;
+  if (!dataRows.length) {
+    throw new Error("Excelファイルに問題データが見つかりませんでした。");
+  }
+
+  const seenIds = new Set();
+  const nextBank = [];
+  dataRows.forEach((row, offset) => {
+    if (!Array.isArray(row) || row.every((cell) => String(cell ?? "").trim() === "")) {
+      return;
+    }
+    const rowNumber = offset + (firstCell === "問題ID" ? 2 : 1);
+    const rawId = String(row[0] ?? "").replace(/[\uFEFF\s]+/g, "").trim();
+    const rawUnit = String(row[1] ?? "").replace(/\s+/g, "").trim();
+    const rawJapanese = normalizeInstantCompositionImportedText(String(row[2] ?? "").trim()).replace(/\s{2,}/g, " ");
+    const rawAnswer = normalizeInstantCompositionImportedText(String(row[3] ?? "").trim()).replace(/\s{2,}/g, " ");
+
+    if (!rawId) throw new Error(`問題IDが空欄です。${rowNumber}行目`);
+    if (!rawUnit) throw new Error(`Unitが空欄です。${rowNumber}行目`);
+    if (!rawJapanese) throw new Error(`日本語の問題が空欄です。${rowNumber}行目`);
+    if (!rawAnswer) throw new Error(`英語の正解が空欄です。${rowNumber}行目`);
+    if (seenIds.has(rawId)) throw new Error(`問題IDの重複です。問題ID: ${rawId}（${rowNumber}行目）`);
+
+    seenIds.add(rawId);
+    nextBank.push({ id: rawId, unit: rawUnit, japanese: rawJapanese, answer: rawAnswer });
+  });
+
+  if (!nextBank.length) {
+    throw new Error("Excelファイルに問題データが見つかりませんでした。");
+  }
+
+  const previousBank = sanitizeSchoolTestVocabQuestionBank(
+    typeof state !== "undefined" && Array.isArray(state.schoolTestVocabQuestionBank) ? state.schoolTestVocabQuestionBank : []
+  );
+  const previousIds = new Set(previousBank.map((question) => question.id));
+  const nextIds = new Set(nextBank.map((question) => question.id));
+  const summary = {
+    total: nextBank.length,
+    added: nextBank.filter((question) => !previousIds.has(question.id)).length,
+    updated: nextBank.filter((question) => previousIds.has(question.id)).length,
+    removed: previousBank.filter((question) => !nextIds.has(question.id)).length
+  };
+
+  const sanitizedNextBank = sanitizeSchoolTestVocabQuestionBank(nextBank);
+  if (typeof state !== "undefined") {
+    state.schoolTestVocabQuestionBank = sanitizedNextBank;
+    state.schoolTestVocabImportMeta = {
+      fileName,
+      importedAt: Date.now(),
+      summary
+    };
+  }
+  if (typeof saveState === "function") {
+    saveState();
+  }
+  return { bank: sanitizedNextBank, summary, fileName };
+}
+
+async function handleSchoolTestVocabExcelImport(file) {
+  try {
+    const result = await importSchoolTestVocabQuestionMaster(file);
+    renderSchoolTestMenuCards();
+    if (typeof alert === "function") {
+      alert(`学校テスト対策（教科書 単語・熟語）を取り込みました。\n登録: ${result.summary.total}問（新規 ${result.summary.added} / 更新 ${result.summary.updated} / 除外 ${result.summary.removed}）`);
+    }
+  } catch (error) {
+    const message = error && error.message ? error.message : "学校テスト対策問題マスターの取り込みに失敗しました。";
+    if (typeof alert === "function") {
+      alert(message);
+    }
+  }
+}
+
+function bindSchoolTestVocabImportHandlers() {
+  const importBtn = document.getElementById("importSchoolTestVocabMasterBtn");
+  const importInput = document.getElementById("schoolTestVocabMasterFileInput");
+  if (!importBtn || !importInput) {
+    return;
+  }
+  importBtn.addEventListener("click", () => {
+    importInput.click();
+  });
+  importInput.addEventListener("change", async (event) => {
+    const input = event.target;
+    const file = input && input.files && input.files[0] ? input.files[0] : null;
+    if (!file) return;
+    await handleSchoolTestVocabExcelImport(file);
+    input.value = "";
+  });
+}
+
 function syncInstantCompositionQuestionBankState(nextBank = []) {
   const sanitizedBank = sanitizeInstantCompositionQuestionBank(nextBank);
   if (typeof state !== "undefined") {
@@ -1090,6 +1246,9 @@ function shuffleInstantCompositionQuestions(sourceQuestions) {
 function buildInstantCompositionQuestionSet(selection = getInstantCompositionSelection()) {
   if (!selection) return [];
   const mode = String(selection.mode || "").trim();
+  if (mode === "school-test-vocab") {
+    return getSchoolTestVocabQuestionBank();
+  }
   if (mode === "random") {
     return getInstantCompositionRandomQuestions(Math.max(1, Math.min(20, Number(selection.questionCount) || 20)));
   }
@@ -1526,16 +1685,27 @@ function renderInstantCompositionQuestionScreen() {
     return;
   }
 
+  const questionEyebrow = document.querySelector("#instantCompositionQuestionScreen .screen-header .eyebrow");
+  if (questionEyebrow) {
+    questionEyebrow.textContent = session.mode === "school-test-vocab" ? "学校テスト対策" : "英作文特訓";
+  }
+
   session.questionShownAt = Date.now();
 
   const questionTitle = document.getElementById("instantCompositionQuestionTitle");
   if (questionTitle) {
-    questionTitle.textContent = session.mode === "weak" ? "苦手特訓" : (session.unitName || "英作文特訓");
+    if (session.mode === "school-test-vocab") {
+      questionTitle.textContent = "教科書 単語・熟語";
+    } else {
+      questionTitle.textContent = session.mode === "weak" ? "苦手特訓" : (session.unitName || "英作文特訓");
+    }
   }
 
   const questionMode = document.getElementById("instantCompositionQuestionMode");
   if (questionMode) {
-    if (session.mode === "random") {
+    if (session.mode === "school-test-vocab") {
+      questionMode.textContent = `学校テスト対策　${currentQuestion.unit || ""}`.trim();
+    } else if (session.mode === "random") {
       questionMode.textContent = "ランダム20問";
     } else if (session.mode === "weak") {
       questionMode.textContent = "苦手特訓";
@@ -1551,7 +1721,14 @@ function renderInstantCompositionQuestionScreen() {
 
   const prompt = document.getElementById("instantCompositionPrompt");
   if (prompt) {
-    setInstantCompositionMultilineText(prompt, "", currentQuestion.japanese || "問題を読み込み中です。");
+    let promptText = currentQuestion.japanese || "問題を読み込み中です。";
+    if (session.mode === "school-test-vocab") {
+      const wordCount = countSchoolTestAnswerWords(currentQuestion.answer);
+      if (wordCount >= 2) {
+        promptText += `（${wordCount}語）`;
+      }
+    }
+    setInstantCompositionMultilineText(prompt, "", promptText);
   }
 
   const answerInput = document.getElementById("instantCompositionAnswerInput");
@@ -1760,18 +1937,22 @@ function submitInstantCompositionAnswer() {
   }
   session.questionShownAt = Date.now();
 
-  if (isFirstAttempt && isCorrect) {
+  const isSchoolTestVocabSession = session.mode === "school-test-vocab";
+
+  if (isFirstAttempt && isCorrect && !isSchoolTestVocabSession) {
     const earnedNow = awardPointsForTrainingMode("instant-composition");
     session.earnedPoints = Math.max(0, Number(session.earnedPoints) || 0) + Math.max(0, Number(earnedNow) || 0);
   }
 
-  applyInstantCompositionWeakTracking({
-    mode: session.mode,
-    questionId: currentQuestion.id,
-    isCorrect,
-    isFirstAttempt: firstAttemptCount === 0
-  });
-  renderInstantCompositionWeakButtonState();
+  if (!isSchoolTestVocabSession) {
+    applyInstantCompositionWeakTracking({
+      mode: session.mode,
+      questionId: currentQuestion.id,
+      isCorrect,
+      isFirstAttempt: firstAttemptCount === 0
+    });
+    renderInstantCompositionWeakButtonState();
+  }
 
   const answerBox = document.getElementById("instantCompositionModelAnswer");
   const diffBox = document.getElementById("instantCompositionAnswerDiff");
@@ -1945,7 +2126,7 @@ function buildInstantCompositionLearningHistoryEntry(sessionLike, reason) {
     startedAtDisplay: formatTimestampToJstDisplay(startedAt),
     endedAtDisplay: formatTimestampToJstDisplay(endedAt),
     activeStudySeconds: answerCount > 0 ? Math.max(1, activeStudySeconds) : activeStudySeconds,
-    mode: LEARNING_MODE.INSTANT_COMPOSITION,
+    mode: String(sessionLike?.mode || "") === "school-test-vocab" ? LEARNING_MODE.SCHOOL_TEST : LEARNING_MODE.INSTANT_COMPOSITION,
     dayNumber: "",
     questionCount: answerCount,
     correctCount,
@@ -1978,10 +2159,12 @@ function finishInstantCompositionSession() {
   const correctCount = session.results.filter((entry) => entry.judgement === "correct").length;
   const incorrectCount = session.results.filter((entry) => entry.judgement === "incorrect").length;
   const scoreRate = session.results.length ? Math.round((correctCount / session.results.length) * 100) : 0;
+  const isSchoolTestVocabSession = session.mode === "school-test-vocab";
+  const summaryTitle = isSchoolTestVocabSession ? `${session.results.length}問終了` : "20問終了";
   const summaryBox = document.getElementById("instantCompositionSessionSummary");
   if (summaryBox) {
     summaryBox.innerHTML = `
-      <div class="instant-composition-summary-title">20問終了</div>
+      <div class="instant-composition-summary-title">${escapeHtml(summaryTitle)}</div>
       <div class="instant-composition-summary-grid">
         <div><span>正解数</span><strong>${correctCount}</strong></div>
         <div><span>不正解数</span><strong>${incorrectCount}</strong></div>
@@ -2026,7 +2209,11 @@ function finishInstantCompositionSession() {
       if (typeof saveState === "function") {
         saveState();
       }
-      openInstantCompositionMenuScreen();
+      if (isSchoolTestVocabSession) {
+        openSchoolTestMenuScreen();
+      } else {
+        openInstantCompositionMenuScreen();
+      }
     };
   }
 
@@ -2096,24 +2283,39 @@ function openTrainingMenuScreen() {
 }
 
 const SCHOOL_TEST_MENU_ITEMS = Object.freeze([
-  { id: "schoolTestTextbookVocabBtn", title: "教科書 単語・熟語", icon: "📖", mode: "school-test-textbook-vocab", isReady: false },
+  { id: "schoolTestTextbookVocabBtn", title: "教科書 単語・熟語", icon: "📖", mode: "school-test-textbook-vocab", isReady: true },
   { id: "schoolTestTextbookClozeBtn", title: "教科書 穴埋め", icon: "✏️", mode: "school-test-textbook-cloze", isReady: false },
   { id: "schoolTestTextbookCompositionBtn", title: "教科書 英作文", icon: "📝", mode: "school-test-textbook-composition", isReady: false },
   { id: "schoolTestPrintVocabBtn", title: "プリント 単語・熟語", icon: "📄", mode: "school-test-print-vocab", isReady: false },
   { id: "schoolTestPrintCompositionBtn", title: "プリント 英作文", icon: "🖊️", mode: "school-test-print-composition", isReady: false }
 ]);
 
+function startSchoolTestVocabSession() {
+  const bank = getSchoolTestVocabQuestionBank();
+  if (!bank.length) {
+    if (typeof alert === "function") {
+      alert("問題が登録されていません。設定画面の「学校テスト対策（教科書 単語・熟語）問題マスター」からExcelを取り込んでください。");
+    }
+    return;
+  }
+  startInstantCompositionSession({ mode: "school-test-vocab" });
+}
+
 function renderSchoolTestMenuCards() {
   const container = document.getElementById("schoolTestMenuCards");
   if (!container) return;
+  const vocabBankCount = getSchoolTestVocabQuestionBank().length;
   container.innerHTML = SCHOOL_TEST_MENU_ITEMS.map((item) => {
     const isReady = item.isReady !== false;
+    const pointLabel = item.mode === "school-test-textbook-vocab"
+      ? (vocabBankCount ? `登録 ${vocabBankCount}問` : "問題未登録")
+      : "準備中";
     return `<button id="${item.id}" class="secondary-btn training-menu-card-btn${isReady ? "" : " is-disabled"}" type="button" data-training-mode="${item.mode || ""}">
       <span class="training-menu-card-top">
         <span class="training-menu-card-title"><span class="training-menu-card-icon">${escapeHtml(item.icon || "✦")}</span>${escapeHtml(item.title || "特訓")}</span>
         <span class="training-menu-card-chevron">›</span>
       </span>
-      <span class="training-menu-card-point">${escapeHtml(item.pointLabel || "準備中")}</span>
+      <span class="training-menu-card-point">${escapeHtml(pointLabel)}</span>
     </button>`;
   }).join("");
 
@@ -2121,11 +2323,10 @@ function renderSchoolTestMenuCards() {
     const button = document.getElementById(item.id);
     if (!button) return;
     button.onclick = () => {
-      if (!item.isReady) {
-        showTrainingComingSoonNotice();
+      if (item.mode === "school-test-textbook-vocab") {
+        startSchoolTestVocabSession();
         return;
       }
-      // 各モードの実装時にここへ処理を接続する
       showTrainingComingSoonNotice();
     };
   });
@@ -5963,7 +6164,8 @@ const LEARNING_MODE = Object.freeze({
   PREPOSITION: "前置詞特訓",
   RESPONSE: "応答文特訓",
   IRREGULAR_VERB: "不規則動詞特訓",
-  INSTANT_COMPOSITION: "英作文特訓"
+  INSTANT_COMPOSITION: "英作文特訓",
+  SCHOOL_TEST: "学校テスト対策"
 });
 
 const VALID_LEARNING_MODE_SET = new Set(Object.values(LEARNING_MODE));
@@ -5987,6 +6189,8 @@ function normalizeLearningMode(mode) {
     normalizedMode = LEARNING_MODE.IRREGULAR_VERB;
   } else if (rawMode === "instant-composition" || rawMode === "instant-composition-training" || rawMode === LEARNING_MODE.INSTANT_COMPOSITION) {
     normalizedMode = LEARNING_MODE.INSTANT_COMPOSITION;
+  } else if (rawMode === "school-test" || rawMode === "school-test-vocab" || rawMode === LEARNING_MODE.SCHOOL_TEST) {
+    normalizedMode = LEARNING_MODE.SCHOOL_TEST;
   }
 
   if (!VALID_LEARNING_MODE_SET.has(normalizedMode)) {
@@ -14012,6 +14216,15 @@ function loadState() {
         ? parsed.state.instantCompositionHistory
         : [];
     mergedState.instantCompositionHistory = savedInstantCompositionHistory.filter((entry) => entry && typeof entry === "object");
+    const savedSchoolTestVocabBank = Array.isArray(parsed.schoolTestVocabQuestionBank)
+      ? parsed.schoolTestVocabQuestionBank
+      : Array.isArray(parsed.state?.schoolTestVocabQuestionBank)
+        ? parsed.state.schoolTestVocabQuestionBank
+        : [];
+    mergedState.schoolTestVocabQuestionBank = sanitizeSchoolTestVocabQuestionBank(savedSchoolTestVocabBank);
+    if (parsed.schoolTestVocabImportMeta && typeof parsed.schoolTestVocabImportMeta === "object") {
+      mergedState.schoolTestVocabImportMeta = parsed.schoolTestVocabImportMeta;
+    }
     mergedState.session = null;
     return mergedState;
   } catch (error) {
@@ -17972,6 +18185,7 @@ function bindEvents() {
   }
 
   bindInstantCompositionImportHandlers();
+  bindSchoolTestVocabImportHandlers();
   renderInstantCompositionWeakButtonState();
 
   if (typingControls.every((control) => Boolean(control))) {
