@@ -2342,7 +2342,7 @@ function buildInstantCompositionLearningHistoryEntry(sessionLike, reason) {
     endedAtDisplay: formatTimestampToJstDisplay(endedAt),
     activeStudySeconds: answerCount > 0 ? Math.max(1, activeStudySeconds) : activeStudySeconds,
     mode: isSchoolTestSessionMode(sessionLike?.mode) ? LEARNING_MODE.SCHOOL_TEST : LEARNING_MODE.INSTANT_COMPOSITION,
-    dayNumber: "",
+    dayNumber: isSchoolTestSessionMode(sessionLike?.mode) ? String(sessionLike.mode) : "",
     questionCount: answerCount,
     correctCount,
     earnedPoints: Math.max(0, Number(sessionLike?.earnedPoints) || 0),
@@ -2527,12 +2527,36 @@ function startSchoolTestCompositionSession() {
   startInstantCompositionSession({ mode: "school-test-composition" });
 }
 
+function getSchoolTestLatestResultLabel(sessionMode) {
+  const targetMode = String(sessionMode || "");
+  if (!targetMode) return "";
+  let latest = null;
+  loadLearningHistoryEntries().forEach((entry) => {
+    if (String(entry?.mode || "") !== LEARNING_MODE.SCHOOL_TEST) return;
+    if (String(entry?.completedReason || "") !== "completed") return;
+    if (String(entry?.dayNumber || "") !== targetMode) return;
+    if (!latest || Number(entry.endedAt) > Number(latest.endedAt)) {
+      latest = entry;
+    }
+  });
+  if (!latest) return "";
+  const dayLabel = formatLearningHistoryDateLabel(getLearningHistoryDayKey(Number(latest.endedAt)));
+  const questionCount = Math.max(0, Number(latest.questionCount) || 0);
+  const correctCount = Math.max(0, Math.min(questionCount, Number(latest.correctCount) || 0));
+  return `${dayLabel}　${correctCount}/${questionCount}問正解`;
+}
+
 function renderSchoolTestMenuCards() {
   const container = document.getElementById("schoolTestMenuCards");
   if (!container) return;
   const vocabBankCount = getSchoolTestVocabQuestionBank().length;
   const compositionBankCount = getSchoolTestCompositionQuestionBank().length;
   const clozeBankCount = getSchoolTestClozeQuestionBank().length;
+  const sessionModeByCardMode = {
+    "school-test-textbook-vocab": "school-test-vocab",
+    "school-test-textbook-composition": "school-test-composition",
+    "school-test-textbook-cloze": "school-test-cloze"
+  };
   container.innerHTML = SCHOOL_TEST_MENU_ITEMS.map((item) => {
     const isReady = item.isReady !== false;
     const pointLabel = item.mode === "school-test-textbook-vocab"
@@ -2542,10 +2566,12 @@ function renderSchoolTestMenuCards() {
         : item.mode === "school-test-textbook-cloze"
           ? (clozeBankCount ? `登録 ${clozeBankCount}問` : "問題未登録")
           : "準備中";
+    const latestResultLabel = getSchoolTestLatestResultLabel(sessionModeByCardMode[item.mode] || "");
     return `<button id="${item.id}" class="secondary-btn training-menu-card-btn${isReady ? "" : " is-disabled"}" type="button" data-training-mode="${item.mode || ""}">
       <span class="training-menu-card-top">
         <span class="training-menu-card-title"><span class="training-menu-card-icon">${escapeHtml(item.icon || "✦")}</span>${escapeHtml(item.title || "特訓")}</span>
-        <span class="training-menu-card-chevron">›</span>
+        ${latestResultLabel ? `<span class="training-menu-card-detail" style="margin-left:auto;">${escapeHtml(latestResultLabel)}</span>` : ""}
+        <span class="training-menu-card-chevron"${latestResultLabel ? ' style="margin-left:0;"' : ""}>›</span>
       </span>
       <span class="training-menu-card-point">${escapeHtml(pointLabel)}</span>
     </button>`;
