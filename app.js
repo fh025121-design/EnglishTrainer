@@ -2560,12 +2560,11 @@ function startSchoolTestCompositionSession() {
 function getSchoolTestLatestResultLabel(sessionMode) {
   const targetMode = String(sessionMode || "");
   if (!targetMode) return "";
-  // 直近で学習した日(JST)の累計成績(完了セッションのみ・日単位で合算)
+  // 直近で学習した日(JST)の累計成績(途中終了も解答分を集計・日単位で合算)
   const totalsByDay = {};
   loadLearningHistoryEntries().forEach((entry) => {
     if (String(entry?.mode || "") !== LEARNING_MODE.SCHOOL_TEST) return;
     if (String(entry?.dayNumber || "") !== targetMode) return;
-    if (String(entry?.completedReason || "") !== "completed") return;
     const questionCount = Math.max(0, Number(entry?.questionCount) || 0);
     if (questionCount <= 0) return;
     const endedAt = Number(entry?.endedAt) || 0;
