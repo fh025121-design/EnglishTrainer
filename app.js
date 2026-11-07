@@ -1466,7 +1466,9 @@ function buildInstantCompositionQuestionSet(selection = getInstantCompositionSel
   if (!selection) return [];
   const mode = String(selection.mode || "").trim();
   if (mode === "school-test-vocab") {
-    return buildSchoolTestVocabPrioritizedQuestions();
+    const unitFilter = String(selection.unitName || "").trim();
+    const vocabBank = getSchoolTestVocabQuestionBank().filter((question) => !unitFilter || String(question.unit) === unitFilter);
+    return buildSchoolTestPrioritizedQuestions(vocabBank, "school-test-vocab");
   }
   if (mode === "school-test-composition") {
     return buildSchoolTestPrioritizedQuestions(getSchoolTestCompositionQuestionBank(), "school-test-composition");
@@ -2635,15 +2637,66 @@ function buildSchoolTestVocabPrioritizedQuestions() {
   return buildSchoolTestPrioritizedQuestions(getSchoolTestVocabQuestionBank(), "school-test-vocab");
 }
 
-function startSchoolTestVocabSession() {
-  const bank = getSchoolTestVocabQuestionBank();
+let schoolTestUnitSelectContext = "";
+
+function openSchoolTestUnitSelectScreen(cardMode) {
+  schoolTestUnitSelectContext = String(cardMode || "");
+  const titleEl = document.getElementById("schoolTestUnitSelectTitle");
+  if (titleEl) {
+    titleEl.textContent = schoolTestUnitSelectContext === "school-test-print-vocab" ? "プリント 単語・熟語" : "教科書 単語・熟語";
+  }
+  renderSchoolTestUnitSelectCards();
+  showScreen("schoolTestUnitSelectScreen");
+}
+
+function renderSchoolTestUnitSelectCards() {
+  const container = document.getElementById("schoolTestUnitSelectCards");
+  if (!container) return;
+  const isPrint = schoolTestUnitSelectContext === "school-test-print-vocab";
+  const bank = isPrint ? [] : getSchoolTestVocabQuestionBank();
+  const options = [
+    { unit: "Unit4", label: "Unit4" },
+    { unit: "Unit5", label: "Unit5" },
+    { unit: "Unit6", label: "Unit6" },
+    { unit: "", label: "All（全Unit）" }
+  ];
+  container.innerHTML = options.map((option, optionIndex) => {
+    const count = option.unit
+      ? bank.filter((question) => String(question.unit) === option.unit).length
+      : bank.length;
+    return `<button class="secondary-btn training-menu-card-btn${count ? "" : " is-disabled"}" type="button" data-school-test-unit="${escapeHtml(option.unit)}" data-school-test-unit-index="${optionIndex}">
+      <span class="training-menu-card-top">
+        <span class="training-menu-card-title">${escapeHtml(option.label)}</span>
+        <span class="training-menu-card-chevron">›</span>
+      </span>
+      <span class="training-menu-card-point">${count ? `登録 ${count}問` : "問題未登録"}</span>
+    </button>`;
+  }).join("");
+  container.querySelectorAll("[data-school-test-unit-index]").forEach((button) => {
+    button.onclick = () => {
+      if (schoolTestUnitSelectContext === "school-test-print-vocab") {
+        if (typeof alert === "function") {
+          alert("プリント（単語・熟語）の問題はまだ登録されていません。");
+        }
+        return;
+      }
+      startSchoolTestVocabSession(String(button.getAttribute("data-school-test-unit") || ""));
+    };
+  });
+}
+
+function startSchoolTestVocabSession(unitName = "") {
+  const unitFilter = String(unitName || "").trim();
+  const bank = getSchoolTestVocabQuestionBank().filter((question) => !unitFilter || String(question.unit) === unitFilter);
   if (!bank.length) {
     if (typeof alert === "function") {
-      alert("問題が登録されていません。設定画面の「学校テスト対策（教科書 単語・熟語）問題マスター」からExcelを取り込んでください。");
+      alert(unitFilter
+        ? `${unitFilter} には問題が登録されていません。`
+        : "問題が登録されていません。設定画面の「学校テスト対策（教科書 単語・熟語）問題マスター」からExcelを取り込んでください。");
     }
     return;
   }
-  startInstantCompositionSession({ mode: "school-test-vocab" });
+  startInstantCompositionSession({ mode: "school-test-vocab", unitName: unitFilter });
 }
 
 function startSchoolTestCompositionSession() {
@@ -2718,7 +2771,11 @@ function renderSchoolTestMenuCards() {
     if (!button) return;
     button.onclick = () => {
       if (item.mode === "school-test-textbook-vocab") {
-        startSchoolTestVocabSession();
+        openSchoolTestUnitSelectScreen(item.mode);
+        return;
+      }
+      if (item.mode === "school-test-print-vocab") {
+        openSchoolTestUnitSelectScreen(item.mode);
         return;
       }
       if (item.mode === "school-test-textbook-composition") {
