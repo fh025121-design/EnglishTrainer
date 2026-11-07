@@ -1449,13 +1449,13 @@ function buildInstantCompositionQuestionSet(selection = getInstantCompositionSel
   if (!selection) return [];
   const mode = String(selection.mode || "").trim();
   if (mode === "school-test-vocab") {
-    return getSchoolTestVocabQuestionBank();
+    return shuffleInstantCompositionQuestions(getSchoolTestVocabQuestionBank());
   }
   if (mode === "school-test-composition") {
     return getSchoolTestCompositionQuestionBank();
   }
   if (mode === "school-test-cloze") {
-    return getSchoolTestClozeQuestionBank();
+    return shuffleInstantCompositionQuestions(getSchoolTestClozeQuestionBank());
   }
   if (mode === "random") {
     return getInstantCompositionRandomQuestions(Math.max(1, Math.min(20, Number(selection.questionCount) || 20)));
