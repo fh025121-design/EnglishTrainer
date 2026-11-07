@@ -113,6 +113,15 @@
         mode: "instant-composition",
         isReady: true,
         pointLabel: formatPointSummary("instant-composition", pointConfig, pointSummaryMap)
+      },
+      {
+        id: "trainingSchoolTestBtn",
+        key: "school-test",
+        title: "学校テスト対策",
+        icon: "🏫",
+        mode: "school-test",
+        isReady: false,
+        pointLabel: "準備中"
       }
     ];
   }

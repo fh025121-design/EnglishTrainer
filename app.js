@@ -95,7 +95,8 @@ const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingResponseBtn", mode: "response-training", isReady: true },
   { id: "trainingIrregularVerbBtn", mode: "irregular-verb-training", isReady: true },
   { id: "trainingGrammarBtn", mode: "grammar", isReady: true },
-  { id: "trainingInstantCompositionBtn", mode: "instant-composition", isReady: true }
+  { id: "trainingInstantCompositionBtn", mode: "instant-composition", isReady: true },
+  { id: "trainingSchoolTestBtn", mode: "school-test", isReady: false }
 ]);
 
 const INSTANT_COMPOSITION_UNIT_CATALOG = Object.freeze([
@@ -840,8 +841,8 @@ function getTrainingMenuCardsForUi() {
   const pointSummaryMap = getTrainingMenuPointSummaryMap();
   const fallbackCards = TRAINING_MENU_ITEMS.map((item) => ({
     ...item,
-    title: item.id === "trainingIdiomBtn" ? "熟語特訓" : item.id === "trainingChallengeBtn" ? "過去の間違いに挑戦" : item.id === "trainingPrepositionBtn" ? "前置詞特訓" : item.id === "trainingResponseBtn" ? "応答文特訓" : item.id === "trainingIrregularVerbBtn" ? "不規則動詞特訓" : item.id === "trainingGrammarBtn" ? "文法" : "英作文特訓",
-    icon: item.id === "trainingIdiomBtn" ? "📖" : item.id === "trainingChallengeBtn" ? "🎯" : item.id === "trainingPrepositionBtn" ? "🧭" : item.id === "trainingResponseBtn" ? "🗣️" : item.id === "trainingIrregularVerbBtn" ? "🔄" : item.id === "trainingGrammarBtn" ? "📘" : "⚡",
+    title: item.id === "trainingIdiomBtn" ? "熟語特訓" : item.id === "trainingChallengeBtn" ? "過去の間違いに挑戦" : item.id === "trainingPrepositionBtn" ? "前置詞特訓" : item.id === "trainingResponseBtn" ? "応答文特訓" : item.id === "trainingIrregularVerbBtn" ? "不規則動詞特訓" : item.id === "trainingGrammarBtn" ? "文法" : item.id === "trainingSchoolTestBtn" ? "学校テスト対策" : "英作文特訓",
+    icon: item.id === "trainingIdiomBtn" ? "📖" : item.id === "trainingChallengeBtn" ? "🎯" : item.id === "trainingPrepositionBtn" ? "🧭" : item.id === "trainingResponseBtn" ? "🗣️" : item.id === "trainingIrregularVerbBtn" ? "🔄" : item.id === "trainingGrammarBtn" ? "📘" : item.id === "trainingSchoolTestBtn" ? "🏫" : "⚡",
     mode: item.mode,
     isReady: item.id === "trainingInstantCompositionBtn" || item.mode === "instant-composition" ? true : item.isReady,
     pointLabel: "ポイントなし"
