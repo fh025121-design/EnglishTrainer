@@ -1449,7 +1449,7 @@ function buildInstantCompositionQuestionSet(selection = getInstantCompositionSel
   if (!selection) return [];
   const mode = String(selection.mode || "").trim();
   if (mode === "school-test-vocab") {
-    return shuffleInstantCompositionQuestions(getSchoolTestVocabQuestionBank());
+    return buildSchoolTestVocabPrioritizedQuestions();
   }
   if (mode === "school-test-composition") {
     return getSchoolTestCompositionQuestionBank();
@@ -2504,6 +2504,36 @@ const SCHOOL_TEST_MENU_ITEMS = Object.freeze([
   { id: "schoolTestPrintVocabBtn", title: "プリント 単語・熟語", icon: "📄", mode: "school-test-print-vocab", isReady: false },
   { id: "schoolTestPrintCompositionBtn", title: "プリント 英作文", icon: "🖊️", mode: "school-test-print-composition", isReady: false }
 ]);
+
+function buildSchoolTestVocabPrioritizedQuestions() {
+  const bank = getSchoolTestVocabQuestionBank();
+  // 既存の解答履歴(問題ID単位)から誤答状況を参照
+  const lastJudgementById = {};
+  const everWrongIds = new Set();
+  getInstantCompositionHistoryEntries().forEach((entry) => {
+    if (String(entry?.mode || "") !== "school-test-vocab") return;
+    const questionId = String(entry?.questionId || "").trim();
+    if (!questionId) return;
+    const judgement = String(entry?.firstJudgement || entry?.judgement || "");
+    const answeredAt = Date.parse(String(entry?.createdAt || "")) || 0;
+    const existing = lastJudgementById[questionId];
+    if (!existing || answeredAt >= existing.answeredAt) {
+      lastJudgementById[questionId] = { judgement, answeredAt };
+    }
+    if (judgement === "incorrect") {
+      everWrongIds.add(questionId);
+    }
+  });
+  // 優先順位: 0=前回誤答 / 1=過去に誤答あり / 2=その他(同順位内はシャッフル順を維持)
+  const getPriorityRank = (question) => {
+    const questionId = String(question?.id || "");
+    const last = lastJudgementById[questionId];
+    if (last && last.judgement === "incorrect") return 0;
+    if (everWrongIds.has(questionId)) return 1;
+    return 2;
+  };
+  return shuffleInstantCompositionQuestions(bank).sort((left, right) => getPriorityRank(left) - getPriorityRank(right));
+}
 
 function startSchoolTestVocabSession() {
   const bank = getSchoolTestVocabQuestionBank();
