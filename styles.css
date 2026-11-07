@@ -2397,6 +2397,17 @@ p {
   color: var(--text-color);
 }
 
+.instant-composition-cloze-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(100%, 760px);
+}
+
+.instant-composition-cloze-inputs.hidden {
+  display: none;
+}
+
 .instant-composition-answer-form .instant-composition-answer-input {
   flex: 0 0 auto;
   width: min(100%, 760px);

@@ -623,14 +623,21 @@ function getSchoolTestClozeQuestionBank() {
     : [];
   const sanitized = sanitizeSchoolTestCompositionQuestionBank(rawBank)
     .filter((question) => (question.target === "cloze" || question.target === "both") && question.clozeText && question.clozeAnswer);
-  // 穴埋めは F列を正解としてタイピングさせる(既存採点を流用するため answer に設定)
-  return sortSchoolTestQuestionBank(sanitized).map((question) => ({
-    id: question.id,
-    unit: question.unit,
-    japanese: question.japanese,
-    clozeText: question.clozeText,
-    answer: question.clozeAnswer
-  }));
+  // 穴埋めは F列(「/」区切り)を空欄ごとの正解としてタイピングさせる
+  return sortSchoolTestQuestionBank(sanitized).map((question) => {
+    const answers = String(question.clozeAnswer || "")
+      .split(/[/／]/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return {
+      id: question.id,
+      unit: question.unit,
+      japanese: question.japanese,
+      clozeText: question.clozeText,
+      answers,
+      answer: answers.join(" / ")
+    };
+  });
 }
 
 function startSchoolTestClozeSession() {
@@ -706,6 +713,16 @@ async function importSchoolTestCompositionQuestionMaster(file) {
     }
     if ((target === "cloze" || target === "both") && (!rawClozeText || !rawClozeAnswer)) {
       throw new Error(`穴埋め出題には穴埋め問題（E列）と穴埋めの正解（F列）が必須です。問題ID: ${rawId}（${rowNumber}行目）`);
+    }
+    if (target === "cloze" || target === "both") {
+      const blankCount = (rawClozeText.match(/[(（][\s\u3000]*[)）]/g) || []).length;
+      const answerParts = rawClozeAnswer.split(/[/／]/).map((part) => part.trim()).filter(Boolean);
+      if (blankCount < 1 || blankCount > 3) {
+        throw new Error(`穴埋め問題（E列）の空欄（　）は1～3個にしてください。問題ID: ${rawId}（${rowNumber}行目: 空欄${blankCount}個）`);
+      }
+      if (answerParts.length !== blankCount) {
+        throw new Error(`穴埋めの空欄数と正解数が一致しません。問題ID: ${rawId}（${rowNumber}行目: 空欄${blankCount}個 / 正解${answerParts.length}個）F列は「/」区切りで左から順に指定してください。`);
+      }
     }
 
     seenIds.add(rawId);
@@ -1947,9 +1964,12 @@ function renderInstantCompositionQuestionScreen() {
   }
 
   const answerInput = document.getElementById("instantCompositionAnswerInput");
+  const clozeInputsWrap = document.getElementById("instantCompositionClozeInputs");
+  const isClozeMulti = session.mode === "school-test-cloze" && Array.isArray(currentQuestion.answers) && currentQuestion.answers.length > 0;
   if (answerInput) {
     answerInput.value = "";
     answerInput.disabled = false;
+    answerInput.classList.toggle("hidden", isClozeMulti);
     answerInput.oninput = () => applyInstantCompositionAnswerAutoWrap(answerInput);
     answerInput.onkeydown = (event) => {
       if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
@@ -1963,7 +1983,37 @@ function renderInstantCompositionQuestionScreen() {
       submitInstantCompositionAnswer();
     };
     adjustInstantCompositionAnswerInputHeight(answerInput);
-    answerInput.focus();
+    if (!isClozeMulti) {
+      answerInput.focus();
+    }
+  }
+  if (clozeInputsWrap) {
+    if (isClozeMulti) {
+      clozeInputsWrap.innerHTML = currentQuestion.answers.map((_, blankIndex) => (
+        `<input type="text" class="answer-input instant-composition-answer-input instant-composition-cloze-input" data-cloze-index="${blankIndex}" autocomplete="off" spellcheck="false" placeholder="空欄${blankIndex + 1}の英語" />`
+      )).join("");
+      clozeInputsWrap.classList.remove("hidden");
+      const clozeInputEls = Array.from(clozeInputsWrap.querySelectorAll("input"));
+      clozeInputEls.forEach((el, blankIndex) => {
+        el.onkeydown = (event) => {
+          if (event.key !== "Enter" || event.isComposing) return;
+          event.preventDefault();
+          if (blankIndex < clozeInputEls.length - 1) {
+            clozeInputEls[blankIndex + 1].focus();
+            return;
+          }
+          const submitButton = document.getElementById("instantCompositionSubmitBtn");
+          if (el.disabled || (submitButton && submitButton.disabled)) return;
+          submitInstantCompositionAnswer();
+        };
+      });
+      if (clozeInputEls[0]) {
+        clozeInputEls[0].focus();
+      }
+    } else {
+      clozeInputsWrap.innerHTML = "";
+      clozeInputsWrap.classList.add("hidden");
+    }
   }
 
   if (session.questionStates) {
@@ -2096,11 +2146,27 @@ function submitInstantCompositionAnswer() {
   }
 
   const input = document.getElementById("instantCompositionAnswerInput");
-  // 自動改行(表示上の処理)を空白に戻して採点・保存する(改行の有無で正誤判定を変えない)
-  const typedAnswer = input ? String(input.value || "").replace(/\s+/g, " ").trim() : "";
-  if (!typedAnswer) {
-    input?.focus();
-    return;
+  const isClozeMultiSession = session.mode === "school-test-cloze" && Array.isArray(currentQuestion.answers) && currentQuestion.answers.length > 0;
+  const clozeInputEls = isClozeMultiSession
+    ? Array.from(document.querySelectorAll("#instantCompositionClozeInputs input"))
+    : [];
+  let clozeTypedValues = [];
+  let typedAnswer = "";
+  if (isClozeMultiSession) {
+    clozeTypedValues = clozeInputEls.map((el) => String(el.value || "").replace(/\s+/g, " ").trim());
+    const emptyIndex = clozeTypedValues.findIndex((value) => !value);
+    if (emptyIndex >= 0) {
+      clozeInputEls[emptyIndex]?.focus();
+      return;
+    }
+    typedAnswer = clozeTypedValues.join(" / ");
+  } else {
+    // 自動改行(表示上の処理)を空白に戻して採点・保存する(改行の有無で正誤判定を変えない)
+    typedAnswer = input ? String(input.value || "").replace(/\s+/g, " ").trim() : "";
+    if (!typedAnswer) {
+      input?.focus();
+      return;
+    }
   }
 
   const submitBtn = document.getElementById("instantCompositionSubmitBtn");
@@ -2115,7 +2181,22 @@ function submitInstantCompositionAnswer() {
   const existingRecord = session.questionRecords[currentQuestion.id];
   const firstAttemptCount = Number(existingRecord?.attemptCount || 0);
   const isFirstAttempt = firstAttemptCount === 0;
-  const isCorrect = isInstantCompositionAnswerCorrect(currentQuestion.answer, typedAnswer);
+  // 複数空欄は全空欄正解で1問正解(一部正解は不正解)
+  const clozeBlankResults = isClozeMultiSession
+    ? currentQuestion.answers.map((expected, blankIndex) => isInstantCompositionAnswerCorrect(expected, clozeTypedValues[blankIndex]))
+    : [];
+  const isCorrect = isClozeMultiSession
+    ? clozeBlankResults.every(Boolean)
+    : isInstantCompositionAnswerCorrect(currentQuestion.answer, typedAnswer);
+
+  // 空欄ごとの正誤を入力欄の枠色で表示
+  if (isClozeMultiSession) {
+    clozeInputEls.forEach((el, blankIndex) => {
+      const blankCorrect = Boolean(clozeBlankResults[blankIndex]);
+      el.style.borderColor = blankCorrect ? "#34d399" : "#f87171";
+      el.style.boxShadow = blankCorrect ? "inset 0 0 0 1px #34d399" : "inset 0 0 0 1px #f87171";
+    });
+  }
 
   if (!existingRecord) {
     session.questionRecords[currentQuestion.id] = {
@@ -2276,6 +2357,9 @@ function submitInstantCompositionAnswer() {
     if (submitBtn) {
       submitBtn.disabled = true;
     }
+    if (isClozeMultiSession) {
+      clozeInputEls.forEach((el) => { el.disabled = true; });
+    }
     questionState.hasAnswered = true;
     questionState.isCorrect = true;
     questionState.isFinalized = true;
@@ -2289,7 +2373,13 @@ function submitInstantCompositionAnswer() {
     answerBox.classList.remove("hidden");
   }
   if (diffBox) {
-    renderInstantCompositionAnswerDiff(currentQuestion.answer, typedAnswer);
+    if (isClozeMultiSession) {
+      // 複数空欄は入力欄の枠色で空欄ごとの正誤を表示するため差分表示は行わない
+      diffBox.classList.add("hidden");
+      diffBox.innerHTML = "";
+    } else {
+      renderInstantCompositionAnswerDiff(currentQuestion.answer, typedAnswer);
+    }
   }
   if (nextBtn) {
     nextBtn.disabled = true;
@@ -2310,7 +2400,11 @@ function submitInstantCompositionAnswer() {
   }
 
   const answerInput = document.getElementById("instantCompositionAnswerInput");
-  if (answerInput) {
+  if (isClozeMultiSession) {
+    const firstWrongIndex = clozeBlankResults.findIndex((result) => !result);
+    const focusTarget = clozeInputEls[firstWrongIndex >= 0 ? firstWrongIndex : 0];
+    focusTarget?.focus();
+  } else if (answerInput) {
     answerInput.focus();
   }
 
@@ -2410,6 +2504,9 @@ function finishInstantCompositionSession() {
     answerInput.disabled = true;
     adjustInstantCompositionAnswerInputHeight(answerInput);
   }
+  document.querySelectorAll("#instantCompositionClozeInputs input").forEach((el) => {
+    el.disabled = true;
+  });
 
   const finishBackBtn = document.getElementById("instantCompositionFinishBackBtn");
   if (finishBackBtn) {
