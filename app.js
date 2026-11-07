@@ -2530,20 +2530,27 @@ function startSchoolTestCompositionSession() {
 function getSchoolTestLatestResultLabel(sessionMode) {
   const targetMode = String(sessionMode || "");
   if (!targetMode) return "";
-  let latest = null;
+  // 直近で学習した日(JST)の累計成績(完了セッションのみ・日単位で合算)
+  const totalsByDay = {};
   loadLearningHistoryEntries().forEach((entry) => {
     if (String(entry?.mode || "") !== LEARNING_MODE.SCHOOL_TEST) return;
-    if (String(entry?.completedReason || "") !== "completed") return;
     if (String(entry?.dayNumber || "") !== targetMode) return;
-    if (!latest || Number(entry.endedAt) > Number(latest.endedAt)) {
-      latest = entry;
-    }
+    if (String(entry?.completedReason || "") !== "completed") return;
+    const questionCount = Math.max(0, Number(entry?.questionCount) || 0);
+    if (questionCount <= 0) return;
+    const endedAt = Number(entry?.endedAt) || 0;
+    if (!endedAt) return;
+    const dayKey = getLearningHistoryDayKey(endedAt);
+    const row = totalsByDay[dayKey] || { questionCount: 0, correctCount: 0 };
+    row.questionCount += questionCount;
+    row.correctCount += Math.max(0, Math.min(questionCount, Number(entry?.correctCount) || 0));
+    totalsByDay[dayKey] = row;
   });
-  if (!latest) return "";
-  const dayLabel = formatLearningHistoryDateLabel(getLearningHistoryDayKey(Number(latest.endedAt)));
-  const questionCount = Math.max(0, Number(latest.questionCount) || 0);
-  const correctCount = Math.max(0, Math.min(questionCount, Number(latest.correctCount) || 0));
-  return `${dayLabel}　${correctCount}/${questionCount}問正解`;
+  const dayKeys = Object.keys(totalsByDay).sort();
+  if (!dayKeys.length) return "";
+  const latestDayKey = dayKeys[dayKeys.length - 1];
+  const totals = totalsByDay[latestDayKey];
+  return `${formatLearningHistoryDateLabel(latestDayKey)}　${totals.correctCount}/${totals.questionCount}問正解`;
 }
 
 function renderSchoolTestMenuCards() {
