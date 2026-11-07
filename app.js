@@ -1469,7 +1469,7 @@ function buildInstantCompositionQuestionSet(selection = getInstantCompositionSel
     return buildSchoolTestVocabPrioritizedQuestions();
   }
   if (mode === "school-test-composition") {
-    return getSchoolTestCompositionQuestionBank();
+    return buildSchoolTestPrioritizedQuestions(getSchoolTestCompositionQuestionBank(), "school-test-composition");
   }
   if (mode === "school-test-cloze") {
     return shuffleInstantCompositionQuestions(getSchoolTestClozeQuestionBank());
@@ -2602,13 +2602,12 @@ const SCHOOL_TEST_MENU_ITEMS = Object.freeze([
   { id: "schoolTestPrintCompositionBtn", title: "プリント 英作文", icon: "🖊️", mode: "school-test-print-composition", isReady: false }
 ]);
 
-function buildSchoolTestVocabPrioritizedQuestions() {
-  const bank = getSchoolTestVocabQuestionBank();
-  // 既存の解答履歴(問題ID単位)から誤答状況を参照
+function buildSchoolTestPrioritizedQuestions(bank, historyMode) {
+  // 既存の解答履歴(問題ID単位・出題形式別)から誤答状況を参照
   const lastJudgementById = {};
   const everWrongIds = new Set();
   getInstantCompositionHistoryEntries().forEach((entry) => {
-    if (String(entry?.mode || "") !== "school-test-vocab") return;
+    if (String(entry?.mode || "") !== historyMode) return;
     const questionId = String(entry?.questionId || "").trim();
     if (!questionId) return;
     const judgement = String(entry?.firstJudgement || entry?.judgement || "");
@@ -2629,7 +2628,11 @@ function buildSchoolTestVocabPrioritizedQuestions() {
     if (everWrongIds.has(questionId)) return 1;
     return 2;
   };
-  return shuffleInstantCompositionQuestions(bank).sort((left, right) => getPriorityRank(left) - getPriorityRank(right));
+  return shuffleInstantCompositionQuestions(Array.isArray(bank) ? bank : []).sort((left, right) => getPriorityRank(left) - getPriorityRank(right));
+}
+
+function buildSchoolTestVocabPrioritizedQuestions() {
+  return buildSchoolTestPrioritizedQuestions(getSchoolTestVocabQuestionBank(), "school-test-vocab");
 }
 
 function startSchoolTestVocabSession() {
