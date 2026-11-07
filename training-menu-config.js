@@ -120,8 +120,8 @@
         title: "学校テスト対策",
         icon: "🏫",
         mode: "school-test",
-        isReady: false,
-        pointLabel: "準備中"
+        isReady: true,
+        pointLabel: "Unit4-6"
       }
     ];
   }

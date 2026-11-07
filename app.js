@@ -96,7 +96,7 @@ const TRAINING_MENU_ITEMS = Object.freeze([
   { id: "trainingIrregularVerbBtn", mode: "irregular-verb-training", isReady: true },
   { id: "trainingGrammarBtn", mode: "grammar", isReady: true },
   { id: "trainingInstantCompositionBtn", mode: "instant-composition", isReady: true },
-  { id: "trainingSchoolTestBtn", mode: "school-test", isReady: false }
+  { id: "trainingSchoolTestBtn", mode: "school-test", isReady: true }
 ]);
 
 const INSTANT_COMPOSITION_UNIT_CATALOG = Object.freeze([
@@ -914,6 +914,10 @@ function bindTrainingMenuCardHandlers() {
         return;
       }
       if (item.isReady && item.mode) {
+        if (item.mode === "school-test") {
+          openSchoolTestMenuScreen();
+          return;
+        }
         if (item.mode === "preposition-training") {
           openPrepositionTrainingSelector();
           return;
@@ -2089,6 +2093,47 @@ function renderTrainingMenuCards() {
 function openTrainingMenuScreen() {
   renderTrainingMenuCards();
   showScreen("trainingMenuScreen");
+}
+
+const SCHOOL_TEST_MENU_ITEMS = Object.freeze([
+  { id: "schoolTestTextbookVocabBtn", title: "教科書 単語・熟語", icon: "📖", mode: "school-test-textbook-vocab", isReady: false },
+  { id: "schoolTestTextbookClozeBtn", title: "教科書 穴埋め", icon: "✏️", mode: "school-test-textbook-cloze", isReady: false },
+  { id: "schoolTestTextbookCompositionBtn", title: "教科書 英作文", icon: "📝", mode: "school-test-textbook-composition", isReady: false },
+  { id: "schoolTestPrintVocabBtn", title: "プリント 単語・熟語", icon: "📄", mode: "school-test-print-vocab", isReady: false },
+  { id: "schoolTestPrintCompositionBtn", title: "プリント 英作文", icon: "🖊️", mode: "school-test-print-composition", isReady: false }
+]);
+
+function renderSchoolTestMenuCards() {
+  const container = document.getElementById("schoolTestMenuCards");
+  if (!container) return;
+  container.innerHTML = SCHOOL_TEST_MENU_ITEMS.map((item) => {
+    const isReady = item.isReady !== false;
+    return `<button id="${item.id}" class="secondary-btn training-menu-card-btn${isReady ? "" : " is-disabled"}" type="button" data-training-mode="${item.mode || ""}">
+      <span class="training-menu-card-top">
+        <span class="training-menu-card-title"><span class="training-menu-card-icon">${escapeHtml(item.icon || "✦")}</span>${escapeHtml(item.title || "特訓")}</span>
+        <span class="training-menu-card-chevron">›</span>
+      </span>
+      <span class="training-menu-card-point">${escapeHtml(item.pointLabel || "準備中")}</span>
+    </button>`;
+  }).join("");
+
+  SCHOOL_TEST_MENU_ITEMS.forEach((item) => {
+    const button = document.getElementById(item.id);
+    if (!button) return;
+    button.onclick = () => {
+      if (!item.isReady) {
+        showTrainingComingSoonNotice();
+        return;
+      }
+      // 各モードの実装時にここへ処理を接続する
+      showTrainingComingSoonNotice();
+    };
+  });
+}
+
+function openSchoolTestMenuScreen() {
+  renderSchoolTestMenuCards();
+  showScreen("schoolTestMenuScreen");
 }
 
 function getGrammarDataApi() {
