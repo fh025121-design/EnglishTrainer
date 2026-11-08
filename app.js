@@ -619,9 +619,9 @@ function getSchoolTestCompositionQuestionBank(bankKey = "schoolTestCompositionQu
   return sortSchoolTestQuestionBank(sanitized);
 }
 
-function getSchoolTestClozeQuestionBank() {
-  const rawBank = typeof state !== "undefined" && Array.isArray(state.schoolTestCompositionQuestionBank)
-    ? state.schoolTestCompositionQuestionBank
+function getSchoolTestClozeQuestionBank(bankKey = "schoolTestCompositionQuestionBank") {
+  const rawBank = typeof state !== "undefined" && Array.isArray(state[bankKey])
+    ? state[bankKey]
     : [];
   const sanitized = sanitizeSchoolTestCompositionQuestionBank(rawBank)
     .filter((question) => (question.target === "cloze" || question.target === "both") && question.clozeText && question.clozeAnswer);
@@ -651,6 +651,15 @@ function startSchoolTestClozeSession() {
     return;
   }
   startInstantCompositionSession({ mode: "school-test-cloze" });
+}
+
+function getSchoolTestPrintCompositionQuestionSet() {
+  // プリント英作文カードは英作文対象+穴埋め対象を同一セッションで出題する
+  // (「両方」指定でIDが重複しても別問題として扱えるよう穴埋め側のIDに #cloze を付与)
+  const compositionBank = getSchoolTestCompositionQuestionBank("schoolTestPrintCompositionQuestionBank");
+  const clozeBank = getSchoolTestClozeQuestionBank("schoolTestPrintCompositionQuestionBank")
+    .map((question) => ({ ...question, id: `${question.id}#cloze` }));
+  return [...compositionBank, ...clozeBank];
 }
 
 async function importSchoolTestCompositionQuestionMaster(file, options = {}) {
@@ -706,14 +715,15 @@ async function importSchoolTestCompositionQuestionMaster(file, options = {}) {
     if (seenIds.has(rawId)) throw new Error(`問題IDの重複です。問題ID: ${rawId}（${rowNumber}行目）`);
 
     let target = "none";
-    if (rawTarget === "教科書英作文") {
+    const normalizedTarget = rawTarget.replace(/^(教科書|プリント)/, "");
+    if (normalizedTarget === "英作文") {
       target = "composition";
-    } else if (rawTarget === "教科書穴埋め") {
+    } else if (normalizedTarget === "穴埋め") {
       target = "cloze";
-    } else if (rawTarget === "教科書両方") {
+    } else if (normalizedTarget === "両方") {
       target = "both";
     } else if (rawTarget !== "") {
-      throw new Error(`出題（G列）の値が不正です。「教科書　英作文」「教科書　穴埋め」「教科書　両方」または空欄を指定してください。問題ID: ${rawId}（${rowNumber}行目: ${rawTarget}）`);
+      throw new Error(`出題（G列）の値が不正です。「教科書　英作文」「教科書　穴埋め」「教科書　両方」（プリントの場合は「プリント　英作文」など）または空欄を指定してください。問題ID: ${rawId}（${rowNumber}行目: ${rawTarget}）`);
     }
     if ((target === "cloze" || target === "both") && (!rawClozeText || !rawClozeAnswer)) {
       throw new Error(`穴埋め出題には穴埋め問題（E列）と穴埋めの正解（F列）が必須です。問題ID: ${rawId}（${rowNumber}行目）`);
@@ -823,7 +833,7 @@ async function handleSchoolTestPrintCompositionExcelImport(file) {
     });
     renderSchoolTestMenuCards();
     if (typeof alert === "function") {
-      alert(`プリント（英作文・穴埋め）を取り込みました。\n登録: ${result.summary.total}問（新規 ${result.summary.added} / 更新 ${result.summary.updated} / 除外 ${result.summary.removed}）\n英作文の出題対象: ${getSchoolTestCompositionQuestionBank("schoolTestPrintCompositionQuestionBank").length}問`);
+      alert(`プリント（英作文・穴埋め）を取り込みました。\n登録: ${result.summary.total}問（新規 ${result.summary.added} / 更新 ${result.summary.updated} / 除外 ${result.summary.removed}）\n英作文の出題対象: ${getSchoolTestCompositionQuestionBank("schoolTestPrintCompositionQuestionBank").length}問 / 穴埋めの出題対象: ${getSchoolTestClozeQuestionBank("schoolTestPrintCompositionQuestionBank").length}問`);
     }
   } catch (error) {
     const message = error && error.message ? error.message : "プリント問題マスターの取り込みに失敗しました。";
@@ -1540,7 +1550,7 @@ function buildInstantCompositionQuestionSet(selection = getInstantCompositionSel
     return buildSchoolTestPrioritizedQuestions(getSchoolTestVocabQuestionBank("schoolTestPrintVocabQuestionBank"), "school-test-print-vocab");
   }
   if (mode === "school-test-print-composition") {
-    return buildSchoolTestPrioritizedQuestions(getSchoolTestCompositionQuestionBank("schoolTestPrintCompositionQuestionBank"), "school-test-print-composition");
+    return buildSchoolTestPrioritizedQuestions(getSchoolTestPrintCompositionQuestionSet(), "school-test-print-composition");
   }
   if (mode === "random") {
     return getInstantCompositionRandomQuestions(Math.max(1, Math.min(20, Number(selection.questionCount) || 20)));
@@ -2029,7 +2039,7 @@ function renderInstantCompositionQuestionScreen() {
         promptText += `（${wordCount}語）`;
       }
     }
-    if (session.mode === "school-test-cloze" && currentQuestion.clozeText) {
+    if (session.mode === "school-test-cloze" || (isSchoolTestSessionMode(session.mode) && currentQuestion.clozeText && Array.isArray(currentQuestion.answers) && currentQuestion.answers.length > 0)) {
       promptText += `\n${currentQuestion.clozeText}`;
     }
     setInstantCompositionMultilineText(prompt, "", promptText);
@@ -2037,7 +2047,7 @@ function renderInstantCompositionQuestionScreen() {
 
   const answerInput = document.getElementById("instantCompositionAnswerInput");
   const clozeInputsWrap = document.getElementById("instantCompositionClozeInputs");
-  const isClozeMulti = session.mode === "school-test-cloze" && Array.isArray(currentQuestion.answers) && currentQuestion.answers.length > 0;
+  const isClozeMulti = isSchoolTestSessionMode(session.mode) && Array.isArray(currentQuestion.answers) && currentQuestion.answers.length > 0;
   if (answerInput) {
     answerInput.value = "";
     answerInput.disabled = false;
@@ -2218,7 +2228,7 @@ function submitInstantCompositionAnswer() {
   }
 
   const input = document.getElementById("instantCompositionAnswerInput");
-  const isClozeMultiSession = session.mode === "school-test-cloze" && Array.isArray(currentQuestion.answers) && currentQuestion.answers.length > 0;
+  const isClozeMultiSession = isSchoolTestSessionMode(session.mode) && Array.isArray(currentQuestion.answers) && currentQuestion.answers.length > 0;
   const clozeInputEls = isClozeMultiSession
     ? Array.from(document.querySelectorAll("#instantCompositionClozeInputs input"))
     : [];
@@ -2817,7 +2827,7 @@ function startSchoolTestPrintVocabSession() {
 }
 
 function startSchoolTestPrintCompositionSession() {
-  const bank = getSchoolTestCompositionQuestionBank("schoolTestPrintCompositionQuestionBank");
+  const bank = getSchoolTestPrintCompositionQuestionSet();
   if (!bank.length) {
     if (typeof alert === "function") {
       alert("出題対象がありません。「プリント（英作文・穴埋め）Excel取込」から出題列（G列）を設定したExcelを取り込んでください。");
@@ -2834,7 +2844,7 @@ function renderSchoolTestMenuCards() {
   const compositionBankCount = getSchoolTestCompositionQuestionBank().length;
   const clozeBankCount = getSchoolTestClozeQuestionBank().length;
   const printVocabBankCount = getSchoolTestVocabQuestionBank("schoolTestPrintVocabQuestionBank").length;
-  const printCompositionBankCount = getSchoolTestCompositionQuestionBank("schoolTestPrintCompositionQuestionBank").length;
+  const printCompositionBankCount = getSchoolTestPrintCompositionQuestionSet().length;
   const sessionModeByCardMode = {
     "school-test-textbook-vocab": "school-test-vocab",
     "school-test-textbook-composition": "school-test-composition",
