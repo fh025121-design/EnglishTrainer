@@ -2397,6 +2397,47 @@ p {
   color: var(--text-color);
 }
 
+.school-test-status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.school-test-status-tab-btn {
+  min-height: 40px;
+}
+
+.school-test-status-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.school-test-status-table th,
+.school-test-status-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: left;
+  vertical-align: top;
+}
+
+.school-test-status-table th {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.school-test-status-prompt {
+  word-break: break-word;
+}
+
+.school-test-status-results {
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
 .instant-composition-cloze-inputs {
   display: flex;
   flex-direction: column;

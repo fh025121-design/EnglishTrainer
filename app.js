@@ -2905,8 +2905,130 @@ function renderSchoolTestMenuCards() {
   });
 }
 
+const SCHOOL_TEST_STATUS_TABS = Object.freeze([
+  { key: "textbook-vocab", label: "教科書 単語・熟語", historyMode: "school-test-vocab" },
+  { key: "textbook-cloze", label: "教科書 穴埋め", historyMode: "school-test-cloze" },
+  { key: "textbook-composition", label: "教科書 英作文", historyMode: "school-test-composition" },
+  { key: "print-vocab", label: "プリント 単語・熟語", historyMode: "school-test-print-vocab" },
+  { key: "print-composition", label: "プリント 英作文", historyMode: "school-test-print-composition" }
+]);
+
+let schoolTestStatusActiveTabKey = "textbook-vocab";
+
+function getSchoolTestStatusQuestions(tabKey) {
+  if (tabKey === "textbook-vocab") {
+    return getSchoolTestVocabQuestionBank().map((question) => ({ ...question, formLabel: "" }));
+  }
+  if (tabKey === "textbook-cloze") {
+    return getSchoolTestClozeQuestionBank().map((question) => ({ ...question, formLabel: "" }));
+  }
+  if (tabKey === "textbook-composition") {
+    return getSchoolTestCompositionQuestionBank().map((question) => ({ ...question, formLabel: "" }));
+  }
+  if (tabKey === "print-vocab") {
+    return getSchoolTestVocabQuestionBank("schoolTestPrintVocabQuestionBank").map((question) => ({ ...question, formLabel: "" }));
+  }
+  if (tabKey === "print-composition") {
+    // 混合出題仕様に合わせ、英作文と穴埋め(#cloze)を別行で表示する
+    return getSchoolTestPrintCompositionQuestionSet().map((question) => ({
+      ...question,
+      formLabel: String(question.id || "").endsWith("#cloze") ? "穴埋め" : "英作文"
+    }));
+  }
+  return [];
+}
+
+function getSchoolTestStatusRows(tabKey) {
+  const tab = SCHOOL_TEST_STATUS_TABS.find((entry) => entry.key === tabKey);
+  if (!tab) return [];
+  const entriesById = {};
+  getInstantCompositionHistoryEntries().forEach((entry) => {
+    if (String(entry?.mode || "") !== tab.historyMode) return;
+    const questionId = String(entry?.questionId || "").trim();
+    if (!questionId) return;
+    (entriesById[questionId] = entriesById[questionId] || []).push(entry);
+  });
+  return getSchoolTestStatusQuestions(tabKey).map((question) => {
+    const questionId = String(question.id || "");
+    const entries = (entriesById[questionId] || []).slice().sort((left, right) => {
+      return (Date.parse(String(left?.createdAt || "")) || 0) - (Date.parse(String(right?.createdAt || "")) || 0);
+    });
+    const count = entries.length;
+    const lastEntry = entries[entries.length - 1] || null;
+    const lastDayKey = lastEntry ? getInstantCompositionEntryJstDayKey(lastEntry) : "";
+    const recentMarks = entries.slice(-5)
+      .map((entry) => (String(entry?.firstJudgement || entry?.judgement || "") === "correct" ? "○" : "×"))
+      .join("");
+    return {
+      displayId: questionId.replace(/#cloze$/, ""),
+      formLabel: String(question.formLabel || ""),
+      prompt: String(question.japanese || ""),
+      countLabel: count ? `${count}回` : "0回",
+      lastDateLabel: lastDayKey ? formatLearningHistoryDateLabel(lastDayKey) : "-",
+      recentLabel: count ? recentMarks : "未着手"
+    };
+  });
+}
+
+function renderSchoolTestStatusScreen() {
+  const tabsEl = document.getElementById("schoolTestStatusTabs");
+  const listEl = document.getElementById("schoolTestStatusList");
+  if (!tabsEl || !listEl) return;
+
+  tabsEl.innerHTML = SCHOOL_TEST_STATUS_TABS.map((tab) => {
+    const isActive = tab.key === schoolTestStatusActiveTabKey;
+    return `<button class="${isActive ? "primary-btn" : "secondary-btn"} school-test-status-tab-btn" type="button" data-status-tab="${tab.key}">${escapeHtml(tab.label)}</button>`;
+  }).join("");
+  tabsEl.querySelectorAll("[data-status-tab]").forEach((button) => {
+    button.onclick = () => {
+      schoolTestStatusActiveTabKey = String(button.getAttribute("data-status-tab") || "textbook-vocab");
+      renderSchoolTestStatusScreen();
+    };
+  });
+
+  const rows = getSchoolTestStatusRows(schoolTestStatusActiveTabKey);
+  if (!rows.length) {
+    listEl.innerHTML = '<p class="empty-state">この形式の問題はまだ登録されていません。</p>';
+    return;
+  }
+  const showForm = rows.some((row) => row.formLabel);
+  listEl.innerHTML = `
+    <table class="school-test-status-table">
+      <thead>
+        <tr>
+          <th>問題ID</th>${showForm ? "<th>形式</th>" : ""}
+          <th>問題文</th>
+          <th>解答回数</th>
+          <th>最終解答日</th>
+          <th>直近5回（古→新）</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((row) => `
+          <tr>
+            <td>${escapeHtml(row.displayId)}</td>${showForm ? `<td>${escapeHtml(row.formLabel)}</td>` : ""}
+            <td class="school-test-status-prompt">${escapeHtml(row.prompt)}</td>
+            <td>${escapeHtml(row.countLabel)}</td>
+            <td>${escapeHtml(row.lastDateLabel)}</td>
+            <td class="school-test-status-results">${escapeHtml(row.recentLabel)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function openSchoolTestStatusScreen() {
+  renderSchoolTestStatusScreen();
+  showScreen("schoolTestStatusScreen");
+}
+
 function openSchoolTestMenuScreen() {
   renderSchoolTestMenuCards();
+  const statusBtn = document.getElementById("schoolTestStatusBtn");
+  if (statusBtn) {
+    statusBtn.onclick = () => openSchoolTestStatusScreen();
+  }
   showScreen("schoolTestMenuScreen");
 }
 
