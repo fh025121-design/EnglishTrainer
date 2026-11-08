@@ -432,9 +432,9 @@ function sanitizeSchoolTestVocabQuestionBank(rows) {
   return Array.from(byId.values());
 }
 
-function getSchoolTestVocabQuestionBank() {
-  const rawBank = typeof state !== "undefined" && Array.isArray(state.schoolTestVocabQuestionBank)
-    ? state.schoolTestVocabQuestionBank
+function getSchoolTestVocabQuestionBank(bankKey = "schoolTestVocabQuestionBank") {
+  const rawBank = typeof state !== "undefined" && Array.isArray(state[bankKey])
+    ? state[bankKey]
     : [];
   const sanitized = sanitizeSchoolTestVocabQuestionBank(rawBank);
   // Unitの数値昇順(Unit4→Unit5→Unit6)、同一Unit内は登録順を維持
@@ -459,7 +459,9 @@ function countSchoolTestAnswerWords(answer) {
     .length;
 }
 
-async function importSchoolTestVocabQuestionMaster(file) {
+async function importSchoolTestVocabQuestionMaster(file, options = {}) {
+  const bankKey = String(options.bankKey || "schoolTestVocabQuestionBank");
+  const metaKey = String(options.metaKey || "schoolTestVocabImportMeta");
   if (!file) {
     throw new Error("Excelファイルを選択してください。");
   }
@@ -515,7 +517,7 @@ async function importSchoolTestVocabQuestionMaster(file) {
   }
 
   const previousBank = sanitizeSchoolTestVocabQuestionBank(
-    typeof state !== "undefined" && Array.isArray(state.schoolTestVocabQuestionBank) ? state.schoolTestVocabQuestionBank : []
+    typeof state !== "undefined" && Array.isArray(state[bankKey]) ? state[bankKey] : []
   );
   const previousIds = new Set(previousBank.map((question) => question.id));
   const nextIds = new Set(nextBank.map((question) => question.id));
@@ -528,8 +530,8 @@ async function importSchoolTestVocabQuestionMaster(file) {
 
   const sanitizedNextBank = sanitizeSchoolTestVocabQuestionBank(nextBank);
   if (typeof state !== "undefined") {
-    state.schoolTestVocabQuestionBank = sanitizedNextBank;
-    state.schoolTestVocabImportMeta = {
+    state[bankKey] = sanitizedNextBank;
+    state[metaKey] = {
       fileName,
       importedAt: Date.now(),
       summary
@@ -608,9 +610,9 @@ function sortSchoolTestQuestionBank(sanitized) {
     .map((entry) => entry.question);
 }
 
-function getSchoolTestCompositionQuestionBank() {
-  const rawBank = typeof state !== "undefined" && Array.isArray(state.schoolTestCompositionQuestionBank)
-    ? state.schoolTestCompositionQuestionBank
+function getSchoolTestCompositionQuestionBank(bankKey = "schoolTestCompositionQuestionBank") {
+  const rawBank = typeof state !== "undefined" && Array.isArray(state[bankKey])
+    ? state[bankKey]
     : [];
   const sanitized = sanitizeSchoolTestCompositionQuestionBank(rawBank)
     .filter((question) => question.target === "composition" || question.target === "both");
@@ -651,7 +653,9 @@ function startSchoolTestClozeSession() {
   startInstantCompositionSession({ mode: "school-test-cloze" });
 }
 
-async function importSchoolTestCompositionQuestionMaster(file) {
+async function importSchoolTestCompositionQuestionMaster(file, options = {}) {
+  const bankKey = String(options.bankKey || "schoolTestCompositionQuestionBank");
+  const metaKey = String(options.metaKey || "schoolTestCompositionImportMeta");
   if (!file) {
     throw new Error("Excelファイルを選択してください。");
   }
@@ -734,7 +738,7 @@ async function importSchoolTestCompositionQuestionMaster(file) {
   }
 
   const previousBank = sanitizeSchoolTestCompositionQuestionBank(
-    typeof state !== "undefined" && Array.isArray(state.schoolTestCompositionQuestionBank) ? state.schoolTestCompositionQuestionBank : []
+    typeof state !== "undefined" && Array.isArray(state[bankKey]) ? state[bankKey] : []
   );
   const previousIds = new Set(previousBank.map((question) => question.id));
   const nextIds = new Set(nextBank.map((question) => question.id));
@@ -747,8 +751,8 @@ async function importSchoolTestCompositionQuestionMaster(file) {
 
   const sanitizedNextBank = sanitizeSchoolTestCompositionQuestionBank(nextBank);
   if (typeof state !== "undefined") {
-    state.schoolTestCompositionQuestionBank = sanitizedNextBank;
-    state.schoolTestCompositionImportMeta = {
+    state[bankKey] = sanitizedNextBank;
+    state[metaKey] = {
       fileName,
       importedAt: Date.now(),
       summary
@@ -791,6 +795,62 @@ function bindSchoolTestCompositionImportHandlers() {
     await handleSchoolTestCompositionExcelImport(file);
     input.value = "";
   });
+}
+
+async function handleSchoolTestPrintVocabExcelImport(file) {
+  try {
+    const result = await importSchoolTestVocabQuestionMaster(file, {
+      bankKey: "schoolTestPrintVocabQuestionBank",
+      metaKey: "schoolTestPrintVocabImportMeta"
+    });
+    renderSchoolTestMenuCards();
+    if (typeof alert === "function") {
+      alert(`プリント（単語・熟語）を取り込みました。\n登録: ${result.summary.total}問（新規 ${result.summary.added} / 更新 ${result.summary.updated} / 除外 ${result.summary.removed}）`);
+    }
+  } catch (error) {
+    const message = error && error.message ? error.message : "プリント問題マスターの取り込みに失敗しました。";
+    if (typeof alert === "function") {
+      alert(message);
+    }
+  }
+}
+
+async function handleSchoolTestPrintCompositionExcelImport(file) {
+  try {
+    const result = await importSchoolTestCompositionQuestionMaster(file, {
+      bankKey: "schoolTestPrintCompositionQuestionBank",
+      metaKey: "schoolTestPrintCompositionImportMeta"
+    });
+    renderSchoolTestMenuCards();
+    if (typeof alert === "function") {
+      alert(`プリント（英作文・穴埋め）を取り込みました。\n登録: ${result.summary.total}問（新規 ${result.summary.added} / 更新 ${result.summary.updated} / 除外 ${result.summary.removed}）\n英作文の出題対象: ${getSchoolTestCompositionQuestionBank("schoolTestPrintCompositionQuestionBank").length}問`);
+    }
+  } catch (error) {
+    const message = error && error.message ? error.message : "プリント問題マスターの取り込みに失敗しました。";
+    if (typeof alert === "function") {
+      alert(message);
+    }
+  }
+}
+
+function bindSchoolTestPrintImportHandlers() {
+  const bindPair = (buttonId, inputId, handler) => {
+    const importBtn = document.getElementById(buttonId);
+    const importInput = document.getElementById(inputId);
+    if (!importBtn || !importInput) return;
+    importBtn.addEventListener("click", () => {
+      importInput.click();
+    });
+    importInput.addEventListener("change", async (event) => {
+      const input = event.target;
+      const file = input && input.files && input.files[0] ? input.files[0] : null;
+      if (!file) return;
+      await handler(file);
+      input.value = "";
+    });
+  };
+  bindPair("importSchoolTestPrintVocabMasterBtn", "schoolTestPrintVocabMasterFileInput", handleSchoolTestPrintVocabExcelImport);
+  bindPair("importSchoolTestPrintCompositionMasterBtn", "schoolTestPrintCompositionMasterFileInput", handleSchoolTestPrintCompositionExcelImport);
 }
 
 function syncInstantCompositionQuestionBankState(nextBank = []) {
@@ -1476,6 +1536,12 @@ function buildInstantCompositionQuestionSet(selection = getInstantCompositionSel
   if (mode === "school-test-cloze") {
     return shuffleInstantCompositionQuestions(getSchoolTestClozeQuestionBank());
   }
+  if (mode === "school-test-print-vocab") {
+    return buildSchoolTestPrioritizedQuestions(getSchoolTestVocabQuestionBank("schoolTestPrintVocabQuestionBank"), "school-test-print-vocab");
+  }
+  if (mode === "school-test-print-composition") {
+    return buildSchoolTestPrioritizedQuestions(getSchoolTestCompositionQuestionBank("schoolTestPrintCompositionQuestionBank"), "school-test-print-composition");
+  }
   if (mode === "random") {
     return getInstantCompositionRandomQuestions(Math.max(1, Math.min(20, Number(selection.questionCount) || 20)));
   }
@@ -1927,6 +1993,10 @@ function renderInstantCompositionQuestionScreen() {
       questionTitle.textContent = "教科書 英作文";
     } else if (session.mode === "school-test-cloze") {
       questionTitle.textContent = "教科書 穴埋め";
+    } else if (session.mode === "school-test-print-vocab") {
+      questionTitle.textContent = "プリント 単語・熟語";
+    } else if (session.mode === "school-test-print-composition") {
+      questionTitle.textContent = "プリント 英作文";
     } else {
       questionTitle.textContent = session.mode === "weak" ? "苦手特訓" : (session.unitName || "英作文特訓");
     }
@@ -1953,7 +2023,7 @@ function renderInstantCompositionQuestionScreen() {
   const prompt = document.getElementById("instantCompositionPrompt");
   if (prompt) {
     let promptText = currentQuestion.japanese || "問題を読み込み中です。";
-    if (session.mode === "school-test-vocab") {
+    if (session.mode === "school-test-vocab" || session.mode === "school-test-print-vocab") {
       const wordCount = countSchoolTestAnswerWords(currentQuestion.answer);
       if (wordCount >= 2) {
         promptText += `（${wordCount}語）`;
@@ -2600,8 +2670,8 @@ const SCHOOL_TEST_MENU_ITEMS = Object.freeze([
   { id: "schoolTestTextbookVocabBtn", title: "教科書 単語・熟語", icon: "📖", mode: "school-test-textbook-vocab", isReady: true },
   { id: "schoolTestTextbookClozeBtn", title: "教科書 穴埋め", icon: "✏️", mode: "school-test-textbook-cloze", isReady: true },
   { id: "schoolTestTextbookCompositionBtn", title: "教科書 英作文", icon: "📝", mode: "school-test-textbook-composition", isReady: true },
-  { id: "schoolTestPrintVocabBtn", title: "プリント 単語・熟語", icon: "📄", mode: "school-test-print-vocab", isReady: false },
-  { id: "schoolTestPrintCompositionBtn", title: "プリント 英作文", icon: "🖊️", mode: "school-test-print-composition", isReady: false }
+  { id: "schoolTestPrintVocabBtn", title: "プリント 単語・熟語", icon: "📄", mode: "school-test-print-vocab", isReady: true },
+  { id: "schoolTestPrintCompositionBtn", title: "プリント 英作文", icon: "🖊️", mode: "school-test-print-composition", isReady: true }
 ]);
 
 function buildSchoolTestPrioritizedQuestions(bank, historyMode) {
@@ -2735,16 +2805,42 @@ function getSchoolTestLatestResultLabel(sessionMode) {
   return `${formatLearningHistoryDateLabel(latestDayKey)}　${totals.correctCount}/${totals.questionCount}問正解`;
 }
 
+function startSchoolTestPrintVocabSession() {
+  const bank = getSchoolTestVocabQuestionBank("schoolTestPrintVocabQuestionBank");
+  if (!bank.length) {
+    if (typeof alert === "function") {
+      alert("問題が登録されていません。「プリント（単語・熟語）Excel取込」から取り込んでください。");
+    }
+    return;
+  }
+  startInstantCompositionSession({ mode: "school-test-print-vocab" });
+}
+
+function startSchoolTestPrintCompositionSession() {
+  const bank = getSchoolTestCompositionQuestionBank("schoolTestPrintCompositionQuestionBank");
+  if (!bank.length) {
+    if (typeof alert === "function") {
+      alert("出題対象がありません。「プリント（英作文・穴埋め）Excel取込」から出題列（G列）を設定したExcelを取り込んでください。");
+    }
+    return;
+  }
+  startInstantCompositionSession({ mode: "school-test-print-composition" });
+}
+
 function renderSchoolTestMenuCards() {
   const container = document.getElementById("schoolTestMenuCards");
   if (!container) return;
   const vocabBankCount = getSchoolTestVocabQuestionBank().length;
   const compositionBankCount = getSchoolTestCompositionQuestionBank().length;
   const clozeBankCount = getSchoolTestClozeQuestionBank().length;
+  const printVocabBankCount = getSchoolTestVocabQuestionBank("schoolTestPrintVocabQuestionBank").length;
+  const printCompositionBankCount = getSchoolTestCompositionQuestionBank("schoolTestPrintCompositionQuestionBank").length;
   const sessionModeByCardMode = {
     "school-test-textbook-vocab": "school-test-vocab",
     "school-test-textbook-composition": "school-test-composition",
-    "school-test-textbook-cloze": "school-test-cloze"
+    "school-test-textbook-cloze": "school-test-cloze",
+    "school-test-print-vocab": "school-test-print-vocab",
+    "school-test-print-composition": "school-test-print-composition"
   };
   container.innerHTML = SCHOOL_TEST_MENU_ITEMS.map((item) => {
     const isReady = item.isReady !== false;
@@ -2754,7 +2850,11 @@ function renderSchoolTestMenuCards() {
         ? (compositionBankCount ? `登録 ${compositionBankCount}問` : "問題未登録")
         : item.mode === "school-test-textbook-cloze"
           ? (clozeBankCount ? `登録 ${clozeBankCount}問` : "問題未登録")
-          : "準備中";
+          : item.mode === "school-test-print-vocab"
+            ? (printVocabBankCount ? `登録 ${printVocabBankCount}問` : "問題未登録")
+            : item.mode === "school-test-print-composition"
+              ? (printCompositionBankCount ? `登録 ${printCompositionBankCount}問` : "問題未登録")
+              : "準備中";
     const latestResultLabel = getSchoolTestLatestResultLabel(sessionModeByCardMode[item.mode] || "");
     return `<button id="${item.id}" class="secondary-btn training-menu-card-btn${isReady ? "" : " is-disabled"}" type="button" data-training-mode="${item.mode || ""}">
       <span class="training-menu-card-top">
@@ -2775,7 +2875,11 @@ function renderSchoolTestMenuCards() {
         return;
       }
       if (item.mode === "school-test-print-vocab") {
-        openSchoolTestUnitSelectScreen(item.mode);
+        startSchoolTestPrintVocabSession();
+        return;
+      }
+      if (item.mode === "school-test-print-composition") {
+        startSchoolTestPrintCompositionSession();
         return;
       }
       if (item.mode === "school-test-textbook-composition") {
@@ -14693,6 +14797,16 @@ function loadState() {
     if (parsed.schoolTestCompositionImportMeta && typeof parsed.schoolTestCompositionImportMeta === "object") {
       mergedState.schoolTestCompositionImportMeta = parsed.schoolTestCompositionImportMeta;
     }
+    const savedPrintVocabBank = Array.isArray(parsed.schoolTestPrintVocabQuestionBank) ? parsed.schoolTestPrintVocabQuestionBank : [];
+    mergedState.schoolTestPrintVocabQuestionBank = sanitizeSchoolTestVocabQuestionBank(savedPrintVocabBank);
+    if (parsed.schoolTestPrintVocabImportMeta && typeof parsed.schoolTestPrintVocabImportMeta === "object") {
+      mergedState.schoolTestPrintVocabImportMeta = parsed.schoolTestPrintVocabImportMeta;
+    }
+    const savedPrintCompositionBank = Array.isArray(parsed.schoolTestPrintCompositionQuestionBank) ? parsed.schoolTestPrintCompositionQuestionBank : [];
+    mergedState.schoolTestPrintCompositionQuestionBank = sanitizeSchoolTestCompositionQuestionBank(savedPrintCompositionBank);
+    if (parsed.schoolTestPrintCompositionImportMeta && typeof parsed.schoolTestPrintCompositionImportMeta === "object") {
+      mergedState.schoolTestPrintCompositionImportMeta = parsed.schoolTestPrintCompositionImportMeta;
+    }
     mergedState.session = null;
     return mergedState;
   } catch (error) {
@@ -18655,6 +18769,7 @@ function bindEvents() {
   bindInstantCompositionImportHandlers();
   bindSchoolTestVocabImportHandlers();
   bindSchoolTestCompositionImportHandlers();
+  bindSchoolTestPrintImportHandlers();
   renderInstantCompositionWeakButtonState();
 
   if (typingControls.every((control) => Boolean(control))) {
