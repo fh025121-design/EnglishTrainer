@@ -2106,9 +2106,16 @@ p {
 }
 
 #schoolTestMenuCards .school-test-latest-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   font-size: 18px;
-  white-space: normal;
-  text-align: right;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+#schoolTestMenuCards .school-test-latest-result-part {
+  font-size: 18px;
 }
 
 .training-menu-card-point:has(span) {
