@@ -2105,6 +2105,12 @@ p {
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.28);
 }
 
+#schoolTestMenuCards .school-test-latest-result {
+  font-size: 18px;
+  white-space: normal;
+  text-align: right;
+}
+
 .training-menu-card-point:has(span) {
   color: var(--text-color);
 }
@@ -2221,7 +2227,8 @@ p {
 }
 
 #instantCompositionMenuScreen .instant-composition-side-history {
-  font-size: 0.92rem;
+  font-size: 18px;
+  white-space: normal;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.86);
 }
@@ -2310,7 +2317,8 @@ p {
 }
 
 #instantCompositionMenuScreen .instant-composition-unit-meta-line {
-  font-size: 0.92rem;
+  font-size: 18px;
+  white-space: normal;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.86);
 }

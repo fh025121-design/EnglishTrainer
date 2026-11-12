@@ -2869,7 +2869,7 @@ function renderSchoolTestMenuCards() {
     return `<button id="${item.id}" class="secondary-btn training-menu-card-btn${isReady ? "" : " is-disabled"}" type="button" data-training-mode="${item.mode || ""}">
       <span class="training-menu-card-top">
         <span class="training-menu-card-title"><span class="training-menu-card-icon">${escapeHtml(item.icon || "✦")}</span>${escapeHtml(item.title || "特訓")}</span>
-        ${latestResultLabel ? `<span class="training-menu-card-detail" style="margin-left:auto;">${escapeHtml(latestResultLabel)}</span>` : ""}
+        ${latestResultLabel ? `<span class="training-menu-card-detail school-test-latest-result" style="margin-left:auto;">${escapeHtml(latestResultLabel)}</span>` : ""}
         <span class="training-menu-card-chevron"${latestResultLabel ? ' style="margin-left:0;"' : ""}>›</span>
       </span>
       <span class="training-menu-card-point">${escapeHtml(pointLabel)}</span>
