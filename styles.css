@@ -2221,7 +2221,7 @@ p {
 }
 
 #instantCompositionMenuScreen .instant-composition-side-history {
-  font-size: 0.78rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.86);
 }
@@ -2310,7 +2310,7 @@ p {
 }
 
 #instantCompositionMenuScreen .instant-composition-unit-meta-line {
-  font-size: 0.78rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.86);
 }
